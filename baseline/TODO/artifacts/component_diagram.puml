@@ -1,0 +1,44 @@
+@startuml component_diagram
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "TODO Application" {
+
+    component [main] <<entrypoint>> as MAIN
+
+    package "cli" {
+        [InteractiveMenu] as IM
+        [TodoCLI]         as CLI
+    }
+
+    package "services" {
+        [TodoService]  as SVC
+        [TaskManager]  as MGR
+    }
+
+    package "models" {
+        [Task]       as TASK
+        [TaskStatus] as STATUS
+    }
+
+    package "storage" {
+        [JsonStorage] as STOR
+    }
+}
+
+database "~/.todo_data.json" as DB
+
+MAIN --> IM   : launches (interactive)
+MAIN --> CLI  : launches (with args)
+IM   --> SVC  : uses
+CLI  --> SVC  : uses
+SVC  --> MGR  : delegates
+MGR  --> STOR : persists via
+MGR  ..> TASK : creates / mutates
+TASK ..> STATUS : uses
+STOR --> DB   : reads / writes
+IM   ..> STOR : instantiates
+CLI  ..> STOR : instantiates
+
+@enduml

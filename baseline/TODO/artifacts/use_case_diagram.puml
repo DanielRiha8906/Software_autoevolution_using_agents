@@ -1,0 +1,31 @@
+@startuml use_case_diagram
+
+left to right direction
+skinparam packageStyle rectangle
+
+actor User
+
+rectangle "TODO Application" {
+    usecase "Add task"           as UC_ADD
+    usecase "List tasks"         as UC_LIST
+    usecase "Filter by status"   as UC_FILTER
+    usecase "Show task details"  as UC_SHOW
+    usecase "Start task"         as UC_START
+    usecase "Complete task"      as UC_DONE
+    usecase "Reopen task"        as UC_REOPEN
+    usecase "Update task"        as UC_UPDATE
+    usecase "Delete task"        as UC_DELETE
+}
+
+User --> UC_ADD
+User --> UC_LIST
+User --> UC_SHOW
+User --> UC_START
+User --> UC_DONE
+User --> UC_REOPEN
+User --> UC_UPDATE
+User --> UC_DELETE
+
+UC_FILTER ..> UC_LIST : <<extend>>
+
+@enduml

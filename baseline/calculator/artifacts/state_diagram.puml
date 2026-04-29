@@ -1,0 +1,46 @@
+@startuml state_diagram
+
+<style>
+stateDiagram {
+  FontSize 13
+  ArrowFontSize 12
+}
+</style>
+
+[*] --> CommandMode     : launch [--operation flag] / parse args
+[*] --> InteractiveMode : launch [interactive]
+
+'─── Command Mode ────────────────────────────────────────────────
+state CommandMode {
+    state Calculating : do / evaluate operation
+
+    [*]         --> Calculating
+    Calculating --> [*] : complete [success] / output result
+    Calculating --> [*] : complete [error]   / report error
+}
+
+CommandMode --> [*]
+
+'─── Interactive Mode ────────────────────────────────────────────
+state InteractiveMode {
+    state AwaitingMenuChoice : entry / display menu
+    state AwaitingOperands   : entry / prompt for operands
+    state Calculating        : do / evaluate operation
+
+    [*] --> AwaitingMenuChoice
+
+    AwaitingMenuChoice --> AwaitingOperands   : operationSelected [1–4] / store selection
+    AwaitingMenuChoice --> AwaitingMenuChoice : historyRequested / load and display history
+    AwaitingMenuChoice --> AwaitingMenuChoice : invalidChoice / show warning
+    AwaitingMenuChoice --> [*]               : exitRequested / display farewell
+
+    AwaitingOperands --> Calculating        : operandsSubmitted [valid] / invoke calculation
+    AwaitingOperands --> AwaitingMenuChoice : operandsSubmitted [invalid] / show input error
+
+    Calculating --> AwaitingMenuChoice : complete [success] / persist + display result
+    Calculating --> AwaitingMenuChoice : complete [error]   / show calculation error
+}
+
+InteractiveMode --> [*]
+
+@enduml

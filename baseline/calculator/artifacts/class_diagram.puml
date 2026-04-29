@@ -1,0 +1,84 @@
+@startuml class_diagram
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+
+package "models" #DDEEFF {
+    enum Operation {
+        ADD
+        SUBTRACT
+        MULTIPLY
+        DIVIDE
+        --
+        +from_string(value: str) : Operation
+        +display_name() : str
+    }
+
+    class CalculationResult {
+        +operation : str
+        +operand_a : float
+        +operand_b : float
+        +result    : float
+        +timestamp : str
+        --
+        +to_dict() : dict
+        +{static} from_dict(data: dict) : CalculationResult
+        +__str__() : str
+    }
+}
+
+package "services" #DDFFD4 {
+    class Calculator {
+        +add(a: float, b: float) : float
+        +subtract(a: float, b: float) : float
+        +multiply(a: float, b: float) : float
+        +divide(a: float, b: float) : float
+        +calculate(op: Operation, a: float, b: float) : float
+    }
+
+    class CalculatorService {
+        -calculator : Calculator
+        -storage    : JsonStorage
+        --
+        +__init__(calculator, storage)
+        +perform(op: Operation, a: float, b: float) : CalculationResult
+        +get_history() : list[CalculationResult]
+    }
+}
+
+package "storage" #FFF3CC {
+    class JsonStorage {
+        +filepath : Path
+        --
+        +__init__(filepath: Path | str)
+        +save(result: CalculationResult) : None
+        +load_all() : list[CalculationResult]
+        -_read_raw() : list
+        -_write_raw(records: list) : None
+    }
+}
+
+package "cli" #FFE5E5 {
+    class CalculatorCLI {
+        -{static} _MENU : list[tuple]
+        -service : CalculatorService
+        --
+        +__init__(service: CalculatorService)
+        +run_interactive() : None
+        +run_command(op_str: str, a: float, b: float) : None
+        -_print_menu() : None
+        -_resolve_menu_choice(choice: str) : Operation | None
+        -_prompt_number(prompt: str) : float | None
+        -_show_history() : None
+    }
+}
+
+CalculatorCLI     "1" --> "1" CalculatorService : -service
+CalculatorService "1" --> "1" Calculator        : -calculator
+CalculatorService "1" --> "1" JsonStorage       : -storage
+CalculatorService       ..>    CalculationResult : <<creates>>
+CalculatorCLI           ..>    Operation
+Calculator              ..>    Operation
+JsonStorage             ..>    CalculationResult
+
+@enduml

@@ -1,0 +1,37 @@
+@startuml component_diagram
+
+skinparam componentStyle uml2
+skinparam defaultFontSize 13
+
+actor User
+
+package "Calculator Application" {
+
+    component [EntryPoint\n(__main__)] as Main
+    component [CalculatorCLI] as CLI
+    component [CalculatorService] as Service
+    component [Calculator] as Calc
+    component [JsonStorage] as Store
+    component [Models\n(Operation, CalculationResult)] as Models
+
+    Main --> CLI : creates
+    Main --> Service : creates
+    Main --> Calc : creates
+    Main --> Store : creates
+
+    CLI --> Service : calls
+    Service --> Calc : delegates calculation
+    Service --> Store : saves / loads history
+
+    Service --> Models : uses
+    CLI --> Models : uses Operation
+    Calc --> Models : uses Operation
+    Store --> Models : serializes CalculationResult
+}
+
+database "calculations.json" as DB
+
+User --> Main : starts application
+Store --> DB : read / write
+
+@enduml

@@ -1,0 +1,110 @@
+@startuml sequence_diagram
+
+skinparam sequenceArrowThickness 2
+skinparam sequenceParticipantBorderColor #555555
+
+actor       User
+participant "InteractiveMenu" as Menu
+participant "TodoService"     as SVC
+participant "TaskManager"     as MGR
+participant "JsonStorage"     as STOR
+database    "~/.todo_data.json" as DB
+
+== Add a task ==
+
+User -> Menu : choice "2" (Add task)
+Menu --> User : prompt title
+User -> Menu  : title
+Menu --> User : prompt description (optional)
+User -> Menu  : description
+
+Menu  -> SVC  : add_task(title, description)
+activate SVC
+note right of SVC : validates title is not empty
+SVC   -> MGR  : add(title, description)
+activate MGR
+MGR   -> MGR  : Task(title, description)
+MGR   -> STOR : save(tasks)
+activate STOR
+STOR  -> DB   : write JSON
+DB   --> STOR : ok
+deactivate STOR
+MGR  --> SVC  : task : Task
+deactivate MGR
+SVC  --> Menu : task : Task
+deactivate SVC
+Menu --> User : "Added: [ ] <id>  <title>"
+
+== Start the task ==
+
+User -> Menu : choice "4" (Change status)
+Menu --> User : list tasks, prompt selection
+User -> Menu  : pick task
+Menu --> User : show current status,\nprompt new status (start / done / reopen)
+User -> Menu  : pick "start  (in progress)"
+
+Menu  -> SVC  : start_task(task_id)
+activate SVC
+SVC   -> MGR  : set_status(task_id, IN_PROGRESS)
+activate MGR
+MGR   -> MGR  : task.status = IN_PROGRESS\ntask.updated_at = now()
+MGR   -> STOR : save(tasks)
+activate STOR
+STOR  -> DB   : write JSON
+DB   --> STOR : ok
+deactivate STOR
+MGR  --> SVC  : task : Task
+deactivate MGR
+SVC  --> Menu : task : Task
+deactivate SVC
+Menu --> User : "Updated: [~] <id>  <title>"
+
+== Complete the task ==
+
+User -> Menu : choice "4" (Change status)
+Menu --> User : list tasks, prompt selection
+User -> Menu  : pick task
+Menu --> User : show current status,\nprompt new status (start / done / reopen)
+User -> Menu  : pick "done"
+
+Menu  -> SVC  : complete_task(task_id)
+activate SVC
+SVC   -> MGR  : set_status(task_id, DONE)
+activate MGR
+MGR   -> MGR  : task.status = DONE\ntask.updated_at = now()
+MGR   -> STOR : save(tasks)
+activate STOR
+STOR  -> DB   : write JSON
+DB   --> STOR : ok
+deactivate STOR
+MGR  --> SVC  : task : Task
+deactivate MGR
+SVC  --> Menu : task : Task
+deactivate SVC
+Menu --> User : "Updated: [x] <id>  <title>"
+
+== Delete a task ==
+
+User -> Menu : choice "6" (Delete task)
+Menu --> User : list tasks, prompt selection
+User -> Menu  : pick task
+Menu --> User : "Are you sure? (y/N)"
+User -> Menu  : "y"
+
+Menu  -> SVC  : delete_task(task_id)
+activate SVC
+SVC   -> MGR  : delete(task_id)
+activate MGR
+MGR   -> MGR  : del _tasks[id]
+MGR   -> STOR : save(tasks)
+activate STOR
+STOR  -> DB   : write JSON
+DB   --> STOR : ok
+deactivate STOR
+MGR  --> SVC  : None
+deactivate MGR
+SVC  --> Menu : None
+deactivate SVC
+Menu --> User : "Deleted: <id>  <title>"
+
+@enduml

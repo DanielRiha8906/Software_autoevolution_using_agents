@@ -1,0 +1,113 @@
+@startuml activity_diagram
+
+<style>
+activityDiagram {
+  FontSize 13
+  ArrowFontSize 12
+  diamond {
+    FontSize 11
+  }
+}
+</style>
+
+start
+
+if ([--operation flag]) then
+
+  '─── Command Mode ───────────────────────────────────
+  partition "Command Mode" {
+
+    :Validate operation and operands;
+
+    if ([valid]) then
+
+      :Perform calculation
+      <pin>op : Operation</pin>
+      <pin>a, b : float</pin>;
+
+      if ([success]) then
+        :Persist result
+        <pin>result : CalculationResult</pin>;
+        note right
+          <<datastore>>
+          calculations.json
+        end note
+        :Output result;
+        stop
+
+      else ([error])
+        :Report calculation error;
+        end
+      endif
+
+    else ([invalid])
+      :Report usage error;
+      end
+    endif
+
+  }
+
+else ([interactive])
+
+  '─── Interactive Mode ───────────────────────────────
+  partition "Interactive Mode" {
+
+    repeat
+
+      :Show menu;
+
+      if ([exit]) then
+        stop
+
+      elseif ([history]) then
+        :Load history
+        <pin>records : CalculationResult[ ]</pin>;
+        note right
+          <<datastore>>
+          calculations.json
+        end note
+        :Display history entries;
+
+      elseif ([valid operation 1–4]) then
+
+        partition "Execute Calculation" {
+
+          :Collect operands;
+
+          if ([valid]) then
+
+            :Perform calculation
+            <pin>op : Operation</pin>
+            <pin>a, b : float</pin>;
+
+            if ([success]) then
+              :Persist result
+              <pin>result : CalculationResult</pin>;
+              note right
+                <<datastore>>
+                calculations.json
+              end note
+              :Display result;
+
+            else ([error])
+              :Display calculation error;
+            endif
+
+          else ([invalid])
+            :Display input error;
+          endif
+
+        }
+
+      else ([invalid choice])
+        :Display invalid choice;
+      endif
+
+    repeat while ([menu active])
+
+  }
+
+endif
+
+stop
+@enduml
