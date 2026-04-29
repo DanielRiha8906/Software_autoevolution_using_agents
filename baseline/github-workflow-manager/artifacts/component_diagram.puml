@@ -1,0 +1,48 @@
+@startuml component_diagram
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+
+package "GitHub Workflow Manager" {
+
+    component [__main__] <<entrypoint>> as MAIN
+
+    package "cli" {
+        [workflow_cli]     as CLI
+        [interactive_menu] as IM
+    }
+
+    package "services" {
+        [WorkflowRunService] as SVC
+        [WorkflowRunTracker] as TRACKER
+    }
+
+    package "models" {
+        [WorkflowRun]        as RUN
+        [WorkflowStatus]     as STATUS
+        [WorkflowConclusion] as CONCLUSION
+    }
+
+    package "storage" {
+        [WorkflowJsonStorage] as STOR
+    }
+}
+
+database "artifacts/workflow_runs.json" as DB
+
+MAIN    --> IM       : launches (interactive)
+MAIN    --> CLI      : launches (with args)
+IM      --> SVC      : uses
+IM      ..> TRACKER  : uses
+CLI     --> SVC      : uses
+CLI     ..> TRACKER  : uses
+TRACKER --> SVC      : delegates add
+SVC     --> STOR     : persists via
+SVC     ..> RUN      : creates / queries
+SVC     ..> STATUS   : filters by
+SVC     ..> CONCLUSION : filters by
+RUN     ..> STATUS   : uses
+RUN     ..> CONCLUSION : uses
+STOR    --> DB       : reads / writes
+
+@enduml
