@@ -34,6 +34,7 @@ MAIN --> CLI  : launches (with args)
 IM   --> SVC  : uses
 CLI  --> SVC  : uses
 SVC  --> MGR  : delegates
+SVC ..> STATUS : uses status transitions
 MGR  --> STOR : persists via
 MGR  ..> TASK : creates / mutates
 TASK ..> STATUS : uses

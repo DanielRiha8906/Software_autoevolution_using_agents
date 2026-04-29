@@ -63,8 +63,8 @@ repeat
         :Pick task from list;
         if (cancelled?) then (yes)
         else (no)
-          :Prompt new title (keep current if blank);
-          :Prompt new description (keep current if blank);
+          :Prompt new title (blank keeps current);
+          :Prompt new description (blank clears description);
           :TodoService.update_task();
           :Confirm "Updated: <id> <title>";
         endif

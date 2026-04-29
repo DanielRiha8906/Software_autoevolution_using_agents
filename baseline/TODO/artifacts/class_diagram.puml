@@ -101,17 +101,18 @@ package "cli" #FFE5E5 {
         -_do_delete(tasks: list[Task]) : None
     }
 }
-
-Task              "1" --> "1"  TaskStatus        : status
-TaskManager       "1" --> "1"  JsonStorage       : -_storage
-TaskManager            ..>     Task              : <<creates / manages>>
-TaskManager            ..>     TaskNotFoundError : <<raises>>
-TodoService       "1" --> "1"  TaskManager       : -_manager
-TodoCLI           "1" --> "1"  TodoService       : -_service
-InteractiveMenu   "1" --> "1"  TodoService       : -_service
-TodoCLI                ..>     JsonStorage       : <<instantiates>>
-InteractiveMenu        ..>     JsonStorage       : <<instantiates>>
-TodoCLI                ..>     TaskNotFoundError : <<catches>>
-InteractiveMenu        ..>     TaskNotFoundError : <<catches>>
+Task                   ..>     TaskStatus        : status
+TaskManager       "1" --> "1"  JsonStorage  : -_storage
+TaskManager            ..>     Task
+TaskManager            ..>     TaskNotFoundError
+TodoService       "1" --> "1"  TaskManager  : -_manager
+TodoService            ..>     TaskStatus
+TodoCLI           "1" --> "1"  TodoService  : -_service
+InteractiveMenu   "1" --> "1"  TodoService  : -_service
+TodoCLI                ..>     JsonStorage
+InteractiveMenu        ..>     JsonStorage
+TodoCLI                ..>     TaskNotFoundError
+InteractiveMenu        ..>     TaskNotFoundError
+TodoService            ..>     TaskStatus
 
 @enduml
