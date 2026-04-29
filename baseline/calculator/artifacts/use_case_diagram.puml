@@ -1,31 +1,20 @@
 @startuml use_case_diagram
 
-<style>
-usecaseDiagram {
-  FontSize 13
-  ActorFontSize 14
-}
-</style>
+skinparam defaultFontSize 13
 
 left to right direction
 
 actor User
 
 rectangle "Calculator Application" {
-    usecase "Calculate a result"          as UC_Calc
-    usecase "Review calculation history"  as UC_History
-    usecase "Validate inputs"             as UC_Validate
-    usecase "Record result"               as UC_Record
+    usecase "Perform calculation" as UC_Calc
+    usecase "View calculation history" as UC_History
+    usecase "Exit application" as UC_Exit
+
 }
 
 User --> UC_Calc
 User --> UC_History
-
-' <<include>>: Validate inputs is mandatory — always executed
-UC_Calc ..> UC_Validate : <<include>>
-
-' <<extend>>: Record result is conditional — only when calculation succeeds
-UC_Record ..> UC_Calc : <<extend>>
-note on link : [calculation succeeded]
+User --> UC_Exit
 
 @enduml

@@ -1,113 +1,74 @@
 @startuml activity_diagram
 
-<style>
-activityDiagram {
-  FontSize 13
-  ArrowFontSize 12
-  diamond {
-    FontSize 11
-  }
-}
-</style>
+skinparam activityBackgroundColor #DDEEFF
+skinparam activityBorderColor #3366AA
+skinparam activityDiamondBackgroundColor #FFF3CC
 
 start
 
-if ([--operation flag]) then
+if (CLI operation provided?) then (yes)
 
-  '─── Command Mode ───────────────────────────────────
-  partition "Command Mode" {
+  :Validate operation and operands;
 
-    :Validate operation and operands;
+  if (Input valid?) then (yes)
+    :Perform calculation;
 
-    if ([valid]) then
-
-      :Perform calculation
-      <pin>op : Operation</pin>
-      <pin>a, b : float</pin>;
-
-      if ([success]) then
-        :Persist result
-        <pin>result : CalculationResult</pin>;
-        note right
-          <<datastore>>
-          calculations.json
-        end note
-        :Output result;
-        stop
-
-      else ([error])
-        :Report calculation error;
-        end
-      endif
-
-    else ([invalid])
-      :Report usage error;
-      end
+    if (Calculation successful?) then (yes)
+      :Save result to history;
+      :Show result;
+      stop
+    else (no)
+      :Show calculation error;
+      stop
     endif
 
-  }
+  else (no)
+    :Show usage error;
+    stop
+  endif
 
-else ([interactive])
+else (no)
 
-  '─── Interactive Mode ───────────────────────────────
-  partition "Interactive Mode" {
+  repeat
+    :Show menu;
+    :Read user choice;
 
-    repeat
+    switch (User choice?)
 
-      :Show menu;
-
-      if ([exit]) then
+      case (Exit)
+        :Show goodbye message;
         stop
 
-      elseif ([history]) then
-        :Load history
-        <pin>records : CalculationResult[ ]</pin>;
-        note right
-          <<datastore>>
-          calculations.json
-        end note
-        :Display history entries;
+      case (History)
+        :Load calculation history;
+        :Show history;
 
-      elseif ([valid operation 1–4]) then
+      case (Operation)
+        :Read operands;
 
-        partition "Execute Calculation" {
+        if (Input valid?) then (yes)
+          :Perform calculation;
 
-          :Collect operands;
-
-          if ([valid]) then
-
-            :Perform calculation
-            <pin>op : Operation</pin>
-            <pin>a, b : float</pin>;
-
-            if ([success]) then
-              :Persist result
-              <pin>result : CalculationResult</pin>;
-              note right
-                <<datastore>>
-                calculations.json
-              end note
-              :Display result;
-
-            else ([error])
-              :Display calculation error;
-            endif
-
-          else ([invalid])
-            :Display input error;
+          if (Calculation successful?) then (yes)
+            :Save result to history;
+            :Show result;
+          else (no)
+            :Show calculation error;
           endif
 
-        }
+        else (no)
+          :Show input error;
+        endif
 
-      else ([invalid choice])
-        :Display invalid choice;
-      endif
+      case (Invalid choice)
+        :Show invalid choice message;
 
-    repeat while ([menu active])
+    endswitch
 
-  }
+  repeat while (Menu active?) is (yes)
 
 endif
 
 stop
+
 @enduml

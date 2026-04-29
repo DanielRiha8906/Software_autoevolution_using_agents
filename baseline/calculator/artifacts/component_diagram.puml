@@ -2,36 +2,30 @@
 
 skinparam componentStyle uml2
 skinparam defaultFontSize 13
-
-actor User
+left to right direction
 
 package "Calculator Application" {
 
-    component [EntryPoint\n(__main__)] as Main
-    component [CalculatorCLI] as CLI
-    component [CalculatorService] as Service
-    component [Calculator] as Calc
-    component [JsonStorage] as Store
-    component [Models\n(Operation, CalculationResult)] as Models
+    component "Entry Point\n(__main__)" as Main
+    component "CLI Interface\n(CalculatorCLI)" as CLI
+    component "Application Service\n(CalculatorService)" as Service
+    component "Calculation Engine\n(Calculator)" as Calc
+    component "JSON Storage\n(JsonStorage)" as Store
+    component "Domain Models\n(Operation, CalculationResult)" as Models
 
-    Main --> CLI : creates
-    Main --> Service : creates
-    Main --> Calc : creates
-    Main --> Store : creates
+    Main --> CLI : initializes
+    Main --> Service : initializes
 
-    CLI --> Service : calls
-    Service --> Calc : delegates calculation
-    Service --> Store : saves / loads history
+    CLI --> Service : uses
+    Service --> Calc : uses
+    Service --> Store : uses
 
-    Service --> Models : uses
-    CLI --> Models : uses Operation
-    Calc --> Models : uses Operation
-    Store --> Models : serializes CalculationResult
+    Service ..> Models
+    Store ..> Models
 }
 
 database "calculations.json" as DB
 
-User --> Main : starts application
-Store --> DB : read / write
+Store --> DB : read/write
 
 @enduml
