@@ -33,21 +33,21 @@ rectangle "TODO Manager" {
 User --> UI
 User --> CLI
 
-UI --> I_ADD
-UI --> I_LIST
-UI --> I_SHOW
-UI --> I_STATUS
-UI --> I_UPDATE
-UI --> I_DELETE
-UI --> I_QUIT
+UI ..> I_ADD    : <<exclude>>
+UI ..> I_LIST   : <<exclude>>
+UI ..> I_SHOW   : <<exclude>>
+UI ..> I_STATUS : <<exclude>>
+UI ..> I_UPDATE : <<exclude>>
+UI ..> I_DELETE : <<exclude>>
+UI ..> I_QUIT   : <<exclude>>
 
-CLI --> C_ADD
-CLI --> C_LIST
-CLI --> C_SHOW
-CLI --> C_START
-CLI --> C_DONE
-CLI --> C_REOPEN
-CLI --> C_UPDATE
-CLI --> C_DELETE
+CLI ..> C_ADD    : <<exclude>>
+CLI ..> C_LIST   : <<exclude>>
+CLI ..> C_SHOW   : <<exclude>>
+CLI ..> C_START  : <<exclude>>
+CLI ..> C_DONE   : <<exclude>>
+CLI ..> C_REOPEN : <<exclude>>
+CLI ..> C_UPDATE : <<exclude>>
+CLI ..> C_DELETE : <<exclude>>
 
 @enduml

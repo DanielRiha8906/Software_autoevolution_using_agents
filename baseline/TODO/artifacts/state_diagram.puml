@@ -1,28 +1,9 @@
-@startuml state_diagram
+@startuml
 
-skinparam state {
-    BackgroundColor #DDEEFF
-    BorderColor     #3366AA
-    FontStyle       bold
-}
+[*] --> PENDING
 
-note "set_status() in TaskManager applies any\ntransition without enforcement. Arrows shown\nrepresent the intended application workflow." as N1
-
-[*] --> PENDING : add_task()
-
-PENDING    : [ ] Task is waiting to be started
-
-IN_PROGRESS : [~] Task is actively being worked on
-
-DONE       : [x] Task has been completed
-
-PENDING     --> IN_PROGRESS : start_task()
-IN_PROGRESS --> DONE        : complete_task()
-DONE        --> PENDING     : reopen_task()
-IN_PROGRESS --> PENDING     : reopen_task()
-
-PENDING     --> [*] : delete_task()
-IN_PROGRESS --> [*] : delete_task()
-DONE        --> [*] : delete_task()
+PENDING --> IN_PROGRESS : start
+IN_PROGRESS --> DONE : complete
+DONE --> IN_PROGRESS : reopen
 
 @enduml

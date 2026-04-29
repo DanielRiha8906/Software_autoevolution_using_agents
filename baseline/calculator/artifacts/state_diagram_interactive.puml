@@ -18,9 +18,8 @@ FirstOperand --> Feedback : invalid number
 SecondOperand --> Calculating : valid number
 SecondOperand --> Feedback : invalid number
 
-Calculating --> Feedback
-Calculating --> Feedback
-
+Calculating --> Feedback : success / show result
+Calculating --> Feedback : error / show error
 Feedback --> Menu
 
 @enduml

@@ -5,32 +5,31 @@ skinparam classFontStyle bold
 
 package "models" #DDEEFF {
     enum TaskStatus {
-        PENDING = "pending"
-        IN_PROGRESS = "in_progress"
-        DONE = "done"
+        PENDING
+        IN_PROGRESS
+        DONE
     }
 
     class Task {
-        +id          : str
-        +title       : str
-        +description : Optional[str]
-        +status      : TaskStatus
-        +created_at  : datetime
-        +updated_at  : datetime
+        +id : String
+        +title : String
+        +description : String [0..1]
+        +status : TaskStatus
+        +createdAt : DateTime
+        +updatedAt : DateTime
         --
-        +to_dict() : dict
-        +{static} from_dict(data: dict) : Task
+        +toDict() : Dictionary
+        +fromDict(data: Dictionary) : Task
     }
 }
 
 package "storage" #FFF3CC {
     class JsonStorage {
-        -_path : Path
+        -path : String
         --
-        +__init__(path: Optional[str])
-        +path : Path
-        +load() : list[dict]
-        +save(tasks: list[dict]) : None
+        +JsonStorage(path: String [0..1])
+        +load() : List<Dictionary>
+        +save(tasks: List<Dictionary>) : void
     }
 }
 
@@ -38,80 +37,57 @@ package "services" #DDFFD4 {
     exception TaskNotFoundError
 
     class TaskManager {
-        -_storage : JsonStorage
-        -_tasks   : dict[str, Task]
+        -storage : JsonStorage
+        -tasks : Dictionary<String, Task>
         --
-        +__init__(storage: Optional[JsonStorage])
-        +add(title: str, description: Optional[str]) : Task
-        +get(task_id: str) : Task
-        +list_all() : list[Task]
-        +list_by_status(status: TaskStatus) : list[Task]
-        +update(task_id: str, title: Optional[str], description: Optional[str]) : Task
-        +set_status(task_id: str, status: TaskStatus) : Task
-        +delete(task_id: str) : None
-        -_load() : None
-        -_persist() : None
+        +TaskManager(storage: JsonStorage [0..1])
+        +add(title: String, description: String [0..1]) : Task
+        +get(taskId: String) : Task
+        +listAll() : List<Task>
+        +listByStatus(status: TaskStatus) : List<Task>
+        +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
+        +setStatus(taskId: String, status: TaskStatus) : Task
+        +delete(taskId: String) : void
+        -load() : void
+        -persist() : void
     }
 
     class TodoService {
-        -_manager : TaskManager
+        -manager : TaskManager
         --
-        +__init__(storage: Optional[JsonStorage])
-        +add_task(title: str, description: Optional[str]) : Task
-        +get_task(task_id: str) : Task
-        +list_tasks(status: Optional[TaskStatus]) : list[Task]
-        +start_task(task_id: str) : Task
-        +complete_task(task_id: str) : Task
-        +reopen_task(task_id: str) : Task
-        +update_task(task_id: str, title: Optional[str], description: Optional[str]) : Task
-        +delete_task(task_id: str) : None
+        +TodoService(storage: JsonStorage [0..1])
+        +addTask(title: String, description: String [0..1]) : Task
+        +getTask(taskId: String) : Task
+        +listTasks(status: TaskStatus [0..1]) : List<Task>
+        +startTask(taskId: String) : Task
+        +completeTask(taskId: String) : Task
+        +reopenTask(taskId: String) : Task
+        +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
+        +deleteTask(taskId: String) : void
     }
 }
 
 package "cli" #FFE5E5 {
     class TodoCLI {
-        -_service : TodoService
+        -service : TodoService
         --
-        +__init__(storage_path: Optional[str])
-        +run(argv: Optional[list[str]]) : int
-        -_build_parser() : ArgumentParser
-        -_cmd_add(args: Namespace) : int
-        -_cmd_list(args: Namespace) : int
-        -_cmd_show(args: Namespace) : int
-        -_cmd_start(args: Namespace) : int
-        -_cmd_done(args: Namespace) : int
-        -_cmd_reopen(args: Namespace) : int
-        -_cmd_update(args: Namespace) : int
-        -_cmd_delete(args: Namespace) : int
+        +TodoCLI(storagePath: String [0..1])
+        +run(argv: List<String> [0..1]) : Integer
     }
 
     class InteractiveMenu {
-        -_service : TodoService
+        -service : TodoService
         --
-        +__init__(storage_path: Optional[str])
-        +run() : None
-        -_print_header() : None
-        -_print_task_list(tasks: list[Task]) : None
-        -_print_main_menu() : None
-        -_do_list() : None
-        -_do_add() : None
-        -_do_show(tasks: list[Task]) : None
-        -_do_change_status(tasks: list[Task]) : None
-        -_do_update(tasks: list[Task]) : None
-        -_do_delete(tasks: list[Task]) : None
+        +InteractiveMenu(storagePath: String [0..1])
+        +run() : void
     }
 }
-Task                   ..>     TaskStatus        : status
-TaskManager       "1" --> "1"  JsonStorage  : -_storage
-TaskManager            ..>     Task
-TaskManager            ..>     TaskNotFoundError
-TodoService       "1" --> "1"  TaskManager  : -_manager
-TodoCLI           "1" --> "1"  TodoService  : -_service
-InteractiveMenu   "1" --> "1"  TodoService  : -_service
-TodoCLI                ..>     JsonStorage
-InteractiveMenu        ..>     JsonStorage
-TodoCLI                ..>     TaskNotFoundError
-InteractiveMenu        ..>     TaskNotFoundError
-TodoService            ..>     TaskStatus
+
+Task --> TaskStatus : status
+TaskManager --> JsonStorage : storage
+TaskManager ..> TaskNotFoundError : raises
+TodoService --> TaskManager : manager
+TodoCLI --> TodoService : service
+InteractiveMenu --> TodoService : service
 
 @enduml

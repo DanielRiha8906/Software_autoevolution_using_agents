@@ -2,47 +2,51 @@
 
 skinparam componentStyle rectangle
 skinparam linetype ortho
+top to bottom direction
 
 package "GitHub Workflow Manager" {
 
-    component [__main__] <<entrypoint>> as MAIN
+  package "Application entrypoint" {
+    component "main" as MAIN
+  }
 
-    package "cli" {
-        [workflow_cli]     as CLI
-        [interactive_menu] as IM
-    }
+  package "Interface layer" {
+    component "workflow_cli" as CLI
+    component "interactive_menu" as IM
+  }
 
-    package "services" {
-        [WorkflowRunService] as SVC
-        [WorkflowRunTracker] as TRACKER
-    }
+  package "Service layer" {
+    component "WorkflowRunTracker" as TRACKER
+    component "WorkflowRunService" as SVC
+  }
 
-    package "models" {
-        [WorkflowRun]        as RUN
-        [WorkflowStatus]     as STATUS
-        [WorkflowConclusion] as CONCLUSION
-    }
+  package "Persistence layer" {
+    component "WorkflowJsonStorage" as STOR
+    artifact "workflow_runs.json" as JSON_FILE
+  }
 
-    package "storage" {
-        [WorkflowJsonStorage] as STOR
-    }
+  package "Domain model" {
+    component "WorkflowRun" as RUN
+    component "WorkflowStatus" as STATUS
+    component "WorkflowConclusion" as CONCLUSION
+  }
 }
 
-database "artifacts/workflow_runs.json" as DB
+MAIN --> CLI
+MAIN --> IM
 
-MAIN    --> IM       : launches (interactive)
-MAIN    --> CLI      : launches (with args)
-IM      --> SVC      : uses
-IM      ..> TRACKER  : uses
-CLI     --> SVC      : uses
-CLI     ..> TRACKER  : uses
-TRACKER --> SVC      : delegates add
-SVC     --> STOR     : persists via
-SVC     ..> RUN      : creates / queries
-SVC     ..> STATUS   : filters by
-SVC     ..> CONCLUSION : filters by
-RUN     ..> STATUS   : uses
-RUN     ..> CONCLUSION : uses
-STOR    --> DB       : reads / writes
+CLI --> TRACKER
+IM --> TRACKER
+
+CLI --> SVC
+IM --> SVC
+
+TRACKER --> SVC
+SVC --> STOR
+STOR --> JSON_FILE
+
+SVC ..> RUN
+RUN --> STATUS
+RUN --> CONCLUSION
 
 @enduml

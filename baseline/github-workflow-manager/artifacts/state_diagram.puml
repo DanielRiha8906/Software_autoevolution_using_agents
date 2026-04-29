@@ -1,35 +1,13 @@
-@startuml state_diagram
+@startuml workflow_run_local_state
+
+title Local WorkflowRun record state
 
 skinparam state {
-    BackgroundColor #DDEEFF
-    BorderColor     #3366AA
-    FontStyle       bold
+  BackgroundColor #DDEEFF
+  BorderColor #3366AA
+  FontStyle bold
 }
 
-note "WorkflowStatus values mirror the GitHub Actions API.\nConclusion is only meaningful when status = COMPLETED." as N1
-
-[*] --> QUEUED : add_workflow_run()
-
-QUEUED      : Run is waiting\nfor a runner
-
-REQUESTED   : Workflow has been\ntriggered and is\nawaiting scheduling
-
-PENDING     : Run is pending\na prerequisite
-
-WAITING     : Waiting on a concurrency\ngroup or deployment\nprotection rule
-
-IN_PROGRESS : Runner is actively\nexecuting the workflow
-
-COMPLETED   : Run has finished\n─────────────────────\nconclusion:\n  SUCCESS | FAILURE | CANCELLED\n  TIMED_OUT | SKIPPED\n  ACTION_REQUIRED | NEUTRAL | STALE
-
-QUEUED      --> IN_PROGRESS : runner picks up
-QUEUED      --> WAITING     : concurrency blocked
-QUEUED      --> PENDING     : prerequisite missing
-REQUESTED   --> QUEUED      : scheduled by runner
-PENDING     --> IN_PROGRESS : prerequisite cleared
-WAITING     --> IN_PROGRESS : concurrency lock acquired
-IN_PROGRESS --> COMPLETED   : run finishes
-
-COMPLETED   --> [*]
+[*] --> Recorded : add_workflow_run()
 
 @enduml

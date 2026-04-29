@@ -1,102 +1,31 @@
-@startuml activity_diagram
-
-skinparam activityBackgroundColor #DDEEFF
-skinparam activityBorderColor     #3366AA
-skinparam activityDiamondBackgroundColor #FFF3CC
+@startuml
 
 start
-
 :Launch application;
-:Display task list + main menu;
 
 repeat
-
+  :Display task list + main menu;
   :Wait for user input;
 
   switch (choice)
-
-    case (1 — List / filter)
-      :Prompt status filter\n(all / pending / in_progress / done);
-      :Display filtered tasks;
-
+    case (1 — List/filter)
+      :Run list/filter flow;
     case (2 — Add task)
-      :Prompt title;
-      if (title empty?) then (yes)
-        :Show "Title cannot be empty";
-      else (no)
-        :Prompt description (optional);
-        :TodoService.add_task();
-        :Confirm "Added: [ ] <id> <title>";
-      endif
-
+      :Run add task flow;
     case (3 — Show details)
-      if (no tasks?) then (yes)
-        :Show "No tasks";
-      else (no)
-        :Pick task from list;
-        if (cancelled?) then (yes)
-        else (no)
-          :Display full task details\n(id, title, desc, status, timestamps);
-        endif
-      endif
-
+      :Run show details flow;
     case (4 — Change status)
-      if (no tasks?) then (yes)
-        :Show "No tasks";
-      else (no)
-        :Pick task from list;
-        if (cancelled?) then (yes)
-        else (no)
-          :Choose new status\n(start / done / reopen);
-          if (cancelled?) then (yes)
-          else (no)
-            :TodoService.start_task()\n/ complete_task() / reopen_task();
-            :Confirm updated status;
-          endif
-        endif
-      endif
-
+      :Run change status flow;
     case (5 — Update task)
-      if (no tasks?) then (yes)
-        :Show "No tasks";
-      else (no)
-        :Pick task from list;
-        if (cancelled?) then (yes)
-        else (no)
-          :Prompt new title (blank keeps current);
-          :Prompt new description (blank clears description);
-          :TodoService.update_task();
-          :Confirm "Updated: <id> <title>";
-        endif
-      endif
-
+      :Run update task flow;
     case (6 — Delete task)
-      if (no tasks?) then (yes)
-        :Show "No tasks";
-      else (no)
-        :Pick task from list;
-        if (cancelled?) then (yes)
-        else (no)
-          :Confirm deletion (y/N);
-          if (confirmed?) then (yes)
-            :TodoService.delete_task();
-            :Confirm "Deleted: <id> <title>";
-          else (no)
-            :Show "Cancelled";
-          endif
-        endif
-      endif
-
-    case (0 / q — Quit)
+      :Run delete task flow;
+    case (0/q — Quit)
       :Clear screen;
       stop
-
-    case (other — unknown option)
-      :Show "Unknown option"\nPress Enter to continue;
-
+    case (other)
+      :Show unknown option;
   endswitch
-
-  :Refresh task list + menu;
 
 repeat while (user continues)
 

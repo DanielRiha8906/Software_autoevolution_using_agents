@@ -42,7 +42,7 @@ package "models" #DDEEFF {
 
 package "storage" #FFF3CC {
     class WorkflowJsonStorage {
-        +filepath : Path
+        +filepath : str
         --
         +__init__(filepath: str)
         +save(runs: List[WorkflowRun]) : None

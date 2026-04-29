@@ -50,7 +50,7 @@ package "storage" #FFF3CC {
     class JsonStorage {
         -filepath : String
         --
-        +JsonStorage(filepath: Path)
+        +JsonStorage(filepath: String)
         +save(result: CalculationResult) : void
         +loadAll() : List<CalculationResult>
         -readRaw() : List<Dictionary>

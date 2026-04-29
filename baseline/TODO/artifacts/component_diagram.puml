@@ -1,45 +1,46 @@
 @startuml component_diagram
 
-skinparam componentStyle rectangle
-skinparam linetype ortho
+skinparam componentStyle uml2
+skinparam defaultFontSize 13
+
+left to right direction
 
 package "TODO Application" {
 
-    component [main] <<entrypoint>> as MAIN
+    component "Entry Point\n(main)" as Main
 
-    package "cli" {
-        [InteractiveMenu] as IM
-        [TodoCLI]         as CLI
+    package "CLI Layer" {
+        component "Interactive Menu" as IM
+        component "Command-line Interface\n(TodoCLI)" as CLI
     }
 
-    package "services" {
-        [TodoService]  as SVC
-        [TaskManager]  as MGR
+    package "Service Layer" {
+        component "Todo Service" as SVC
+        component "Task Manager" as MGR
     }
 
-    package "models" {
-        [Task]       as TASK
-        [TaskStatus] as STATUS
+    package "Domain Model" {
+        component "Task Model\n(Task, TaskStatus)" as Model
     }
 
-    package "storage" {
-        [JsonStorage] as STOR
+    package "Persistence Layer" {
+        component "JSON Storage\n(JsonStorage)" as Storage
     }
 }
 
-database "~/.todo_data.json" as DB
+database "todo_data.json" as DB
 
-MAIN --> IM   : launches (interactive)
-MAIN --> CLI  : launches (with args)
-IM   --> SVC  : uses
-CLI  --> SVC  : uses
-SVC  --> MGR  : delegates
-SVC ..> STATUS : uses status transitions
-MGR  --> STOR : persists via
-MGR  ..> TASK : creates / mutates
-TASK ..> STATUS : uses
-STOR --> DB   : reads / writes
-IM   ..> STOR : instantiates
-CLI  ..> STOR : instantiates
+Main --> IM : interactive mode
+Main --> CLI : command mode
+
+IM --> SVC
+CLI --> SVC
+
+SVC --> MGR
+MGR --> Storage
+MGR ..> Model
+Storage ..> Model
+
+Storage --> DB : read/write
 
 @enduml
