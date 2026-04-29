@@ -1,31 +1,53 @@
 @startuml use_case_diagram
 
 left to right direction
-skinparam packageStyle rectangle
 
 actor User
 
-rectangle "TODO Application" {
-    usecase "Add task"           as UC_ADD
-    usecase "List tasks"         as UC_LIST
-    usecase "Filter by status"   as UC_FILTER
-    usecase "Show task details"  as UC_SHOW
-    usecase "Start task"         as UC_START
-    usecase "Complete task"      as UC_DONE
-    usecase "Reopen task"        as UC_REOPEN
-    usecase "Update task"        as UC_UPDATE
-    usecase "Delete task"        as UC_DELETE
+rectangle "TODO Manager" {
+
+  package "Interactive mode" {
+    usecase "Use interactive menu" as UI
+    usecase "Add task" as I_ADD
+    usecase "List / filter tasks" as I_LIST
+    usecase "Show task details" as I_SHOW
+    usecase "Change task status" as I_STATUS
+    usecase "Update task" as I_UPDATE
+    usecase "Delete task" as I_DELETE
+    usecase "Quit application" as I_QUIT
+  }
+
+  package "Command-line mode" {
+    usecase "Use one-shot CLI command" as CLI
+    usecase "Add task" as C_ADD
+    usecase "List / filter tasks" as C_LIST
+    usecase "Show task details" as C_SHOW
+    usecase "Start task" as C_START
+    usecase "Complete task" as C_DONE
+    usecase "Reopen task" as C_REOPEN
+    usecase "Update task" as C_UPDATE
+    usecase "Delete task" as C_DELETE
+  }
 }
 
-User --> UC_ADD
-User --> UC_LIST
-User --> UC_SHOW
-User --> UC_START
-User --> UC_DONE
-User --> UC_REOPEN
-User --> UC_UPDATE
-User --> UC_DELETE
+User --> UI
+User --> CLI
 
-UC_FILTER ..> UC_LIST : <<extend>>
+UI --> I_ADD
+UI --> I_LIST
+UI --> I_SHOW
+UI --> I_STATUS
+UI --> I_UPDATE
+UI --> I_DELETE
+UI --> I_QUIT
+
+CLI --> C_ADD
+CLI --> C_LIST
+CLI --> C_SHOW
+CLI --> C_START
+CLI --> C_DONE
+CLI --> C_REOPEN
+CLI --> C_UPDATE
+CLI --> C_DELETE
 
 @enduml

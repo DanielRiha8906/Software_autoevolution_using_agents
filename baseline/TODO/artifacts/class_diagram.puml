@@ -106,7 +106,6 @@ TaskManager       "1" --> "1"  JsonStorage  : -_storage
 TaskManager            ..>     Task
 TaskManager            ..>     TaskNotFoundError
 TodoService       "1" --> "1"  TaskManager  : -_manager
-TodoService            ..>     TaskStatus
 TodoCLI           "1" --> "1"  TodoService  : -_service
 InteractiveMenu   "1" --> "1"  TodoService  : -_service
 TodoCLI                ..>     JsonStorage
