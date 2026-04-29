@@ -78,7 +78,13 @@ pytest tests/ -k task   # filter by name
 
 ## Diagrams
 
-No diagrams have been generated for this application yet.
+```bash
+./generate_diagrams.sh          # PNG (default)
+./generate_diagrams.sh svg
+./generate_diagrams.sh pdf
+```
+
+Output is written to `artifacts/`.
 
 ## Structure
 
