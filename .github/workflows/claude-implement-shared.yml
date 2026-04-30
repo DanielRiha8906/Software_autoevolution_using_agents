@@ -52,7 +52,7 @@ jobs:
         id: prompts
         shell: bash
         run: |
-          TASK_DIR=$(ls -d "prompts/strategies/${{ inputs.strategy }}/${{ inputs.task_num }}_"* 2>/dev/null | head -1)
+          TASK_DIR=$(ls -d "prompts/strategies/${{ inputs.strategy }}/${{ inputs.project }}/${{ inputs.task_num }}_"* 2>/dev/null | head -1)
 
           if [ -z "$TASK_DIR" ]; then
             echo "Task directory not found for ${{ inputs.task_num }}"

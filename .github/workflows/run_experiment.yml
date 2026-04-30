@@ -18,9 +18,16 @@ on:
         required: true
         type: choice
         options: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]
+      strategy:
+        description: "Prompt strategy (leave blank to run all three)"
+        required: false
+        type: choice
+        options: ["all", "structured_text", "few_shot", "test_driven"]
+        default: "all"
 
 jobs:
   few-shot:
+    if: ${{ inputs.strategy == 'all' || inputs.strategy == 'few_shot' }}
     uses: ./.github/workflows/claude-implement-shared.yml
     with:
       architecture: ${{ inputs.architecture }}
@@ -31,6 +38,7 @@ jobs:
       anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
   structured-text:
+    if: ${{ inputs.strategy == 'all' || inputs.strategy == 'structured_text' }}
     uses: ./.github/workflows/claude-implement-shared.yml
     with:
       architecture: ${{ inputs.architecture }}
@@ -41,6 +49,7 @@ jobs:
       anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
 
   test-driven:
+    if: ${{ inputs.strategy == 'all' || inputs.strategy == 'test_driven' }}
     uses: ./.github/workflows/claude-implement-shared.yml
     with:
       architecture: ${{ inputs.architecture }}
