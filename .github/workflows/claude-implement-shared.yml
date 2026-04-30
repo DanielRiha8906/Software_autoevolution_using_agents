@@ -178,7 +178,7 @@ jobs:
           anthropic_api_key: ${{ secrets.anthropic_api_key }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           show_full_output: true
-          claude_args: "--model claude-3-5-haiku-20241022 --max-turns 50"
+          claude_args: "--model claude-haiku-4-5-20251001 --max-turns 50"
           prompt: |
             You are the autoevolution agent for:
             Architecture: ${{ inputs.architecture }} | Strategy: ${{ inputs.strategy }} | Project: ${{ inputs.project }}
