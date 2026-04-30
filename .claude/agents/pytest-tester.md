@@ -2,7 +2,7 @@
 name: pytest-tester
 description: "Use this agent to write pytest tests for Python code, run the suite, and report results. It covers happy paths, edge cases, and exceptions. It escalates implementation bugs rather than working around them."
 tools: "Bash, Edit, Glob, Grep, Read, Write"
-model: haiku
+model: claude-3-5-haiku-20241022
 color: cyan
 ---
 

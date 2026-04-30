@@ -19,9 +19,3 @@ This repository runs 27 autonomous autoevolution experiments across 3 MAS archit
 ## How experiments run
 
 Each experiment copies the relevant baseline into its folder and runs the autoevolution pipeline (rows 1-10) autonomously. No human intervention during a run.
-
-## Rules
-
-- Never modify anything inside `baseline/`
-- Each experiment folder is isolated — do not read or write across experiment boundaries
-- The task input format for the current run is defined in `prompts/strategies/<strategy>.md`

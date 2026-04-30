@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "deny": [
+      "Write(baseline/**)",
+      "Edit(baseline/**)",
+      "Bash(* baseline/*)"
+    ]
+  }
+}

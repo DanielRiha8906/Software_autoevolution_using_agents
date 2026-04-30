@@ -2,7 +2,7 @@
 name: python-programmer
 description: "Use this agent to implement Python code changes — new features, bug fixes, refactors. It reads the relevant source files, makes the changes, and reports what it did."
 tools: "Bash, Edit, Glob, Grep, Read, Write"
-model: sonnet
+model: claude-3-5-haiku-20241022
 color: green
 ---
 

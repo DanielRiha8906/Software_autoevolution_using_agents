@@ -1,0 +1,15 @@
+## Task: Add scientific mode
+
+### Must
+- Introduce a scientific mode for advanced operations
+- Mode must extend existing functionality without breaking it
+- Switching modes must be explicit
+
+### Should
+- Maintain consistency with base calculator behavior
+
+### Could
+- Add additional advanced operations
+
+### Won’t
+- Mix normal and scientific logic in an unclear way

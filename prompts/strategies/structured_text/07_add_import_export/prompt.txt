@@ -1,0 +1,15 @@
+## Task: Add import and export of calculation history
+
+### Must
+- Allow exporting stored calculations
+- Allow importing previously saved data
+- Ensure data consistency after import
+
+### Should
+- Use a simple and consistent format
+
+### Could
+- Support multiple formats (e.g., JSON)
+
+### Won’t
+- Corrupt existing stored data

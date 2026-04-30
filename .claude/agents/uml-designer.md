@@ -2,7 +2,7 @@
 name: uml-designer
 description: "Use this agent to create or update PlantUML diagrams in artifacts/ that reflect the current system structure. Invoke it after architectural or implementation changes when the diagrams need to catch up to the code."
 tools: "Bash, Edit, Glob, Grep, Read, Write"
-model: sonnet
+model: claude-3-5-haiku-20241022
 color: orange
 ---
 
