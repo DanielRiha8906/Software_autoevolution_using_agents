@@ -11,7 +11,10 @@ if (CLI operation provided?) then (yes)
   :Validate operation and operands;
 
   if (Input valid?) then (yes)
+    :Measure execution start time;
     :Perform calculation;
+    :Measure execution end time;
+    :Calculate execution_time_ms;
 
     if (Calculation successful?) then (yes)
       :Save result to history;
@@ -47,7 +50,10 @@ else (no)
         :Read operands;
 
         if (Input valid?) then (yes)
+          :Measure execution start time;
           :Perform calculation;
+          :Measure execution end time;
+          :Calculate execution_time_ms;
 
           if (Calculation successful?) then (yes)
             :Save result to history;
