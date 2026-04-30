@@ -1,0 +1,51 @@
+name: Run Experiment Task
+
+on:
+  workflow_dispatch:
+    inputs:
+      architecture:
+        description: "MAS architecture"
+        required: true
+        type: choice
+        options: [pipeline, broadcast, supervisor_as_tools]
+      project:
+        description: "Baseline project"
+        required: true
+        type: choice
+        options: [calculator, TODO, github-workflow-manager]
+      task_num:
+        description: "Task number"
+        required: true
+        type: choice
+        options: ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]
+
+jobs:
+  few-shot:
+    uses: ./.github/workflows/claude-implement-shared.yml
+    with:
+      architecture: ${{ inputs.architecture }}
+      strategy: few_shot
+      project: ${{ inputs.project }}
+      task_num: ${{ inputs.task_num }}
+    secrets:
+      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  structured-text:
+    uses: ./.github/workflows/claude-implement-shared.yml
+    with:
+      architecture: ${{ inputs.architecture }}
+      strategy: structured_text
+      project: ${{ inputs.project }}
+      task_num: ${{ inputs.task_num }}
+    secrets:
+      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+
+  test-driven:
+    uses: ./.github/workflows/claude-implement-shared.yml
+    with:
+      architecture: ${{ inputs.architecture }}
+      strategy: test_driven
+      project: ${{ inputs.project }}
+      task_num: ${{ inputs.task_num }}
+    secrets:
+      anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}

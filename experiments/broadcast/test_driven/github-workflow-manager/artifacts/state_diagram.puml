@@ -1,0 +1,13 @@
+@startuml workflow_run_local_state
+
+title Local WorkflowRun record state
+
+skinparam state {
+  BackgroundColor #DDEEFF
+  BorderColor #3366AA
+  FontStyle bold
+}
+
+[*] --> Recorded : add_workflow_run()
+
+@enduml

@@ -1,0 +1,32 @@
+@startuml
+
+start
+:Launch application;
+
+repeat
+  :Display task list + main menu;
+  :Wait for user input;
+
+  switch (choice)
+    case (1 — List/filter)
+      :Run list/filter flow;
+    case (2 — Add task)
+      :Run add task flow;
+    case (3 — Show details)
+      :Run show details flow;
+    case (4 — Change status)
+      :Run change status flow;
+    case (5 — Update task)
+      :Run update task flow;
+    case (6 — Delete task)
+      :Run delete task flow;
+    case (0/q — Quit)
+      :Clear screen;
+      stop
+    case (other)
+      :Show unknown option;
+  endswitch
+
+repeat while (user continues)
+
+@enduml

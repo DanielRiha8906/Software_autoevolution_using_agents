@@ -1,0 +1,30 @@
+[
+  {
+    "operation": "add",
+    "operand_a": 3.0,
+    "operand_b": 5.0,
+    "result": 8.0,
+    "timestamp": "2026-04-29T12:01:36.308310"
+  },
+  {
+    "operation": "multiply",
+    "operand_a": 6.0,
+    "operand_b": 7.0,
+    "result": 42.0,
+    "timestamp": "2026-04-29T12:01:36.413624"
+  },
+  {
+    "operation": "divide",
+    "operand_a": 10.0,
+    "operand_b": 3.0,
+    "result": 3.3333333333333335,
+    "timestamp": "2026-04-29T12:01:36.522452"
+  },
+  {
+    "operation": "divide",
+    "operand_a": 6.0,
+    "operand_b": 2.0,
+    "result": 3.0,
+    "timestamp": "2026-04-29T13:49:21.896125"
+  }
+]

@@ -1,0 +1,19 @@
+@startuml state_diagram_command
+
+skinparam defaultFontSize 13
+skinparam stateFontStyle bold
+
+top to bottom direction
+
+[*] --> ParsingOperation
+
+ParsingOperation --> Calculating : operation valid
+ParsingOperation --> ErrorShown : operation invalid
+
+Calculating --> ResultShown : success
+Calculating --> ErrorShown : error
+
+ResultShown --> [*]
+ErrorShown --> [*]
+
+@enduml

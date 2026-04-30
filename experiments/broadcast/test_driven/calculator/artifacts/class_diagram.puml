@@ -1,0 +1,86 @@
+@startuml class_diagram
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+
+package "models" #DDEEFF {
+    enum Operation {
+        ADD
+        SUBTRACT
+        MULTIPLY
+        DIVIDE
+        --
+        +fromString(value: String) : Operation
+        +displayName() : String
+    }
+
+    class CalculationResult {
+        +operation : Operation
+        +operandA : float
+        +operandB : float
+        +result : float
+        +timestamp : String
+        --
+        +toDict() : Dictionary
+        +fromDict(data: Dictionary) : CalculationResult
+        +toString() : String
+    }
+}
+
+package "services" #DDFFD4 {
+    class Calculator {
+        +add(a: float, b: float) : float
+        +subtract(a: float, b: float) : float
+        +multiply(a: float, b: float) : float
+        +divide(a: float, b: float) : float
+        +calculate(op: Operation, a: float, b: float) : float
+    }
+
+    class CalculatorService {
+        -calculator : Calculator
+        -storage : JsonStorage
+        --
+        +CalculatorService(calculator: Calculator, storage: JsonStorage)
+        +perform(operation: Operation, a: float, b: float) : CalculationResult
+        +getHistory() : List<CalculationResult>
+    }
+}
+
+package "storage" #FFF3CC {
+    class JsonStorage {
+        -filepath : String
+        --
+        +JsonStorage(filepath: String)
+        +save(result: CalculationResult) : void
+        +loadAll() : List<CalculationResult>
+        -readRaw() : List<Dictionary>
+        -writeRaw(records: List<Dictionary>) : void
+    }
+}
+
+package "cli" #FFE5E5 {
+    class CalculatorCLI {
+        -MENU : List<Tuple<Operation, String>>
+        -service : CalculatorService
+        --
+        +CalculatorCLI(service: CalculatorService)
+        +runInteractive() : void
+        +runCommand(operation: String, a: float, b: float) : void
+        -printMenu() : void
+        -resolveMenuChoice(choice: String) : Operation [0..1]
+        -promptNumber(prompt: String) : float [0..1]
+        -showHistory() : void
+    }
+}
+
+CalculatorCLI --> CalculatorService : service
+CalculatorService --> Calculator : calculator
+CalculatorService --> JsonStorage : storage
+
+CalculatorService ..> CalculationResult : create
+CalculatorService ..> Operation
+CalculatorCLI ..> Operation
+Calculator ..> Operation
+JsonStorage ..> CalculationResult : stores
+
+@enduml
