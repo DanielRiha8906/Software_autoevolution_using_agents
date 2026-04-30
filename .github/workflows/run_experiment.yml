@@ -25,6 +25,13 @@ on:
         options: ["all", "structured_text", "few_shot", "test_driven"]
         default: "all"
 
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  id-token: write
+  actions: read
+
 jobs:
   few-shot:
     if: ${{ inputs.strategy == 'all' || inputs.strategy == 'few_shot' }}
