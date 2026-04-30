@@ -47,4 +47,4 @@ Three independent implementers were evaluated:
 - Proper integration with dataclass serialization/deserialization
 - All 38 existing tests pass without modification
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 271.1s | Cost: $0.504682 USD | Turns: 46
