@@ -1,0 +1,16 @@
+## Task: Add execution time tracking to calculation results
+
+### Must
+- Extend CalculationResult with execution_time_ms attribute
+- Value must represent execution time in milliseconds
+- Attribute must be set for every calculation
+
+### Should
+- Measurement should be reasonably accurate
+- Naming must follow existing conventions
+
+### Could
+- Use a reusable timing mechanism
+
+### Won’t
+- Break existing result structure or API
