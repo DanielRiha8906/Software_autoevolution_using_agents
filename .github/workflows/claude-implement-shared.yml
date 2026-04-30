@@ -78,6 +78,13 @@ jobs:
           Use the Agent tool to run a strict sequential multi-agent pipeline.
           Each sub-agent receives the output of the previous one. Do not write implementation code yourself.
 
+          CONTEXT TO PASS TO EVERY SUB-AGENT:
+          - Working directory: experiments/${{ inputs.architecture }}/${{ inputs.strategy }}/${{ inputs.project }}/
+          - Edit ONLY src/ and tests/ inside that directory (UML Designer: artifacts/ only)
+          - NEVER read or write anything under baseline/
+          - NEVER create files outside your working directory
+          - Use artifacts/*.puml as a RAG index to understand the codebase structure before reading any source files — the diagrams describe classes, components, and flows
+
           1. Spawn a Data Analyst sub-agent.
              Goal: read src/ and the task, identify exactly what needs to change.
              Output: write findings to analysis.md in the working directory.
@@ -102,18 +109,43 @@ jobs:
           Use the Agent tool to spawn 3 independent Implementer sub-agents on separate branches,
           then evaluate and apply the best result. Do not write implementation code yourself.
 
-          1. Spawn Implementer-A sub-agent: create branch broadcast-candidate-a off the task branch,
-             implement the task there independently.
+          AVAILABLE AGENTS: You may optionally spawn a Data Analyst and/or System Architect
+          sub-agent before the fan-out if you judge the task complex enough to warrant it.
+          This is not required — use your judgement.
 
-          2. Spawn Implementer-B sub-agent: create branch broadcast-candidate-b off the task branch,
-             implement the task there independently. Do not reference candidate-a.
+          ISOLATION RULE: Each implementer must work on its own branch. Before any sub-agent
+          reads or writes a single file, it must run:
+            git checkout -b broadcast-candidate-<letter>
+          If it skips this step, its work is invalid.
 
-          3. Spawn Implementer-C sub-agent: create branch broadcast-candidate-c off the task branch,
-             implement the task there independently. Do not reference candidate-a or candidate-b.
+          CONTEXT TO PASS TO EVERY IMPLEMENTER SUB-AGENT:
+          - Working directory: experiments/${{ inputs.architecture }}/${{ inputs.strategy }}/${{ inputs.project }}/
+          - Edit ONLY src/ and tests/ inside that directory
+          - NEVER read or write anything under baseline/ — it is a protected reference copy
+          - NEVER create files outside your working directory
+          - The repo root is NOT your working directory
 
-          4. For each candidate branch run pytest and record how many tests pass.
+          1. Spawn Implementer-A sub-agent with this exact context:
+             - First command: git checkout -b broadcast-candidate-a
+             - Working directory: experiments/${{ inputs.architecture }}/${{ inputs.strategy }}/${{ inputs.project }}/
+             - Edit ONLY src/ and tests/ inside that directory. NEVER touch baseline/.
+             - Implement the task independently.
 
-          5. Check out the task branch. Copy src/ and tests/ from the candidate with the most
+          2. git checkout <task-branch>, then spawn Implementer-B with this exact context:
+             - First command: git checkout -b broadcast-candidate-b
+             - Working directory: experiments/${{ inputs.architecture }}/${{ inputs.strategy }}/${{ inputs.project }}/
+             - Edit ONLY src/ and tests/ inside that directory. NEVER touch baseline/.
+             - Implement the task independently. Do not read candidate-a's work.
+
+          3. git checkout <task-branch>, then spawn Implementer-C with this exact context:
+             - First command: git checkout -b broadcast-candidate-c
+             - Working directory: experiments/${{ inputs.architecture }}/${{ inputs.strategy }}/${{ inputs.project }}/
+             - Edit ONLY src/ and tests/ inside that directory. NEVER touch baseline/.
+             - Implement the task independently. Do not read candidate-a or candidate-b's work.
+
+          4. For each candidate branch: git checkout broadcast-candidate-<letter>, run pytest, record pass count.
+
+          5. git checkout <task-branch>. Copy src/ and tests/ from the candidate with the most
              tests passing into the working directory.
 
           6. In progress.md document all 3 candidates (approach taken, test score) and
@@ -127,6 +159,13 @@ jobs:
           You are a supervisor. Use the Agent tool to delegate work to specialized sub-agents.
           You decide what to delegate, when, and in what order — you are not bound to a fixed sequence.
           Do not write implementation code yourself.
+
+          CONTEXT TO PASS TO EVERY SUB-AGENT:
+          - Working directory: experiments/${{ inputs.architecture }}/${{ inputs.strategy }}/${{ inputs.project }}/
+          - Edit ONLY src/ and tests/ inside that directory (UML Designer: artifacts/ only)
+          - NEVER read or write anything under baseline/
+          - NEVER create files outside your working directory
+          - Use artifacts/*.puml as a RAG index to understand the codebase structure before reading any source files — the diagrams describe classes, components, and flows
 
           Available sub-agent roles you may spawn (use as needed):
           - Analyst: reads codebase, produces an analysis report
