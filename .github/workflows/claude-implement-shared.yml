@@ -40,6 +40,14 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
       - name: Prepare prompts
         id: prompts
         shell: bash
@@ -84,7 +92,10 @@ jobs:
              Goal: implement the design in src/ and add or update tests in tests/.
 
           4. Run pytest. If tests fail, spawn the Programmer sub-agent again passing the full test output
-             so it can fix the failures. Repeat up to 3 times."
+             so it can fix the failures. Repeat up to 3 times.
+
+          5. Spawn a UML Designer sub-agent.
+             Goal: update artifacts/*.puml to reflect the current state of src/ after all changes."
               ;;
             broadcast)
               ARCH="Architecture: BROADCAST
@@ -106,7 +117,10 @@ jobs:
              tests passing into the working directory.
 
           6. In progress.md document all 3 candidates (approach taken, test score) and
-             explain why you selected the winner."
+             explain why you selected the winner.
+
+          7. Spawn a UML Designer sub-agent.
+             Goal: update artifacts/*.puml to reflect the current state of src/ after all changes."
               ;;
             supervisor_as_tools)
               ARCH="Architecture: SUPERVISOR-AS-TOOLS
@@ -119,9 +133,9 @@ jobs:
           - Architect: designs the implementation approach
           - Programmer: implements code changes in src/ and tests/
           - Tester: runs pytest and reports what passes or fails
-          - Reviewer: checks the implementation for correctness and edge cases
+          - UML Designer: updates artifacts/*.puml to reflect the current state of src/
 
-          Coordinate until all tests pass. You may spawn the same role more than once."
+          Coordinate until all tests pass and diagrams are up to date. You may spawn the same role more than once."
               ;;
             *)
               echo "Unknown architecture: ${{ inputs.architecture }}"
