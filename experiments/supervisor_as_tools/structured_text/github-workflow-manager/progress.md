@@ -54,4 +54,4 @@ All tests pass successfully on first run.
 ✅ No migration script needed
 ✅ Existing CLI and interactive menu calls work unchanged
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 344.1s | Cost: $0.569222 USD | Turns: 18
