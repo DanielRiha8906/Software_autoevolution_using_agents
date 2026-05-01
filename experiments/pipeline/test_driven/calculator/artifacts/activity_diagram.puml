@@ -11,10 +11,12 @@ if (CLI operation provided?) then (yes)
   :Validate operation and operands;
 
   if (Input valid?) then (yes)
+    :Start timing;
     :Perform calculation;
+    :Measure execution time;
 
     if (Calculation successful?) then (yes)
-      :Save result to history;
+      :Save result to history with timing;
       :Show result;
       stop
     else (no)
@@ -47,10 +49,12 @@ else (no)
         :Read operands;
 
         if (Input valid?) then (yes)
+          :Start timing;
           :Perform calculation;
+          :Measure execution time;
 
           if (Calculation successful?) then (yes)
-            :Save result to history;
+            :Save result to history with timing;
             :Show result;
           else (no)
             :Show calculation error;
