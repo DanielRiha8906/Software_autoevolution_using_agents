@@ -29,4 +29,4 @@ Test results:
 - Updated `to_dict()` to serialize the field
 - Updated `from_dict()` to deserialize with backward compatibility (defaults to 0.0)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 175.0s | Cost: $0.298459 USD | Turns: 14
