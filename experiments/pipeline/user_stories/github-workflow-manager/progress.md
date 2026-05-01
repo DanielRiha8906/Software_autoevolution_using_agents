@@ -21,4 +21,4 @@
 - Serialization/deserialization fully integrated
 - CLI and interactive menu support duration input
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 272.1s | Cost: $0.494900 USD | Turns: 16
