@@ -15,7 +15,7 @@ class TestJsonStorage:
         assert storage.load_all() == []
 
     def test_save_then_load(self, storage):
-        r = CalculationResult("add", 3, 5, 8, _TS)
+        r = CalculationResult("add", 3, 5, 8, execution_time_ms=0, timestamp=_TS)
         storage.save(r)
         loaded = storage.load_all()
         assert len(loaded) == 1
@@ -23,14 +23,14 @@ class TestJsonStorage:
         assert loaded[0].result == 8
 
     def test_multiple_saves_accumulate(self, storage):
-        storage.save(CalculationResult("add",      1, 2, 3,  _TS))
-        storage.save(CalculationResult("multiply", 3, 4, 12, _TS))
+        storage.save(CalculationResult("add",      1, 2, 3,  execution_time_ms=0, timestamp=_TS))
+        storage.save(CalculationResult("multiply", 3, 4, 12, execution_time_ms=0, timestamp=_TS))
         assert len(storage.load_all()) == 2
 
     def test_data_survives_reload(self, tmp_path):
         path = tmp_path / "calc.json"
         s1 = JsonStorage(path)
-        s1.save(CalculationResult("divide", 10, 2, 5.0, _TS))
+        s1.save(CalculationResult("divide", 10, 2, 5.0, execution_time_ms=0, timestamp=_TS))
 
         s2 = JsonStorage(path)
         loaded = s2.load_all()
@@ -38,7 +38,7 @@ class TestJsonStorage:
         assert loaded[0].result == 5.0
 
     def test_persisted_as_valid_json(self, storage):
-        storage.save(CalculationResult("subtract", 9, 3, 6, _TS))
+        storage.save(CalculationResult("subtract", 9, 3, 6, execution_time_ms=0, timestamp=_TS))
         with open(storage.filepath) as f:
             data = json.load(f)
         assert data[0]["operation"] == "subtract"
@@ -51,5 +51,5 @@ class TestJsonStorage:
     def test_creates_parent_dirs(self, tmp_path):
         deep = tmp_path / "a" / "b" / "c" / "calc.json"
         s = JsonStorage(deep)
-        s.save(CalculationResult("add", 1, 1, 2, _TS))
+        s.save(CalculationResult("add", 1, 1, 2, execution_time_ms=0, timestamp=_TS))
         assert deep.exists()
