@@ -31,4 +31,4 @@ Successfully implemented duration tracking for workflow runs with full persisten
 - **Could Have**: Not implemented (not strictly required)
   - Higher precision (milliseconds) support deferred
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 280.6s | Cost: $0.486017 USD | Turns: 15
