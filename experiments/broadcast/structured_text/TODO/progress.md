@@ -65,4 +65,4 @@
 - All original tests maintain backward compatibility
 - New due_date functionality fully tested
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 525.2s | Cost: $0.757357 USD | Turns: 45
