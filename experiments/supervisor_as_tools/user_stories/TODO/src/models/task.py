@@ -16,9 +16,17 @@ class Task:
     status: TaskStatus = TaskStatus.PENDING
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    due_date: Optional[datetime] = None
+
+    def __post_init__(self) -> None:
+        if self.due_date is not None:
+            if not isinstance(self.due_date, datetime):
+                raise ValueError("due_date must be a datetime instance or None")
+            if self.due_date.tzinfo is None:
+                raise ValueError("due_date must be timezone-aware")
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "id": self.id,
             "title": self.title,
             "description": self.description,
@@ -26,9 +34,14 @@ class Task:
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
+        if self.due_date is not None:
+            result["due_date"] = self.due_date.isoformat()
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> Task:
+        due_date_str = data.get("due_date")
+        due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
         return cls(
             id=data["id"],
             title=data["title"],
@@ -36,4 +49,5 @@ class Task:
             status=TaskStatus(data["status"]),
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
+            due_date=due_date,
         )

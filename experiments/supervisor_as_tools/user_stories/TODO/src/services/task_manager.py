@@ -46,12 +46,14 @@ class TaskManager:
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
 
-    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
+    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         task = self.get(task_id)
         if title is not None:
             task.title = title
         if description is not None:
             task.description = description
+        if due_date is not None:
+            task.due_date = due_date
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task
