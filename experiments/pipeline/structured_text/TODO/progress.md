@@ -16,7 +16,7 @@
 - artifacts/class_diagram.puml (updated to show due_date field and methods)
 
 ### Test Results
-✓ 41 tests passed
+✓ 59 tests passed (41 original + 18 new for due_date feature)
 
 ### Implementation Summary
 - Added Optional[datetime] due_date attribute to Task class
