@@ -72,4 +72,4 @@ Plus 38 existing tests continue to pass, confirming backward compatibility.
 
 **Total: 45 tests passing**
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 184.9s | Cost: $0.545235 USD | Turns: 34
