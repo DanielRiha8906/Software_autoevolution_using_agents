@@ -1,5 +1,7 @@
 import os
+from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
@@ -42,6 +44,29 @@ def _pick(prompt: str, options: list[str]) -> Optional[int]:
     if n == 0 or n > len(options):
         return None
     return n - 1
+
+
+def _parse_due_date(date_str: Optional[str]) -> Optional[datetime]:
+    """Parse due_date string in formats: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS.
+    Returns datetime with Europe/Paris timezone or None if date_str is None.
+    """
+    if not date_str or not date_str.strip():
+        return None
+    try:
+        # Try parsing with time component first
+        if 'T' in date_str or ' ' in date_str:
+            # Try ISO format with time
+            dt = datetime.fromisoformat(date_str)
+        else:
+            # Parse date-only format and add time at midnight
+            dt = datetime.fromisoformat(date_str + "T00:00:00")
+
+        # If no timezone info, assume Europe/Paris
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=ZoneInfo("Europe/Paris"))
+        return dt
+    except ValueError:
+        return None
 
 
 def _task_line(task: Task) -> str:
@@ -142,8 +167,10 @@ class InteractiveMenu:
             input("  Title cannot be empty. Press Enter...")
             return
         description = _prompt("Description (optional)") or None
+        due_date_str = _prompt("Due date (optional, YYYY-MM-DD)") or None
+        due_date = _parse_due_date(due_date_str) if due_date_str else None
         try:
-            task = self._service.add_task(title, description)
+            task = self._service.add_task(title, description, due_date)
             print(f"\n  Added: {_task_line(task)}")
         except ValueError as e:
             print(f"\n  Error: {e}")
@@ -166,6 +193,8 @@ class InteractiveMenu:
         print(f"  Status:      {task.status.value}")
         print(f"  Created:     {task.created_at.strftime('%Y-%m-%d %H:%M UTC')}")
         print(f"  Updated:     {task.updated_at.strftime('%Y-%m-%d %H:%M UTC')}")
+        due_date_str = task.due_date.isoformat() if task.due_date else "—"
+        print(f"  Due date:    {due_date_str}")
         print()
         input("  Press Enter to continue...")
 
@@ -210,9 +239,12 @@ class InteractiveMenu:
         new_title = _prompt("New title", default=task.title)
         new_desc = _prompt("New description", default=task.description or "")
         new_desc = new_desc if new_desc else None
+        due_date_default = task.due_date.isoformat() if task.due_date else ""
+        new_due_date_str = _prompt("New due date (YYYY-MM-DD)", default=due_date_default)
+        new_due_date = _parse_due_date(new_due_date_str) if new_due_date_str else None
 
         try:
-            updated = self._service.update_task(task.id, title=new_title or None, description=new_desc)
+            updated = self._service.update_task(task.id, title=new_title or None, description=new_desc, due_date=new_due_date)
             print(f"\n  Updated: {_task_line(updated)}")
         except (TaskNotFoundError, ValueError) as e:
             print(f"\n  Error: {e}")
