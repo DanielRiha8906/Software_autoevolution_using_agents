@@ -22,4 +22,4 @@
 
 **Backward Compatibility:** ✓ Verified with test_load_json_without_duration_defaults_to_zero
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 313.4s | Cost: $0.456656 USD | Turns: 16
