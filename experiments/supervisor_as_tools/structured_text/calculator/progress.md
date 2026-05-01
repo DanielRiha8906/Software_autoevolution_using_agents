@@ -21,4 +21,4 @@
 - Backward compatible with default value 0.0
 - Automatic JSON serialization support via dataclass asdict()
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 151.6s | Cost: $0.310106 USD | Turns: 14
