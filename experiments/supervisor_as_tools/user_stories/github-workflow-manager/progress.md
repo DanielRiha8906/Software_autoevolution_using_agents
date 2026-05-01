@@ -28,4 +28,4 @@
 - ✓ No external time measurement tools used
 - ✓ Backward compatible with existing JSON (missing field defaults to 0.0)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 281.6s | Cost: $0.482583 USD | Turns: 18
