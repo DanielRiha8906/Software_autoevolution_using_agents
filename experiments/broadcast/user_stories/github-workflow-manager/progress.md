@@ -47,4 +47,4 @@ Candidate A was selected arbitrarily as the winner since all implementations wer
 **Diagrams Updated:**
 - artifacts/class_diagram.puml — Updated to show duration_seconds attribute and __post_init__() method
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 195.0s | Cost: $0.563139 USD | Turns: 25
