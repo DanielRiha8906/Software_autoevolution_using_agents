@@ -17,9 +17,11 @@ package "models" #DDEEFF {
         +status : TaskStatus
         +createdAt : DateTime
         +updatedAt : DateTime
+        +dueDate : DateTime [0..1]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
+        +setDueDate(dueDate: DateTime [0..1]) : void
     }
 }
 
@@ -47,6 +49,7 @@ package "services" #DDFFD4 {
         +listByStatus(status: TaskStatus) : List<Task>
         +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
+        +setDueDate(taskId: String, dueDate: DateTime [0..1]) : Task
         +delete(taskId: String) : void
         -load() : void
         -persist() : void
@@ -63,6 +66,7 @@ package "services" #DDFFD4 {
         +completeTask(taskId: String) : Task
         +reopenTask(taskId: String) : Task
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
+        +setDueDate(taskId: String, dueDate: DateTime [0..1]) : Task
         +deleteTask(taskId: String) : void
     }
 }

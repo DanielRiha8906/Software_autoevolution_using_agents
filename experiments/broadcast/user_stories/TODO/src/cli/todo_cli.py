@@ -1,6 +1,7 @@
 import argparse
 import sys
 from typing import Optional
+from datetime import datetime
 
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
@@ -88,6 +89,12 @@ class TodoCLI:
         p_update.add_argument("-d", "--description", help="New description")
         p_update.set_defaults(func=self._cmd_update)
 
+        # set-due-date
+        p_due = sub.add_parser("set-due-date", help="Set task due date")
+        p_due.add_argument("id", help="Task ID")
+        p_due.add_argument("due_date", help="Due date in ISO 8601 format (e.g., 2026-05-15T14:30:00+02:00)")
+        p_due.set_defaults(func=self._cmd_set_due_date)
+
         # delete
         p_delete = sub.add_parser("delete", help="Delete a task")
         p_delete.add_argument("id", help="Task ID")
@@ -120,6 +127,7 @@ class TodoCLI:
         print(f"Status:      {task.status.value}")
         print(f"Created:     {task.created_at.isoformat()}")
         print(f"Updated:     {task.updated_at.isoformat()}")
+        print(f"Due date:    {task.due_date.isoformat() if task.due_date else '—'}")
         return 0
 
     def _cmd_start(self, args: argparse.Namespace) -> int:
@@ -141,6 +149,16 @@ class TodoCLI:
         task = self._service.update_task(args.id, title=args.title, description=args.description)
         print(f"Updated {task.id[:8]}  {task.title}")
         return 0
+
+    def _cmd_set_due_date(self, args: argparse.Namespace) -> int:
+        try:
+            due_date = datetime.fromisoformat(args.due_date)
+            task = self._service.set_due_date(args.id, due_date)
+            print(f"Set due date for {task.id[:8]}  {task.title} to {due_date.isoformat()}")
+            return 0
+        except ValueError as e:
+            print(f"Error: Invalid due date format: {e}", file=sys.stderr)
+            return 1
 
     def _cmd_delete(self, args: argparse.Namespace) -> int:
         task = self._service.get_task(args.id)
