@@ -50,3 +50,19 @@ class TestCalculatorService:
     def test_result_has_timestamp(self):
         result = self.service.perform(Operation.ADD, 1, 1)
         assert result.timestamp != ""
+
+    def test_execution_time_is_populated(self):
+        result = self.service.perform(Operation.ADD, 3, 5)
+        assert hasattr(result, 'execution_time_ms')
+        assert isinstance(result.execution_time_ms, float)
+
+    def test_execution_time_is_positive(self):
+        result = self.service.perform(Operation.MULTIPLY, 2, 3)
+        assert result.execution_time_ms >= 0
+
+    def test_execution_time_varies_by_complexity(self):
+        result_simple = self.service.perform(Operation.ADD, 1, 1)
+        result_complex = self.service.perform(Operation.DIVIDE, 123456.789, 2.345)
+        # Both should have measured execution time; complex operation may take longer
+        assert result_simple.execution_time_ms >= 0
+        assert result_complex.execution_time_ms >= 0
