@@ -50,4 +50,4 @@ As a user managing my tasks, I want to assign a due date to a task, so that I ca
 - Feature fully tested and verified
 - Backward compatibility confirmed
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 402.0s | Cost: $0.726024 USD | Turns: 35
