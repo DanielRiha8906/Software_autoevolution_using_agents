@@ -45,4 +45,4 @@
 - Backward compatibility: Old records without duration_seconds load with 0.0
 - User interface: Both CLI and interactive menu support duration input
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 346.6s | Cost: $0.606393 USD | Turns: 21
