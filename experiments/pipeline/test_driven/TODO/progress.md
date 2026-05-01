@@ -45,4 +45,4 @@ Successfully implemented optional `due_date: Optional[datetime]` field to the Ta
 - Invalid types (strings, numbers, etc.) raise TypeError
 - Missing due_date key in stored data loads as None
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 259.2s | Cost: $0.416056 USD | Turns: 24
