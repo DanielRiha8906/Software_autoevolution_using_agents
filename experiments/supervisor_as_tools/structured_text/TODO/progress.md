@@ -41,4 +41,4 @@
 - All method signatures maintain backward compatibility (new parameters have default values)
 - No new external dependencies required
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 269.9s | Cost: $0.435138 USD | Turns: 24
