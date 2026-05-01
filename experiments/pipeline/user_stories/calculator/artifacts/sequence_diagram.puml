@@ -1,0 +1,51 @@
+@startuml sequence_diagram
+
+skinparam defaultFontSize 12
+skinparam sequenceArrowThickness 2
+
+actor User
+participant "CalculatorCLI" as CLI
+participant "CalculatorService" as Service
+participant "Calculator" as Calc
+participant "JsonStorage" as Storage
+
+User -> CLI: perform(operation, a, b)
+activate CLI
+
+CLI -> Service: perform(operation, a, b)
+activate Service
+
+note right of Service
+  start = time.perf_counter()
+end note
+
+Service -> Calc: calculate(operation, a, b)
+activate Calc
+Calc --> Service: result
+deactivate Calc
+
+note right of Service
+  end = time.perf_counter()
+  execution_time_ms = (end - start) * 1000
+end note
+
+Service -> Service: Create CalculationResult\n(with execution_time_ms)
+activate Service
+Service --> Service: CalculationResult
+deactivate Service
+
+Service -> Storage: save(calc_result)
+activate Storage
+Storage --> Service: void
+deactivate Storage
+
+Service --> CLI: CalculationResult
+deactivate Service
+
+CLI -> CLI: Display result\n(including execution time)
+activate CLI
+CLI --> User: Show result
+deactivate CLI
+deactivate CLI
+
+@enduml
