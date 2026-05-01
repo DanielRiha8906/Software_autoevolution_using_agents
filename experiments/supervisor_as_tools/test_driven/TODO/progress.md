@@ -24,4 +24,4 @@ Extended Task model with an optional `due_date: Optional[datetime]` field that p
 - Backward compatible: old records without due_date key load correctly
 - Validation occurs in `from_dict()` and service layer entry points
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 193.5s | Cost: $0.364279 USD | Turns: 19
