@@ -24,4 +24,4 @@
 - ✅ SHOULD: Validate datetime values before accepting
 - ✅ COULD: is_overdue() predicate implemented
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 368.2s | Cost: $0.702871 USD | Turns: 17
