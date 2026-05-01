@@ -11,13 +11,15 @@ repeat
     case (1 — List/filter)
       :Run list/filter flow;
     case (2 — Add task)
-      :Run add task flow;
+      :Prompt: title, description, due_date;
+      :Validate and add task;
     case (3 — Show details)
       :Run show details flow;
     case (4 — Change status)
       :Run change status flow;
     case (5 — Update task)
-      :Run update task flow;
+      :Prompt: title, description, due_date;
+      :Validate and update task;
     case (6 — Delete task)
       :Run delete task flow;
     case (0/q — Quit)
