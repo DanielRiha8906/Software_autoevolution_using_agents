@@ -1,0 +1,41 @@
+# Progress Report
+
+## Task 01: Add due date to tasks
+
+### Status: Complete
+
+### Files Changed
+- src/models/task.py (added due_date field, serialization, is_overdue() method)
+- src/services/task_manager.py (added due_date parameters to add/update, new set_due_date method)
+- src/services/todo_service.py (added due_date parameters to add_task/update_task, new set_due_date method)
+- src/cli/todo_cli.py (added --due-date flags, updated display logic)
+- src/cli/interactive_menu.py (added due_date prompts and display)
+- tests/test_task.py (added 7 new tests for serialization and is_overdue)
+- tests/test_task_manager.py (added 4 new tests for persistence)
+- tests/test_todo_cli.py (added 6 new tests for CLI flags)
+- artifacts/class_diagram.puml (updated to show due_date field and methods)
+
+### Test Results
+✓ 41 tests passed
+
+### Implementation Summary
+- Added Optional[datetime] due_date attribute to Task class
+- Implemented CEST (UTC+2) timezone-aware datetime handling
+- ISO 8601 serialization/deserialization with datetime.isoformat()
+- Backward compatible JSON loading (tasks without due_date field)
+- Validation of ISO 8601 format with error handling
+- is_overdue() predicate to check if task is past its due date
+- CLI support with --due-date flags for add and update commands
+- Interactive menu support for setting due dates
+
+### Requirements Met
+- ✓ Must: Add attribute due_date: Optional[datetime]
+- ✓ Must: Allow tasks without due date (None by default)
+- ✓ Must: Persist through storage layer
+- ✓ Must: Update to_dict and from_dict
+- ✓ Must: Use CEST (UTC+2) timezone-aware datetime in ISO 8601 format
+- ✓ Should: Backward compatibility with existing JSON
+- ✓ Should: Validate datetime values
+- ✓ Could: Add is_overdue() predicate
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
