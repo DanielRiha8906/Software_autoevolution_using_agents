@@ -17,10 +17,16 @@ package "models" #DDEEFF {
         +status : TaskStatus
         +createdAt : DateTime
         +updatedAt : DateTime
+        +dueDate : DateTime [0..1]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
     }
+
+    note right of Task
+        dueDate must be timezone-aware
+        and in CEST (UTC+2) if specified
+    end note
 }
 
 package "storage" #FFF3CC {
