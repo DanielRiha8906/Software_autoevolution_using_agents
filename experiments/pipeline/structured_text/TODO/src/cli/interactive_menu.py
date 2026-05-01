@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
@@ -142,8 +143,17 @@ class InteractiveMenu:
             input("  Title cannot be empty. Press Enter...")
             return
         description = _prompt("Description (optional)") or None
+        due_date_str = _prompt("Due date (optional, ISO 8601 format)") or None
+        due_date = None
+        if due_date_str:
+            try:
+                due_date = datetime.fromisoformat(due_date_str)
+            except ValueError:
+                print("\n  Invalid due date format. Use ISO 8601 (e.g., 2026-05-15T14:30:00+02:00)")
+                input("  Press Enter to continue...")
+                return
         try:
-            task = self._service.add_task(title, description)
+            task = self._service.add_task(title, description, due_date)
             print(f"\n  Added: {_task_line(task)}")
         except ValueError as e:
             print(f"\n  Error: {e}")
@@ -166,6 +176,7 @@ class InteractiveMenu:
         print(f"  Status:      {task.status.value}")
         print(f"  Created:     {task.created_at.strftime('%Y-%m-%d %H:%M UTC')}")
         print(f"  Updated:     {task.updated_at.strftime('%Y-%m-%d %H:%M UTC')}")
+        print(f"  Due Date:    {task.due_date.isoformat() if task.due_date else '—'}")
         print()
         input("  Press Enter to continue...")
 
@@ -210,9 +221,18 @@ class InteractiveMenu:
         new_title = _prompt("New title", default=task.title)
         new_desc = _prompt("New description", default=task.description or "")
         new_desc = new_desc if new_desc else None
+        new_due_date_str = _prompt("New due date (optional, ISO 8601 format)", default=task.due_date.isoformat() if task.due_date else "")
+        new_due_date = None
+        if new_due_date_str:
+            try:
+                new_due_date = datetime.fromisoformat(new_due_date_str)
+            except ValueError:
+                print("\n  Invalid due date format. Use ISO 8601 (e.g., 2026-05-15T14:30:00+02:00)")
+                input("  Press Enter to continue...")
+                return
 
         try:
-            updated = self._service.update_task(task.id, title=new_title or None, description=new_desc)
+            updated = self._service.update_task(task.id, title=new_title or None, description=new_desc, due_date=new_due_date)
             print(f"\n  Updated: {_task_line(updated)}")
         except (TaskNotFoundError, ValueError) as e:
             print(f"\n  Error: {e}")

@@ -8,10 +8,12 @@ def cli(tmp_path):
     return TodoCLI(storage_path=str(tmp_path / "tasks.json"))
 
 
-def _add(cli, title, description=None):
+def _add(cli, title, description=None, due_date=None):
     args = ["add", title]
     if description:
         args += ["-d", description]
+    if due_date:
+        args += ["-e", due_date]
     return cli.run(args)
 
 
@@ -96,3 +98,79 @@ def test_update_title(cli, capsys):
 def test_no_subcommand_prints_help(cli, capsys):
     rc = cli.run([])
     assert rc == 0
+
+
+def test_add_with_due_date_flag(cli, capsys):
+    """Test that add command accepts --due-date flag and stores the due date."""
+    rc = _add(cli, "Task with due date", due_date="2026-05-15T14:30:00+02:00")
+    assert rc == 0
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+    cli.run(["show", task_id])
+    out = capsys.readouterr().out
+    assert "2026-05-15" in out
+
+
+def test_add_with_invalid_due_date_format_exits_1(cli):
+    """Test that add command rejects invalid due_date format."""
+    rc = cli.run(["add", "Task", "-e", "invalid-date"])
+    assert rc == 1
+
+
+def test_show_displays_due_date(cli, capsys):
+    """Test that show command displays the due_date field."""
+    _add(cli, "Task with due date", due_date="2026-05-15T14:30:00+02:00")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+    cli.run(["show", task_id])
+    out = capsys.readouterr().out
+    assert "Due Date:" in out
+    assert "2026-05-15" in out
+
+
+def test_show_displays_dash_when_no_due_date(cli, capsys):
+    """Test that show command displays — (dash) when there is no due_date."""
+    _add(cli, "Task without due date")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+    cli.run(["show", task_id])
+    out = capsys.readouterr().out
+    assert "Due Date:" in out
+    assert "—" in out
+
+
+def test_update_with_due_date_flag(cli, capsys):
+    """Test that update command accepts --due-date flag and updates the due date."""
+    _add(cli, "Original task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+    rc = cli.run(["update", task_id, "-e", "2026-06-20T10:00:00+02:00"])
+    assert rc == 0
+    cli.run(["show", task_id])
+    out = capsys.readouterr().out
+    assert "2026-06-20" in out
+
+
+def test_backward_compatibility_old_json_without_due_date(tmp_path):
+    """Test that CLI can load old task JSON that doesn't have due_date field."""
+    import json
+
+    # Create old-format JSON without due_date field
+    storage_path = str(tmp_path / "old_tasks.json")
+    old_data = [
+        {
+            "id": "old-task-id-123",
+            "title": "Old task",
+            "description": "Created before due_date feature",
+            "status": "pending",
+            "created_at": "2026-01-01T10:00:00+00:00",
+            "updated_at": "2026-01-01T10:00:00+00:00"
+        }
+    ]
+    with open(storage_path, 'w') as f:
+        json.dump(old_data, f)
+
+    # Load with CLI and verify it works
+    cli = TodoCLI(storage_path=storage_path)
+    cli.run(["list"])
+    # If we got here without error, backward compatibility works
