@@ -8,7 +8,7 @@ on:
         type: string
         required: true
       strategy:
-        description: "Task specification strategy (few_shot, structured_text, test_driven)"
+        description: "Task specification strategy (user_stories, structured_text, test_driven)"
         type: string
         required: true
       project:
@@ -189,8 +189,8 @@ jobs:
           } >> "$GITHUB_OUTPUT"
 
           case "${{ inputs.strategy }}" in
-            few_shot)
-              STRAT="Task format: FEW-SHOT — the task description includes examples of how prior tasks were completed. Use them as patterns for your implementation."
+            user_stories)
+              STRAT="Task format: USER STORIES — the task is described as user stories (As a…, I want…, So that…) with acceptance criteria. Implement everything needed to satisfy all acceptance criteria."
               ;;
             structured_text)
               STRAT="Task format: STRUCTURED TEXT (MoSCoW) — Must/Should/Could/Won't. Implement all Must items. Implement Should items if straightforward."

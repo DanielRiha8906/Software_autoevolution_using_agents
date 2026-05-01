@@ -33,7 +33,7 @@ permissions:
   actions: read
 
 jobs:
-  few-shot:
+  user-stories:
     if: ${{ inputs.strategy == 'all' || inputs.strategy == 'user_stories' }}
     uses: ./.github/workflows/claude-implement-shared.yml
     with:
