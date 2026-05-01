@@ -32,4 +32,4 @@
 - ✓ Invalid datetime values (non-datetime or naive datetime) are rejected in Task.__post_init__()
 - ✓ Existing stored tasks lacking due_date field load without error (uses .get() in from_dict())
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 278.1s | Cost: $0.497082 USD | Turns: 21
