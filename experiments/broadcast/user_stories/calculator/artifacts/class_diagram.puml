@@ -15,16 +15,16 @@ package "models" #DDEEFF {
     }
 
     class CalculationResult {
-        +operation : Operation
-        +operandA : float
-        +operandB : float
+        +operation : str
+        +operand_a : float
+        +operand_b : float
         +result : float
-        +timestamp : String
+        +timestamp : str
         +execution_time_ms : float
         --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : CalculationResult
-        +toString() : String
+        +to_dict() : dict
+        +from_dict(data: dict) : CalculationResult
+        +__str__() : str
     }
 }
 
