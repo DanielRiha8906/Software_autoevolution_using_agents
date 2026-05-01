@@ -14,7 +14,7 @@ def tmp_storage(tmp_path):
     return WorkflowJsonStorage(str(tmp_path / "runs.json"))
 
 
-def _sample_run() -> WorkflowRun:
+def _sample_run(duration_seconds: float = 0.0) -> WorkflowRun:
     return WorkflowRun(
         id="r1",
         workflow_name="Deploy",
@@ -25,6 +25,7 @@ def _sample_run() -> WorkflowRun:
         updated_at=None,
         run_number=42,
         commit_sha="deadbeef",
+        duration_seconds=duration_seconds,
     )
 
 
@@ -51,3 +52,40 @@ def test_save_persists_json(tmp_storage):
     raw = json.loads(Path(tmp_storage.filepath).read_text())
     assert raw[0]["id"] == "r1"
     assert raw[0]["conclusion"] == "success"
+
+
+def test_roundtrip_with_zero_duration(tmp_storage):
+    run = _sample_run(duration_seconds=0.0)
+    tmp_storage.save([run])
+    loaded = tmp_storage.load()
+    assert len(loaded) == 1
+    assert loaded[0].duration_seconds == 0.0
+
+
+def test_roundtrip_with_nonzero_duration(tmp_storage):
+    run = _sample_run(duration_seconds=123.45)
+    tmp_storage.save([run])
+    loaded = tmp_storage.load()
+    assert len(loaded) == 1
+    assert loaded[0].duration_seconds == 123.45
+
+
+def test_backward_compatibility_missing_duration(tmp_storage):
+    # Simulate loading JSON without duration_seconds field
+    data = {
+        "id": "r1",
+        "workflow_name": "Deploy",
+        "branch": "main",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2024-01-01T00:00:00+00:00",
+        "updated_at": None,
+        "run_number": 42,
+        "commit_sha": "deadbeef",
+    }
+    json_content = json.dumps([data])
+    Path(tmp_storage.filepath).write_text(json_content)
+
+    loaded = tmp_storage.load()
+    assert len(loaded) == 1
+    assert loaded[0].duration_seconds == 0.0
