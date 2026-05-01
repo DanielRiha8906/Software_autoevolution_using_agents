@@ -34,4 +34,4 @@ Pipeline with sequential multi-agent execution:
 3. Programmer - implemented the code changes
 4. UML Designer - updated diagrams
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 229.9s | Cost: $0.373596 USD | Turns: 15
