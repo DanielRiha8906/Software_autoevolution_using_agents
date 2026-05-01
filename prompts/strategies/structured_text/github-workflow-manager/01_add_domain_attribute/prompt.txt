@@ -1,0 +1,20 @@
+Context:
+The system currently tracks workflow runs but lacks explicit duration tracking.
+
+Requirements:
+
+Must Have:
+- Add attribute `duration_seconds: float` to `WorkflowRun`
+- Ensure value is stored and persisted in storage layer
+- Value must represent total execution time in seconds
+- Update serialization/deserialization logic accordingly
+
+Should Have:
+- Validate that duration is non-negative
+- Default to `0.0` if not provided
+
+Could Have:
+- Support optional higher precision (milliseconds)
+
+Won’t Have:
+- Integrate external time measurement tools

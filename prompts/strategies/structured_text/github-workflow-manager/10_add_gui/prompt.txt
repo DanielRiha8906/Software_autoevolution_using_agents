@@ -1,0 +1,18 @@
+Context:
+System currently CLI-only. Use `tkinter` (stdlib) as the GUI framework unless the project already has a GUI dependency available.
+
+Requirements:
+
+Must Have:
+- Implement GUI viewer:
+  - Display workflow runs in a scrollable list or table
+  - Show status, duration, and attempt count per run
+- Read-only interface
+
+Should Have:
+- Filter runs by status or conclusion via a dropdown or input field
+
+Could Have:
+- Highlight rows for failed runs in a distinct color
+- Support editing of workflow runs
+

@@ -1,0 +1,23 @@
+Context:
+Workflow run states exist but lack encapsulated domain logic. `status` holds values such as `queued`, `in_progress`, `completed`; `conclusion` holds values such as `success`, `failure`, `cancelled`, `timed_out`, or `None` when the run is not yet complete.
+
+Requirements:
+
+Must Have:
+- Implement methods:
+  - `is_terminal()`
+  - `is_successful()`
+  - `is_failed()`
+  - `is_running()`
+- Methods must derive state strictly from `status` and `conclusion`
+
+Should Have:
+- `is_terminal()` and `is_running()` must be mutually exclusive
+- `is_successful()` and `is_failed()` must be mutually exclusive
+- Add unit tests covering all state combinations
+
+Could Have:
+- Convenience method `is_cancelled()` derived from `conclusion`
+
+Won’t Have:
+- Modify existing enum definitions

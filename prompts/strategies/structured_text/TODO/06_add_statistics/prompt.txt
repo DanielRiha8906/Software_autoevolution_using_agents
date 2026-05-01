@@ -1,0 +1,19 @@
+## Task: Add task statistics
+
+### Must
+- Compute the following statistics from stored `Task` data:
+  - Total task count
+  - Count per status (pending, in_progress, done)
+  - Count of overdue tasks
+  - Count of tasks with a due date set
+- Return a dataclass (not a plain dict) as the structured report object
+
+### Should
+- Include completion rate as a percentage (done / total)
+- Ensure deterministic output format regardless of task ordering
+
+### Could
+- Include average number of days from creation to completion for done tasks
+
+### Won't
+- Generate charts or any visualization output

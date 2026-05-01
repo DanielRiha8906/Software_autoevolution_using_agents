@@ -1,0 +1,21 @@
+Context:
+Current structure mixes concerns.
+
+Requirements:
+
+Must Have:
+- Separate:
+  - Service layer
+  - Storage layer
+  - GitHub adapter layer
+- Ensure no circular dependencies
+
+Should Have:
+- Preserve existing public interfaces (function signatures, class names, return types)
+- Introduce abstract base classes or protocols to decouple service, storage, and adapter layers
+
+Could Have:
+- Module-level `__all__` declarations to make public API explicit
+
+Won’t Have:
+- Fully rewrite domain logic

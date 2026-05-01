@@ -1,0 +1,11 @@
+As an end user who prefers not to use the command line,
+I want a graphical interface for the calculator,
+so that I can perform calculations and review history without typing commands.
+
+**Acceptance Criteria:**
+- A GUI is provided using `tkinter` (stdlib), unless a GUI dependency already exists in the project.
+- All standard mode operations are accessible from the GUI.
+- Calculation history (MemoryEntry records) is displayed in a scrollable list.
+- The GUI calls existing calculation logic — no business logic is duplicated in the UI layer.
+- Toggling between standard and scientific mode in the GUI is supported as a bonus.
+- Error entries in the history list are visually highlighted as a bonus.

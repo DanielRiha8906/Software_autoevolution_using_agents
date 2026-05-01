@@ -1,0 +1,11 @@
+As a developer maintaining the TODO codebase,
+I want clear boundaries between task, comment, project, storage, and interface layers,
+so that I can change one layer without risking unintended effects in the others.
+
+**Acceptance Criteria:**
+- Task domain logic, comment logic, project logic, storage, and interface are separated into distinct layers with no circular dependencies.
+- All existing public interfaces (function signatures, class names, return types) are preserved.
+- Abstract base classes or protocols decouple service, storage, and interface layers.
+- Repository-style abstractions can be applied to isolate persistence from business logic as a bonus.
+- Module-level `__all__` declarations can be added to make each layer's public API explicit as a bonus.
+- Domain logic and task management algorithms are not rewritten.

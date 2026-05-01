@@ -1,0 +1,17 @@
+## Task: Add import and export of tasks and comments
+
+### Must
+- Allow exporting all stored `Task` records (including their associated `TaskComment` records) to a JSON file
+- Allow importing `Task` and `TaskComment` records from a JSON file
+- Preserve task IDs, statuses, due dates, and comments on import
+- Validate imported data structure before applying it
+- Existing stored data must not be overwritten without explicit intent
+
+### Should
+- Schema must match the `Task.to_dict()` and `TaskComment.to_dict()` serialization formats
+
+### Could
+- Skip invalid or duplicate entries on import rather than failing the entire operation
+
+### Won't
+- Support additional file formats (CSV, XML)

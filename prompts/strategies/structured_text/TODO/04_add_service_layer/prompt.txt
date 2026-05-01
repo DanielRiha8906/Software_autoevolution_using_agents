@@ -1,0 +1,20 @@
+## Task: Add CommentsService for managing TaskComments
+
+### Must
+- Implement `CommentsService` to manage `TaskComment` objects
+- Provide operations:
+  - Add a comment to a task
+  - List all comments for a given task, ordered by `created_at`
+  - Delete a comment by id
+- Validate that the referenced task exists before adding a comment
+- Integrate with the existing storage mechanism
+
+### Should
+- Service responsibilities must be limited to `TaskComment` lifecycle management; storage implementation must stay separate
+- Deleting a task must cascade to its associated comments
+
+### Could
+- Support editing a comment's content (updating `updated_at` if present)
+
+### Won't
+- Implement threaded or nested comment structures

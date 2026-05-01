@@ -1,0 +1,20 @@
+Context:
+Attempts require management logic separate from domain model.
+
+Requirements:
+
+Must Have:
+- Implement `AttemptService`
+- Support:
+  - Create attempt
+  - Retrieve attempts by `run_id`
+- Integrate with existing storage mechanism
+
+Should Have:
+- Ensure no duplicate attempt numbers per run
+
+Could Have:
+- Add sorting by attempt number
+
+Won’t Have:
+- Add a caching layer

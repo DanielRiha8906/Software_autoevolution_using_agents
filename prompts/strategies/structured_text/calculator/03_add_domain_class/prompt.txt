@@ -13,6 +13,8 @@
 ### Could
 - Add a unique identifier for each memory entry.
 
+### Should
+- Keep display formatting out of the domain class; formatting belongs in the presentation layer.
+
 ### Won’t
-- Store calculation history only as formatted strings.
-- Mix display formatting with stored data.
+- Replace structured fields with a single formatted string representation

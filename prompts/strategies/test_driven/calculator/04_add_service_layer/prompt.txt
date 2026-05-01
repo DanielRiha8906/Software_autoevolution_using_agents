@@ -1,0 +1,62 @@
+### Context
+`MemoryEntry` now exists as a domain class. You need a service layer to manage its lifecycle. Persistence details (file I/O, JSON serialisation) must remain in a separate storage layer, not inside the service.
+
+### Objective
+Implement `MemoryService` with `store` and `retrieve` operations. The service must manage `MemoryEntry` lifecycle and keep all persistence details out of itself — those belong in a separate storage layer.
+
+### Test Suite
+```python
+import pytest
+from src.models.memory_entry import MemoryEntry
+from src.services.memory_service import MemoryService
+
+
+def _make_entry(**kwargs):
+    defaults = dict(operation="add", operands=[1, 2], result=3, success=True, execution_time_ms=1)
+    defaults.update(kwargs)
+    return MemoryEntry(**defaults)
+
+
+def test_memory_service_can_store_entry():
+    service = MemoryService()
+    service.store(_make_entry())
+
+
+def test_memory_service_retrieve_returns_stored_entries():
+    service = MemoryService()
+    entry = _make_entry()
+    service.store(entry)
+    assert any(e.id == entry.id for e in service.retrieve())
+
+
+def test_memory_service_stores_multiple_entries():
+    service = MemoryService()
+    for i in range(3):
+        service.store(_make_entry(result=float(i)))
+    assert len(service.retrieve()) == 3
+
+
+def test_memory_service_retrieve_returns_list():
+    service = MemoryService()
+    assert isinstance(service.retrieve(), list)
+
+
+def test_memory_service_does_not_contain_file_io():
+    import inspect
+    from src.services import memory_service as mod
+    source = inspect.getsource(mod)
+    assert "open(" not in source
+    assert "json.dump" not in source
+```
+
+### Implementation Rules
+- Do not modify the tests.
+- File I/O and serialisation belong in a storage class, not in `MemoryService`.
+- `MemoryService` responsibilities are limited to `MemoryEntry` lifecycle management.
+- Do not place business logic (calculations) inside `MemoryService`.
+
+### Definition of Done
+- All provided tests pass.
+- Existing tests still pass.
+- Code compiles without syntax or import errors.
+- `MemoryService` source contains no file I/O or JSON serialisation.

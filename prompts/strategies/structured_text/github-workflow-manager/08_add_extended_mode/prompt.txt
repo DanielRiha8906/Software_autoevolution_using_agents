@@ -1,0 +1,24 @@
+Context:
+System should optionally integrate with GitHub.
+
+Requirements:
+
+Must Have:
+- Add mode: `github_fetch_mode`
+- Fetch workflow runs via GitHub REST API (using `requests`) or `gh` CLI
+- Convert fetched data into domain model
+- Resolve the PAT in this priority order:
+  1. `GITHUB_TOKEN` environment variable
+  2. `secrets/.env` file in the project root
+  3. Prompt user to input PAT securely if neither is found
+- Do not persist a user-entered PAT unless explicitly configured
+
+Should Have:
+- Handle API errors gracefully (rate limits, invalid token, network issues)
+- Validate token before making requests
+
+Could Have:
+- Incremental fetch (only runs newer than the latest stored run)
+
+Won’t Have:
+- Implement full authentication management (OAuth flows, token refresh)

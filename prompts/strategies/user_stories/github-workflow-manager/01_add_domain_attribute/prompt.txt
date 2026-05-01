@@ -1,0 +1,11 @@
+As a developer analysing CI pipeline performance,
+I want each workflow run to record how long it took to execute,
+so that I can identify slow runs and track performance trends over time.
+
+**Acceptance Criteria:**
+- `WorkflowRun` has a `duration_seconds: float` attribute representing total execution time.
+- The attribute is stored and loaded through the storage layer.
+- Serialisation and deserialisation logic is updated accordingly.
+- Negative values are rejected.
+- Defaults to `0.0` if not provided.
+- No external time measurement tools are used.

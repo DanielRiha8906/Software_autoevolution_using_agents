@@ -1,0 +1,21 @@
+## Task: Add status and due date methods to Task
+
+### Must
+- Implement the following methods on `Task`:
+  - `mark_in_progress()` — transitions status to IN_PROGRESS
+  - `mark_done()` — transitions status to DONE
+  - `reopen()` — transitions status to PENDING
+  - `is_completed()` — returns True when status is DONE
+  - `is_overdue()` — returns True when `due_date` is set and is earlier than the current CEST time
+- Each status-mutating method must update `updated_at` to the current CEST time
+- Methods must derive state strictly from existing `Task` attributes
+
+### Should
+- Prevent invalid status transitions (e.g. `reopen()` on a PENDING task should be a no-op or raise)
+- Add unit tests covering all status transitions and overdue combinations
+
+### Could
+- Add `is_pending()` and `is_in_progress()` predicates for symmetry with `is_completed()`
+
+### Won't
+- Implement a workflow approval or state-machine framework

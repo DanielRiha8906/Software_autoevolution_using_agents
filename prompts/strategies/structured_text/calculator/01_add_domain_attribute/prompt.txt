@@ -8,9 +8,10 @@
 ### Should
 - Measurement should be reasonably accurate
 - Naming must follow existing conventions
+- Preserve backward compatibility with existing CalculationResult structure and API
 
 ### Could
 - Use a reusable timing mechanism
 
 ### Won’t
-- Break existing result structure or API
+- Use external time measurement libraries

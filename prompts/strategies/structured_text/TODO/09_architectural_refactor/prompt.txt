@@ -1,0 +1,21 @@
+## Task: Separate core components of the TODO manager
+
+### Must
+- Separate the following into distinct layers with no circular dependencies:
+  - Task domain logic
+  - Comment logic
+  - Project logic
+  - Storage layer
+  - Interface layer
+- Preserve existing public interfaces (function signatures, class names, return types)
+
+### Should
+- Introduce abstract base classes or protocols to decouple service, storage, and interface layers
+- Improve code structure and readability without changing external behavior
+
+### Could
+- Apply repository-style abstractions to isolate persistence from business logic
+- Add module-level `__all__` declarations to make the public API of each layer explicit
+
+### Won't
+- Rewrite domain logic or task management algorithms

@@ -1,15 +1,17 @@
 ## Task: Add calculation statistics
 
 ### Must
-- Provide statistics on operation usage
-- Provide statistics on error frequency
-- Results must be derived from stored data
+- Provide statistics on operation usage (count per operation type)
+- Provide statistics on error frequency (total errors, error rate as a percentage)
+- Compute average `execution_time_ms` across all stored entries
+- Results must be derived from stored MemoryEntry data
 
 ### Should
-- Output must be clearly structured
+- Return a dataclass or named object (not a plain dict) for the report
 
 ### Could
-- Include aggregated metrics (e.g., averages)
+- Include min/max `execution_time_ms`
+- Per-operation breakdown of error rate
 
 ### Won’t
-- Hardcode values or use synthetic data
+- Add a visualization layer

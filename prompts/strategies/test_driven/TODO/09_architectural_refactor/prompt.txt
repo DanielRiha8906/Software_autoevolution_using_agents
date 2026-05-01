@@ -1,0 +1,28 @@
+### Context
+The TODO codebase now includes task logic, comment logic, project logic, storage, and interface-related code. These responsibilities should be separated into clearer components without changing external behaviour.
+
+### Objective
+Refactor the TODO manager into clearly separated components:
+- task domain logic
+- comment management
+- project management
+- storage layer
+- interface layer
+
+### Requirements
+- Preserve all existing public behaviour.
+- Preserve existing public method signatures unless absolutely necessary.
+- Do not rewrite task, comment, or project logic.
+- Do not introduce unrelated features.
+- Avoid circular dependencies.
+- Keep file/module changes minimal and traceable.
+- Use abstractions such as protocols or abstract base classes where useful.
+- Persistence details must stay outside domain models.
+
+### Definition of Done
+- All existing tests pass.
+- Code compiles without syntax or import errors.
+- Existing task functionality still behaves the same.
+- Existing comment functionality still behaves the same.
+- Existing project functionality still behaves the same.
+- The new structure has clear responsibility boundaries.

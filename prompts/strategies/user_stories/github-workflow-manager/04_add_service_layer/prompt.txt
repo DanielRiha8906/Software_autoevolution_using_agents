@@ -1,0 +1,10 @@
+As a developer integrating attempt tracking into the system,
+I want an `AttemptService` that manages the creation and retrieval of `WorkflowRunAttempt` objects,
+so that attempt management is centralised and decoupled from the domain model.
+
+**Acceptance Criteria:**
+- `AttemptService` supports creating an attempt and retrieving all attempts for a given `run_id`.
+- The service integrates with the existing storage mechanism.
+- Duplicate attempt numbers per run are prevented.
+- Attempts can be returned sorted by attempt number as a bonus.
+- No caching layer is added.

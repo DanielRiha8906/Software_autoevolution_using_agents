@@ -1,0 +1,21 @@
+## Task: Add project mode for grouping tasks
+
+### Must
+- Introduce a `Project` domain class with attributes: `id: str` (UUID), `name: str`
+- Add optional `project_id: Optional[str]` to `Task` to assign it to a project
+- Support creating and listing projects
+- Support listing tasks filtered by project
+- Preserve existing behavior for tasks without a project assignment
+
+### Should
+- Validate that project names are not empty
+- Naming and structure must follow existing conventions in the codebase
+- Preserve backward compatibility with stored tasks (tasks without `project_id` must load without error)
+
+### Could
+- Support moving a task from one project to another
+- Support deleting a project (tasks become unassigned, not deleted)
+
+### Won't
+- Implement a Kanban drag-and-drop UI
+- Add access control or per-project permissions

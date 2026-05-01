@@ -1,0 +1,101 @@
+### Context
+`Task` now has a `due_date` attribute. Status transitions are currently handled externally by `TaskManager.set_status`. You need to move status logic onto the `Task` model itself, with proper transition rules and `updated_at` tracking.
+
+### Objective
+Add `mark_in_progress()`, `mark_done()`, `reopen()`, `is_completed()`, `is_overdue()`, `is_pending()`, and `is_in_progress()` to `Task`, deriving all state from existing attributes.
+
+### Test Suite
+```python
+import pytest
+from datetime import datetime, timezone, timedelta
+from src.models.task import Task
+from src.models.task_status import TaskStatus
+
+CEST = timezone(timedelta(hours=2))
+PAST = datetime(2020, 1, 1, tzinfo=CEST)
+FUTURE = datetime(2099, 1, 1, tzinfo=CEST)
+
+
+def test_mark_in_progress():
+    task = Task(title="Test")
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+
+
+def test_mark_done():
+    task = Task(title="Test")
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+
+
+def test_reopen():
+    task = Task(title="Test")
+    task.mark_done()
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+
+
+def test_status_mutation_updates_updated_at():
+    task = Task(title="Test")
+    before = task.updated_at
+    task.mark_in_progress()
+    assert task.updated_at >= before
+
+def test_status_mutation_updates_updated_at_to_cest():
+    task = Task(title="Test")
+    task.mark_in_progress()
+    assert task.updated_at.tzinfo == CEST
+
+def test_is_completed_true_when_done():
+    task = Task(title="Test")
+    task.mark_done()
+    assert task.is_completed() is True
+
+
+def test_is_completed_false_when_pending():
+    assert Task(title="Test").is_completed() is False
+
+
+def test_is_overdue_true_when_past_due():
+    assert Task(title="Test", due_date=PAST).is_overdue() is True
+
+
+def test_is_overdue_false_when_future_due():
+    assert Task(title="Test", due_date=FUTURE).is_overdue() is False
+
+
+def test_is_overdue_false_when_no_due_date():
+    assert Task(title="Test").is_overdue() is False
+
+
+def test_is_pending():
+    assert Task(title="Test").is_pending() is True
+
+
+def test_is_in_progress():
+    task = Task(title="Test")
+    task.mark_in_progress()
+    assert task.is_in_progress() is True
+
+
+def test_reopen_on_pending_is_noop_or_raises():
+    task = Task(title="Test")
+    try:
+        task.reopen()
+        assert task.status == TaskStatus.PENDING
+    except Exception:
+        pass
+```
+
+### Implementation Rules
+- Do not modify the tests.
+- All methods must derive state strictly from existing `Task` attributes; no external dependencies.
+- Each status-mutating method must update `updated_at` to the current CEST (UTC+2) time.
+- `updated_at` must remain timezone-aware after status changes.
+- `is_overdue()` must use CEST (UTC+2) for the current time comparison.
+- `is_overdue()` returns `False` when `due_date` is `None`.
+
+### Definition of Done
+- All provided tests pass.
+- Existing tests still pass.
+- Code compiles without syntax or import errors.

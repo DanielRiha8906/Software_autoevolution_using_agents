@@ -1,0 +1,11 @@
+As a user doing scientific or engineering calculations,
+I want to switch the calculator into a scientific mode that adds trigonometric and logarithmic functions,
+so that I can perform advanced maths without leaving the application.
+
+**Acceptance Criteria:**
+- Scientific mode adds: `sin`, `cos`, `tan`, `log` (base 10), `ln` (natural log), `exp`.
+- Standard mode operations remain fully functional when scientific mode is active.
+- Switching between modes is explicit (not automatic).
+- Scientific operations use the same interface and result structure as standard operations.
+- Domain errors (e.g., `log` of a non-positive number) are handled the same way as existing edge cases (e.g., divide by zero).
+- Operations already in standard mode are not re-implemented.

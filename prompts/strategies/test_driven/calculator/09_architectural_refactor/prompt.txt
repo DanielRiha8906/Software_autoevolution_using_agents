@@ -1,0 +1,24 @@
+### Context
+The calculator codebase now includes calculation logic, memory/history logic, and interface-related code. These responsibilities should be separated into clearer components without changing external behaviour.
+
+### Objective
+Refactor the calculator into clearly separated components:
+- calculation engine
+- memory/history management
+- interface layer
+
+### Requirements
+- Preserve all existing public behaviour.
+- Preserve existing public method signatures unless absolutely necessary.
+- Do not rewrite calculation algorithms.
+- Do not introduce unrelated features.
+- Avoid circular dependencies.
+- Keep file/module changes minimal and traceable.
+- Use abstractions such as protocols or abstract base classes where useful.
+
+### Definition of Done
+- All existing tests pass.
+- Code compiles without syntax or import errors.
+- Existing calculator operations still behave the same.
+- Existing memory/history functionality still behaves the same.
+- The new structure has clear responsibility boundaries.

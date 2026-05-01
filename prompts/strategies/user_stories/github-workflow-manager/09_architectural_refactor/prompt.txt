@@ -1,0 +1,11 @@
+As a developer maintaining the github-workflow-manager codebase,
+I want the service, storage, and GitHub adapter layers to have clear boundaries,
+so that I can change one without affecting the others.
+
+**Acceptance Criteria:**
+- The service layer, storage layer, and GitHub adapter layer are separated into distinct components with no circular dependencies.
+- All existing public interfaces (function signatures, class names, return types) are preserved.
+- Abstract base classes or protocols decouple service, storage, and adapter layers.
+- Module-level `__all__` declarations can be added to make each layer's public API explicit as a bonus.
+- Domain logic is not rewritten, only reorganised.
+- File/module structure changes must remain minimal and traceable.

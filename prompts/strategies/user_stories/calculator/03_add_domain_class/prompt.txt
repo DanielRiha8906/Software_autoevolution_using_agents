@@ -1,0 +1,11 @@
+As a developer working on the calculator's history feature,
+I want a dedicated `MemoryEntry` class that captures everything about a single calculation attempt,
+so that history data has a clear, consistent structure I can build querying and reporting on top of.
+
+**Acceptance Criteria:**
+- `MemoryEntry` stores: operation name, input operands, result, success/error state, execution timestamp, and `execution_time_ms`.
+- Both successful and failed calculations can be represented.
+- `MemoryEntry` can be serialised to and deserialised from a JSON-compatible dictionary.
+- Each entry has a unique identifier.
+- Presentation/formatting logic is kept out of the class.
+- Existing calculation history is not broken.

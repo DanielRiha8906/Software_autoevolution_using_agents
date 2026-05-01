@@ -1,0 +1,10 @@
+As a developer maintaining the calculator codebase,
+I want the calculation engine, memory/history, and interface layers to have clear boundaries,
+so that I can change one without breaking the others and understand where each responsibility lives.
+
+**Acceptance Criteria:**
+- The calculation engine, memory/history management, and interface are separated into distinct components.
+- Each component has a clearly defined boundary; cross-component coupling is explicit and minimal.
+- Abstract base classes or protocols decouple the layers from each other.
+- All existing external behaviour is preserved: public interfaces, return types, and side effects are unchanged.
+- Domain logic and calculation algorithms are not rewritten, only reorganised.

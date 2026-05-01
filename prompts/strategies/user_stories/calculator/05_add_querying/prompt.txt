@@ -1,0 +1,12 @@
+As a user working with the calculator,
+I want to filter my previous calculations by operation type and result state,
+so that I can retrieve and reuse relevant past results efficiently.
+
+**Acceptance Criteria:**
+- A programmatic filtering capability is available over stored calculations.
+- Filtering by operation type is supported.
+- Filtering by result state (success vs. error) is supported.
+- Multiple filters can be combined in a single query.
+- Results are returned as a collection of `MemoryEntry` objects.
+- The structure of returned results is consistent across all queries.
+- No database or external indexing system is used.

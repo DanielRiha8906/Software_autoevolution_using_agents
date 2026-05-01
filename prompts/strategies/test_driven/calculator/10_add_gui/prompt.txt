@@ -1,0 +1,57 @@
+### Context
+The calculator has a complete service layer. You need to add a graphical interface without duplicating calculation logic.
+
+### Objective
+Implement a `tkinter` GUI for the calculator that delegates calculation work to the existing service layer.
+
+### Test Suite
+```python
+import inspect
+from unittest.mock import MagicMock
+
+
+def test_calculator_gui_module_exists():
+    from src.gui.calculator_gui import CalculatorGUI
+    assert CalculatorGUI is not None
+
+
+def test_calculator_gui_accepts_service():
+    from src.gui.calculator_gui import CalculatorGUI
+    gui = CalculatorGUI(MagicMock())
+    assert gui is not None
+
+
+def test_gui_does_not_instantiate_calculator_directly():
+    from src.gui import calculator_gui
+    source = inspect.getsource(calculator_gui)
+    assert "Calculator()" not in source
+
+
+def test_gui_contains_no_arithmetic_logic():
+    from src.gui import calculator_gui
+    source = inspect.getsource(calculator_gui)
+    assert "def add(" not in source
+    assert "def divide(" not in source
+
+
+def test_gui_references_service():
+    from src.gui import calculator_gui
+    source = inspect.getsource(calculator_gui)
+    assert "service" in source.lower()
+```
+
+### Implementation Rules
+- Do not modify the tests.
+- Use `tkinter` from the Python standard library.
+- The GUI must accept a service instance through its constructor.
+- The GUI must delegate calculations to the existing service layer.
+- Do not duplicate arithmetic or history logic in the GUI.
+- Do not instantiate `Calculator` directly inside the GUI.
+- Keep GUI code separate from domain and service logic.
+
+### Definition of Done
+- All provided tests pass.
+- Existing tests still pass.
+- Code compiles without syntax or import errors.
+- The GUI can be instantiated without starting the main event loop automatically.
+- Standard calculator operations are accessible through the GUI.

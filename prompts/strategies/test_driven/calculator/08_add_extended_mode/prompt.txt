@@ -1,0 +1,76 @@
+### Context
+The calculator currently supports basic arithmetic operations. You need to extend it with advanced mathematical functions commonly used in scientific calculations.
+
+### Objective
+Implement a `ScientificCalculator` class that extends the existing calculator functionality with trigonometric, logarithmic, and exponential operations.
+
+### Test Suite
+```python
+import math
+import pytest
+from src.services.calculator import Calculator
+from src.services.scientific_calculator import ScientificCalculator
+
+
+def test_scientific_calculator_exists():
+    calc = ScientificCalculator()
+    assert calc is not None
+
+
+def test_sin():
+    calc = ScientificCalculator()
+    assert calc.sin(0) == pytest.approx(0.0)
+
+
+def test_cos():
+    calc = ScientificCalculator()
+    assert calc.cos(0) == pytest.approx(1.0)
+
+
+def test_tan():
+    calc = ScientificCalculator()
+    assert calc.tan(0) == pytest.approx(0.0)
+
+
+def test_log_base_10():
+    calc = ScientificCalculator()
+    assert calc.log(100) == pytest.approx(2.0)
+
+
+def test_log_of_non_positive_raises():
+    calc = ScientificCalculator()
+    with pytest.raises(Exception):
+        calc.log(0)
+
+
+def test_ln():
+    calc = ScientificCalculator()
+    assert calc.ln(math.e) == pytest.approx(1.0)
+
+
+def test_exp():
+    calc = ScientificCalculator()
+    assert calc.exp(1) == pytest.approx(math.e)
+
+
+def test_standard_operations_still_work():
+    calc = ScientificCalculator()
+    assert calc.add(2, 3) == 5
+    assert calc.divide(10, 2) == 5
+```
+
+### Implementation Rules
+- Do not modify the tests.
+- `ScientificCalculator` must extend or reuse the existing `Calculator` logic.
+- Do not reimplement basic operations (`add`, `subtract`, etc.).
+- All new operations must follow the same method style as existing operations.
+- Domain errors must be represented by raised exceptions.
+- `log(x)` must raise an exception for non-positive input.
+- Use only the Python standard library (`math` module).
+- Do not introduce mode-switching logic; scientific functionality is provided via the `ScientificCalculator` class.
+
+### Definition of Done
+- All provided tests pass.
+- Existing tests still pass.
+- Code compiles without syntax or import errors.
+- Scientific operations are implemented without duplicating base calculator logic.

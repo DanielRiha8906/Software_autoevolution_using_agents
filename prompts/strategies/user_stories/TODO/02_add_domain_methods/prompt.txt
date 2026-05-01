@@ -1,0 +1,10 @@
+As a developer working with the Task domain model,
+I want clear methods for transitioning task status and checking task state,
+so that status changes are consistent and all business rules are enforced in one place.
+
+**Acceptance Criteria:**
+- `Task` provides: `mark_in_progress()`, `mark_done()`, `reopen()`, `is_completed()`, `is_overdue()`.
+- Each status-mutating method updates `updated_at` to the current CEST time.
+- Methods derive state strictly from existing `Task` attributes — no external input required.
+- Invalid transitions (e.g. `reopen()` on a PENDING task) are either a no-op or raise an error.
+- `is_pending()` and `is_in_progress()` predicates are available for symmetry.

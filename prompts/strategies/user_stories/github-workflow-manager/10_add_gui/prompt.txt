@@ -1,0 +1,10 @@
+As a developer who wants a visual overview of CI runs,
+I want a graphical interface that displays and allows editing of workflow runs,
+so that I can review and manage run data without using the CLI.
+
+**Acceptance Criteria:**
+- A GUI is provided using `tkinter` (stdlib), unless a GUI dependency already exists in the project.
+- Workflow runs are displayed in a scrollable list or table showing status, duration, and attempt count.
+- Runs can be filtered by status or conclusion via a dropdown or input field.
+- Editing workflow runs through the GUI is supported.
+- Failed runs are highlighted in a distinct colour as a bonus.

@@ -1,0 +1,52 @@
+### Context
+The service layer is complete. You need a `tkinter`-based GUI that displays tasks with status, due date, and project, supports basic task operations, highlights overdue tasks, and delegates entirely to the existing service layer.
+
+### Objective
+Implement `TodoGUI` using `tkinter` that surfaces task operations and filtering, with overdue highlighting, integrating with the existing service layer only.
+
+### Test Suite
+```python
+import inspect
+from unittest.mock import MagicMock
+
+
+def test_todo_gui_module_exists():
+    from src.gui.todo_gui import TodoGUI
+    assert TodoGUI is not None
+
+
+def test_todo_gui_accepts_service():
+    from src.gui.todo_gui import TodoGUI
+    assert TodoGUI(MagicMock()) is not None
+
+
+def test_gui_does_not_duplicate_task_logic():
+    from src.gui import todo_gui
+    source = inspect.getsource(todo_gui)
+    assert "def add_task(" not in source
+    assert "TaskStatus(" not in source
+
+
+def test_gui_references_service():
+    from src.gui import todo_gui
+    source = inspect.getsource(todo_gui)
+    assert "service" in source.lower()
+
+
+def test_gui_handles_overdue():
+    from src.gui import todo_gui
+    source = inspect.getsource(todo_gui)
+    assert "overdue" in source.lower() or "is_overdue" in source
+```
+
+### Implementation Rules
+- Do not modify the tests.
+- Use `tkinter` from the standard library unless a GUI dependency already exists.
+- No business logic may be duplicated in the GUI module.
+- The GUI class must accept a service instance, not create its own.
+
+### Definition of Done
+- All provided tests pass.
+- Existing tests still pass.
+- Code compiles without syntax or import errors.
+- No task management logic is implemented directly in the GUI module.

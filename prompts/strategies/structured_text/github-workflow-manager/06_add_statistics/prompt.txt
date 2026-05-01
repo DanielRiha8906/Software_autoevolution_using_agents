@@ -1,0 +1,21 @@
+Context:
+System lacks aggregated insights.
+
+Requirements:
+
+Must Have:
+- Compute statistics:
+  - Count by `conclusion`
+  - Average `duration_seconds`
+  - Average number of attempts per run
+- Return structured report object
+
+Should Have:
+- Use a dataclass or named object (not a plain dict) for the report
+- Include min/max `duration_seconds` in the report
+
+Could Have:
+- Per-status breakdown of average duration
+
+Won’t Have:
+- Add a visualization layer

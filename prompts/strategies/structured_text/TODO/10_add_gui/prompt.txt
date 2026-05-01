@@ -1,0 +1,21 @@
+## Task: Add graphical user interface for the TODO manager
+
+Use `tkinter` (stdlib) as the GUI framework unless the project already has a GUI dependency available.
+
+### Must
+- Implement a GUI that displays tasks with: title, status, due date, and project (if assigned)
+- Allow basic task operations: view, add, change status, delete
+- Must integrate with existing service layer logic (no duplicate business logic in the UI)
+- Highlight overdue tasks visually
+
+### Should
+- Support filtering tasks by status or project via a dropdown or input field
+- Ensure basic usability and layout clarity
+
+### Could
+- Allow adding comments through the GUI
+- Show comment count per task in the task list
+
+### Won't
+- Introduce new application functionality not already present in the service layer
+- Implement an advanced project management dashboard

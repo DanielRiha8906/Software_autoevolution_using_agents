@@ -1,0 +1,11 @@
+As a developer tracking retry behaviour in CI,
+I want individual attempts of a workflow run to be modelled as first-class objects,
+so that I can distinguish between attempts and understand per-attempt outcomes.
+
+**Acceptance Criteria:**
+- `WorkflowRunAttempt` has: `id` (int), `run_id` (int), `attempt_number` (int), `status` (str), `conclusion` (Optional[str]), `created_at` (CEST, UTC+2).
+- `(run_id, attempt_number)` must be unique.
+- `attempt_number` is a positive integer starting from 1.
+- `WorkflowRunAttempt` is associated with its parent `WorkflowRun`.
+- `WorkflowRunAttempt` can be serialised to and deserialised from a JSON-compatible dictionary.
+- An optional `duration_seconds: float` attribute can track attempt-specific execution time.

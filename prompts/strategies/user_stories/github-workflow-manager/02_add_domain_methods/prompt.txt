@@ -1,0 +1,11 @@
+As a developer working with workflow run data,
+I want encapsulated methods for checking the state of a run,
+so that state logic is consistent and not duplicated across the codebase.
+
+**Acceptance Criteria:**
+- `WorkflowRun` provides: `is_terminal()`, `is_successful()`, `is_failed()`, `is_running()`.
+- All methods derive state strictly from `status` and `conclusion` — no external input required.
+- `is_terminal()` and `is_running()` are mutually exclusive.
+- `is_successful()` and `is_failed()` are mutually exclusive.
+- A convenience `is_cancelled()` method derived from `conclusion` is available as a bonus.
+- Existing enum definitions are not modified.

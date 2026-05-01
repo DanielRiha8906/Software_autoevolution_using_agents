@@ -1,0 +1,11 @@
+As a developer building comment functionality,
+I want a `CommentsService` that manages the full lifecycle of `TaskComment` objects,
+so that comment logic is centralised and not duplicated across the codebase.
+
+**Acceptance Criteria:**
+- `CommentsService` supports: adding a comment to a task, listing all comments for a task (ordered by `created_at`), and deleting a comment by id.
+- Adding a comment validates that the referenced task exists.
+- The service integrates with the existing storage mechanism.
+- Persistence details stay in the storage layer, not inside the service.
+- Deleting a task cascades to its associated comments.
+- Editing a comment's content (with `updated_at` updated) is supported as a bonus.

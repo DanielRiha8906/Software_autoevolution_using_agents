@@ -1,0 +1,11 @@
+As a user managing my tasks,
+I want to assign a due date to a task,
+so that I can track deadlines and know when work is expected to be completed.
+
+**Acceptance Criteria:**
+- `Task` has an optional `due_date` attribute (`None` by default).
+- Tasks without a due date load and behave correctly.
+- `due_date` is stored and loaded through the storage layer.
+- Dates use a timezone-aware ISO 8601 representation in CEST (UTC+2).
+- Providing an invalid datetime value is rejected before the task is saved.
+- Existing stored tasks that lack a `due_date` field load without error.

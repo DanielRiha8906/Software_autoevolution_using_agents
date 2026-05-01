@@ -1,0 +1,80 @@
+### Context
+`TodoService` holds all tasks. You need a statistics component that computes counts, completion rate, and overdue figures from the stored task data, returning a structured dataclass report.
+
+### Objective
+Implement `TaskStatisticsService` that derives total count, per-status count, overdue count, tasks-with-due-date count, and completion rate from stored task data.
+
+### Test Suite
+```python
+import dataclasses
+import pytest
+from datetime import datetime, timezone, timedelta
+from src.models.task_status import TaskStatus
+from src.services.todo_service import TodoService
+from src.services.statistics_service import TaskStatisticsService
+from src.storage.json_storage import JsonStorage
+
+CEST = timezone(timedelta(hours=2))
+PAST = datetime(2020, 1, 1, tzinfo=CEST)
+FUTURE = datetime(2099, 1, 1, tzinfo=CEST)
+
+
+@pytest.fixture
+def stats_svc(tmp_path):
+    todo = TodoService(JsonStorage(str(tmp_path / "tasks.json")))
+    todo.add_task("Pending")
+    t2 = todo.add_task("Done task")
+    todo.complete_task(t2.id)
+    todo.add_task("Overdue", due_date=PAST)
+    todo.add_task("Future", due_date=FUTURE)
+    return TaskStatisticsService(todo)
+
+
+def test_report_is_dataclass(stats_svc):
+    assert dataclasses.is_dataclass(stats_svc.compute())
+
+
+def test_total_count(stats_svc):
+    assert stats_svc.compute().total == 4
+
+
+def test_count_per_status(stats_svc):
+    report = stats_svc.compute()
+    assert report.count_per_status[TaskStatus.DONE] == 1
+    assert report.count_per_status[TaskStatus.PENDING] == 3
+
+
+def test_overdue_count(stats_svc):
+    assert stats_svc.compute().overdue_count == 1
+
+
+def test_with_due_date_count(stats_svc):
+    assert stats_svc.compute().with_due_date_count == 2
+
+
+def test_completion_rate(stats_svc):
+    assert stats_svc.compute().completion_rate == pytest.approx(25.0)
+
+def test_empty_task_list_statistics(tmp_path):
+    todo = TodoService(JsonStorage(str(tmp_path / "tasks.json")))
+    report = TaskStatisticsService(todo).compute()
+    assert report.total == 0
+    assert report.completion_rate == 0
+    assert report.overdue_count == 0
+
+def test_output_is_deterministic(stats_svc):
+    assert stats_svc.compute().total == stats_svc.compute().total
+```
+
+### Implementation Rules
+- Do not modify the tests.
+- All statistics must be derived exclusively from stored `Task` data.
+- The report must be a `dataclass`, not a `dict`.
+- Completion rate must be expressed as a percentage from 0 to 100.
+- Empty task lists must be handled safely.
+- Do not produce any charts or visualisation output.
+
+### Definition of Done
+- All provided tests pass.
+- Existing tests still pass.
+- Code compiles without syntax or import errors.

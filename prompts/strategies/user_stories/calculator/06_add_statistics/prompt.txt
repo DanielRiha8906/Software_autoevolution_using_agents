@@ -1,0 +1,15 @@
+As a developer analysing calculation behaviour,
+I want a structured statistics component derived from stored calculations,
+so that I can programmatically access usage and error metrics.
+
+**Acceptance Criteria:**
+- A statistics component/service is introduced.
+- The report includes:
+  - count per operation type
+  - total number of errors
+  - error rate as a percentage
+  - average `execution_time_ms`
+- All statistics are derived exclusively from stored `MemoryEntry` data.
+- The result is returned as a structured object (e.g., dataclass), not a plain dictionary.
+- The structure of the statistics output is consistent across calls.
+- No visualisation layer is introduced.

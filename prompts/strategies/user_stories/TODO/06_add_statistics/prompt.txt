@@ -1,0 +1,11 @@
+As a user wanting an overview of my task list,
+I want a summary report of task counts and completion rates,
+so that I can understand the state of my work at a glance.
+
+**Acceptance Criteria:**
+- The report includes: total task count, count per status (pending, in_progress, done), count of overdue tasks, and count of tasks with a due date set.
+- Completion rate is included as a percentage (done / total).
+- The report is returned as a structured object (dataclass), not a plain dictionary.
+- Output format is deterministic regardless of task ordering.
+- Average days from creation to completion for done tasks is included as a bonus.
+- No charts or visualisation output are produced.

@@ -1,0 +1,11 @@
+As a user of the calculator,
+I want to perform square, square root, power, and modulo operations,
+so that I can do more than basic arithmetic without switching to a different tool.
+
+**Acceptance Criteria:**
+- The following operations are available: `square(x)`, `sqrt(x)`, `power(x, y)`, `modulo(x, y)`.
+- Each operation follows the same interface as existing operations (`add`, `subtract`, etc.).
+- `sqrt` of a negative number raises an error or returns a defined error result.
+- `modulo` by zero raises an error.
+- `power` with negative or fractional exponents returns correct results.
+- No existing operation is duplicated or renamed.

@@ -1,15 +1,16 @@
 ## Task: Add scientific mode
 
 ### Must
-- Introduce a scientific mode for advanced operations
+- Introduce a scientific mode that adds the following operations: sin, cos, tan, log (base 10), ln (natural log), exp
 - Mode must extend existing functionality without breaking it
-- Switching modes must be explicit
+- Switching between standard and scientific mode must be explicit
 
 ### Should
-- Maintain consistency with base calculator behavior
+- Maintain consistency with base calculator behavior (same operation interface, same result structure)
+- Handle domain errors (e.g., log of a non-positive number) the same way existing edge cases are handled
 
 ### Could
-- Add additional advanced operations
+- Add further trigonometric or hyperbolic functions (e.g., asin, sinh)
 
 ### Won’t
-- Mix normal and scientific logic in an unclear way
+- Reimplement operations already available in standard mode

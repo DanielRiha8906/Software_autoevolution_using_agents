@@ -1,0 +1,14 @@
+As a user who wants to back up or migrate my data,
+I want to export all tasks and their comments to a JSON file and import them back,
+so that my data is portable and not locked to a single environment.
+
+**Acceptance Criteria:**
+- All `Task` records, including their associated `TaskComment` records, can be exported to a JSON file.
+- Tasks and comments can be imported from a JSON file.
+- Task IDs, statuses, due dates, and comments are preserved on import.
+- Imported data is validated before being applied; invalid structure is rejected.
+- Importing does not overwrite existing data unless explicitly intended.
+- The JSON schema matches the `Task.to_dict()` and `TaskComment.to_dict()` serialisation formats.
+- Invalid or duplicate entries during import are skipped individually, not treated as a full failure.
+- Only JSON format is supported; CSV and XML are out of scope.
+- JSON format is described in documentation (readme.MD).

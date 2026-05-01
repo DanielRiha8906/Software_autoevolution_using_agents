@@ -1,0 +1,30 @@
+### Context
+The workflow manager now includes domain models, services, storage logic, and GitHub integration. These responsibilities should be separated into clearer architectural components without changing external behaviour.
+
+### Objective
+Refactor the workflow manager into clearly separated components:
+- workflow run domain logic
+- attempt management
+- statistics computation
+- storage layer
+- GitHub integration layer
+
+### Requirements
+- Preserve all existing public behaviour.
+- Preserve existing public method signatures unless absolutely necessary.
+- Do not rewrite domain logic or business rules.
+- Do not introduce new features.
+- Avoid circular dependencies.
+- Keep file/module changes minimal and traceable.
+- Persistence logic must remain outside domain models.
+- GitHub CLI interaction must remain isolated from core services.
+- Services must not directly depend on external systems (CLI, network).
+
+### Definition of Done
+- All existing tests pass.
+- Code compiles without syntax or import errors.
+- Existing workflow run functionality behaves the same.
+- Attempt management behaves the same.
+- Statistics computation behaves the same.
+- GitHub fetch functionality behaves the same.
+- The codebase has clear separation of responsibilities.

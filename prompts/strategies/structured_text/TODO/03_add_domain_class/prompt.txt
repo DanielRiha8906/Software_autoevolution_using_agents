@@ -1,0 +1,20 @@
+## Task: Introduce TaskComment domain class
+
+### Must
+- Create class `TaskComment` with the following attributes:
+  - `id: str` (UUID)
+  - `task_id: str` — references the parent `Task` by id
+  - `content: str`
+  - `created_at: datetime` (CEST, UTC+2)
+- Support serialization and deserialization to/from JSON-compatible dictionaries
+
+### Should
+- Validate that `content` is not empty
+- Maintain relationship integrity: a `TaskComment` must reference a valid `task_id`
+
+### Could
+- Add optional `author: str` attribute to track who wrote the comment
+- Add `updated_at: datetime` for consistency with the `Task` model
+
+### Won't
+- Support rich text, markdown rendering, or nested/threaded comments

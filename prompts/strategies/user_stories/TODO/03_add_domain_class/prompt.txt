@@ -1,0 +1,12 @@
+As a user collaborating on tasks,
+I want to attach comments to a task,
+so that I can record notes, decisions, or updates alongside the task itself.
+
+**Acceptance Criteria:**
+- `TaskComment` has: `id` (UUID), `task_id`, `content`, `created_at` (CEST).
+- `TaskComment` can be serialised to and deserialised from a JSON-compatible dictionary.
+- Empty `content` is rejected.
+- A `TaskComment` must reference a valid `task_id`.
+- An optional `author` attribute can record who wrote the comment.
+- An optional `updated_at` attribute is available for consistency with the `Task` model.
+- Rich text, markdown rendering, and nested comments are out of scope.

@@ -9,16 +9,16 @@
 - Each operation must follow the existing operation interface
 - Results must be correct for valid numeric inputs
 
-### Should
+### Must
 - Handle edge cases:
-  - sqrt of negative numbers
-  - modulo by zero
-  - power with negative or fractional exponents
+  - sqrt of negative numbers must raise an error or return a defined error result
+  - modulo by zero must raise an error
+  - power with negative or fractional exponents must produce correct results
 
 ### Could
-- Support operator aliases (e.g., '^' for power)
+- Support operator aliases (e.g., ‘^’ for power)
 - Reuse shared computation logic
 
 ### Won’t
-- Introduce duplicate or redundant operations
-- Break consistency of operation naming or interfaces
+- Introduce duplicate operations (e.g., a second add implementation)
+- Deviate from existing operation naming or interface conventions

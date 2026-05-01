@@ -1,0 +1,12 @@
+As a developer investigating CI runs,
+I want to programmatically filter workflow runs by duration, timestamp, and attempt presence,
+so that I can retrieve relevant subsets of runs for analysis.
+
+**Acceptance Criteria:**
+- A programmatic query interface is available over workflow runs.
+- Filtering by duration range is supported.
+- Filtering by timestamp (before/after a given datetime) is supported.
+- Filtering by attempt presence is supported.
+- Multiple filters can be combined in a single query call.
+- Results are returned as a collection of `WorkflowRun` objects.
+- No database or external index is used.

@@ -1,0 +1,10 @@
+As a developer monitoring CI health,
+I want aggregated statistics over stored workflow runs,
+so that I can understand overall success rates, durations, and retry behaviour.
+
+**Acceptance Criteria:**
+- Statistics include: count by `conclusion`, average `duration_seconds`, and average number of attempts per run.
+- Min and max `duration_seconds` are included in the report.
+- The report is returned as a structured object (dataclass), not a plain dictionary.
+- Per-status breakdown of average duration is included as a bonus.
+- No visualisation layer is added.

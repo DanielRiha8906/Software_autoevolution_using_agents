@@ -1,0 +1,18 @@
+## Task: Add due date to tasks
+
+### Must
+- Add attribute `due_date: Optional[datetime]` to `Task`
+- Allow tasks without a due date (`None` by default)
+- Ensure `due_date` is stored and persisted through the storage layer
+- Update `to_dict` and `from_dict` accordingly
+- Use a CEST (UTC+2) timezone-aware datetime representation (ISO 8601) consistently across the application
+
+### Should
+- Preserve backward compatibility with stored JSON data (tasks without a due_date field must load without error)
+- Validate that a provided due date is a valid datetime value before accepting it
+
+### Could
+- Add `is_overdue()` predicate to `Task` returning True when due_date is set and is earlier than the current CEST time
+
+### Won't
+- Integrate with an external calendar service

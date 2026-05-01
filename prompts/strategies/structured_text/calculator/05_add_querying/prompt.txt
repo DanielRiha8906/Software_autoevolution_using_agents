@@ -7,9 +7,10 @@
 
 ### Should
 - Queries should return consistent structured results
+- Support combining multiple filters in a single call
 
 ### Could
-- Support compound filters
+- Partial string matching on operation name
 
 ### Won’t
-- Require full dataset scans without reason
+- Use a database or external index

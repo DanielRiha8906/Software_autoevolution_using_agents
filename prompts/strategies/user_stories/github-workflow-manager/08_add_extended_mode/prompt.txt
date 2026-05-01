@@ -1,0 +1,13 @@
+As a developer wanting live CI data,
+I want the system to optionally fetch workflow runs directly from GitHub,
+so that I can work with up-to-date run data without manual export steps.
+
+**Acceptance Criteria:**
+- A `github_fetch_mode` is available that fetches workflow runs via the GitHub REST API (`requests`) or `gh` CLI.
+- Fetched data is converted into the existing domain model.
+- The PAT is resolved in this priority order: `GITHUB_TOKEN` env var → `secrets/.env` file → prompt user securely.
+- A user-entered PAT is not persisted unless explicitly configured.
+- API errors (rate limits, invalid token, network issues) are handled gracefully.
+- The token is validated before making requests.
+- Incremental fetch (only runs newer than the latest stored run) is supported as a bonus.
+- Full authentication management (OAuth flows, token refresh) is out of scope.

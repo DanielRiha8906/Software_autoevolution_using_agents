@@ -1,0 +1,9 @@
+As a developer using the calculator library,
+I want each calculation result to record how long the calculation took,
+so that I can profile and compare operation performance.
+
+**Acceptance Criteria:**
+- `CalculationResult` has an `execution_time_ms` attribute representing elapsed time in milliseconds.
+- The attribute is populated automatically for every calculation — no manual input required.
+- Measurement uses only the standard library (no third-party timing packages).
+- Existing code that constructs or reads `CalculationResult` continues to work without changes.

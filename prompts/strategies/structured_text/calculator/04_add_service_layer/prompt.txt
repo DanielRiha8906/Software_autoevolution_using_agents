@@ -6,10 +6,10 @@
 - Ensure integration with calculation flow
 
 ### Should
-- Keep service responsibilities focused
+- Service responsibilities should be limited to MemoryEntry lifecycle management; storage implementation must stay separate
 
 ### Could
-- Add filtering or querying capabilities
+- Add filtering or querying capabilities (expanded in a later step)
 
 ### Won’t
-- Mix business logic with storage implementation
+- Place persistence implementation details (file I/O, serialization) inside the service class

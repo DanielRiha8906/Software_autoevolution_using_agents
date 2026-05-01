@@ -22,7 +22,7 @@ on:
         description: "Prompt strategy (leave blank to run all three)"
         required: false
         type: choice
-        options: ["all", "structured_text", "few_shot", "test_driven"]
+        options: ["all", "structured_text", "user_stories", "test_driven"]
         default: "all"
 
 permissions:
@@ -34,11 +34,11 @@ permissions:
 
 jobs:
   few-shot:
-    if: ${{ inputs.strategy == 'all' || inputs.strategy == 'few_shot' }}
+    if: ${{ inputs.strategy == 'all' || inputs.strategy == 'user_stories' }}
     uses: ./.github/workflows/claude-implement-shared.yml
     with:
       architecture: ${{ inputs.architecture }}
-      strategy: few_shot
+      strategy: user_stories
       project: ${{ inputs.project }}
       task_num: ${{ inputs.task_num }}
     secrets:

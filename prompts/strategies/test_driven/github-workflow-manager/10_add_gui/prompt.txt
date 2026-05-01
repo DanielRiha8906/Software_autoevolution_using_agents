@@ -1,0 +1,69 @@
+### Context
+The workflow manager currently operates via CLI and services. You need to provide a graphical interface for viewing workflow runs, without modifying core logic or duplicating business behaviour.
+
+### Objective
+Implement a `tkinter`-based GUI (`WorkflowGUI`) that displays workflow runs and allows filtering, delegating all logic to the existing service layer.
+
+### Test Suite
+```python
+import inspect
+from unittest.mock import MagicMock
+
+
+def test_workflow_gui_module_exists():
+    from src.gui.workflow_gui import WorkflowGUI
+    assert WorkflowGUI is not None
+
+
+def test_workflow_gui_accepts_service():
+    from src.gui.workflow_gui import WorkflowGUI
+    gui = WorkflowGUI(MagicMock())
+    assert gui is not None
+
+
+def test_gui_does_not_instantiate_services():
+    from src.gui import workflow_gui
+    source = inspect.getsource(workflow_gui)
+
+    assert "WorkflowRunService(" not in source
+    assert "AttemptService(" not in source
+
+
+def test_gui_does_not_use_github_cli():
+    from src.gui import workflow_gui
+    source = inspect.getsource(workflow_gui)
+
+    assert "subprocess" not in source
+    assert "gh " not in source
+
+
+def test_gui_references_service():
+    from src.gui import workflow_gui
+    source = inspect.getsource(workflow_gui)
+
+    assert "service" in source.lower()
+
+
+def test_gui_handles_failed_runs_visually():
+    from src.gui import workflow_gui
+    source = inspect.getsource(workflow_gui)
+
+    assert "fail" in source.lower() or "error" in source.lower()
+```
+
+### Implementation Rules
+- Do not modify the tests.
+- Use `tkinter` from the standard library.
+- The GUI must accept a service instance via constructor.
+- The GUI must not instantiate services internally.
+- The GUI must delegate all data access and filtering to the service layer.
+- The GUI must not use subprocess or GitHub CLI directly.
+- No business logic (filtering, statistics, state evaluation) may be implemented in the GUI.
+- The GUI must not start the `tkinter` main loop during construction.
+
+### Definition of Done
+- All provided tests pass.
+- Existing tests still pass.
+- Code compiles without syntax or import errors.
+- GUI can be instantiated without side effects.
+- No business logic exists in the GUI layer.

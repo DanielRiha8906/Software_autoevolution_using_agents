@@ -1,0 +1,75 @@
+### Context
+`MemoryService` can store and retrieve `MemoryEntry` objects. You need to extend it with filtering capabilities so callers can retrieve subsets of entries without manually filtering the full history.
+
+### Objective
+Add a `query` method to `MemoryService` that supports filtering by operation type, success state, or a combination of both.
+
+### Test Suite
+```python
+import pytest
+from src.models.memory_entry import MemoryEntry
+from src.services.memory_service import MemoryService
+
+
+def _entry(operation="add", success=True):
+    return MemoryEntry(
+        operation=operation,
+        operands=[1, 2],
+        result=3,
+        success=success,
+        execution_time_ms=1,
+    )
+
+
+@pytest.fixture
+def populated_service():
+    service = MemoryService()
+    service.store(_entry("add", success=True))
+    service.store(_entry("multiply", success=True))
+    service.store(_entry("divide", success=False))
+    return service
+
+
+def test_filter_by_operation(populated_service):
+    results = populated_service.query(operation="add")
+    assert len(results) > 0
+    assert all(e.operation == "add" for e in results)
+
+
+def test_filter_by_success_state(populated_service):
+    results = populated_service.query(success=True)
+    assert all(e.success is True for e in results)
+
+
+def test_filter_by_error_state(populated_service):
+    results = populated_service.query(success=False)
+    assert all(e.success is False for e in results)
+
+
+def test_combined_filters(populated_service):
+    results = populated_service.query(operation="add", success=True)
+    assert all(e.operation == "add" and e.success for e in results)
+
+
+def test_query_returns_list(populated_service):
+    assert isinstance(populated_service.query(), list)
+
+
+def test_query_no_match_returns_empty_list(populated_service):
+    assert populated_service.query(operation="nonexistent") == []
+```
+
+### Implementation Rules
+- Do not modify the tests.
+- Implement filtering as a programmatic API, not as CLI-only or GUI-only behaviour.
+- Do not use a database, external index, or external dependency.
+- `query()` with no arguments must return all stored entries.
+- Filters must be combined with AND logic.
+- Results must be returned as a list of `MemoryEntry` objects.
+- `query()` must not mutate stored history.
+
+### Definition of Done
+- All provided tests pass.
+- Existing tests still pass.
+- Code compiles without syntax or import errors.
+- Stored history remains unchanged after querying.

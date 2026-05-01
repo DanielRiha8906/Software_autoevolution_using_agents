@@ -1,0 +1,12 @@
+As a user who wants to keep records or share data,
+I want to export my calculation history to a JSON file and import it back later,
+so that my records persist across sessions and can be moved between environments.
+
+**Acceptance Criteria:**
+- History can be exported to a JSON file.
+- History can be imported from a JSON file.
+- Imported data is validated before being applied; invalid structure is rejected rather than silently corrupted.
+- Importing does not overwrite existing data unless explicitly intended.
+- The JSON schema matches the `MemoryEntry` serialisation format.
+- Invalid or duplicate entries during import are skipped individually, not treated as a full failure.
+- Only JSON format is supported; CSV and XML are out of scope.

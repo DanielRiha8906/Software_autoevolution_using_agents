@@ -1,0 +1,12 @@
+As a developer who wants to archive or transfer run data,
+I want to export workflow runs to a JSON file and import them back,
+so that data can be preserved and moved between environments.
+
+**Acceptance Criteria:**
+- All workflow runs can be exported to a JSON file.
+- Workflow runs can be imported from a JSON file.
+- Imported data is validated before being applied; invalid structure is rejected.
+- Importing does not overwrite existing data unless explicitly intended.
+- Invalid or duplicate entries during import are skipped individually, not treated as a full failure.
+- Only JSON format is supported; CSV and database formats are out of scope.
+- The GitHub adapter layer is the only component allowed to perform external API calls.

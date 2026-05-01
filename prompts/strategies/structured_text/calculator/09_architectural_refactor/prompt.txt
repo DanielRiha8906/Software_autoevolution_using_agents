@@ -5,11 +5,12 @@
 - Ensure clear boundaries between components
 - Maintain existing functionality
 
+### Must
+- Preserve existing external behavior (public interfaces, return types, side effects)
+
 ### Should
 - Improve code structure and readability
-
-### Could
-- Introduce interfaces or abstractions if needed
+- Introduce abstract base classes or protocols to decouple calculation engine, memory, and interface layers
 
 ### Won’t
-- Change external behavior of the system
+- Rewrite domain logic or calculation algorithms

@@ -1,0 +1,12 @@
+As a developer working with task data,
+I want to filter tasks by due date range and overdue status,
+so that I can programmatically retrieve relevant subsets of tasks.
+
+**Acceptance Criteria:**
+- Filtering by due date range (before/after a given datetime) is supported.
+- Filtering by week, month, year (before/after a given datetime) is supported.
+- Filtering by overdue status is supported.
+- Filters can be combined with existing status filtering in a single call.
+- Results are returned in the same structured format as `list_tasks`.
+- Existing `list_tasks(status=...)` behaviour remains unchanged.
+- No database or external indexing system is used.

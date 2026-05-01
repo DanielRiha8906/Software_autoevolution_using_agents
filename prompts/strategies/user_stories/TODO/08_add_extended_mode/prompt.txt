@@ -1,0 +1,15 @@
+As a user managing multiple areas of work,
+I want to group tasks into projects,
+so that I can organise and filter my workload by topic or goal.
+
+**Acceptance Criteria:**
+- A `Project` domain class exists with `id` (UUID) and `name`.
+- `Task` has an optional `project_id` attribute for assignment to a project.
+- Projects can be created and listed.
+- Tasks can be listed filtered by project.
+- Tasks without a `project_id` continue to work as before.
+- Existing stored tasks that lack `project_id` load without error.
+- Project names cannot be empty.
+- Moving a task from one project to another is supported.
+- Deleting a project leaves its tasks unassigned (not deleted) as a bonus.
+- No drag-and-drop UI or per-project access control is introduced.

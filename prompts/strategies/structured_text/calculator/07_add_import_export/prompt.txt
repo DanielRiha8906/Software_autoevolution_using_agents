@@ -1,15 +1,16 @@
 ## Task: Add import and export of calculation history
 
 ### Must
-- Allow exporting stored calculations
-- Allow importing previously saved data
-- Ensure data consistency after import
+- Allow exporting stored MemoryEntry records to a JSON file
+- Allow importing MemoryEntry records from a JSON file
+- Ensure data consistency after import (validate structure before applying)
+- Existing stored data must not be overwritten without explicit intent
 
 ### Should
-- Use a simple and consistent format
+- Schema must match the MemoryEntry serialization format from step 03
 
 ### Could
-- Support multiple formats (e.g., JSON)
+- Skip invalid or duplicate entries on import rather than failing the entire operation
 
 ### Won’t
-- Corrupt existing stored data
+- Support additional file formats (CSV, XML)
