@@ -35,4 +35,4 @@ Used the broadcast architecture with 3 independent implementer agents working in
 - **Backward compatibility**: Optional field with default value 0.0 ensures existing code and data work without modification
 - **Naming**: Follows existing convention with snake_case and `_ms` suffix
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 94.6s | Cost: $0.674276 USD | Turns: 27
