@@ -42,4 +42,4 @@ All three candidates produced identical implementations with identical test resu
 ✓ Existing Task deserialization works unchanged
 ✓ No breaking changes to Task constructor or API
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 20.5s | Cost: $0.530492 USD | Turns: 5
