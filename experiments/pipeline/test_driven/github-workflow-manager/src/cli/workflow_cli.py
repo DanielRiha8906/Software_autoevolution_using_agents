@@ -18,6 +18,7 @@ def _fmt_run(run: WorkflowRun) -> str:
         f"  branch      : {run.branch}\n"
         f"  status      : {run.status.value}\n"
         f"  conclusion  : {conclusion}\n"
+        f"  duration_sec: {run.duration_seconds}\n"
         f"  run_number  : {run.run_number or '—'}\n"
         f"  commit_sha  : {run.commit_sha or '—'}\n"
         f"  created_at  : {run.created_at.isoformat()}\n"
@@ -51,6 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_p.add_argument("--run-number", type=int, default=None)
     add_p.add_argument("--commit-sha", default=None)
+    add_p.add_argument("--duration-seconds", type=float, default=0.0, help="Run duration in seconds")
 
     # list
     list_p = sub.add_parser("list", help="List all runs")
@@ -89,6 +91,7 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             run_number=ns.run_number,
             commit_sha=ns.commit_sha,
             run_id=ns.run_id,
+            duration_seconds=ns.duration_seconds,
         )
         print(f"Added run {run.id}")
 
