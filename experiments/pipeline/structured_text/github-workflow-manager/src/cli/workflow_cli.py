@@ -12,6 +12,7 @@ from ..services.workflow_run_tracker import WorkflowRunTracker
 def _fmt_run(run: WorkflowRun) -> str:
     conclusion = run.conclusion.value if run.conclusion else "—"
     updated = run.updated_at.isoformat() if run.updated_at else "—"
+    duration = f"{run.duration_seconds:.1f}s" if run.duration_seconds else "—"
     return (
         f"  id          : {run.id}\n"
         f"  workflow    : {run.workflow_name}\n"
@@ -22,6 +23,7 @@ def _fmt_run(run: WorkflowRun) -> str:
         f"  commit_sha  : {run.commit_sha or '—'}\n"
         f"  created_at  : {run.created_at.isoformat()}\n"
         f"  updated_at  : {updated}\n"
+        f"  duration    : {duration}\n"
     )
 
 
@@ -51,6 +53,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_p.add_argument("--run-number", type=int, default=None)
     add_p.add_argument("--commit-sha", default=None)
+    add_p.add_argument(
+        "--duration",
+        type=float,
+        default=None,
+        help="Duration in seconds (non-negative)",
+    )
 
     # list
     list_p = sub.add_parser("list", help="List all runs")
@@ -89,6 +97,7 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             run_number=ns.run_number,
             commit_sha=ns.commit_sha,
             run_id=ns.run_id,
+            duration_seconds=ns.duration,
         )
         print(f"Added run {run.id}")
 
