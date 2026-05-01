@@ -25,4 +25,4 @@
 - Old stored data without due_date key loads without error
 - due_date defaults to None for all existing tasks
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 218.4s | Cost: $0.402127 USD | Turns: 14
