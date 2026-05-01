@@ -57,4 +57,4 @@ The implementation satisfies all provided test requirements:
 - Updated `artifacts/class_diagram.puml` to show `+executionTimeMs : float` field in CalculationResult class
 - No changes to activity, component, use case, or state diagrams (timing is internal implementation detail)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 252.6s | Cost: $0.368601 USD | Turns: 19
