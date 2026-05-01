@@ -8,7 +8,7 @@ from src.models.workflow_conclusion import WorkflowConclusion
 from src.services.workflow_run_service import WorkflowRunService
 
 
-def _make_run(run_id: str = "run-1", branch: str = "main") -> WorkflowRun:
+def _make_run(run_id: str = "run-1", branch: str = "main", duration_seconds: float = 0.0) -> WorkflowRun:
     return WorkflowRun(
         id=run_id,
         workflow_name="CI",
@@ -19,6 +19,7 @@ def _make_run(run_id: str = "run-1", branch: str = "main") -> WorkflowRun:
         updated_at=None,
         run_number=1,
         commit_sha="abc123",
+        duration_seconds=duration_seconds,
     )
 
 
