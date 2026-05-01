@@ -30,4 +30,4 @@ Successfully implemented execution time tracking for `CalculationResult` so that
 - All existing tests continue to pass
 - Existing public interfaces unchanged
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 264.0s | Cost: $0.415105 USD | Turns: 16
