@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timezone, timedelta
 from src.models.task_status import TaskStatus
 from src.services.task_manager import TaskManager, TaskNotFoundError
 from src.storage.json_storage import JsonStorage
@@ -79,3 +80,39 @@ def test_persistence(tmp_path):
     task = m1.add("Persisted")
     m2 = TaskManager(JsonStorage(path))
     assert m2.get(task.id).title == "Persisted"
+
+
+def test_add_with_due_date(manager):
+    """Test that add() accepts and stores due_date parameter."""
+    due_date = datetime(2026, 5, 15, 14, 30, 0, tzinfo=timezone(timedelta(hours=2)))
+    task = manager.add("Task with due date", due_date=due_date)
+    assert task.due_date == due_date
+
+
+def test_update_due_date(manager):
+    """Test that update() can set or change due_date."""
+    task = manager.add("Task")
+    due_date = datetime(2026, 5, 15, 14, 30, 0, tzinfo=timezone(timedelta(hours=2)))
+    updated = manager.update(task.id, due_date=due_date)
+    assert updated.due_date == due_date
+
+
+def test_set_due_date(manager):
+    """Test set_due_date() method."""
+    task = manager.add("Task")
+    due_date = datetime(2026, 5, 15, 14, 30, 0, tzinfo=timezone(timedelta(hours=2)))
+    updated = manager.set_due_date(task.id, due_date)
+    assert updated.due_date == due_date
+
+
+def test_due_date_persistence(tmp_path):
+    """Test that due_date is persisted across instances."""
+    path = str(tmp_path / "tasks.json")
+    due_date = datetime(2026, 5, 15, 14, 30, 0, tzinfo=timezone(timedelta(hours=2)))
+
+    m1 = TaskManager(JsonStorage(path))
+    task = m1.add("Persisted task with due date", due_date=due_date)
+
+    m2 = TaskManager(JsonStorage(path))
+    fetched = m2.get(task.id)
+    assert fetched.due_date == due_date
