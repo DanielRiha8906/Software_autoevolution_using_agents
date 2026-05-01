@@ -33,4 +33,4 @@ Implemented optional due_date attribute for tasks with full support for creation
 - Added --due-date CLI options for add/update commands
 - Interactive menu prompts for optional due_date and converts for display
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 372.3s | Cost: $0.624776 USD | Turns: 14
