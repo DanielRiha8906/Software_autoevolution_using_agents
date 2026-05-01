@@ -32,15 +32,16 @@ def _choose(label: str, options: list, allow_blank: bool = False) -> Optional[st
 def _fmt_run(run: WorkflowRun) -> str:
     conclusion = run.conclusion.value if run.conclusion else "—"
     return (
-        f"  id          : {run.id}\n"
-        f"  workflow    : {run.workflow_name}\n"
-        f"  branch      : {run.branch}\n"
-        f"  status      : {run.status.value}\n"
-        f"  conclusion  : {conclusion}\n"
-        f"  run_number  : {run.run_number or '—'}\n"
-        f"  commit_sha  : {run.commit_sha or '—'}\n"
-        f"  created_at  : {run.created_at.isoformat()}\n"
-        f"  updated_at  : {run.updated_at.isoformat() if run.updated_at else '—'}\n"
+        f"  id              : {run.id}\n"
+        f"  workflow        : {run.workflow_name}\n"
+        f"  branch          : {run.branch}\n"
+        f"  status          : {run.status.value}\n"
+        f"  conclusion      : {conclusion}\n"
+        f"  run_number      : {run.run_number or '—'}\n"
+        f"  commit_sha      : {run.commit_sha or '—'}\n"
+        f"  duration_seconds: {run.duration_seconds}\n"
+        f"  created_at      : {run.created_at.isoformat()}\n"
+        f"  updated_at      : {run.updated_at.isoformat() if run.updated_at else '—'}\n"
     )
 
 
@@ -53,9 +54,11 @@ def _add_run(service: WorkflowRunService) -> None:
     conclusion_val = _choose("Conclusion (optional)", [c.value for c in WorkflowConclusion], allow_blank=True)
     run_number_raw = _prompt("Run number (leave blank to skip)", "")
     commit_sha = _prompt("Commit SHA (leave blank to skip)", "") or None
+    duration_raw = _prompt("Duration in seconds (leave blank to skip)", "")
 
     run_number = int(run_number_raw) if run_number_raw else None
     conclusion = WorkflowConclusion(conclusion_val) if conclusion_val else None
+    duration_seconds = float(duration_raw) if duration_raw else None
 
     run = tracker.track(
         workflow_name=name,
@@ -64,6 +67,7 @@ def _add_run(service: WorkflowRunService) -> None:
         conclusion=conclusion,
         run_number=run_number,
         commit_sha=commit_sha,
+        duration_seconds=duration_seconds,
     )
     print(f"\nAdded run {run.id}")
 

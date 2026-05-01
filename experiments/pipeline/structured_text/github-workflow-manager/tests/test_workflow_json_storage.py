@@ -25,6 +25,7 @@ def _sample_run() -> WorkflowRun:
         updated_at=None,
         run_number=42,
         commit_sha="deadbeef",
+        duration_seconds=0.0,
     )
 
 
@@ -43,6 +44,7 @@ def test_save_and_load_roundtrip(tmp_storage):
     assert loaded[0].conclusion == run.conclusion
     assert loaded[0].run_number == run.run_number
     assert loaded[0].commit_sha == run.commit_sha
+    assert loaded[0].duration_seconds == run.duration_seconds
 
 
 def test_save_persists_json(tmp_storage):
@@ -51,3 +53,4 @@ def test_save_persists_json(tmp_storage):
     raw = json.loads(Path(tmp_storage.filepath).read_text())
     assert raw[0]["id"] == "r1"
     assert raw[0]["conclusion"] == "success"
+    assert raw[0]["duration_seconds"] == 0.0
