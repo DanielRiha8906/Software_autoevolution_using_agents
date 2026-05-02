@@ -46,3 +46,47 @@
 - User interface: Both CLI and interactive menu support duration input
 
 Duration: 346.6s | Cost: $0.606393 USD | Turns: 21
+
+## Task 02: Add State-Checking Methods to WorkflowRun
+
+**Status:** COMPLETED
+
+### Task Number
+02
+
+### Files Changed
+- src/models/workflow_run.py (added 5 state-checking methods)
+- artifacts/class_diagram.puml (updated WorkflowRun class with new methods)
+
+### Test Results
+✓ All 9 tests passed
+- test_is_running_when_in_progress
+- test_is_running_false_when_completed
+- test_is_terminal_when_completed_success
+- test_is_terminal_when_completed_failure
+- test_is_terminal_false_when_running
+- test_is_running_and_is_terminal_are_mutually_exclusive
+- test_is_successful
+- test_is_failed
+- test_is_successful_and_is_failed_are_mutually_exclusive
+- test_is_cancelled
+- test_methods_use_only_status_and_conclusion
+
+### Implementation Details
+Added 5 public methods to WorkflowRun dataclass:
+- `is_running() -> bool`: Returns True when status == WorkflowStatus.IN_PROGRESS
+- `is_terminal() -> bool`: Returns True when status == WorkflowStatus.COMPLETED
+- `is_successful() -> bool`: Returns True when status == COMPLETED AND conclusion == SUCCESS
+- `is_failed() -> bool`: Returns True when status == COMPLETED AND conclusion == FAILURE
+- `is_cancelled() -> bool`: Returns True when status == COMPLETED AND conclusion == CANCELLED
+
+All methods derive state strictly from status and conclusion fields only.
+
+### Key Features
+- State encapsulation: Status logic now lives on the model
+- Mutually exclusive: is_running() and is_terminal() cannot both be True
+- Clean API: Replaces direct enum comparisons with readable method calls
+- No dependencies: Uses only == comparisons with enum fields
+- Pure queries: No side effects or I/O operations
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
