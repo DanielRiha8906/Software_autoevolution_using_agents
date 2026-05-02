@@ -69,4 +69,4 @@ Duration: 447.0s | Cost: $0.868444 USD | Turns: 30
 - ✓ Should: Prevent invalid status transitions with ValueError
 - ✓ Should: Add unit tests covering all transitions
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 283.6s | Cost: $0.497648 USD | Turns: 26
