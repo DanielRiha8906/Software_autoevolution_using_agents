@@ -39,4 +39,4 @@
 ✓ Invalid datetime values rejected before save
 ✓ Existing stored tasks without `due_date` field load without error
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 614.7s | Cost: $1.099172 USD | Turns: 14
