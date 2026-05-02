@@ -51,4 +51,4 @@ Duration: 259.3s | Cost: $0.404111 USD | Turns: 16
 - Full CLI integration with interactive menu and one-shot command mode
 - CalculationResult __str__() properly formats unary operations (no second operand displayed)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 376.0s | Cost: $0.664385 USD | Turns: 31
