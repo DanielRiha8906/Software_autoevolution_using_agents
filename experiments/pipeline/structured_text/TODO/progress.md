@@ -72,3 +72,36 @@ Duration: 447.0s | Cost: $0.868444 USD | Turns: 30
 - ✓ Could: (Not implemented) Add is_pending() and is_in_progress() predicates
 
 Duration: 260.0s | Cost: $0.403842 USD | Turns: 13
+
+## Task 03: Introduce TaskComment domain class
+
+### Status: Complete
+
+### Files Changed
+- src/models/task_comment.py (new — TaskComment dataclass with to_dict/from_dict)
+- src/models/__init__.py (added TaskComment export)
+- tests/test_task_comment.py (new — 18 comprehensive tests)
+- artifacts/class_diagram.puml (added TaskComment class and Task→TaskComment relationship)
+- artifacts/component_diagram.puml (updated models package to include TaskComment)
+
+### Test Results
+✓ 93 tests passed (75 existing + 18 new for TaskComment)
+
+### Implementation Summary
+- Created TaskComment domain class with attributes: id (UUID), task_id (str), content (str), created_at (datetime CEST)
+- Implemented to_dict() method for JSON serialization with ISO 8601 datetime format
+- Implemented from_dict() classmethod for deserialization with validation:
+  - Validates all required fields present
+  - Validates content is non-empty/non-whitespace
+  - Parses ISO 8601 timestamps with error handling
+- 18 comprehensive tests covering instantiation, uniqueness, serialization, validation, and roundtrip integrity
+- Follows existing Task class patterns: dataclass with field factories, ISO 8601 serialization, validation in from_dict()
+
+### Requirements Met
+- ✓ Must: Create TaskComment with id, task_id, content, created_at (CEST UTC+2)
+- ✓ Must: Support JSON serialization/deserialization (to_dict/from_dict)
+- ✓ Should: Validate content is not empty
+- ✓ Should: Maintain relationship integrity (task_id validation in from_dict)
+- ⊘ Could: Not implemented — author, updated_at, edit() method (out of scope for Must/Should)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
