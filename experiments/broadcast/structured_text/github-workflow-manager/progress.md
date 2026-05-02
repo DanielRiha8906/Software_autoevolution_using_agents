@@ -317,4 +317,4 @@ Duration: 234.5s | Cost: $0.459188 USD | Turns: 27
 
 Files changed: src/services/attempt_service.py, src/services/__init__.py, tests/test_attempt_service.py, artifacts/class_diagram.puml
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 221.9s | Cost: $0.431683 USD | Turns: 25
