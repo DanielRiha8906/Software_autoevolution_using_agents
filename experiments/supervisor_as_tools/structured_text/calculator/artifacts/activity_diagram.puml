@@ -11,13 +11,16 @@ if (CLI operation provided?) then (yes)
   :Validate operation and operands;
 
   if (Input valid?) then (yes)
-    :Perform calculation;
+    :Perform calculation via MemoryService;
 
     if (Calculation successful?) then (yes)
-      :Save result to history;
+      :Create success MemoryEntry;
+      :Save entry to storage;
       :Show result;
       stop
     else (no)
+      :Create error MemoryEntry;
+      :Save entry to storage;
       :Show calculation error;
       stop
     endif
@@ -47,12 +50,15 @@ else (no)
         :Read operands;
 
         if (Input valid?) then (yes)
-          :Perform calculation;
+          :Perform calculation via MemoryService;
 
           if (Calculation successful?) then (yes)
-            :Save result to history;
+            :Create success MemoryEntry;
+            :Save entry to storage;
             :Show result;
           else (no)
+            :Create error MemoryEntry;
+            :Save entry to storage;
             :Show calculation error;
           endif
 

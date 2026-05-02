@@ -51,3 +51,33 @@ Duration: 151.6s | Cost: $0.310106 USD | Turns: 14
 - All 38 existing tests pass with no changes required to test suite
 
 Duration: 228.3s | Cost: $0.358443 USD | Turns: 18
+
+## Task 04: Add MemoryService for managing MemoryEntry
+
+**Status:** Completed
+
+**Task Number:** 04
+
+**Files Changed:**
+- src/services/memory_service.py — Created new MemoryService class
+- src/services/__init__.py — Added MemoryService to exports
+- tests/test_memory_service.py — Created comprehensive test suite (8 tests)
+- artifacts/class_diagram.puml — Added MemoryService class with dependencies and methods
+- artifacts/component_diagram.puml — Added MemoryService component showing wrapping pattern
+- artifacts/activity_diagram.puml — Updated to show memory persistence on success and error paths
+
+**Test Result:** ✅ PASS (46/46 tests passed - 38 existing + 8 new)
+
+**Implementation Summary:**
+- Created MemoryService class in src/services/memory_service.py
+- Constructor accepts calculator_service (CalculatorService) and storage (JsonStorage) as dependencies
+- perform() method: wraps CalculatorService.perform(), creates MemoryEntry on success using MemoryEntry.success(), creates error MemoryEntry on ValueError using MemoryEntry.error(), persists to storage in both cases, re-raises exceptions to caller
+- store() method: delegates to storage.save() for explicit MemoryEntry persistence
+- retrieve_all() method: loads entries from storage and converts to MemoryEntry objects using from_dict()
+- get_history() method: delegates to calculator_service.get_history() for backward compatibility
+- Comprehensive test suite covering initialization, success path, error path with division by zero, execute time tracking, and delegation
+- MemoryService acts as wrapper/decorator around CalculatorService, enabling error persistence (previously lost)
+- Storage implementation details remain encapsulated in JsonStorage (duck typing supports both CalculationResult and MemoryEntry)
+- Full error tracking with status field ("success" or "error") and error_message for failed operations
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
