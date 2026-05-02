@@ -98,4 +98,4 @@ Implemented an optional `due_date` field for the Task model with complete suppor
 - `activity_diagram.puml` — Updated task flow to show due_date handling
 - `use_case_diagram.puml` — Added set/view due_date use cases
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 476.8s | Cost: $0.861312 USD | Turns: 23
