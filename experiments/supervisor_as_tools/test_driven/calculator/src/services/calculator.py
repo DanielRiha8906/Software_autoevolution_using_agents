@@ -1,3 +1,5 @@
+import math
+
 from ..models.operation import Operation
 
 
@@ -15,6 +17,22 @@ class Calculator:
         if b == 0:
             raise ValueError("Division by zero is not allowed")
         return a / b
+
+    def square(self, a: float) -> float:
+        return a * a
+
+    def sqrt(self, a: float) -> float:
+        if a < 0:
+            raise ValueError("Cannot take square root of negative number")
+        return math.sqrt(a)
+
+    def power(self, base: float, exponent: float) -> float:
+        return base ** exponent
+
+    def modulo(self, a: float, b: float) -> float:
+        if b == 0:
+            raise ValueError("Modulo by zero is not allowed")
+        return a % b
 
     def calculate(self, operation: Operation, a: float, b: float) -> float:
         dispatch = {
