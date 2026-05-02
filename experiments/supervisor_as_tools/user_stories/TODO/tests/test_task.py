@@ -71,3 +71,146 @@ def test_task_backward_compatibility_missing_due_date():
     }
     task = Task.from_dict(data)
     assert task.due_date is None
+
+
+# Tests for status transition action methods
+
+
+def test_mark_in_progress():
+    """Test that mark_in_progress() transitions status to IN_PROGRESS."""
+    task = Task(title="Test")
+    assert task.status == TaskStatus.PENDING
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+
+
+def test_mark_in_progress_updates_timestamp():
+    """Test that mark_in_progress() updates updated_at to CEST timezone."""
+    cest = ZoneInfo("Europe/Paris")
+    task = Task(title="Test")
+    old_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.updated_at != old_updated_at
+    assert task.updated_at.tzinfo == cest
+
+
+def test_mark_done():
+    """Test that mark_done() transitions status to DONE."""
+    task = Task(title="Test")
+    task.status = TaskStatus.IN_PROGRESS
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+
+
+def test_mark_done_updates_timestamp():
+    """Test that mark_done() updates updated_at to CEST timezone."""
+    cest = ZoneInfo("Europe/Paris")
+    task = Task(title="Test")
+    old_updated_at = task.updated_at
+    task.mark_done()
+    assert task.updated_at != old_updated_at
+    assert task.updated_at.tzinfo == cest
+
+
+def test_reopen():
+    """Test that reopen() transitions status back to PENDING."""
+    task = Task(title="Test")
+    task.status = TaskStatus.DONE
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+
+
+def test_reopen_updates_timestamp():
+    """Test that reopen() updates updated_at to CEST timezone."""
+    cest = ZoneInfo("Europe/Paris")
+    task = Task(title="Test")
+    task.status = TaskStatus.DONE
+    old_updated_at = task.updated_at
+    task.reopen()
+    assert task.updated_at != old_updated_at
+    assert task.updated_at.tzinfo == cest
+
+
+# Tests for query/predicate methods
+
+
+def test_is_completed_true():
+    """Test that is_completed() returns True when status is DONE."""
+    task = Task(title="Test", status=TaskStatus.DONE)
+    assert task.is_completed() is True
+
+
+def test_is_completed_false():
+    """Test that is_completed() returns False when status is not DONE."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    assert task.is_completed() is False
+    task.status = TaskStatus.IN_PROGRESS
+    assert task.is_completed() is False
+
+
+def test_is_pending_true():
+    """Test that is_pending() returns True when status is PENDING."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    assert task.is_pending() is True
+
+
+def test_is_pending_false():
+    """Test that is_pending() returns False when status is not PENDING."""
+    task = Task(title="Test", status=TaskStatus.DONE)
+    assert task.is_pending() is False
+    task.status = TaskStatus.IN_PROGRESS
+    assert task.is_pending() is False
+
+
+def test_is_in_progress_true():
+    """Test that is_in_progress() returns True when status is IN_PROGRESS."""
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    assert task.is_in_progress() is True
+
+
+def test_is_in_progress_false():
+    """Test that is_in_progress() returns False when status is not IN_PROGRESS."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    assert task.is_in_progress() is False
+    task.status = TaskStatus.DONE
+    assert task.is_in_progress() is False
+
+
+def test_is_overdue_with_past_due_date():
+    """Test that is_overdue() returns True when due_date is in the past."""
+    cest = ZoneInfo("Europe/Paris")
+    past_date = datetime(2020, 1, 1, tzinfo=cest)
+    task = Task(title="Test", due_date=past_date)
+    assert task.is_overdue() is True
+
+
+def test_is_overdue_with_future_due_date():
+    """Test that is_overdue() returns False when due_date is in the future."""
+    cest = ZoneInfo("Europe/Paris")
+    future_date = datetime(2050, 12, 31, tzinfo=cest)
+    task = Task(title="Test", due_date=future_date)
+    assert task.is_overdue() is False
+
+
+def test_is_overdue_with_none_due_date():
+    """Test that is_overdue() returns False when due_date is None."""
+    task = Task(title="Test", due_date=None)
+    assert task.is_overdue() is False
+
+
+def test_query_methods_dont_modify_state():
+    """Test that query methods don't modify task state."""
+    cest = ZoneInfo("Europe/Paris")
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS, due_date=datetime(2020, 1, 1, tzinfo=cest))
+    original_status = task.status
+    original_updated_at = task.updated_at
+
+    # Call all query methods
+    _ = task.is_completed()
+    _ = task.is_pending()
+    _ = task.is_in_progress()
+    _ = task.is_overdue()
+
+    # Verify state hasn't changed
+    assert task.status == original_status
+    assert task.updated_at == original_updated_at
