@@ -48,12 +48,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Install PlantUML
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y plantuml graphviz jq bc
-          plantuml -version
-          dot -V
       - name: Prepare prompts
         id: prompts
         shell: bash
@@ -375,23 +369,3 @@ jobs:
 
           git commit -m "chore: patch progress.md with actual cost (task ${{ inputs.task_num }})"
           git push origin "$BRANCH"
-
-      - name: Generate UML diagrams
-        if: always()
-        shell: bash
-        run: |
-          WORK_DIR="experiments/${{ inputs.architecture }}/${{ inputs.strategy }}/${{ inputs.project }}"
-
-          bash "$WORK_DIR/generate_diagrams.sh"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add "$WORK_DIR/artifacts/"
-
-          if git diff --cached --quiet; then
-          echo "No UML diagram changes to commit."
-          else
-              git commit -m "chore: update generated UML diagrams"
-              git push
-          fi

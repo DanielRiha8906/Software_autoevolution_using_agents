@@ -1,0 +1,52 @@
+@startuml component_diagram
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+top to bottom direction
+
+package "GitHub Workflow Manager" {
+
+  package "Application entrypoint" {
+    component "main" as MAIN
+  }
+
+  package "Interface layer" {
+    component "workflow_cli" as CLI
+    component "interactive_menu" as IM
+  }
+
+  package "Service layer" {
+    component "WorkflowRunTracker" as TRACKER
+    component "WorkflowRunService" as SVC
+  }
+
+  package "Persistence layer" {
+    component "WorkflowJsonStorage" as STOR
+    artifact "workflow_runs.json" as JSON_FILE
+  }
+
+  package "Domain model" {
+    component "WorkflowRun" as RUN
+    component "WorkflowStatus" as STATUS
+    component "WorkflowConclusion" as CONCLUSION
+  }
+}
+
+MAIN --> CLI
+MAIN --> IM
+
+CLI --> TRACKER
+IM --> TRACKER
+
+CLI --> SVC
+IM --> SVC
+
+TRACKER --> SVC
+SVC --> STOR
+STOR --> JSON_FILE
+
+SVC ..> RUN
+RUN --> STATUS
+RUN --> CONCLUSION
+
+@enduml

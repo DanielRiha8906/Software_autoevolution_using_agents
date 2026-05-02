@@ -1,0 +1,53 @@
+@startuml use_case_diagram
+
+left to right direction
+
+actor User
+
+rectangle "TODO Manager" {
+
+  package "Interactive mode" {
+    usecase "Use interactive menu" as UI
+    usecase "Add task" as I_ADD
+    usecase "List / filter tasks" as I_LIST
+    usecase "Show task details" as I_SHOW
+    usecase "Change task status" as I_STATUS
+    usecase "Update task" as I_UPDATE
+    usecase "Delete task" as I_DELETE
+    usecase "Quit application" as I_QUIT
+  }
+
+  package "Command-line mode" {
+    usecase "Use one-shot CLI command" as CLI
+    usecase "Add task" as C_ADD
+    usecase "List / filter tasks" as C_LIST
+    usecase "Show task details" as C_SHOW
+    usecase "Start task" as C_START
+    usecase "Complete task" as C_DONE
+    usecase "Reopen task" as C_REOPEN
+    usecase "Update task" as C_UPDATE
+    usecase "Delete task" as C_DELETE
+  }
+}
+
+User --> UI
+User --> CLI
+
+UI ..> I_ADD    : <<exclude>>
+UI ..> I_LIST   : <<exclude>>
+UI ..> I_SHOW   : <<exclude>>
+UI ..> I_STATUS : <<exclude>>
+UI ..> I_UPDATE : <<exclude>>
+UI ..> I_DELETE : <<exclude>>
+UI ..> I_QUIT   : <<exclude>>
+
+CLI ..> C_ADD    : <<exclude>>
+CLI ..> C_LIST   : <<exclude>>
+CLI ..> C_SHOW   : <<exclude>>
+CLI ..> C_START  : <<exclude>>
+CLI ..> C_DONE   : <<exclude>>
+CLI ..> C_REOPEN : <<exclude>>
+CLI ..> C_UPDATE : <<exclude>>
+CLI ..> C_DELETE : <<exclude>>
+
+@enduml

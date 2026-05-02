@@ -1,0 +1,9 @@
+@startuml
+
+[*] --> PENDING
+
+PENDING --> IN_PROGRESS : start
+IN_PROGRESS --> DONE : complete
+DONE --> IN_PROGRESS : reopen
+
+@enduml
