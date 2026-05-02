@@ -22,3 +22,27 @@
 - CLI and interactive menu support duration input
 
 Duration: 272.1s | Cost: $0.494900 USD | Turns: 16
+
+## Task 02: Add state-checking methods to WorkflowRun
+
+**Status:** ✅ Complete
+
+**Files Changed:**
+- src/models/workflow_run.py (added is_terminal(), is_running(), is_successful(), is_failed(), is_cancelled() methods)
+- tests/test_workflow_run.py (created new test file with 51 test cases)
+- artifacts/class_diagram.puml (updated WorkflowRun class to show 5 new methods)
+
+**Test Result:** ✅ 63 tests passed
+
+**Key Implementation Details:**
+- is_terminal(): returns True if status == COMPLETED
+- is_running(): returns True if status == IN_PROGRESS
+- is_successful(): returns True if status == COMPLETED and conclusion == SUCCESS
+- is_failed(): returns True if status == COMPLETED and conclusion in (FAILURE, TIMED_OUT, ACTION_REQUIRED)
+- is_cancelled(): returns True if status == COMPLETED and conclusion == CANCELLED
+- All methods derive state strictly from status and conclusion fields
+- is_terminal() and is_running() are mutually exclusive
+- is_successful() and is_failed() are mutually exclusive
+- No enum modifications required
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
