@@ -57,4 +57,4 @@ Extended the Calculator class with four new mathematical operations: square, sqr
 - Used simple multiplication for square(a * a) for clarity
 - All error messages consistent with existing patterns (ValueError with descriptive text)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 156.1s | Cost: $0.340129 USD | Turns: 31
