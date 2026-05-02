@@ -58,4 +58,4 @@ Successfully added status transition and query methods to the Task model with CE
 - `reopen()` is idempotent (safe to call on already-PENDING tasks)
 - TaskManager.set_status() now delegates to Task methods, centralizing timezone logic
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 222.4s | Cost: $0.397226 USD | Turns: 23
