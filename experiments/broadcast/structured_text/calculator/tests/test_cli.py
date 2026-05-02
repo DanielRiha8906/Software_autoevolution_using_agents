@@ -58,15 +58,18 @@ class TestRunInteractive:
         assert "Invalid choice" in capsys.readouterr().out
 
     def test_invalid_number_retries(self, capsys):
-        cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["1", "abc", "5", "10"]):
+        cli, service = _make_cli()
+        service.perform.return_value = CalculationResult("add", 5, 3, 8, _TS)
+        with patch("builtins.input", side_effect=["1", "abc", "1", "5", "3", "10"]):
             cli.run_interactive()
-        assert "Invalid number" in capsys.readouterr().out
+        out = capsys.readouterr().out
+        assert "Invalid number" in out
+        assert "8" in out
 
     def test_history_empty(self, capsys):
         cli, service = _make_cli()
         service.get_history.return_value = []
-        with patch("builtins.input", side_effect=["5", "6"]):
+        with patch("builtins.input", side_effect=["9", "10"]):
             cli.run_interactive()
         assert "No calculations" in capsys.readouterr().out
 
@@ -75,6 +78,6 @@ class TestRunInteractive:
         service.get_history.return_value = [
             CalculationResult("add", 1, 2, 3, _TS),
         ]
-        with patch("builtins.input", side_effect=["5", "6"]):
+        with patch("builtins.input", side_effect=["9", "10"]):
             cli.run_interactive()
         assert "1 + 2 = 3" in capsys.readouterr().out
