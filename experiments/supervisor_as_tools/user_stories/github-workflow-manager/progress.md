@@ -65,4 +65,4 @@ Duration: 281.6s | Cost: $0.482583 USD | Turns: 18
 - ✓ Full service layer with CRUD operations and filtering
 - ✓ JSON persistence layer with separate storage file
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 344.5s | Cost: $0.663813 USD | Turns: 27
