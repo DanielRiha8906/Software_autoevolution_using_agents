@@ -13,7 +13,7 @@ if (CLI arguments provided?) then (yes)
   switch (subcommand)
 
     case (add)
-      :Read name, branch, status\nconclusion, run-number, commit-sha;
+      :Read name, branch, status\nconclusion, run-number, commit-sha\nduration-seconds;
       :WorkflowRunTracker.track();
       :Print "Added run <id>";
 

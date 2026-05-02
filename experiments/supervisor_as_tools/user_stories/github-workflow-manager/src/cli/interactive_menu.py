@@ -41,6 +41,7 @@ def _fmt_run(run: WorkflowRun) -> str:
         f"  commit_sha  : {run.commit_sha or '—'}\n"
         f"  created_at  : {run.created_at.isoformat()}\n"
         f"  updated_at  : {run.updated_at.isoformat() if run.updated_at else '—'}\n"
+        f"  duration_seconds : {run.duration_seconds}\n"
     )
 
 
@@ -54,6 +55,18 @@ def _add_run(service: WorkflowRunService) -> None:
     run_number_raw = _prompt("Run number (leave blank to skip)", "")
     commit_sha = _prompt("Commit SHA (leave blank to skip)", "") or None
 
+    # Prompt for duration with validation
+    while True:
+        duration_raw = _prompt("Duration in seconds (leave blank for 0)", "0")
+        try:
+            duration_seconds = float(duration_raw) if duration_raw else 0.0
+            if duration_seconds < 0:
+                print("Duration cannot be negative. Please try again.")
+                continue
+            break
+        except ValueError:
+            print("Invalid number. Please try again.")
+
     run_number = int(run_number_raw) if run_number_raw else None
     conclusion = WorkflowConclusion(conclusion_val) if conclusion_val else None
 
@@ -64,6 +77,7 @@ def _add_run(service: WorkflowRunService) -> None:
         conclusion=conclusion,
         run_number=run_number,
         commit_sha=commit_sha,
+        duration_seconds=duration_seconds,
     )
     print(f"\nAdded run {run.id}")
 
