@@ -66,3 +66,73 @@
 - New due_date functionality fully tested
 
 Duration: 525.2s | Cost: $0.757357 USD | Turns: 45
+
+---
+
+## Task 02: Add status and due date methods to Task
+
+### Broadcast Candidates Evaluation
+
+#### Candidate A (broadcast-candidate-a) ⭐ **SELECTED**
+- **Approach**: Implemented all MUST methods (mark_in_progress, mark_done, reopen, is_completed) with CEST timezone updates, invalid transition prevention via ValueError on reopen() for PENDING status, and added COULD items (is_pending, is_in_progress predicates)
+- **Test Results**: 74 tests pass (55 original + 19 new)
+- **Status**: Complete ✓
+- **Key Implementation Details**:
+  - All status-mutating methods update `updated_at` to current CEST time
+  - reopen() raises ValueError if task already PENDING (prevents invalid transitions)
+  - Added symmetrical predicates: is_pending(), is_in_progress()
+  - All methods derive state from existing Task attributes only
+- **Code Quality**: Clean, concise, well-documented methods with docstrings
+
+#### Candidate B (broadcast-candidate-b)
+- **Approach**: Identical implementation to Candidate A
+- **Test Results**: 74 tests pass (55 original + 19 new)
+- **Status**: Complete ✓
+- **Differences**: None - produces identical code to Candidate A
+
+#### Candidate C (broadcast-candidate-c)
+- **Approach**: Identical implementation to Candidates A and B
+- **Test Results**: 74 tests pass (55 original + 19 new)
+- **Status**: Complete ✓
+- **Differences**: None - produces identical code to Candidates A and B
+
+### Selection Rationale
+
+**Candidate A was selected** because:
+1. **All candidates equivalent**: All three produced identical, working implementations with 100% test pass rate (74/74)
+2. **Perfect MoSCoW compliance**: All MUST items implemented, SHOULD items (invalid transition prevention) implemented, COULD items (symmetrical predicates) included
+3. **Deterministic selection**: Selected first candidate (A) since all are equivalent in quality and test coverage
+4. **Robust error handling**: ValueError approach for invalid transitions is one of the two acceptable approaches mentioned in SHOULD requirements
+
+### Files Changed
+- `src/models/task.py` - Added 6 new methods: mark_in_progress(), mark_done(), reopen(), is_completed(), is_pending(), is_in_progress()
+- `tests/test_task.py` - Added 19 comprehensive tests covering all status transitions, timestamp updates, invalid transitions, and predicate combinations
+
+### Requirements Met
+
+**MUST (all implemented)**:
+- ✓ `mark_in_progress()` — transitions status to IN_PROGRESS, updates updated_at to CEST
+- ✓ `mark_done()` — transitions status to DONE, updates updated_at to CEST
+- ✓ `reopen()` — transitions status to PENDING, updates updated_at to CEST
+- ✓ `is_completed()` — returns True when status is DONE
+- ✓ `is_overdue()` — already implemented in Task 01
+- ✓ Each status-mutating method updates updated_at to current CEST time
+- ✓ Methods derive state strictly from existing Task attributes
+
+**SHOULD (all implemented)**:
+- ✓ Prevents invalid status transitions: reopen() on PENDING raises ValueError
+- ✓ Unit tests covering all status transitions and combinations
+
+**COULD (implemented)**:
+- ✓ `is_pending()` predicate for symmetry with is_completed()
+- ✓ `is_in_progress()` predicate for symmetry with is_completed()
+
+**WON'T**:
+- No workflow approval or state-machine framework (as required)
+
+### Test Results Summary
+- Total passing: 74/74 (100%)
+- All original tests maintain compatibility
+- 19 new tests cover status transitions, timestamp updates, invalid transitions, and predicate combinations
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
