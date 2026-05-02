@@ -45,6 +45,39 @@ class Task:
             result["due_date"] = self.due_date.isoformat()
         return result
 
+    def mark_in_progress(self) -> None:
+        """Set status to IN_PROGRESS and update timestamp to CEST."""
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(CEST)
+
+    def mark_done(self) -> None:
+        """Set status to DONE and update timestamp to CEST."""
+        self.status = TaskStatus.DONE
+        self.updated_at = datetime.now(CEST)
+
+    def reopen(self) -> None:
+        """Set status to PENDING and update timestamp to CEST."""
+        self.status = TaskStatus.PENDING
+        self.updated_at = datetime.now(CEST)
+
+    def is_completed(self) -> bool:
+        """Return True if status is DONE."""
+        return self.status == TaskStatus.DONE
+
+    def is_pending(self) -> bool:
+        """Return True if status is PENDING."""
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Return True if status is IN_PROGRESS."""
+        return self.status == TaskStatus.IN_PROGRESS
+
+    def is_overdue(self) -> bool:
+        """Return True if due_date is in the past (CEST), False if no due_date."""
+        if self.due_date is None:
+            return False
+        return datetime.now(CEST) > self.due_date
+
     @classmethod
     def from_dict(cls, data: dict) -> Task:
         due_date = None
