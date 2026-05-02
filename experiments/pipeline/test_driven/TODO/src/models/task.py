@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from .task_status import TaskStatus
+
+CEST = timezone(timedelta(hours=2))
 
 
 @dataclass
@@ -51,3 +53,38 @@ class Task:
             updated_at=datetime.fromisoformat(data["updated_at"]),
             due_date=due_date,
         )
+
+    def is_pending(self) -> bool:
+        """Check if the task is in PENDING status."""
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Check if the task is in IN_PROGRESS status."""
+        return self.status == TaskStatus.IN_PROGRESS
+
+    def is_completed(self) -> bool:
+        """Check if the task is in DONE status."""
+        return self.status == TaskStatus.DONE
+
+    def is_overdue(self) -> bool:
+        """Check if the task is overdue. Returns False if due_date is None."""
+        if self.due_date is None:
+            return False
+        return self.due_date < datetime.now(CEST)
+
+    def mark_in_progress(self) -> None:
+        """Mark the task as IN_PROGRESS and update the updated_at timestamp."""
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(CEST)
+
+    def mark_done(self) -> None:
+        """Mark the task as DONE and update the updated_at timestamp."""
+        self.status = TaskStatus.DONE
+        self.updated_at = datetime.now(CEST)
+
+    def reopen(self) -> None:
+        """Reopen the task by setting status to PENDING. Raises ValueError if already PENDING."""
+        if self.status == TaskStatus.PENDING:
+            raise ValueError("Task is already in PENDING status")
+        self.status = TaskStatus.PENDING
+        self.updated_at = datetime.now(CEST)

@@ -69,4 +69,85 @@ All tests pass successfully:
 
 ---
 
-Duration: 252.8s | Cost: $0.436173 USD | Turns: 15
+## Task 02: Add status mutation methods and state query methods to Task model
+
+**Architecture:** pipeline | **Strategy:** test_driven | **Project:** TODO
+
+**Objective:** Move status transition logic onto the Task model by adding `mark_in_progress()`, `mark_done()`, `reopen()`, and state query methods (`is_completed()`, `is_overdue()`, `is_pending()`, `is_in_progress()`) with proper `updated_at` tracking and CEST timezone handling.
+
+### Summary
+
+Successfully implemented 7 new methods on the Task model to handle status transitions and state queries. All methods derive state from existing Task attributes and properly update timestamps in CEST (UTC+2).
+
+### Files Changed
+
+1. **src/models/task.py**
+   - Added `timedelta` import to existing datetime imports
+   - Added CEST timezone constant: `CEST = timezone(timedelta(hours=2))`
+   - Added 4 state query methods: `is_pending()`, `is_in_progress()`, `is_completed()`, `is_overdue()`
+   - Added 3 state mutation methods: `mark_in_progress()`, `mark_done()`, `reopen()`
+   - All mutating methods update `updated_at` to current CEST time
+   - `is_overdue()` returns False if no due_date, otherwise compares due_date against CEST now
+
+2. **tests/test_task.py**
+   - Added 13 new test cases covering all 7 new methods
+   - Tests verify status transitions, timestamp updates, timezone handling, and edge cases
+
+3. **artifacts/class_diagram.puml**
+   - Updated Task class diagram to show 7 new methods with correct signatures and return types
+   - Query methods marked as returning Boolean, mutation methods as void
+
+### Test Results
+
+```
+61 tests passed (48 existing + 13 new)
+- All 13 new tests pass
+- All 48 existing tests continue to pass
+- 0 failures, 0 skipped
+```
+
+All tests pass successfully:
+- ✅ test_mark_in_progress
+- ✅ test_mark_done
+- ✅ test_reopen
+- ✅ test_status_mutation_updates_updated_at
+- ✅ test_status_mutation_updates_updated_at_to_cest
+- ✅ test_is_completed_true_when_done
+- ✅ test_is_completed_false_when_pending
+- ✅ test_is_overdue_true_when_past_due
+- ✅ test_is_overdue_false_when_future_due
+- ✅ test_is_overdue_false_when_no_due_date
+- ✅ test_is_pending
+- ✅ test_is_in_progress
+- ✅ test_reopen_on_pending_is_noop_or_raises
+
+### Implementation Details
+
+**Key features:**
+- 3 mutating methods for status transitions: mark_in_progress(), mark_done(), reopen()
+- 4 query methods for state inspection: is_pending(), is_in_progress(), is_completed(), is_overdue()
+- Timestamp tracking: All mutations update updated_at to CEST (UTC+2) time
+- Timezone awareness: updated_at becomes CEST-aware when mutated, preserving existing UTC initialization
+- Overdue detection: Compares due_date (any timezone) against current CEST time; returns False if due_date is None
+- Transition validation: reopen() raises ValueError if task is already PENDING (invalid transition)
+- No external dependencies: All logic uses only existing Task attributes
+
+**Behavior:**
+- Status can transition from any state to any other state via mutating methods (flexible, test-driven)
+- reopen() is an exception: raises ValueError when attempting to reopen a PENDING task (invalid state)
+- All state queries are pure functions with no side effects
+- Timestamp mutations use CEST (UTC+2) per requirements, not system default timezone
+
+### Definition of Done ✓
+
+- [x] All 13 provided tests pass
+- [x] All 48 existing tests still pass
+- [x] Code compiles without syntax/import errors
+- [x] updated_at is set to CEST time on status mutations
+- [x] is_overdue() correctly handles None due_date and CEST comparisons
+- [x] UML diagrams updated (class_diagram.puml)
+- [x] progress.md updated
+
+---
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
