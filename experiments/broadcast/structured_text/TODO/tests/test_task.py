@@ -168,3 +168,185 @@ def test_task_is_overdue_cest_timezone():
     past_cest = datetime.now(CEST) - timedelta(hours=1)
     task = Task(title="Test task", due_date=past_cest)
     assert task.is_overdue() is True
+
+
+# Status transition method tests
+def test_mark_in_progress():
+    """Test that mark_in_progress() transitions status to IN_PROGRESS."""
+    task = Task(title="Test task")
+    assert task.status == TaskStatus.PENDING
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+
+
+def test_mark_in_progress_updates_updated_at():
+    """Test that mark_in_progress() updates updated_at to current CEST time."""
+    task = Task(title="Test task")
+    old_updated_at = task.updated_at
+    import time
+    time.sleep(0.01)
+    task.mark_in_progress()
+    assert task.updated_at > old_updated_at
+
+
+def test_mark_done():
+    """Test that mark_done() transitions status to DONE."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+
+
+def test_mark_done_updates_updated_at():
+    """Test that mark_done() updates updated_at to current CEST time."""
+    task = Task(title="Test task")
+    old_updated_at = task.updated_at
+    import time
+    time.sleep(0.01)
+    task.mark_done()
+    assert task.updated_at > old_updated_at
+
+
+def test_mark_done_from_pending():
+    """Test that mark_done() can transition from PENDING directly to DONE."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+
+
+def test_reopen():
+    """Test that reopen() transitions status to PENDING."""
+    task = Task(title="Test task", status=TaskStatus.DONE)
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+
+
+def test_reopen_from_in_progress():
+    """Test that reopen() works from IN_PROGRESS status."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+
+
+def test_reopen_updates_updated_at():
+    """Test that reopen() updates updated_at to current CEST time."""
+    task = Task(title="Test task", status=TaskStatus.DONE)
+    old_updated_at = task.updated_at
+    import time
+    time.sleep(0.01)
+    task.reopen()
+    assert task.updated_at > old_updated_at
+
+
+def test_reopen_pending_raises_error():
+    """Test that reopen() raises ValueError if task is already PENDING (prevents invalid transition)."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    with pytest.raises(ValueError, match="Cannot reopen a task that is already PENDING"):
+        task.reopen()
+
+
+def test_is_completed_true():
+    """Test that is_completed() returns True when status is DONE."""
+    task = Task(title="Test task", status=TaskStatus.DONE)
+    assert task.is_completed() is True
+
+
+def test_is_completed_false():
+    """Test that is_completed() returns False when status is not DONE."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    assert task.is_completed() is False
+    task.status = TaskStatus.IN_PROGRESS
+    assert task.is_completed() is False
+
+
+def test_is_pending():
+    """Test that is_pending() returns True when status is PENDING."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    assert task.is_pending() is True
+
+
+def test_is_pending_false():
+    """Test that is_pending() returns False when status is not PENDING."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    assert task.is_pending() is False
+    task.status = TaskStatus.DONE
+    assert task.is_pending() is False
+
+
+def test_is_in_progress():
+    """Test that is_in_progress() returns True when status is IN_PROGRESS."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    assert task.is_in_progress() is True
+
+
+def test_is_in_progress_false():
+    """Test that is_in_progress() returns False when status is not IN_PROGRESS."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    assert task.is_in_progress() is False
+    task.status = TaskStatus.DONE
+    assert task.is_in_progress() is False
+
+
+def test_status_transition_pending_to_in_progress_to_done():
+    """Test complete status transition chain from PENDING to IN_PROGRESS to DONE."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    assert task.is_pending() is True
+    assert task.is_in_progress() is False
+    assert task.is_completed() is False
+
+    task.mark_in_progress()
+    assert task.is_pending() is False
+    assert task.is_in_progress() is True
+    assert task.is_completed() is False
+
+    task.mark_done()
+    assert task.is_pending() is False
+    assert task.is_in_progress() is False
+    assert task.is_completed() is True
+
+
+def test_status_transition_done_to_pending():
+    """Test status transition from DONE back to PENDING via reopen()."""
+    task = Task(title="Test task", status=TaskStatus.DONE)
+    assert task.is_completed() is True
+
+    task.reopen()
+    assert task.is_pending() is True
+    assert task.is_completed() is False
+
+
+def test_is_completed_and_is_overdue():
+    """Test combination of is_completed() and is_overdue() on overdue completed task."""
+    past = datetime.now(CEST) - timedelta(days=1)
+    task = Task(title="Test task", status=TaskStatus.DONE, due_date=past)
+    assert task.is_completed() is True
+    assert task.is_overdue() is True
+
+
+def test_status_transitions_preserve_other_attributes():
+    """Test that status transitions do not affect other task attributes."""
+    due = datetime.now(CEST) + timedelta(days=1)
+    task = Task(
+        title="Test task",
+        description="Important task",
+        status=TaskStatus.PENDING,
+        due_date=due,
+    )
+    original_id = task.id
+    original_title = task.title
+    original_description = task.description
+    original_due_date = task.due_date
+    original_created_at = task.created_at
+
+    task.mark_in_progress()
+    assert task.id == original_id
+    assert task.title == original_title
+    assert task.description == original_description
+    assert task.due_date == original_due_date
+    assert task.created_at == original_created_at
+
+    task.mark_done()
+    assert task.id == original_id
+    assert task.title == original_title
+    assert task.description == original_description
+    assert task.due_date == original_due_date
+    assert task.created_at == original_created_at
