@@ -142,4 +142,4 @@ Duration: 297.2s | Cost: $0.466100 USD | Turns: 12
 - ✓ Should: Cascade delete when task is deleted
 - ⊘ Could: Not implemented — editing a comment's content (out of scope)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 342.9s | Cost: $0.577161 USD | Turns: 14
