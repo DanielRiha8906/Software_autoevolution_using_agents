@@ -6,6 +6,10 @@ class Operation(Enum):
     SUBTRACT = "subtract"
     MULTIPLY = "multiply"
     DIVIDE = "divide"
+    SQUARE = "square"
+    SQRT = "sqrt"
+    POWER = "power"
+    MODULO = "modulo"
 
     @classmethod
     def from_string(cls, value: str) -> "Operation":
@@ -18,3 +22,7 @@ class Operation(Enum):
 
     def display_name(self) -> str:
         return self.value.capitalize()
+
+    def is_unary(self) -> bool:
+        """Return True if operation takes only one operand."""
+        return self in (Operation.SQUARE, Operation.SQRT)

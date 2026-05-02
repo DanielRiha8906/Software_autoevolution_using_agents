@@ -25,19 +25,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide} A B]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} OPERANDS]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide"],
-        help="Operation to perform (add | subtract | multiply | divide)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
+        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
     )
     parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
-        help="Two operands (required when --operation is given)",
+        help="Operands (1 for unary ops [square, sqrt]; 2 for binary ops)",
     )
 
     args = parser.parse_args()
@@ -45,11 +45,14 @@ def main() -> None:
     cli = CalculatorCLI(service)
 
     if args.operation:
-        if len(args.operands) != 2:
-            parser.error("Exactly two operands are required when using --operation")
+        operation = Operation.from_string(args.operation)
+        expected_count = 1 if operation.is_unary() else 2
+        if len(args.operands) != expected_count:
+            op_type = "unary (1 operand)" if operation.is_unary() else "binary (2 operands)"
+            parser.error(f"{args.operation} is a {op_type}, got {len(args.operands)}")
         try:
             a = _as_number(args.operands[0])
-            b = _as_number(args.operands[1])
+            b = _as_number(args.operands[1]) if len(args.operands) > 1 else 0.0
         except argparse.ArgumentTypeError as exc:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)

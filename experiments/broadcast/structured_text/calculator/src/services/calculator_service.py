@@ -12,7 +12,10 @@ class CalculatorService:
 
     def perform(self, operation: Operation, a: float, b: float) -> CalculationResult:
         start_time = time.perf_counter()
-        result = self.calculator.calculate(operation, a, b)
+        if operation.is_unary():
+            result = self.calculator.calculate_unary(operation, a)
+        else:
+            result = self.calculator.calculate(operation, a, b)
         end_time = time.perf_counter()
         execution_time_ms = (end_time - start_time) * 1000
 
