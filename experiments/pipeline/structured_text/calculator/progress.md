@@ -37,3 +37,19 @@ Duration: 295.5s | Cost: $0.446889 USD | Turns: 16
 ✓ 87 tests passed (38 existing + 49 new)
 
 Duration: 331.4s | Cost: $0.558125 USD | Turns: 18
+
+## Task 03: Introduce MemoryEntry domain class
+
+### Status: COMPLETED ✓
+
+### Files Changed
+- `src/models/memory_entry.py` — Created MemoryEntry dataclass with 9 fields (operation, operand_a, operand_b, result, success, error_message, timestamp, execution_time_ms, entry_id), validation in __post_init__(), to_dict(), from_dict() with backward compatibility, and __str__()
+- `src/models/__init__.py` — Added MemoryEntry export
+- `tests/test_memory_entry.py` — Created 22 comprehensive tests (successful/failed calculations, backward/forward compatibility, round-trip serialization, validation, timestamp/entry_id generation)
+- `artifacts/class_diagram.puml` — Added MemoryEntry class with all fields and methods
+- `artifacts/component_diagram.puml` — Updated Domain Models component to include MemoryEntry
+
+### Test Result
+✓ 109 tests passed (87 existing + 22 new)
+
+Duration: 272.4s | Cost: $0.437095 USD | Turns: 16
