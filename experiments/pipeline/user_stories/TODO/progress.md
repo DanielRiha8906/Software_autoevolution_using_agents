@@ -40,3 +40,41 @@
 ✓ Existing stored tasks without `due_date` field load without error
 
 Duration: 614.7s | Cost: $1.099172 USD | Turns: 14
+
+## Task 02: Task Status Transition Methods
+
+**Status:** COMPLETE ✓
+
+### Changes Made
+- **Task Model:** Added 7 new methods for status transitions and state queries:
+  - `mark_in_progress()` — transitions PENDING → IN_PROGRESS (idempotent from IN_PROGRESS)
+  - `mark_done()` — transitions IN_PROGRESS → DONE with validation
+  - `reopen()` — transitions DONE → IN_PROGRESS with validation
+  - `is_completed()`, `is_pending()`, `is_in_progress()` — status predicates
+  - `is_overdue()` — checks due_date against current CEST time
+- **Timezone handling:** All status-mutating methods update `updated_at` to current CEST (UTC+2) time
+- **Validation:** Invalid transitions raise ValueError with descriptive messages
+- **Diagrams:** Updated class_diagram.puml to include 7 new public methods
+
+### Files Changed
+- src/models/task.py
+- tests/test_task.py
+- artifacts/class_diagram.puml
+- analysis.md (working document)
+- design.md (working document)
+
+### Test Results
+**119 tests total: ALL PASSED**
+- 30 new tests for Task status methods (4 mark_in_progress, 4 mark_done, 4 reopen, 3 is_completed, 3 is_pending, 3 is_in_progress, 6 is_overdue with timezone handling)
+- All existing tests continue to pass
+
+### Acceptance Criteria Verification
+✓ Task provides `mark_in_progress()`, `mark_done()`, `reopen()` status transition methods
+✓ Task provides `is_completed()`, `is_overdue()` state check methods
+✓ Task provides `is_pending()`, `is_in_progress()` symmetry predicates
+✓ All status-mutating methods update `updated_at` to current CEST time
+✓ Methods derive state strictly from existing Task attributes
+✓ Invalid transitions (e.g., reopen() on PENDING) raise ValueError
+✓ Method chaining supported (all mutating methods return self)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
