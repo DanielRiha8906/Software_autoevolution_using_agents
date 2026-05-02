@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from .task_status import TaskStatus
+
+# CEST is UTC+2
+CEST = timezone(timedelta(hours=2))
 
 
 @dataclass
@@ -16,6 +19,7 @@ class Task:
     status: TaskStatus = TaskStatus.PENDING
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    due_date: Optional[datetime] = None
 
     def to_dict(self) -> dict:
         return {
@@ -25,10 +29,25 @@ class Task:
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
+            "due_date": self.due_date.isoformat() if self.due_date is not None else None,
         }
+
+    def set_due_date(self, due_date: Optional[datetime]) -> None:
+        """Set due date with validation. Raises ValueError if due_date is invalid."""
+        if due_date is not None and not isinstance(due_date, datetime):
+            raise ValueError("due_date must be a datetime object or None")
+        self.due_date = due_date
 
     @classmethod
     def from_dict(cls, data: dict) -> Task:
+        due_date_str = data.get("due_date")
+        due_date = None
+        if due_date_str is not None:
+            try:
+                due_date = datetime.fromisoformat(due_date_str)
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Invalid due_date format: {e}")
+
         return cls(
             id=data["id"],
             title=data["title"],
@@ -36,4 +55,5 @@ class Task:
             status=TaskStatus(data["status"]),
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
+            due_date=due_date,
         )
