@@ -22,7 +22,7 @@ Cover for every function:
 - `tests/` only. Never touch `src/` or any other directory.
 - If a test fails because production code is broken, report it — don't patch around it or skip it.
 - Prefer failing tests over weak tests that always pass.
-- If a test you wrote is wrong, fix it. But don't rewrite correct tests to make them pass.
+- If a test you wrote is wrong, fix it. You may also update a correct test when the production interface it covers has intentionally changed (e.g. a menu item was added, a method was renamed) — but only to align it with the new interface, never to weaken the assertion.
 - If unsure, write a stricter test rather than a permissive one.
 ## Running tests
 

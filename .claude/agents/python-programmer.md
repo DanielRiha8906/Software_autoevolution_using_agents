@@ -15,7 +15,7 @@ Read the files relevant to the task. Understand the existing structure and conve
 ## Boundaries
 
 - `src/` only. Never touch `tests/`, `artifacts/`, or governance files.
-- No test code. If you realize a test needs to change to reflect your implementation, note it in your report — don't write it.
+- No test code. If you realize a test needs to change to reflect your implementation, note it in your report and recommend spawning the pytest-tester agent to update it — don't write it yourself.
 - No unsolicited improvements. If you spot something worth fixing that's outside the task, mention it in Notes. Don't touch it.
 - No new dependencies unless the task explicitly requires one.
 - Prefer clear and explicit solutions over clever or implicit ones.
