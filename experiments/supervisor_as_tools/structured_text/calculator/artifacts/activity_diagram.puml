@@ -48,6 +48,12 @@ else (no)
 
         if (Input valid?) then (yes)
           :Perform calculation;
+          note right
+            Validation:
+            - divide: b != 0
+            - modulo: b != 0
+            - sqrt: a >= 0
+          end note
 
           if (Calculation successful?) then (yes)
             :Save result to history;
