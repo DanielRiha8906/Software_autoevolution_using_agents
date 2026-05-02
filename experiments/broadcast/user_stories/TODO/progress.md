@@ -105,4 +105,4 @@ so that status changes are consistent and all business rules are enforced in one
 - CEST timezone handling verified
 - No regressions introduced
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 323.3s | Cost: $0.656851 USD | Turns: 57
