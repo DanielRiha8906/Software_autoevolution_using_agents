@@ -145,4 +145,4 @@ Successfully implemented new `TaskComment` domain class with automatic UUID id g
 - Naive datetimes rejected with ValueError
 - Non-CEST timezones rejected with ValueError
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 266.0s | Cost: $0.428168 USD | Turns: 18
