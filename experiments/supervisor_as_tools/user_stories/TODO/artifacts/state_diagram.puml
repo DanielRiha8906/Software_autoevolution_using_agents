@@ -1,9 +1,32 @@
-@startuml
+@startuml state_diagram
 
 [*] --> PENDING
 
-PENDING --> IN_PROGRESS : start
-IN_PROGRESS --> DONE : complete
-DONE --> IN_PROGRESS : reopen
+PENDING --> IN_PROGRESS : markInProgress()
+IN_PROGRESS --> DONE : markDone()
+DONE --> PENDING : reopen()
+
+note right of PENDING
+  isInProgress() returns False
+  isPending() returns True
+  isCompleted() returns False
+end note
+
+note right of IN_PROGRESS
+  isInProgress() returns True
+  isPending() returns False
+  isCompleted() returns False
+end note
+
+note right of DONE
+  isInProgress() returns False
+  isPending() returns False
+  isCompleted() returns True
+end note
+
+note bottom
+  Invalid transitions are silently ignored.
+  isOverdue() checks if due_date is in the past.
+end note
 
 @enduml
