@@ -66,3 +66,41 @@ class TestCalculatorService:
         # Both should have measured execution time; complex operation may take longer
         assert result_simple.execution_time_ms >= 0
         assert result_complex.execution_time_ms >= 0
+
+    def test_perform_square(self):
+        result = self.service.perform(Operation.SQUARE, 5, 0)
+        assert result.result == 25
+        assert result.operation == "square"
+
+    def test_perform_sqrt(self):
+        result = self.service.perform(Operation.SQRT, 16, 0)
+        assert result.result == 4.0
+        assert result.operation == "sqrt"
+
+    def test_perform_sqrt_negative_raises(self):
+        with pytest.raises(ValueError, match="Square root of negative number"):
+            self.service.perform(Operation.SQRT, -1, 0)
+
+    def test_perform_power(self):
+        result = self.service.perform(Operation.POWER, 2, 3)
+        assert result.result == 8
+        assert result.operation == "power"
+
+    def test_perform_modulo(self):
+        result = self.service.perform(Operation.MODULO, 17, 5)
+        assert result.result == 2
+        assert result.operation == "modulo"
+
+    def test_perform_modulo_by_zero_raises(self):
+        with pytest.raises(ValueError, match="Modulo by zero"):
+            self.service.perform(Operation.MODULO, 5, 0)
+
+    def test_sqrt_negative_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.SQRT, -1, 0)
+        self.storage.save.assert_not_called()
+
+    def test_modulo_by_zero_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.MODULO, 5, 0)
+        self.storage.save.assert_not_called()

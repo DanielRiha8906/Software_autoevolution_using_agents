@@ -2,7 +2,16 @@ from dataclasses import dataclass, asdict, field
 from datetime import datetime
 
 
-_SYMBOLS = {"add": "+", "subtract": "-", "multiply": "×", "divide": "÷"}
+_SYMBOLS = {
+    "add": "+",
+    "subtract": "-",
+    "multiply": "×",
+    "divide": "÷",
+    "square": "²",
+    "sqrt": "√",
+    "power": "^",
+    "modulo": "%"
+}
 
 
 @dataclass
@@ -30,4 +39,11 @@ class CalculationResult:
         a = int(self.operand_a) if self.operand_a == int(self.operand_a) else self.operand_a
         b = int(self.operand_b) if self.operand_b == int(self.operand_b) else self.operand_b
         r = int(self.result) if self.result == int(self.result) else self.result
-        return f"{a} {symbol} {b} = {r}"
+
+        # Handle single-operand operations: square, sqrt
+        if self.operation == "square":
+            return f"{a}² = {r}"
+        elif self.operation == "sqrt":
+            return f"√{a} = {r}"
+        else:
+            return f"{a} {symbol} {b} = {r}"
