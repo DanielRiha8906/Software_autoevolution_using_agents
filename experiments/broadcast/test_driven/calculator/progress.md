@@ -176,4 +176,4 @@ All 55 tests passing:
 
 **Total: 55 tests passing**
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 196.8s | Cost: $0.477814 USD | Turns: 30
