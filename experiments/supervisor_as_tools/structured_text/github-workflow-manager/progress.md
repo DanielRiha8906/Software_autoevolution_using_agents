@@ -37,4 +37,4 @@ Successfully added `duration_seconds: float` attribute to the WorkflowRun model 
 - ✅ All tests pass
 - ✅ Diagrams updated
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 277.2s | Cost: $0.492852 USD | Turns: 17
