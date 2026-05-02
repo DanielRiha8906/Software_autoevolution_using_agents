@@ -29,18 +29,36 @@ def _choose(label: str, options: list, allow_blank: bool = False) -> Optional[st
         print("Invalid choice, try again.")
 
 
+def _prompt_float(label: str, default: float = 0.0) -> float:
+    """Prompt for a float value with non-negative validation."""
+    suffix = f" [{default}]"
+    while True:
+        value_str = input(f"{label}{suffix}: ").strip()
+        if not value_str:
+            return default
+        try:
+            value = float(value_str)
+            if value < 0.0:
+                print("Value must be non-negative, try again.")
+                continue
+            return value
+        except ValueError:
+            print("Invalid float value, try again.")
+
+
 def _fmt_run(run: WorkflowRun) -> str:
     conclusion = run.conclusion.value if run.conclusion else "—"
     return (
-        f"  id          : {run.id}\n"
-        f"  workflow    : {run.workflow_name}\n"
-        f"  branch      : {run.branch}\n"
-        f"  status      : {run.status.value}\n"
-        f"  conclusion  : {conclusion}\n"
-        f"  run_number  : {run.run_number or '—'}\n"
-        f"  commit_sha  : {run.commit_sha or '—'}\n"
-        f"  created_at  : {run.created_at.isoformat()}\n"
-        f"  updated_at  : {run.updated_at.isoformat() if run.updated_at else '—'}\n"
+        f"  id              : {run.id}\n"
+        f"  workflow        : {run.workflow_name}\n"
+        f"  branch          : {run.branch}\n"
+        f"  status          : {run.status.value}\n"
+        f"  conclusion      : {conclusion}\n"
+        f"  run_number      : {run.run_number or '—'}\n"
+        f"  commit_sha      : {run.commit_sha or '—'}\n"
+        f"  created_at      : {run.created_at.isoformat()}\n"
+        f"  updated_at      : {run.updated_at.isoformat() if run.updated_at else '—'}\n"
+        f"  duration_seconds: {run.duration_seconds}\n"
     )
 
 
@@ -53,6 +71,7 @@ def _add_run(service: WorkflowRunService) -> None:
     conclusion_val = _choose("Conclusion (optional)", [c.value for c in WorkflowConclusion], allow_blank=True)
     run_number_raw = _prompt("Run number (leave blank to skip)", "")
     commit_sha = _prompt("Commit SHA (leave blank to skip)", "") or None
+    duration_seconds = _prompt_float("Duration (seconds)", 0.0)
 
     run_number = int(run_number_raw) if run_number_raw else None
     conclusion = WorkflowConclusion(conclusion_val) if conclusion_val else None
@@ -64,6 +83,7 @@ def _add_run(service: WorkflowRunService) -> None:
         conclusion=conclusion,
         run_number=run_number,
         commit_sha=commit_sha,
+        duration_seconds=duration_seconds,
     )
     print(f"\nAdded run {run.id}")
 
