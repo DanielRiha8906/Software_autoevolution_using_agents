@@ -66,3 +66,23 @@ class TestCalculatorService:
         # Both should have measured execution time; complex operation may take longer
         assert result_simple.execution_time_ms >= 0
         assert result_complex.execution_time_ms >= 0
+
+    def test_perform_square(self):
+        result = self.service.perform(Operation.SQUARE, 5, 0)
+        assert result.result == 25
+        assert result.operation == "square"
+
+    def test_perform_sqrt(self):
+        result = self.service.perform(Operation.SQRT, 9, 0)
+        assert result.result == 3.0
+        assert result.operation == "sqrt"
+
+    def test_perform_power(self):
+        result = self.service.perform(Operation.POWER, 2, 3)
+        assert result.result == 8
+        assert result.operation == "power"
+
+    def test_perform_modulo(self):
+        result = self.service.perform(Operation.MODULO, 10, 3)
+        assert result.result == 1
+        assert result.operation == "modulo"

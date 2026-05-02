@@ -89,3 +89,25 @@ class TestJsonStorage:
             data = json.load(f)
         assert data[0]["execution_time_ms"] == 5.678
         assert isinstance(data[0]["execution_time_ms"], float)
+
+    def test_save_and_load_new_operations(self, storage):
+        square = CalculationResult("square", 5, 0, 25, _TS)
+        sqrt = CalculationResult("sqrt", 9, 0, 3.0, _TS)
+        power = CalculationResult("power", 2, 3, 8, _TS)
+        modulo = CalculationResult("modulo", 10, 3, 1, _TS)
+
+        storage.save(square)
+        storage.save(sqrt)
+        storage.save(power)
+        storage.save(modulo)
+
+        loaded = storage.load_all()
+        assert len(loaded) == 4
+        assert loaded[0].operation == "square"
+        assert loaded[0].result == 25
+        assert loaded[1].operation == "sqrt"
+        assert loaded[1].result == 3.0
+        assert loaded[2].operation == "power"
+        assert loaded[2].result == 8
+        assert loaded[3].operation == "modulo"
+        assert loaded[3].result == 1

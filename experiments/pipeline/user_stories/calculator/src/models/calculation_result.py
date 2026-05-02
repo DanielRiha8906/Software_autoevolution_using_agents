@@ -2,7 +2,8 @@ from dataclasses import dataclass, asdict, field
 from datetime import datetime
 
 
-_SYMBOLS = {"add": "+", "subtract": "-", "multiply": "×", "divide": "÷"}
+_SYMBOLS = {"add": "+", "subtract": "-", "multiply": "×", "divide": "÷", "power": "^", "modulo": "%"}
+_UNARY_OPS = {"square", "sqrt"}
 
 
 @dataclass
@@ -26,8 +27,17 @@ class CalculationResult:
         return cls(**data)
 
     def __str__(self) -> str:
-        symbol = _SYMBOLS.get(self.operation, self.operation)
         a = int(self.operand_a) if self.operand_a == int(self.operand_a) else self.operand_a
-        b = int(self.operand_b) if self.operand_b == int(self.operand_b) else self.operand_b
         r = int(self.result) if self.result == int(self.result) else self.result
+
+        if self.operation in _UNARY_OPS:
+            if self.operation == "square":
+                return f"{a}² = {r}"
+            elif self.operation == "sqrt":
+                return f"√{a} = {r}"
+            else:
+                return f"{self.operation}({a}) = {r}"
+
+        symbol = _SYMBOLS.get(self.operation, self.operation)
+        b = int(self.operand_b) if self.operand_b == int(self.operand_b) else self.operand_b
         return f"{a} {symbol} {b} = {r}"

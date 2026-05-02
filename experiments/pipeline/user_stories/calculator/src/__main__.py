@@ -25,13 +25,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide} A B]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide"],
-        help="Operation to perform (add | subtract | multiply | divide)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
+        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
     )
     parser.add_argument(
         "operands",
@@ -45,11 +45,16 @@ def main() -> None:
     cli = CalculatorCLI(service)
 
     if args.operation:
-        if len(args.operands) != 2:
-            parser.error("Exactly two operands are required when using --operation")
+        unary_ops = ["square", "sqrt"]
+        required_operands = 1 if args.operation in unary_ops else 2
+        if len(args.operands) != required_operands:
+            if required_operands == 1:
+                parser.error(f"Exactly one operand is required for {args.operation}")
+            else:
+                parser.error("Exactly two operands are required when using --operation")
         try:
             a = _as_number(args.operands[0])
-            b = _as_number(args.operands[1])
+            b = _as_number(args.operands[1]) if required_operands == 2 else 0.0
         except argparse.ArgumentTypeError as exc:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)
