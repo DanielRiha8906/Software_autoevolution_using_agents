@@ -27,4 +27,4 @@ All three candidates achieved identical test scores (17/17), employing substanti
 ## Test Result
 ✅ All 17 tests passing
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 253.6s | Cost: $0.578887 USD | Turns: 54
