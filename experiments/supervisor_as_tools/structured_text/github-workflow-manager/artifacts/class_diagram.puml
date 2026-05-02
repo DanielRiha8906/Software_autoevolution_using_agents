@@ -35,6 +35,7 @@ package "models" #DDEEFF {
         +run_number    : Optional[int]
         +commit_sha    : Optional[str]
         +duration_seconds : float
+        +attempts      : List[WorkflowRunAttempt]
         --
         +__post_init__() : None
         +to_dict() : dict
@@ -85,6 +86,16 @@ package "services" #DDFFD4 {
         +__init__(service: WorkflowRunService)
         +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str],\n  duration_seconds: float) : WorkflowRun
     }
+
+    class AttemptService {
+        -_storage : WorkflowJsonStorage
+        -_workflow_service : WorkflowRunService
+        --
+        +__init__(storage: WorkflowJsonStorage, workflow_service: WorkflowRunService)
+        +create_attempt(run_id: str, status: str, conclusion: Optional[str]) : WorkflowRunAttempt
+        +retrieve_attempts_by_run_id(run_id: str) : List[WorkflowRunAttempt]
+        -_get_next_attempt_number(run_id: str) : int
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -105,13 +116,16 @@ package "cli" #FFE5E5 {
 
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
-WorkflowRun            "1" --> "*" WorkflowRunAttempt  : run_id
+WorkflowRun            "1" --> "*" WorkflowRunAttempt  : attempts
 WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
+AttemptService        "1" --> "1" WorkflowJsonStorage : -_storage
+AttemptService        "1" --> "1" WorkflowRunService  : -_workflow_service
+AttemptService             ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService
