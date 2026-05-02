@@ -177,3 +177,88 @@ All 55 tests passing:
 **Total: 55 tests passing**
 
 Duration: 196.8s | Cost: $0.477814 USD | Turns: 30
+
+---
+
+# Task 03: MemoryEntry Domain Class
+
+## Broadcast Architecture Evaluation
+
+### Candidate A
+- **Approach**: Created MemoryEntry dataclass with auto-generated UUID id field and timestamp. Implemented to_dict() using asdict() and from_dict() classmethod for round-trip serialization. Supports failed calculations with result=None.
+- **Files Changed**:
+  - `src/models/memory_entry.py` — new MemoryEntry dataclass
+  - `src/models/__init__.py` — exported MemoryEntry
+  - `tests/test_memory_entry.py` — 14 test cases
+- **Test Results**: 69 tests passing (55 existing + 14 new)
+
+### Candidate B
+- **Approach**: Identical implementation to Candidate A — dataclass with UUID id, timestamp, to_dict() and from_dict() methods. Used field(default_factory=...) for UUID generation and __post_init__() for timestamp.
+- **Files Changed**:
+  - `src/models/memory_entry.py` — new MemoryEntry dataclass
+  - `src/models/__init__.py` — exported MemoryEntry
+- **Test Results**: 69 tests passing (55 existing + 14 new)
+
+### Candidate C
+- **Approach**: Identical implementation to Candidates A and B — dataclass pattern with auto-generated UUID id and timestamp fields, to_dict() and from_dict() serialization methods.
+- **Files Changed**:
+  - `src/models/memory_entry.py` — new MemoryEntry dataclass
+  - `src/models/__init__.py` — exported MemoryEntry
+- **Test Results**: 69 tests passing (55 existing + 14 new)
+
+## Selection Rationale
+
+**Selected Winner**: Candidate A
+
+All three candidates produced **identical implementations** with the same test results (69 tests passing). The test-driven specification and straightforward dataclass requirements led to convergent solutions.
+
+Key achievements across all implementations:
+- ✅ MemoryEntry dataclass created with all required fields
+- ✅ Auto-generated UUID string for id field using field(default_factory=...)
+- ✅ Auto-generated timestamp using __post_init__() with datetime.now().isoformat()
+- ✅ Support for failed calculations (result=None, success=False)
+- ✅ to_dict() serialization using asdict()
+- ✅ from_dict() deserialization classmethod
+- ✅ All 14 required tests pass
+- ✅ All 55 existing tests continue to pass
+- ✅ No print statements or formatting logic
+
+## Implementation Summary
+
+### Changes Made
+
+1. **MemoryEntry** (`src/models/memory_entry.py`):
+   - New dataclass with fields: operation (str), operands (list[float]), result (Optional[float]), success (bool), execution_time_ms (float)
+   - Auto-generated fields: id (UUID string), timestamp (ISO format)
+   - id field uses `field(default_factory=lambda: str(uuid.uuid4()))`
+   - timestamp field initialized in `__post_init__()` using `datetime.now().isoformat()`
+   - Implements `to_dict()` using `asdict()` for full serialization
+   - Implements `from_dict(cls, data)` classmethod for deserialization
+   - Supports both successful and failed calculations
+
+2. **Models Package** (`src/models/__init__.py`):
+   - Exported MemoryEntry class for public API
+
+3. **Test Suite** (`tests/test_memory_entry.py`):
+   - test_memory_entry_can_be_created — validates basic instantiation
+   - test_memory_entry_has_unique_id — confirms UUID uniqueness
+   - test_memory_entry_id_is_uuid_string — validates UUID format
+   - test_memory_entry_has_timestamp — confirms timestamp generation
+   - test_memory_entry_supports_failed_calculation — tests failure handling
+   - test_memory_entry_serializes_to_dict — validates to_dict() output
+   - test_memory_entry_serializes_timestamp_as_string — validates timestamp format
+   - test_memory_entry_round_trips_via_dict — confirms serialization integrity
+   - test_memory_entry_contains_no_formatting_logic — ensures no print statements
+
+4. **Diagrams** (`artifacts/class_diagram.puml`):
+   - Added MemoryEntry class to models package with all fields and methods
+
+## Test Coverage
+
+All 69 tests passing:
+- ✓ 14 new MemoryEntry tests (100% pass rate)
+- ✓ 55 existing tests continue to pass
+
+**Total: 69 tests passing**
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
