@@ -54,4 +54,4 @@ Duration: 151.6s | Cost: $0.310106 USD | Turns: 14
 - Comprehensive test coverage: 20 direct calculator tests, 8 service integration tests, 18 enum tests
 - Fixed 7 test_cli.py tests that were using hardcoded menu indices (changed from 4 to 8 operations)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 331.9s | Cost: $0.582711 USD | Turns: 27
