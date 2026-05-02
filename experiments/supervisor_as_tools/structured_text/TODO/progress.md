@@ -165,4 +165,4 @@ Duration: 192.6s | Cost: $0.335670 USD | Turns: 17
 }
 ```
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 538.7s | Cost: $0.923246 USD | Turns: 27
