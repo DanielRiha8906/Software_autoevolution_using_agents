@@ -259,4 +259,4 @@ All required test cases validated:
 - ✓ Retrieval is deterministic and ordered
 - ✓ Progress documented
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 208.6s | Cost: $0.453147 USD | Turns: 47
