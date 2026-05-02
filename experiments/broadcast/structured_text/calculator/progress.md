@@ -131,4 +131,4 @@ All edge cases properly handled:
 - All operations callable via `python -m src --operation <op> <operands>`
 - Operand count validation prevents invalid one-shot calls
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 624.3s | Cost: $1.386703 USD | Turns: 90
