@@ -62,4 +62,4 @@ Candidates B and C both achieved the highest test count (39/39), verifying that 
 ## Test Result
 ✅ All 39 tests passing
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 209.6s | Cost: $0.611190 USD | Turns: 48
