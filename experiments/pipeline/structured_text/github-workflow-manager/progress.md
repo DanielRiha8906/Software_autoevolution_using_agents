@@ -105,4 +105,4 @@ Duration: 405.7s | Cost: $0.688061 USD | Turns: 16
 
 **Backward Compatibility:** ✓ 100% — All 101 existing tests pass unchanged. New service does not modify existing classes or workflows.
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 333.0s | Cost: $0.651858 USD | Turns: 23
