@@ -204,4 +204,4 @@ Duration: 297.1s | Cost: $0.559475 USD | Turns: 22
 - Differs from WorkflowRunService which delegates to WorkflowJsonStorage
 - Suitable for managing transient attempt tracking per session
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 283.3s | Cost: $0.474484 USD | Turns: 14
