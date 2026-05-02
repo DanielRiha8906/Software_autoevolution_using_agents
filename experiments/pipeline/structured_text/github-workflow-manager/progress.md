@@ -91,4 +91,4 @@ All tests pass. Coverage includes:
 **Won't Have (Not Applicable):**
 - No enum definition modifications (constraint honored)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 304.9s | Cost: $0.568650 USD | Turns: 19
