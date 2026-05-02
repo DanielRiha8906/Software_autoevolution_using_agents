@@ -136,4 +136,4 @@ The implementation satisfies all provided Task 02 test requirements:
 - Updated `artifacts/class_diagram.puml` to show new methods in Calculator class with proper signatures
 - No changes to activity, component, use case, or state diagrams (operations handled polymorphically)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 364.5s | Cost: $0.564171 USD | Turns: 17
