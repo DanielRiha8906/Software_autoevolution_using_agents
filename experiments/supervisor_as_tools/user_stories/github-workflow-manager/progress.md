@@ -38,3 +38,38 @@ Successfully implemented the `duration_seconds: float` attribute for WorkflowRun
 - **All tests passing**: Unit, integration, and CLI/menu tests
 
 Duration: 351.8s | Cost: $0.654089 USD | Turns: 15
+
+# Task 02: Add State Checking Methods to WorkflowRun
+
+## Summary
+Successfully implemented encapsulated state checking methods for the WorkflowRun class to provide consistent state logic and eliminate duplication across the codebase.
+
+## Files Changed
+- `src/models/workflow_run.py` — Added 5 state predicate methods (is_terminal, is_successful, is_failed, is_running, is_cancelled)
+- `tests/test_workflow_run_states.py` — New comprehensive test suite with 58 test cases
+
+## Test Results
+- **Total tests**: 110 (52 existing + 58 new)
+- **Passed**: 110 ✓
+- **Failed**: 0
+- **Command**: `pytest tests/ -q`
+
+## Acceptance Criteria Met
+✓ WorkflowRun provides: is_terminal(), is_successful(), is_failed(), is_running()
+✓ All methods derive state strictly from status and conclusion — no external input required
+✓ is_terminal() and is_running() are mutually exclusive
+✓ is_successful() and is_failed() are mutually exclusive
+✓ Bonus is_cancelled() method derived from conclusion is available
+✓ Existing enum definitions not modified
+
+## Implementation Details
+- **is_terminal()**: Returns True if status is COMPLETED
+- **is_running()**: Returns True if status is IN_PROGRESS or REQUESTED
+- **is_successful()**: Returns True if status is COMPLETED and conclusion is SUCCESS
+- **is_failed()**: Returns True if status is COMPLETED and conclusion is FAILURE
+- **is_cancelled()**: Returns True if conclusion is CANCELLED (bonus)
+
+## Diagram Updates
+- `artifacts/class_diagram.puml` — Updated WorkflowRun class to show new methods
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
