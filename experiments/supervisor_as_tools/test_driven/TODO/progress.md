@@ -54,4 +54,4 @@ Created a new `TaskComment` domain class with full serialization support, CEST t
 - Timezone handling: All datetimes use CEST (timezone(timedelta(hours=2))), not UTC
 - Validation: Empty content raises ValueError; timezone-aware datetime enforcement
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 407.7s | Cost: $0.637273 USD | Turns: 24
