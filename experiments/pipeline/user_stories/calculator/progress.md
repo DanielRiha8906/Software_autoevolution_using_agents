@@ -59,4 +59,4 @@ Duration: 272.5s | Cost: $0.421845 USD | Turns: 15
 - ✅ No existing operations duplicated or renamed
 - ✅ All operations accessible via interactive menu (options 5-8) and one-shot mode (--operation flag)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 518.4s | Cost: $0.832936 USD | Turns: 15
