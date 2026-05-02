@@ -95,4 +95,4 @@ Candidate C was selected as the winner.
 **Diagrams Updated:**
 - artifacts/class_diagram.puml — Updated to show new state-checking methods
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 176.1s | Cost: $0.467889 USD | Turns: 37
