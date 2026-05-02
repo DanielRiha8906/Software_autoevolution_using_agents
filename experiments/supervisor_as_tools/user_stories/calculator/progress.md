@@ -68,4 +68,4 @@ Successfully implemented a dedicated `MemoryEntry` class to capture complete inf
 - No custom __str__() to preserve separation of concerns
 - Coexists with CalculationResult without breaking changes
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 285.0s | Cost: $0.495623 USD | Turns: 23
