@@ -224,3 +224,97 @@ Duration: 114.6s | Cost: $0.855491 USD | Turns: 39
 Files changed: src/models/workflow_run_attempt.py, src/models/workflow_run.py, src/models/__init__.py, artifacts/class_diagram.puml
 
 Duration: 234.5s | Cost: $0.459188 USD | Turns: 27
+
+## Task 04: Implement AttemptService
+
+**Branch:** task/broadcast-structured_text-github-workflow-manager-04
+
+### Broadcast Architecture Evaluation
+
+**Candidates Evaluated:**
+- **broadcast-candidate-a**: 79 tests passing ✓
+- **broadcast-candidate-b**: 79 tests passing ✓
+- **broadcast-candidate-c**: 79 tests passing ✓
+
+**Selected Winner:** broadcast-candidate-a
+
+**Reason:** All three candidates produced identical implementations with identical test coverage (79/79 passing). Candidate-a was selected as the first successful completion with comprehensive implementation of all requirements.
+
+### Implementation Summary
+
+**Files Changed:**
+1. `src/services/attempt_service.py` (NEW)
+   - Created AttemptService class to manage workflow run attempts
+   - Implements `create_attempt()` method:
+     - Creates new WorkflowRunAttempt with auto-assigned global ID
+     - Auto-increments attempt_number per run (unique within each run)
+     - Validates run_id is positive (raises ValueError if invalid)
+     - Persists to attempts.json via WorkflowJsonStorage
+   - Implements `get_attempts_by_run_id()` method:
+     - Returns all attempts for a given run_id
+     - Results sorted by attempt_number in ascending order
+   - Internal methods for persistence and ID management
+   - Full docstrings and error handling
+
+2. `src/services/__init__.py`
+   - Added AttemptService to module exports
+
+3. `tests/test_attempt_service.py` (NEW)
+   - Comprehensive test suite with 19 tests covering:
+     - Single and multiple attempt creation
+     - Automatic attempt number assignment per run
+     - Unique ID generation across attempts
+     - Duplicate prevention within runs
+     - Retrieval by run_id with sorting
+     - Persistence across service instances
+     - ID sequence preservation
+     - Edge cases (None conclusion, invalid run_ids)
+
+4. `artifacts/class_diagram.puml`
+   - Added AttemptService class with all methods and attributes
+   - Added relationship from AttemptService to WorkflowJsonStorage
+   - Added one-to-many relationship (1 AttemptService → * WorkflowRunAttempt)
+
+### Requirements Met
+
+**Must Have:**
+- ✓ Implement `AttemptService` class in src/services/attempt_service.py
+- ✓ Support: Create attempt (add new attempt to a run, increment attempt number)
+- ✓ Support: Retrieve attempts by `run_id` (return all attempts for a given run)
+- ✓ Integrate with existing storage mechanism (WorkflowJsonStorage)
+
+**Should Have:**
+- ✓ Ensure no duplicate attempt numbers per run (enforced by design: each run's attempts numbered 1, 2, 3...)
+
+**Could Have:**
+- ✓ Add sorting by attempt number (returns attempts sorted ascending by attempt_number)
+
+### Test Results
+
+**Final test run:** 79/79 tests passing
+- 19 new attempt_service tests (organized in 4 test classes)
+- 60 existing tests (from previous tasks)
+- All new tests pass, all existing tests continue to pass
+- Test execution time: 0.11s
+
+**Test breakdown:**
+- TestCreateAttempt: 8 tests covering creation, incrementing, validation
+- TestGetAttemptsByRunId: 6 tests covering retrieval, filtering, sorting
+- TestDuplicateAttemptNumbers: 2 tests verifying uniqueness guarantees
+- TestIntegrationAndPersistence: 3 tests verifying persistence and cross-instance state
+
+### Implementation Details
+
+- Used @dataclass decorator for consistency with WorkflowRunAttempt pattern
+- Separate attempts.json file for attempt storage (derived from main storage filepath)
+- Attempt numbers scoped per run: each run's attempts start at 1
+- Global IDs sequential across all attempts (stored in _next_id)
+- Automatic ID sequencing for efficient new attempt generation
+- Full persistence implemented with JSON serialization/deserialization
+- Validation ensures run_id is positive
+- No new external dependencies (uses standard library only)
+- Code follows existing patterns and style conventions
+
+Files changed: src/services/attempt_service.py, src/services/__init__.py, tests/test_attempt_service.py, artifacts/class_diagram.puml
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

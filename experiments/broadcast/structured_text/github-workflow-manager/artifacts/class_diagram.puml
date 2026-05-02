@@ -91,6 +91,18 @@ package "services" #DDFFD4 {
         +__init__(service: WorkflowRunService)
         +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str]) : WorkflowRun
     }
+
+    class AttemptService {
+        -_storage : WorkflowJsonStorage
+        -_attempts : List[WorkflowRunAttempt]
+        -_next_id : int
+        --
+        +__init__(storage: WorkflowJsonStorage)
+        +create_attempt(run_id: int, status: str,\n  conclusion: Optional[str],\n  created_at: datetime) : WorkflowRunAttempt
+        +get_attempts_by_run_id(run_id: int) : List[WorkflowRunAttempt]
+        -_persist() : None
+        -_load() : None
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -118,6 +130,9 @@ WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
+AttemptService        "1" --> "1" WorkflowJsonStorage : -_storage
+AttemptService        "1" --> "*" WorkflowRunAttempt  : -_attempts
+AttemptService             ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService
