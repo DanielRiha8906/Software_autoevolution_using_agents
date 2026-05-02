@@ -128,4 +128,4 @@ Duration: 339.8s | Cost: $0.684623 USD | Turns: 48
 - ✅ No existing operations duplicated or renamed
 - ✅ All operations accessible via CLI interactive mode and one-shot mode (`python -m src --operation <op> <a> <b>`)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 306.0s | Cost: $0.595629 USD | Turns: 37
