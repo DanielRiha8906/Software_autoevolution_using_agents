@@ -29,4 +29,22 @@ repeat
 
 repeat while (user continues)
 
+partition "Add/Update Task Flow" {
+  :Input title, description;
+  :Input optional due date;
+  if (Due date provided?) then (yes)
+    :Convert to CEST timezone;
+    if (Valid ISO format?) then (yes)
+      :Parse datetime;
+    else (invalid)
+      :Show error message;
+      :Return to input;
+    endif
+  else (no)
+    :Leave due_date as None;
+  endif
+  :Create/update task with due_date;
+  :Persist to storage;
+}
+
 @enduml

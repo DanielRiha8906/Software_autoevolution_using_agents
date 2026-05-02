@@ -1,4 +1,5 @@
-from typing import Optional
+from datetime import datetime
+from typing import Optional, Union
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
@@ -10,10 +11,10 @@ class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
 
-    def add_task(self, title: str, description: Optional[str] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description)
+        return self._manager.add(title.strip(), description, due_date)
 
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
@@ -32,10 +33,10 @@ class TodoService:
     def reopen_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.PENDING)
 
-    def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
+    def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None) -> Task:
         if title is not None and not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.update(task_id, title=title, description=description)
+        return self._manager.update(task_id, title=title, description=description, due_date=due_date)
 
     def delete_task(self, task_id: str) -> None:
         self._manager.delete(task_id)

@@ -23,6 +23,10 @@ package "TODO Application" {
         component "Task Model\n(Task, TaskStatus)" as Model
     }
 
+    package "Utilities" {
+        component "DateTime Utilities\n(DateTimeUtils)" as DTUtils
+    }
+
     package "Persistence Layer" {
         component "JSON Storage\n(JsonStorage)" as Storage
     }
@@ -38,8 +42,10 @@ CLI --> SVC
 
 SVC --> MGR
 MGR --> Storage
+MGR --> DTUtils : validate dates
 MGR ..> Model
 Storage ..> Model
+DTUtils --> Model : works with
 
 Storage --> DB : read/write
 
