@@ -303,4 +303,4 @@ Duration: 301.5s | Cost: $0.586463 USD | Turns: 34
   - Persistence across instances
   - Multi-task isolation
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 430.2s | Cost: $0.903709 USD | Turns: 65
