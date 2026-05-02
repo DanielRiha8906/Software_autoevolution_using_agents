@@ -23,3 +23,26 @@
 **Backward Compatibility:** ✓ Verified with test_load_json_without_duration_defaults_to_zero
 
 Duration: 313.4s | Cost: $0.456656 USD | Turns: 16
+
+---
+
+## Task 02: Workflow Run State Methods
+
+**Status:** COMPLETED
+
+**Files Changed:**
+- `src/models/workflow_run.py` — Added 5 state query methods (is_running, is_terminal, is_successful, is_failed, is_cancelled)
+- `tests/test_workflow_run_state.py` — New test file with 55 comprehensive tests covering all 54 status/conclusion combinations
+- `artifacts/class_diagram.puml` — Updated WorkflowRun class with new method signatures
+
+**Test Result:** ✓ PASSED (68 tests total: 55 new + 13 from Task 01)
+
+**Key Features Implemented:**
+- Must Have: All 4 required methods (is_running, is_terminal, is_successful, is_failed) with state derivation from status/conclusion
+- Should Have: Mutual exclusivity constraints verified (running ⊥ terminal, successful ⊥ failed)
+- Could Have: is_cancelled() convenience method implemented
+- Comprehensive test coverage: All 6 statuses × 9 conclusion values (54 combinations)
+
+**Backward Compatibility:** ✓ 100% — only new methods added, no existing code modified
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
