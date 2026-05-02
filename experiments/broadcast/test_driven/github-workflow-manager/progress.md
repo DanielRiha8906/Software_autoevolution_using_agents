@@ -54,3 +54,74 @@ All required test cases validated:
 - ✓ Progress documented
 
 Duration: 9.9s | Cost: $0.652913 USD | Turns: 2
+
+---
+
+# Task 02: Add State Checking Methods to WorkflowRun
+
+## Objective
+Add encapsulated state checking methods (`is_running()`, `is_terminal()`, `is_successful()`, `is_failed()`, `is_cancelled()`) to `WorkflowRun` model, deriving all state strictly from `status` and `conclusion` attributes.
+
+## Broadcast Architecture Results
+
+### Candidate Evaluation
+All 3 independent implementers produced identical, high-quality solutions:
+- **Candidate-A**: 17/17 tests passing ✓
+- **Candidate-B**: 17/17 tests passing ✓
+- **Candidate-C**: 17/17 tests passing ✓
+
+### Winner: Candidate-A
+Selected as reference implementation (first to converge on optimal pattern).
+
+## Implementation Details
+
+### Files Changed
+- `src/models/workflow_run.py` — Added 5 state checking methods to WorkflowRun dataclass
+- `artifacts/class_diagram.puml` — Updated class diagram to show new methods
+
+### Changes Made
+1. **is_running()** → Returns `True` if `status == WorkflowStatus.IN_PROGRESS`
+2. **is_terminal()** → Returns `True` if `status == WorkflowStatus.COMPLETED`
+3. **is_successful()** → Returns `True` if `status == COMPLETED and conclusion == SUCCESS`
+4. **is_failed()** → Returns `True` if `status == COMPLETED and conclusion == FAILURE`
+5. **is_cancelled()** → Returns `True` if `status == COMPLETED and conclusion == CANCELLED`
+
+All methods:
+- Use only `status` and `conclusion` attributes
+- Include descriptive docstrings
+- Have explicit return type hints (`bool`)
+- Maintain mutual exclusivity constraints (is_running/is_terminal cannot both be True)
+
+### Test Results
+- **New test requirements**: All 10 tests passing ✓
+- **Existing tests**: 7/7 passing (preserved backward compatibility) ✓
+- **Total**: 17/17 passing ✓
+
+## Test Coverage
+
+Validation of state logic:
+- ✓ `test_is_running_when_in_progress` — is_running() works for IN_PROGRESS
+- ✓ `test_is_running_false_when_completed` — is_running() false for COMPLETED
+- ✓ `test_is_terminal_when_completed_success` — is_terminal() true for COMPLETED+SUCCESS
+- ✓ `test_is_terminal_when_completed_failure` — is_terminal() true for COMPLETED+FAILURE
+- ✓ `test_is_terminal_false_when_running` — is_terminal() false for IN_PROGRESS
+- ✓ `test_is_running_and_is_terminal_are_mutually_exclusive` — mutual exclusivity enforced
+- ✓ `test_is_successful()` — Success detection works
+- ✓ `test_is_failed()` — Failure detection works
+- ✓ `test_is_successful_and_is_failed_are_mutually_exclusive` — mutual exclusivity enforced
+- ✓ `test_is_cancelled()` — Cancellation detection works
+- ✓ Existing 7 tests remain passing (backward compatibility verified)
+
+## Diagrams Updated
+- `artifacts/class_diagram.puml` — Added 5 new methods to WorkflowRun class definition
+
+## Definition of Done
+- ✓ All provided tests pass
+- ✓ Existing tests still pass
+- ✓ Code compiles without syntax or import errors
+- ✓ All methods use only status and conclusion
+- ✓ is_running() and is_terminal() are mutually exclusive
+- ✓ Diagrams updated to reflect changes
+- ✓ Progress documented
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
