@@ -77,8 +77,16 @@ package "services" #DDFFD4 {
         +get_run_detail(run_id: str) : Optional[WorkflowRun]
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
-        +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowConclusion]
         -_persist() : None
+    }
+
+    class AttemptService {
+        -_attempts : List[WorkflowRunAttempt]
+        --
+        +__init__() : None
+        +create(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
+        +get_by_run_id(run_id: int) : List[WorkflowRunAttempt]
     }
 
     class WorkflowRunTracker {
@@ -112,6 +120,7 @@ WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
+AttemptService       "1" --> "*" WorkflowRunAttempt  : -_attempts
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 "workflow_cli"             ..>  WorkflowRunService

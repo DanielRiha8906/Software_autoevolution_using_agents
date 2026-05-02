@@ -69,3 +69,41 @@ Test coverage:
 - Updated class diagram to show WorkflowRunAttempt with one-to-many relationship to WorkflowRun
 
 Duration: 218.5s | Cost: $0.373930 USD | Turns: 20
+
+## Task 04: Implement AttemptService
+
+### Summary
+Successfully implemented `AttemptService` to manage `WorkflowRunAttempt` objects with in-memory storage, composite key uniqueness enforcement, and deterministic sorted retrieval.
+
+### Files Changed
+- `src/services/attempt_service.py` — Created new AttemptService class
+- `src/services/__init__.py` — Updated to export AttemptService
+- `tests/test_attempt_service.py` — Created test suite (6 tests)
+- `artifacts/class_diagram.puml` — Updated to include AttemptService class and relationships
+- `artifacts/component_diagram.puml` — Updated to include AttemptService component
+
+### Test Results
+✅ All tests passed (42/42 total: 6 new + 36 existing)
+
+Test coverage:
+- test_attempt_service_exists ✓
+- test_create_attempt ✓
+- test_retrieve_attempts_by_run_id ✓
+- test_duplicate_attempt_number_raises ✓
+- test_attempts_sorted_by_attempt_number ✓
+- test_attempt_service_does_not_contain_file_io ✓
+
+### Implementation Details
+- Created `AttemptService` class with in-memory storage: `_attempts: List[WorkflowRunAttempt]`
+- Implemented `create(attempt)` method with composite key uniqueness on (run_id, attempt_number)
+  - Raises `ValueError` with descriptive message on duplicate attempts
+  - Appends and returns the attempt
+- Implemented `get_by_run_id(run_id)` method that:
+  - Filters attempts by run_id
+  - Returns sorted by attempt_number ascending
+  - Returns defensive copy (new list)
+- Zero file I/O and JSON serialization (constraint enforced and verified)
+- In-memory only (no persistence layer dependency unlike WorkflowRunService)
+- Updated class and component diagrams with new service and relationships
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
