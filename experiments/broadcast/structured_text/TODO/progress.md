@@ -144,4 +144,4 @@ Duration: 525.2s | Cost: $0.757357 USD | Turns: 45
 - All predicates tested in all states
 - No regressions in existing functionality
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 94.1s | Cost: $0.647622 USD | Turns: 19
