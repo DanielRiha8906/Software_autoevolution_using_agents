@@ -48,3 +48,50 @@ class Task:
         now_utc = datetime.now(timezone.utc)
         due_date_utc = self.due_date if self.due_date.tzinfo else self.due_date.replace(tzinfo=timezone.utc)
         return due_date_utc < now_utc
+
+    def mark_in_progress(self) -> None:
+        """Transition status to IN_PROGRESS.
+
+        Raises ValueError if task is already IN_PROGRESS or DONE.
+        Updates updated_at to current UTC time.
+        """
+        if self.status == TaskStatus.IN_PROGRESS:
+            raise ValueError("Cannot mark a task that is already in progress as in progress")
+        if self.status == TaskStatus.DONE:
+            raise ValueError("Cannot mark a completed task as in progress")
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(timezone.utc)
+
+    def mark_done(self) -> None:
+        """Transition status to DONE.
+
+        Raises ValueError if task is already DONE.
+        Updates updated_at to current UTC time.
+        """
+        if self.status == TaskStatus.DONE:
+            raise ValueError("Cannot mark a task that is already done as done")
+        self.status = TaskStatus.DONE
+        self.updated_at = datetime.now(timezone.utc)
+
+    def reopen(self) -> None:
+        """Transition status to PENDING.
+
+        Raises ValueError if task is not DONE (i.e., if it's PENDING or IN_PROGRESS).
+        Updates updated_at to current UTC time.
+        """
+        if self.status != TaskStatus.DONE:
+            raise ValueError("Only completed tasks can be reopened")
+        self.status = TaskStatus.PENDING
+        self.updated_at = datetime.now(timezone.utc)
+
+    def is_completed(self) -> bool:
+        """Return True if status is DONE, False otherwise."""
+        return self.status == TaskStatus.DONE
+
+    def is_pending(self) -> bool:
+        """Return True if status is PENDING, False otherwise."""
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Return True if status is IN_PROGRESS, False otherwise."""
+        return self.status == TaskStatus.IN_PROGRESS
