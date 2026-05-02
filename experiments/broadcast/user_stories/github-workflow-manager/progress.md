@@ -97,4 +97,4 @@ Candidate A was selected as the winner based on semantic correctness despite all
 **Diagrams Updated:**
 - artifacts/class_diagram.puml — Added 5 new methods to WorkflowRun class definition
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 280.2s | Cost: $1.035941 USD | Turns: 27
