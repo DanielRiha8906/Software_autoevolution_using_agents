@@ -1,9 +1,12 @@
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from .workflow_status import WorkflowStatus
 from .workflow_conclusion import WorkflowConclusion
+
+if TYPE_CHECKING:
+    from .workflow_run_attempt import WorkflowRunAttempt
 
 
 @dataclass
@@ -18,6 +21,7 @@ class WorkflowRun:
     run_number: Optional[int]
     commit_sha: Optional[str]
     duration_seconds: float = 0.0
+    attempts: List["WorkflowRunAttempt"] = field(default_factory=list)
 
     def __post_init__(self):
         if self.duration_seconds < 0:
@@ -61,10 +65,16 @@ class WorkflowRun:
             "run_number": self.run_number,
             "commit_sha": self.commit_sha,
             "duration_seconds": self.duration_seconds,
+            "attempts": [attempt.to_dict() for attempt in self.attempts],
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> "WorkflowRun":
+        from .workflow_run_attempt import WorkflowRunAttempt
+
+        attempts_data = data.get("attempts", [])
+        attempts = [WorkflowRunAttempt.from_dict(attempt_dict) for attempt_dict in attempts_data]
+
         return cls(
             id=data["id"],
             workflow_name=data["workflow_name"],
@@ -76,4 +86,5 @@ class WorkflowRun:
             run_number=data.get("run_number"),
             commit_sha=data.get("commit_sha"),
             duration_seconds=data.get("duration_seconds", 0.0),
+            attempts=attempts,
         )
