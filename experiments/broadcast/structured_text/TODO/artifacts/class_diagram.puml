@@ -17,9 +17,11 @@ package "models" #DDEEFF {
         +status : TaskStatus
         +createdAt : DateTime
         +updatedAt : DateTime
+        +dueDate : DateTime [0..1]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
+        +isOverdue() : Boolean
     }
 }
 
@@ -34,7 +36,8 @@ package "storage" #FFF3CC {
 }
 
 package "services" #DDFFD4 {
-    exception TaskNotFoundError
+    class TaskNotFoundError {
+    }
 
     class TaskManager {
         -storage : JsonStorage
