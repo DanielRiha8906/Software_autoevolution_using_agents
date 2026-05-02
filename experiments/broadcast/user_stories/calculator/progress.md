@@ -50,4 +50,4 @@
 - ✅ Measurement uses only the standard library (time.perf_counter())
 - ✅ Existing code that constructs or reads CalculationResult continues to work without changes (backward compatibility with default=0.0)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 339.8s | Cost: $0.684623 USD | Turns: 48
