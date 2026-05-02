@@ -262,3 +262,80 @@ All 69 tests passing:
 **Total: 69 tests passing**
 
 Duration: 171.8s | Cost: $0.323907 USD | Turns: 22
+
+---
+
+# Task 04: MemoryService Lifecycle Manager
+
+## Broadcast Architecture Evaluation
+
+### Candidate A
+- **Approach**: Implemented MemoryService as an in-memory lifecycle manager using a private `_entries` list. Provides `store(entry: MemoryEntry)` to append entries and `retrieve()` to return all stored entries. No file I/O or serialization logic — separation of concerns enforced.
+- **Files Changed**:
+  - `src/services/memory_service.py` — new MemoryService class
+  - `tests/test_memory_service.py` — 5 test cases
+- **Test Results**: 74 tests passing (69 existing + 5 new)
+
+### Candidate B
+- **Approach**: Identical implementation to Candidate A — in-memory MemoryService with _entries list, store() and retrieve() methods. No file I/O or JSON serialization. Clean separation of concerns.
+- **Files Changed**:
+  - `src/services/memory_service.py` — new MemoryService class
+  - `tests/test_memory_service.py` — 5 test cases
+- **Test Results**: 74 tests passing (69 existing + 5 new)
+
+### Candidate C
+- **Approach**: Identical implementation to Candidates A and B — MemoryService manages MemoryEntry lifecycle entirely in memory. Store and retrieve operations only; persistence responsibility delegated to separate storage layer.
+- **Files Changed**:
+  - `src/services/memory_service.py` — new MemoryService class
+  - `tests/test_memory_service.py` — 5 test cases
+- **Test Results**: 74 tests passing (69 existing + 5 new)
+
+## Selection Rationale
+
+**Selected Winner**: Candidate A
+
+All three candidates produced **identical implementations** with the same test results (74 tests passing). The test-driven specification and straightforward service requirements led to convergent solutions.
+
+Key achievements across all implementations:
+- ✅ MemoryService class created as lifecycle manager
+- ✅ `store(entry: MemoryEntry) -> None` method appends entries to in-memory list
+- ✅ `retrieve() -> list[MemoryEntry]` method returns all stored entries
+- ✅ No file I/O (`open(` not present in source)
+- ✅ No JSON serialization (`json.dump` not present in source)
+- ✅ Clean separation of concerns: service layer isolated from storage layer
+- ✅ All 5 required tests pass
+- ✅ All 69 existing tests continue to pass
+- ✅ Proper type hints and documentation
+
+## Implementation Summary
+
+### Changes Made
+
+1. **MemoryService** (`src/services/memory_service.py`):
+   - New class with single responsibility: manage MemoryEntry lifecycle in memory
+   - Private field: `_entries: list[MemoryEntry]` for storing entries
+   - Constructor initializes empty list
+   - `store(entry: MemoryEntry) -> None` — appends entry to internal list
+   - `retrieve() -> list[MemoryEntry]` — returns all stored entries
+   - Zero file I/O, zero serialization logic — architecture enforces separation
+
+2. **Test Suite** (`tests/test_memory_service.py`):
+   - test_memory_service_can_store_entry — validates store() method
+   - test_memory_service_retrieve_returns_stored_entries — validates retrieve() and entry identity
+   - test_memory_service_stores_multiple_entries — tests multiple entry storage
+   - test_memory_service_retrieve_returns_list — validates return type
+   - test_memory_service_does_not_contain_file_io — enforces no file I/O or serialization in source code
+
+3. **Diagrams** (`artifacts/class_diagram.puml`, `artifacts/component_diagram.puml`):
+   - Added MemoryService to services package with store() and retrieve() methods
+   - Updated component diagram showing MemoryService manages MemoryEntry objects
+
+## Test Coverage
+
+All 74 tests passing:
+- ✓ 5 new MemoryService tests (100% pass rate)
+- ✓ 69 existing tests continue to pass
+
+**Total: 74 tests passing**
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
