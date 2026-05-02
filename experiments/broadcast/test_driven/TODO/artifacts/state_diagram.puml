@@ -2,8 +2,9 @@
 
 [*] --> PENDING
 
-PENDING --> IN_PROGRESS : start
-IN_PROGRESS --> DONE : complete
-DONE --> IN_PROGRESS : reopen
+PENDING --> IN_PROGRESS : markInProgress()
+IN_PROGRESS --> DONE : markDone()
+DONE --> PENDING : reopen()
+PENDING --> PENDING : reopen()
 
 @enduml
