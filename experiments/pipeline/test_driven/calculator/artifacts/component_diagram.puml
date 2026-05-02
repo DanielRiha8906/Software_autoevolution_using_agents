@@ -11,6 +11,7 @@ package "Calculator Application" {
     component "Application Service\n(CalculatorService)" as Service
     component "Calculation Engine\n(Calculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
+    component "Memory Service\n(MemoryService)" as Memory
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
 
     Main --> CLI : initializes
@@ -22,6 +23,7 @@ package "Calculator Application" {
 
     Service ..> Models
     Store ..> Models
+    Memory ..> Models
 }
 
 database "calculations.json" as DB
