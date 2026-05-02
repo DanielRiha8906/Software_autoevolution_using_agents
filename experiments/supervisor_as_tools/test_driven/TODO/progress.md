@@ -88,4 +88,4 @@ Implemented `CommentsService` to manage the full lifecycle of `TaskComment` obje
 - `delete_comment(comment_id: str) → None` — Remove single comment
 - `delete_comments_for_task(task_id: str) → None` — Remove all comments for task
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 351.8s | Cost: $0.610275 USD | Turns: 13
