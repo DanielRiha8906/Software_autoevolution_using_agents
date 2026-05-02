@@ -1,9 +1,10 @@
-@startuml
+@startuml state_diagram
 
 [*] --> PENDING
 
-PENDING --> IN_PROGRESS : start
-IN_PROGRESS --> DONE : complete
-DONE --> IN_PROGRESS : reopen
+PENDING --> IN_PROGRESS : mark_in_progress()
+IN_PROGRESS --> DONE : mark_done()
+DONE --> PENDING : reopen()
+PENDING --> DONE : mark_done()
 
 @enduml
