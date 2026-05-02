@@ -12,6 +12,7 @@ class CalculationResult:
     operand_b: float
     result: float
     timestamp: str = field(default="")
+    execution_time_ms: int | float | None = None
 
     def __post_init__(self) -> None:
         if not self.timestamp:
