@@ -50,3 +50,33 @@ class TestCalculatorService:
     def test_result_has_timestamp(self):
         result = self.service.perform(Operation.ADD, 1, 1)
         assert result.timestamp != ""
+
+    def test_perform_square(self):
+        assert self.service.perform(Operation.SQUARE, 5, 0).result == 25
+
+    def test_perform_sqrt(self):
+        assert self.service.perform(Operation.SQRT, 25, 0).result == 5.0
+
+    def test_perform_sqrt_negative_raises(self):
+        with pytest.raises(ValueError, match="Square root of a negative number"):
+            self.service.perform(Operation.SQRT, -1, 0)
+
+    def test_perform_sqrt_negative_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.SQRT, -1, 0)
+        self.storage.save.assert_not_called()
+
+    def test_perform_power(self):
+        assert self.service.perform(Operation.POWER, 2, 3).result == 8.0
+
+    def test_perform_modulo(self):
+        assert self.service.perform(Operation.MODULO, 10, 3).result == 1
+
+    def test_perform_modulo_by_zero_raises(self):
+        with pytest.raises(ValueError, match="Modulo by zero"):
+            self.service.perform(Operation.MODULO, 10, 0)
+
+    def test_perform_modulo_by_zero_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.MODULO, 10, 0)
+        self.storage.save.assert_not_called()
