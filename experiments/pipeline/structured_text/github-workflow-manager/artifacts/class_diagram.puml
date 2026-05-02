@@ -25,15 +25,16 @@ package "models" #DDEEFF {
     }
 
     class WorkflowRun {
-        +id            : str
-        +workflow_name : str
-        +branch        : str
-        +status        : WorkflowStatus
-        +conclusion    : Optional[WorkflowConclusion]
-        +created_at    : datetime
-        +updated_at    : Optional[datetime]
-        +run_number    : Optional[int]
-        +commit_sha    : Optional[str]
+        +id               : str
+        +workflow_name    : str
+        +branch           : str
+        +status           : WorkflowStatus
+        +conclusion       : Optional[WorkflowConclusion]
+        +created_at       : datetime
+        +updated_at       : Optional[datetime]
+        +run_number       : Optional[int]
+        +commit_sha       : Optional[str]
+        +duration_seconds : float
         --
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRun
@@ -69,7 +70,7 @@ package "services" #DDFFD4 {
         -_service : WorkflowRunService
         --
         +__init__(service: WorkflowRunService)
-        +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str]) : WorkflowRun
+        +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str],\n  duration_seconds: float) : WorkflowRun
     }
 }
 

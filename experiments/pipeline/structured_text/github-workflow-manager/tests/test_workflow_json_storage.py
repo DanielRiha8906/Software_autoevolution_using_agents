@@ -51,3 +51,63 @@ def test_save_persists_json(tmp_storage):
     raw = json.loads(Path(tmp_storage.filepath).read_text())
     assert raw[0]["id"] == "r1"
     assert raw[0]["conclusion"] == "success"
+
+
+def test_duration_seconds_roundtrip(tmp_storage):
+    """Verify duration_seconds is saved and loaded correctly."""
+    run = WorkflowRun(
+        id="r_duration",
+        workflow_name="Deploy",
+        branch="main",
+        status=WorkflowStatus.COMPLETED,
+        conclusion=WorkflowConclusion.SUCCESS,
+        created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        updated_at=None,
+        run_number=42,
+        commit_sha="deadbeef",
+        duration_seconds=123.45,
+    )
+    tmp_storage.save([run])
+    loaded = tmp_storage.load()
+    assert len(loaded) == 1
+    assert loaded[0].duration_seconds == 123.45
+
+
+def test_duration_seconds_default(tmp_storage):
+    """Verify missing duration_seconds in JSON defaults to 0.0."""
+    # Manually create JSON without duration_seconds to simulate old data
+    old_data = [
+        {
+            "id": "r_old",
+            "workflow_name": "Deploy",
+            "branch": "main",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2024-01-01T00:00:00+00:00",
+            "updated_at": None,
+            "run_number": 42,
+            "commit_sha": "deadbeef",
+        }
+    ]
+    Path(tmp_storage.filepath).write_text(json.dumps(old_data))
+    loaded = tmp_storage.load()
+    assert len(loaded) == 1
+    assert loaded[0].duration_seconds == 0.0
+
+
+def test_duration_seconds_validation_negative():
+    """Verify WorkflowRun.from_dict raises ValueError for negative duration_seconds."""
+    data = {
+        "id": "r_neg",
+        "workflow_name": "Deploy",
+        "branch": "main",
+        "status": "completed",
+        "conclusion": "success",
+        "created_at": "2024-01-01T00:00:00+00:00",
+        "updated_at": None,
+        "run_number": 42,
+        "commit_sha": "deadbeef",
+        "duration_seconds": -5.0,
+    }
+    with pytest.raises(ValueError, match="duration_seconds must be non-negative"):
+        WorkflowRun.from_dict(data)
