@@ -63,4 +63,4 @@ Implemented explicit status transition methods on the Task class with validation
 - Error messages match specification exactly
 - All 41 new tests verify valid transitions, invalid transitions, timestamp updates, and serialization
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 247.1s | Cost: $0.395894 USD | Turns: 15
