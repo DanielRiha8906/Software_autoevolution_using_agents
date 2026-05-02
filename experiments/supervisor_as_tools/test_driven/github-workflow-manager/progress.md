@@ -68,4 +68,4 @@ Existing tests: All 9 existing tests continue to pass (no regressions)
 
 All methods derive state strictly from `status` and `conclusion` attributes. No external I/O or libraries used.
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 140.3s | Cost: $0.317388 USD | Turns: 26
