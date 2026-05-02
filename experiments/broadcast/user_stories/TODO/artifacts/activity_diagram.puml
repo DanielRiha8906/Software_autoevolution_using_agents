@@ -20,7 +20,9 @@ repeat
       :Run update task flow;
     case (6 — Set due date)
       :Run set due date flow;
-    case (7 — Delete task)
+    case (7 — Manage comments)
+      :Run comment flow;
+    case (8 — Delete task)
       :Run delete task flow;
     case (0/q — Quit)
       :Clear screen;
