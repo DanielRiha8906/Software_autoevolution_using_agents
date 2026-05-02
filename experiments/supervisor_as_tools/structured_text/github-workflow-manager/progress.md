@@ -205,4 +205,4 @@ All tests pass successfully with no failures on first run.
 - AttemptService dependency on WorkflowRunService enables run validation and atomic persistence
 - UUID-based attempt IDs and UTC timezone datetime for global uniqueness and consistency
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 362.0s | Cost: $0.656911 USD | Turns: 25
