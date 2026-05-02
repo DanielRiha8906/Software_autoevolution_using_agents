@@ -146,3 +146,66 @@ Successfully implemented new `TaskComment` domain class with automatic UUID id g
 - Non-CEST timezones rejected with ValueError
 
 Duration: 266.0s | Cost: $0.428168 USD | Turns: 18
+
+## Task 04: Implement CommentsService with full lifecycle management
+
+### Summary
+Successfully implemented `CommentsService` that manages the full lifecycle of task comments with in-memory storage, task existence validation, and cascade-delete support. The service follows the established validation and dependency injection patterns, integrating seamlessly with TodoService.
+
+### Files Changed
+1. **src/services/comments_service.py** — New CommentsService implementation
+   - Defined `CommentNotFoundError` exception for missing comments
+   - Created `CommentsService` class with in-memory comment storage (dict)
+   - Implemented `__init__(todo_service: TodoService)` for dependency injection
+   - Implemented `add_comment(task_id: str, content: str) → TaskComment` with task validation
+   - Implemented `list_comments(task_id: str) → list[TaskComment]` with created_at ordering
+   - Implemented `delete_comment(comment_id: str) → None` with existence validation
+   - Implemented `delete_comments_for_task(task_id: str) → None` for cascade deletion
+
+2. **src/services/__init__.py** — Module exports
+   - Added imports for CommentsService and CommentNotFoundError
+   - Updated `__all__` to export both new classes
+
+3. **tests/test_comments_service.py** — New test suite
+   - Created 7 comprehensive test cases covering add, list, delete, and cascade operations
+   - Tests validate empty content rejection, task existence checking, ordering, and cascade delete
+
+4. **artifacts/class_diagram.puml** — Updated UML class diagram
+   - Added CommentNotFoundError exception class
+   - Added CommentsService class with all public methods and private attributes
+   - Added relationships: CommentsService → TodoService (dependency), CommentsService ⇒ TaskComment (manages)
+
+5. **artifacts/component_diagram.puml** — Updated component diagram
+   - Added "Comments Service" component to Service Layer
+   - Added dependencies showing CommentsService uses TodoService and manages TaskComments
+
+### Test Results
+- All 67 tests passing (60 existing + 7 new CommentsService tests)
+- All new tests pass: add_comment validation, list ordering, delete operations, cascade delete
+- All existing tests remain passing (backward compatibility verified)
+- File I/O check passed: no open() or json.dump() in CommentsService
+
+### Key Features Implemented
+✓ In-memory storage using dict keyed by comment_id (pattern mirrors TaskManager)
+✓ Task existence validation via TodoService.get_task() before adding comments
+✓ Empty content validation delegated to TaskComment.__post_init__()
+✓ Comments returned in deterministic created_at ascending order
+✓ Individual comment deletion by comment_id with CommentNotFoundError on missing
+✓ Cascade deletion for all comments associated with a task_id
+✓ No file I/O or JSON serialization in service layer
+✓ Proper exception handling: propagates TaskNotFoundError, raises CommentNotFoundError
+
+### Integration Points
+- CommentsService takes TodoService in constructor (dependency injection)
+- Uses TodoService.get_task() for task validation in add_comment()
+- Manages TaskComment lifecycle independently (no persistence required)
+- delete_comments_for_task() supports cascading deletes when a task is removed
+
+### Implementation Rules Applied
+- All exceptions follow established patterns (TaskNotFoundError reused, CommentNotFoundError new)
+- Storage is in-memory only (no file I/O per requirements)
+- Comments validated via existing TaskComment.__post_init__() logic
+- Ordering deterministic via sorted(key=lambda c: c.created_at)
+- Cascade delete implemented without validating task existence (design choice)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

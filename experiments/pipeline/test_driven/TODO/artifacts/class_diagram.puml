@@ -57,6 +57,7 @@ package "storage" #FFF3CC {
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
+    exception CommentNotFoundError
 
     class TaskManager {
         -storage : JsonStorage
@@ -87,6 +88,17 @@ package "services" #DDFFD4 {
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +deleteTask(taskId: String) : void
     }
+
+    class CommentsService {
+        -todo_service : TodoService
+        -comments : Dictionary<String, TaskComment>
+        --
+        +CommentsService(todo_service: TodoService)
+        +add_comment(task_id: String, content: String) : TaskComment
+        +list_comments(task_id: String) : List<TaskComment>
+        +delete_comment(comment_id: String) : void
+        +delete_comments_for_task(task_id: String) : void
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -109,6 +121,9 @@ Task --> TaskStatus : status
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
+CommentsService --> TodoService : todo_service
+CommentsService --> TaskComment : manages
+CommentsService ..> CommentNotFoundError : raises
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 
