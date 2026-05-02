@@ -26,3 +26,37 @@
 - ✅ Existing code continues to work without changes (backward compatible)
 
 Duration: 272.5s | Cost: $0.421845 USD | Turns: 15
+
+## Task 02: Square, Square Root, Power, and Modulo Operations
+
+**Status**: ✅ Complete
+
+**Description**: Extend calculator with four new arithmetic operations (square, square root, power, modulo) following the same interface and error-handling patterns as existing operations.
+
+**Files Changed**:
+- `src/models/operation.py` — Added 4 new Operation enum members: SQUARE, SQRT, POWER, MODULO
+- `src/models/calculation_result.py` — Updated _SYMBOLS dict; modified __str__() to format unary operations (square, sqrt) differently from binary operations
+- `src/services/calculator.py` — Implemented square(), sqrt(), power(), modulo() methods with proper error handling; updated dispatcher dictionary
+- `src/services/calculator_service.py` — Added logic to detect unary operations and set operand_b = -1.0 as sentinel for storage
+- `src/cli/calculator_cli.py` — Extended _MENU with 4 new operations; updated run_interactive() to handle unary vs binary operation prompting
+- `src/__main__.py` — Updated argparse choices to include all 8 operations; updated help text
+- `artifacts/class_diagram.puml` — Updated Operation enum (8 members), Calculator class (8 methods)
+- `artifacts/use_case_diagram.puml` — Added 6 new use cases for individual arithmetic operations
+- `tests/test_new_operations.py` — Comprehensive test suite (98 new tests) covering all new operations, edge cases, error conditions, and integration paths
+
+**Test Results**:
+- Total tests: 169 (71 existing + 98 new)
+- Passed: 169 ✅
+- Failed: 0
+- Coverage: All new operations (normal cases, boundary conditions, edge cases), error handling (sqrt of negative, modulo by zero), CalculationService integration, CLI menu and one-shot modes, result formatting, backward compatibility
+
+**Acceptance Criteria Met**:
+- ✅ Four operations available: square(x), sqrt(x), power(x, y), modulo(x, y)
+- ✅ Each operation follows same interface as existing operations (add, subtract, etc.)
+- ✅ sqrt of negative number raises ValueError("Square root of negative number is not allowed")
+- ✅ modulo by zero raises ValueError("Modulo by zero is not allowed")
+- ✅ power with negative and fractional exponents returns correct results (e.g., 2^-2 = 0.25, 4^0.5 = 2.0)
+- ✅ No existing operations duplicated or renamed
+- ✅ All operations accessible via interactive menu (options 5-8) and one-shot mode (--operation flag)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

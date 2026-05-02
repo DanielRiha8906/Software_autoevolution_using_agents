@@ -10,6 +10,10 @@ class CalculatorCLI:
         (Operation.SUBTRACT, "Subtract"),
         (Operation.MULTIPLY, "Multiply"),
         (Operation.DIVIDE,   "Divide"),
+        (Operation.SQUARE,   "Square"),
+        (Operation.SQRT,     "Square Root"),
+        (Operation.POWER,    "Power"),
+        (Operation.MODULO,   "Modulo"),
     ]
 
     def __init__(self, service: CalculatorService) -> None:
@@ -41,12 +45,18 @@ class CalculatorCLI:
                 print("Invalid choice — try again.\n")
                 continue
 
-            a = self._prompt_number("Enter first number: ")
-            if a is None:
-                continue
-            b = self._prompt_number("Enter second number: ")
-            if b is None:
-                continue
+            if operation in (Operation.SQUARE, Operation.SQRT):
+                a = self._prompt_number("Enter number: ")
+                if a is None:
+                    continue
+                b = -1.0
+            else:
+                a = self._prompt_number("Enter first number: ")
+                if a is None:
+                    continue
+                b = self._prompt_number("Enter second number: ")
+                if b is None:
+                    continue
 
             try:
                 result = self.service.perform(operation, a, b)

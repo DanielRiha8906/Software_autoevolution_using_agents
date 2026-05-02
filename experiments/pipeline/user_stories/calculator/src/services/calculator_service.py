@@ -17,10 +17,15 @@ class CalculatorService:
         end_time = time.perf_counter()
         execution_time_ms = (end_time - start_time) * 1000
 
+        if operation in (Operation.SQUARE, Operation.SQRT):
+            operand_b = -1.0
+        else:
+            operand_b = b
+
         calc_result = CalculationResult(
             operation=operation.value,
             operand_a=a,
-            operand_b=b,
+            operand_b=operand_b,
             result=result,
             execution_time_ms=execution_time_ms,
         )
