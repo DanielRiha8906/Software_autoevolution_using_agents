@@ -11,6 +11,11 @@ from .task_status import TaskStatus
 CEST = timezone(timedelta(hours=2))
 
 
+def _now_cest() -> datetime:
+    """Return the current time in CEST (UTC+2)."""
+    return datetime.now(CEST)
+
+
 @dataclass
 class Task:
     title: str
@@ -28,6 +33,39 @@ class Task:
                 raise ValueError("due_date must be timezone-aware (cannot be naive)")
             if self.due_date.tzinfo != CEST:
                 raise ValueError(f"due_date must be in CEST timezone, got {self.due_date.tzinfo}")
+
+    def mark_in_progress(self) -> None:
+        """Set status to IN_PROGRESS and update updated_at to CEST."""
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = _now_cest()
+
+    def mark_done(self) -> None:
+        """Set status to DONE and update updated_at to CEST."""
+        self.status = TaskStatus.DONE
+        self.updated_at = _now_cest()
+
+    def reopen(self) -> None:
+        """Set status to PENDING and update updated_at to CEST. Idempotent/noop if already pending."""
+        self.status = TaskStatus.PENDING
+        self.updated_at = _now_cest()
+
+    def is_completed(self) -> bool:
+        """Return True if status == DONE."""
+        return self.status == TaskStatus.DONE
+
+    def is_pending(self) -> bool:
+        """Return True if status == PENDING."""
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Return True if status == IN_PROGRESS."""
+        return self.status == TaskStatus.IN_PROGRESS
+
+    def is_overdue(self) -> bool:
+        """Return True if due_date exists and is in the past (using CEST time), else False."""
+        if self.due_date is None:
+            return False
+        return self.due_date < _now_cest()
 
     def to_dict(self) -> dict:
         return {

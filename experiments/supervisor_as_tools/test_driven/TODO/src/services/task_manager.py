@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from ..models.task import Task
+from ..models.task import Task, _now_cest
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 
@@ -52,14 +52,18 @@ class TaskManager:
             task.title = title
         if description is not None:
             task.description = description
-        task.updated_at = datetime.now(timezone.utc)
+        task.updated_at = _now_cest()
         self._persist()
         return task
 
     def set_status(self, task_id: str, status: TaskStatus) -> Task:
         task = self.get(task_id)
-        task.status = status
-        task.updated_at = datetime.now(timezone.utc)
+        if status == TaskStatus.IN_PROGRESS:
+            task.mark_in_progress()
+        elif status == TaskStatus.DONE:
+            task.mark_done()
+        elif status == TaskStatus.PENDING:
+            task.reopen()
         self._persist()
         return task
 
