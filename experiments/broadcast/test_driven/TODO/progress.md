@@ -144,3 +144,58 @@ All three candidates produced functionally equivalent implementations with ident
 ✓ Follows existing Task model patterns for consistency
 
 Duration: 237.6s | Cost: $0.692382 USD | Turns: 41
+
+---
+
+# Task 04: Implement CommentsService with full lifecycle management
+
+## Broadcast Evaluation Results
+
+### Candidate A - SELECTED
+**Test Score:** 7/7 ✓ (79/79 total tests)
+**Approach:** In-memory comment storage with TodoService dependency injection
+
+**Implementation Details:**
+- Created `src/services/comments_service.py` with CommentsService class
+- Constructor: accepts TodoService dependency for task validation
+- `add_comment(task_id, content)`: validates task existence, creates TaskComment, stores in-memory dictionary
+- `list_comments(task_id)`: returns comments for task sorted by created_at timestamp
+- `delete_comment(comment_id)`: removes comment from in-memory storage by ID
+- `delete_comments_for_task(task_id)`: cascade delete - removes all comments for a task
+- Task existence validation: calls TodoService.get_task(), converts TaskNotFoundError to Exception
+- Empty content validation: delegated to TaskComment.__post_init__()
+- No file I/O or JSON serialization in service layer (all persistence handled by storage layer)
+
+**Why Selected:**
+All three candidates produced functionally identical implementations with identical test results (7/7 tests, 79/79 total). All implementations use in-memory dictionaries for comment storage, delegate validation to domain objects, and maintain proper separation of concerns. Candidate A selected as the winner based on completion order in parallel evaluation.
+
+### Candidate B
+**Test Score:** 7/7 ✓ (79/79 total tests)
+**Approach:** Identical to Candidate A
+
+### Candidate C
+**Test Score:** 7/7 ✓ (79/79 total tests)
+**Approach:** Identical to Candidate A
+
+## Files Changed
+- `src/services/comments_service.py`: Created new CommentsService class (70 lines)
+- `tests/test_task_04.py`: Created test suite with 7 tests
+- `artifacts/class_diagram.puml`: Added CommentsService to service layer diagram
+- `artifacts/component_diagram.puml`: Added Comments Service component to architecture
+
+## Test Results
+**All Tests Passing:** 79/79
+- 7 new tests in test_task_04.py (CommentsService lifecycle tests)
+- 72 existing tests (from Tasks 01-03, all backward compatible)
+
+## Implementation Quality
+✓ CommentsService uses in-memory dictionary storage (no persistence coupling)
+✓ Task existence validation via TodoService dependency
+✓ Comments always ordered by created_at in list_comments()
+✓ Empty content rejected via TaskComment validation
+✓ Cascade delete support via delete_comments_for_task()
+✓ No file I/O or JSON serialization in service (proper separation of concerns)
+✓ TaskComment model validation handles content validation
+✓ All test requirements met: add, list, delete, validation, cascade delete
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
