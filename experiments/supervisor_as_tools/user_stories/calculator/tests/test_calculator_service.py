@@ -50,3 +50,19 @@ class TestCalculatorService:
     def test_result_has_timestamp(self):
         result = self.service.perform(Operation.ADD, 1, 1)
         assert result.timestamp != ""
+
+    def test_str_square(self):
+        result = self.service.perform(Operation.SQUARE, 5, 0)
+        assert "square" in str(result)
+
+    def test_str_sqrt(self):
+        result = self.service.perform(Operation.SQRT, 16, 0)
+        assert "sqrt" in str(result)
+
+    def test_str_power(self):
+        result = self.service.perform(Operation.POWER, 2, 3)
+        assert "power" in str(result)
+
+    def test_str_modulo(self):
+        result = self.service.perform(Operation.MODULO, 10, 3)
+        assert "modulo" in str(result)

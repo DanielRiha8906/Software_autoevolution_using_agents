@@ -7,13 +7,27 @@ left to right direction
 actor User
 
 rectangle "Calculator Application" {
-    usecase "Perform calculation" as UC_Calc
+    usecase "Add" as UC_Add
+    usecase "Subtract" as UC_Subtract
+    usecase "Multiply" as UC_Multiply
+    usecase "Divide" as UC_Divide
+    usecase "Square" as UC_Square
+    usecase "Square Root" as UC_Sqrt
+    usecase "Power" as UC_Power
+    usecase "Modulo" as UC_Modulo
     usecase "View calculation history" as UC_History
     usecase "Exit application" as UC_Exit
 
 }
 
-User --> UC_Calc
+User --> UC_Add
+User --> UC_Subtract
+User --> UC_Multiply
+User --> UC_Divide
+User --> UC_Square
+User --> UC_Sqrt
+User --> UC_Power
+User --> UC_Modulo
 User --> UC_History
 User --> UC_Exit
 

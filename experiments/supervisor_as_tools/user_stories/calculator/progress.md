@@ -33,3 +33,44 @@ Successfully implemented automatic execution timing for calculator operations. E
 - All changes follow existing code conventions and style
 
 Duration: 249.9s | Cost: $0.445273 USD | Turns: 23
+
+## Task 02: Add square, sqrt, power, and modulo operations
+
+### Summary
+Successfully implemented four new mathematical operations: square(x), sqrt(x), power(x, y), and modulo(x, y). Each operation follows the same interface as existing operations. Error handling is included for invalid inputs (negative square root, modulo by zero). All 65 tests pass (27 new tests plus existing tests).
+
+### Files Changed
+1. **src/models/operation.py** — Added SQUARE, SQRT, POWER, MODULO enum values
+2. **src/services/calculator.py** — Added square(), sqrt(), power(), modulo() methods with proper error handling; updated dispatch dict
+3. **src/models/calculation_result.py** — Extended _SYMBOLS dict with mappings for new operations
+4. **src/cli/calculator_cli.py** — Added four new menu items to _MENU
+5. **tests/test_calculator.py** — Added 17 new tests covering all operations with edge cases and error handling
+6. **tests/test_calculator_service.py** — Added 4 tests for result string formatting
+7. **tests/test_cli.py** — Removed test_invalid_operation_exits (modulo now valid); added 7 new CLI tests
+8. **artifacts/class_diagram.puml** — Updated Operation enum and Calculator class to show all 8 operations
+9. **artifacts/use_case_diagram.puml** — Updated to show 8 explicit operation use cases
+
+### Test Results
+- **Status:** ✅ All tests PASSED
+- **Total tests:** 65
+- **Passed:** 65
+- **Failed:** 0
+
+### Acceptance Criteria
+- ✅ Operations available: square(x), sqrt(x), power(x, y), modulo(x, y)
+- ✅ Each operation follows the same interface as existing operations
+- ✅ sqrt of negative number raises ValueError with message
+- ✅ modulo by zero raises ValueError with message
+- ✅ power with negative and fractional exponents returns correct results using Python's ** operator
+- ✅ No existing operations duplicated or renamed
+- ✅ All new operations integrated into CLI menu
+- ✅ Full test coverage with edge cases and error scenarios
+
+### Implementation Details
+- All new operations accept (float, float) signature to maintain consistency with existing interface
+- For unary operations (square, sqrt), the second parameter is ignored (stored in CalculationResult for consistency)
+- Error messages follow the pattern of existing error handling (e.g., divide-by-zero)
+- CalculationResult displays unary operations as binary (e.g., "4 sqrt 4 = 2") to maintain formatting consistency
+- All changes follow existing code conventions and style
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
