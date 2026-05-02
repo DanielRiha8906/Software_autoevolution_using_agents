@@ -71,4 +71,4 @@ Duration: 447.0s | Cost: $0.868444 USD | Turns: 30
 - ✓ Should: Add unit tests covering all status transitions and overdue combinations
 - ✓ Could: (Not implemented) Add is_pending() and is_in_progress() predicates
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 260.0s | Cost: $0.403842 USD | Turns: 13
