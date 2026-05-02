@@ -1,3 +1,5 @@
+import math
+
 from ..models.operation import Operation
 
 
@@ -26,3 +28,19 @@ class Calculator:
         if operation not in dispatch:
             raise ValueError(f"Unsupported operation: {operation}")
         return dispatch[operation](a, b)
+
+    def square(self, a: float) -> float:
+        return a * a
+
+    def sqrt(self, a: float) -> float:
+        if a < 0:
+            raise ValueError("Cannot take square root of negative number")
+        return math.sqrt(a)
+
+    def power(self, a: float, b: float) -> float:
+        return a ** b
+
+    def modulo(self, a: float, b: float) -> float:
+        if b == 0:
+            raise ValueError("Modulo by zero is not allowed")
+        return a % b

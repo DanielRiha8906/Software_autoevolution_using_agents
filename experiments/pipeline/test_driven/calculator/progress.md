@@ -58,3 +58,52 @@ The implementation satisfies all provided test requirements:
 - No changes to activity, component, use case, or state diagrams (timing is internal implementation detail)
 
 Duration: 252.6s | Cost: $0.368601 USD | Turns: 19
+
+## Task 02: Add Domain Methods to Calculator
+
+### Task Number
+Task 02
+
+### Files Changed
+- `src/services/calculator.py` — Added four new mathematical methods: `square()`, `sqrt()`, `power()`, `modulo()` with error handling
+- `artifacts/class_diagram.puml` — Updated Calculator class to include new method signatures
+
+### Test Results
+- **Status:** ✓ All tests passed
+- **Output:** 38 passed in 0.09s
+- **New tests:** All 8 new tests for square, sqrt, power, modulo pass
+- **Regression:** All 30 existing tests continue to pass (no regressions)
+
+### Implementation Details
+
+#### Changes to `src/services/calculator.py`
+- Added import: `import math` (for sqrt function)
+- Added `square(a: float) -> float` — Returns a²
+- Added `sqrt(a: float) -> float` — Returns √a, raises ValueError for negative inputs
+- Added `power(a: float, b: float) -> float` — Returns a^b, handles integer/fractional/negative exponents
+- Added `modulo(a: float, b: float) -> float` — Returns a % b, raises ValueError for zero divisor
+
+### Key Design Decisions
+1. **Error Handling:** Use ValueError for domain errors (matching existing divide() pattern)
+2. **Unary Operations:** square() and sqrt() are standalone methods, not integrated into Operation enum
+3. **Math Library:** Use math.sqrt() for proper floating-point precision
+4. **Operator Choice:** Use Python native operators (**, %) for power and modulo
+
+### Test Coverage
+The implementation satisfies all provided test requirements:
+- ✓ square(4) = 16, square(0) = 0
+- ✓ sqrt(9) ≈ 3.0, sqrt(-1) raises Exception
+- ✓ power(2, 10) = 1024, power(8, 1/3) ≈ 2.0, power(2, -1) ≈ 0.5
+- ✓ modulo(10, 3) = 1, modulo(10, 0) raises Exception
+- ✓ All existing operations (add, subtract, multiply, divide) unchanged
+
+### Architecture Compliance
+- **Pipeline Architecture:** Followed strict sequential pipeline: Data Analyst → System Architect → Programmer → Pytest → UML Designer
+- **Test-Driven Strategy:** All changes driven by test requirements, no specification beyond tests
+- **Code Quality:** Minimal additive changes, no modifications to existing methods
+
+### UML Updates
+- Updated `artifacts/class_diagram.puml` to show new methods in Calculator class
+- No changes to activity, component, use case, or state diagrams
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
