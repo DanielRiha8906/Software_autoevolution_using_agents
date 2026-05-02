@@ -50,3 +50,25 @@ class TestCalculatorService:
     def test_result_has_timestamp(self):
         result = self.service.perform(Operation.ADD, 1, 1)
         assert result.timestamp != ""
+
+    def test_result_has_execution_time_ms(self):
+        result = self.service.perform(Operation.ADD, 1, 1)
+        assert hasattr(result, "execution_time_ms")
+        assert isinstance(result.execution_time_ms, (int, float))
+        assert result.execution_time_ms >= 0
+
+    def test_execution_time_ms_is_populated(self):
+        result = self.service.perform(Operation.ADD, 1, 1)
+        assert result.execution_time_ms > 0
+
+    def test_execution_time_ms_serialization(self):
+        result = self.service.perform(Operation.ADD, 1, 1)
+        result_dict = result.to_dict()
+        assert "execution_time_ms" in result_dict
+        assert isinstance(result_dict["execution_time_ms"], (int, float))
+
+    def test_execution_time_ms_deserialization(self):
+        result = self.service.perform(Operation.ADD, 1, 1)
+        result_dict = result.to_dict()
+        reconstructed = CalculationResult.from_dict(result_dict)
+        assert reconstructed.execution_time_ms == result.execution_time_ms

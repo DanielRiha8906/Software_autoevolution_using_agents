@@ -1,0 +1,47 @@
+@startuml sequence_diagram_perform
+
+skinparam sequenceParticipantPadding 30
+skinparam sequenceActorBorderColor #3366AA
+skinparam sequenceLifeLineBorderColor #3366AA
+skinparam sequenceArrowColor #3366AA
+
+participant User as U
+participant CalculatorCLI as CLI
+participant CalculatorService as Service
+participant Calculator as Calc
+participant JsonStorage as Store
+participant "time module" as Time
+
+U -> CLI: runCommand(operation, a, b)
+CLI -> Service: perform(operation, a, b)
+
+Service -> Time: start_time = perf_counter()
+activate Time
+Time --> Service: start_time (float)
+deactivate Time
+
+Service -> Calc: calculate(operation, a, b)
+activate Calc
+Calc --> Service: result (float)
+deactivate Calc
+
+Service -> Time: end_time = perf_counter()
+activate Time
+Time --> Service: end_time (float)
+deactivate Time
+
+note over Service
+  execution_time_ms = (end_time - start_time) * 1000
+end note
+
+Service -> Service: create CalculationResult(\n  operation, a, b, result,\n  execution_time_ms)
+
+Service -> Store: save(calc_result)
+activate Store
+Store --> Service: void
+deactivate Store
+
+Service --> CLI: CalculationResult
+CLI --> U: display result & execution time
+
+@enduml
