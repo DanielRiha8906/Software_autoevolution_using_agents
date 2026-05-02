@@ -73,3 +73,36 @@ Duration: 266.9s | Cost: $0.485983 USD | Turns: 15
 **Backward Compatibility:** ✓ Verified with test_load_json_without_attempts_defaults_to_empty_list — old JSON files without attempts key load successfully with empty list
 
 Duration: 405.7s | Cost: $0.688061 USD | Turns: 16
+
+---
+
+## Task 04: Attempt Service Implementation
+
+**Status:** COMPLETED
+
+**Files Changed:**
+- `src/services/attempt_service.py` — New file. Created `AttemptService` class with dependency on `WorkflowRunService`. Implemented `create_attempt()` method with run validation, duplicate attempt_number checking, auto-incrementing ID generation, and persistence. Implemented `get_attempts_by_run_id()` method with sorting and graceful empty/missing run handling.
+- `src/services/__init__.py` — Added import for `AttemptService` and updated `__all__` export list.
+- `tests/test_attempt_service.py` — New file. Created 19 comprehensive tests covering: valid creation (with/without duration), validation errors (missing run, duplicate number, invalid number), ID auto-increment, persistence, retrieval with sorting, empty/missing runs, and multi-run isolation.
+- `artifacts/component_diagram.puml` — Added `AttemptService` component to Service layer, added dependency to `WorkflowRunService`, added usage relationships to `WorkflowRunAttempt` and `WorkflowRun`.
+- `artifacts/class_diagram.puml` — Added `AttemptService` class with fields and method signatures, added composition and usage relationships.
+
+**Test Result:** ✓ PASSED (120 tests total: 19 new for AttemptService + 101 existing)
+
+**Key Features Implemented:**
+- Must Have: Created `AttemptService` class with `create_attempt()` and `get_attempts_by_run_id()` methods, integrated with existing `WorkflowRunService` and storage mechanism via `_persist()`, enforced no duplicate attempt_numbers per run
+- Should Have: Sorted attempts by attempt_number in ascending order on retrieval
+- Could Have: Not implemented (caching layer not needed)
+- Won't Have: Intentionally excluded (no deletion, modification, or caching)
+
+**Validation & Error Handling:**
+- Validates run existence before creating attempt
+- Checks for duplicate attempt_number within run
+- Auto-generates attempt ID as next sequential integer (len(run.attempts) + 1)
+- Delegates field validation to `WorkflowRunAttempt.__post_init__()` (attempt_number >= 1)
+- Raises `ValueError` with descriptive messages for all domain errors
+- `get_attempts_by_run_id()` returns empty list for non-existent runs (no exceptions)
+
+**Backward Compatibility:** ✓ 100% — All 101 existing tests pass unchanged. New service does not modify existing classes or workflows.
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
