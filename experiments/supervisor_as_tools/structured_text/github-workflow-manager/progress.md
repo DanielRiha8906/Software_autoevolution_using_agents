@@ -38,3 +38,43 @@ Successfully added `duration_seconds: float` attribute to the WorkflowRun model 
 - ✅ Diagrams updated
 
 Duration: 277.2s | Cost: $0.492852 USD | Turns: 17
+
+## Task 02: Workflow Run State Encapsulation
+
+**Status:** Completed
+
+### Summary
+Successfully implemented state query methods on the WorkflowRun model to encapsulate domain logic for workflow run states. Added four required methods and one optional method for querying state combinations.
+
+### Files Changed
+- `src/models/workflow_run.py` — Added is_terminal(), is_running(), is_successful(), is_failed(), is_cancelled() methods
+- `tests/test_workflow_run_queries.py` — Created comprehensive test file with 91 tests covering all state combinations
+- `artifacts/class_diagram.puml` — Updated WorkflowRun class to show new methods
+
+### Test Results
+- **Total Tests:** 100 (9 existing + 91 new)
+- **Passed:** 100
+- **Failed:** 0
+- **Status:** ✅ All tests pass
+
+### Implementation Details
+- Must Have: ✅ Implemented all 4 required methods (is_terminal, is_running, is_successful, is_failed)
+- Must Have: ✅ Methods derive state strictly from status and conclusion
+- Should Have: ✅ Mutual exclusivity enforced (is_terminal/is_running; is_successful/is_failed)
+- Should Have: ✅ Unit tests covering all state combinations (54+ combinations tested)
+- Could Have: ✅ Implemented is_cancelled() convenience method
+- Won't Have: ✅ No enum definitions modified
+
+### Acceptance Criteria
+- ✅ is_terminal() returns True when status == COMPLETED and conclusion is not None
+- ✅ is_running() returns True when status != COMPLETED and conclusion is None
+- ✅ is_successful() returns True when status == COMPLETED and conclusion == SUCCESS
+- ✅ is_failed() returns True when status == COMPLETED and conclusion == FAILURE
+- ✅ is_cancelled() returns True when conclusion == CANCELLED
+- ✅ is_terminal() and is_running() are mutually exclusive
+- ✅ is_successful() and is_failed() are mutually exclusive
+- ✅ Comprehensive test coverage for all state combinations
+- ✅ All 100 tests pass
+- ✅ Diagrams updated
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
