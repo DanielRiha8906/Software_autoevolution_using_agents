@@ -26,6 +26,19 @@ package "models" #DDEEFF {
         +fromDict(data: Dictionary) : CalculationResult
         +toString() : String
     }
+
+    class MemoryEntry {
+        +operation : str
+        +operands : list
+        +result : float | None
+        +success : bool
+        +execution_time_ms : float
+        +id : str
+        +timestamp : datetime
+        --
+        +to_dict() : dict
+        +from_dict(data: dict) : MemoryEntry
+    }
 }
 
 package "services" #DDFFD4 {
