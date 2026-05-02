@@ -88,6 +88,16 @@ package "services" #DDFFD4 {
         +deleteTask(taskId: String) : void
         -validateDueDate(dueDate: String [0..1]) : DateTime [0..1]
     }
+
+    class CommentsService {
+        -task_manager : TaskManager
+        --
+        +CommentsService(task_manager: TaskManager)
+        +add_comment(task_id: String, content: String, author: String [0..1]) : TaskComment
+        +list_comments(task_id: String) : List<TaskComment>
+        +delete_comment(task_id: String, comment_id: String) : void
+        +edit_comment(task_id: String, comment_id: String, new_content: String) : TaskComment
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -111,6 +121,8 @@ Task --> TaskComment : contains *
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
+CommentsService --> TaskManager : task_manager
+CommentsService --> TaskComment : returns/works with
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 

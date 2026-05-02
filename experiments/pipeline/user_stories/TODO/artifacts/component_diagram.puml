@@ -17,6 +17,7 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Comments Service" as COMSVC
     }
 
     package "Domain Model" {
@@ -37,6 +38,7 @@ IM --> SVC
 CLI --> SVC
 
 SVC --> MGR
+COMSVC --> MGR
 MGR --> Storage
 MGR ..> Model
 Storage ..> Model

@@ -101,3 +101,45 @@ Implemented TaskComment domain model allowing users to attach timestamped notes 
 - All timestamps stored as UTC, compatible with existing Task model patterns
 
 Duration: 354.1s | Cost: $0.622307 USD | Turns: 17
+
+## Task 04: CommentsService
+
+### Summary
+Implemented CommentsService that centralizes comment lifecycle management (add, list, delete, edit) with validation, persistence, and cascade delete support. Provides the canonical API for comment operations while maintaining backward compatibility with existing TodoService methods.
+
+### Files Changed
+- src/services/comments_service.py — New CommentsService class with 4 methods: add_comment(), list_comments(), delete_comment(), edit_comment()
+- src/services/__init__.py — Exported CommentsService for public API
+- tests/test_comments_service.py — New 27-test suite covering all methods, error cases, and cascade delete
+- artifacts/class_diagram.puml — Added CommentsService class and dependencies
+- artifacts/component_diagram.puml — Added Comments Service component to service layer
+
+### Test Result
+✓ All 134 tests passed (27 new + 107 existing)
+
+### Acceptance Criteria Met
+- ✓ CommentsService supports: add_comment(), list_comments() (ordered by created_at), delete_comment(), edit_comment() (bonus)
+- ✓ add_comment() validates that referenced task exists via TaskManager.get()
+- ✓ Service integrates with TaskManager (task validation, persistence via _persist())
+- ✓ Persistence details stay in storage layer (comments embedded in Task JSON)
+- ✓ Deleting a task cascades to its associated comments (implicit behavior)
+- ✓ edit_comment() updates content with updated_at timestamp (bonus implemented)
+
+### Implementation Details
+- CommentsService depends on TaskManager for task validation and persistence
+- Comments stored as nested objects within Task.comments list (no separate table)
+- Cascade delete is implicit: when task is deleted, all comments are automatically removed via Task serialization
+- Content validation: non-empty after stripping whitespace (ValueError if invalid)
+- Error handling: ValueError for validation/not found, TaskNotFoundError for missing tasks
+- All timestamps use datetime.now(timezone.utc) for consistency
+- TaskComment objects use uuid4() for auto-generated IDs
+- edit_comment() bonus: sets updated_at to current UTC time when content changes
+
+### Test Coverage
+- add_comment: 8 tests (validation, persistence, uniqueness, with/without author)
+- list_comments: 4 tests (retrieval, empty lists, ordering, errors)
+- delete_comment: 5 tests (removal, persistence, error cases)
+- edit_comment: 8 tests (content updates, timestamp management, validation)
+- cascade delete: 2 tests (implicit behavior verification in-memory and storage)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
