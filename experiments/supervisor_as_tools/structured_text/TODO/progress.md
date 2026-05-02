@@ -93,4 +93,4 @@ Duration: 269.9s | Cost: $0.435138 USD | Turns: 24
 - Updated UML diagrams show TaskComment-to-Task relationship (task_id reference)
 - No modifications to Task, TaskManager, or JsonStorage classes
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 192.6s | Cost: $0.335670 USD | Turns: 17
