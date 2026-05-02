@@ -135,4 +135,4 @@ Duration: 525.2s | Cost: $0.757357 USD | Turns: 45
 - All original tests maintain compatibility
 - 19 new tests cover status transitions, timestamp updates, invalid transitions, and predicate combinations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 386.4s | Cost: $1.164348 USD | Turns: 39
