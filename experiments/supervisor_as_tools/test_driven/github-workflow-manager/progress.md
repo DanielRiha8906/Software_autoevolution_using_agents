@@ -31,4 +31,4 @@ Duration: 90.2s | Cost: $0.185309 USD | Turns: 21
 - State-checking logic fully encapsulated on the model
 - Methods use only `status` and `conclusion` attributes
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 242.9s | Cost: $0.397924 USD | Turns: 18
