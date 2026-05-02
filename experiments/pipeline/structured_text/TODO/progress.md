@@ -39,3 +39,36 @@
 - ✓ Could: Add is_overdue() predicate
 
 Duration: 447.0s | Cost: $0.868444 USD | Turns: 30
+
+## Task 02: Add status and due date methods to Task
+
+### Status: Complete
+
+### Files Changed
+- src/models/task.py (added mark_in_progress(), mark_done(), reopen(), is_completed() methods)
+- tests/test_task.py (added 16 new tests for status transitions and predicates)
+- artifacts/class_diagram.puml (updated Task class with new method signatures)
+- artifacts/state_diagram.puml (corrected DONE → PENDING transition for reopen())
+
+### Test Results
+✓ 75 tests passed (59 existing + 16 new for Task 02)
+
+### Implementation Summary
+- Added 4 status transition and predicate methods to Task class
+- mark_in_progress() — transitions status to IN_PROGRESS, updates updated_at to CEST
+- mark_done() — transitions status to DONE, updates updated_at to CEST
+- reopen() — transitions status to PENDING (previously DONE), updates updated_at to CEST
+- is_completed() — returns True if status is DONE
+- All status-mutating methods are idempotent (silent no-ops when already in target state)
+- All timestamp updates use CEST (UTC+2) timezone: timezone(timedelta(hours=2))
+- 16 comprehensive unit tests covering transitions, idempotence, and timestamp behavior
+
+### Requirements Met
+- ✓ Must: Implement mark_in_progress(), mark_done(), reopen(), is_completed()
+- ✓ Must: Each status-mutating method updates updated_at to current CEST time
+- ✓ Must: Methods derive state strictly from existing Task attributes
+- ✓ Should: Prevent invalid transitions (idempotent no-ops instead of exceptions)
+- ✓ Should: Add unit tests covering all status transitions and overdue combinations
+- ✓ Could: (Not implemented) Add is_pending() and is_in_progress() predicates
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
