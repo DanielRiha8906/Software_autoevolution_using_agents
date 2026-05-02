@@ -81,6 +81,18 @@ package "services" #DDFFD4 {
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +deleteTask(taskId: String) : void
     }
+
+    class CommentsService {
+        -todo_service : TodoService
+        -comments : Dictionary<String, List<TaskComment>>
+        --
+        +CommentsService(todo_service: TodoService)
+        +add_comment(task_id: String, content: String, author: String [0..1]) : TaskComment
+        +list_comments(task_id: String) : List<TaskComment>
+        +delete_comment(task_id: String, comment_id: String) : void
+        +delete_comments_for_task(task_id: String) : void
+        -load() : void
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -104,6 +116,8 @@ Task "1" -- "0..*" TaskComment : has comments
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
+CommentsService --> TodoService : todo_service
+CommentsService "1" -- "0..*" TaskComment : manages
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 

@@ -55,3 +55,37 @@ Created a new `TaskComment` domain class with full serialization support, CEST t
 - Validation: Empty content raises ValueError; timezone-aware datetime enforcement
 
 Duration: 407.7s | Cost: $0.637273 USD | Turns: 24
+
+## Task 04: Implement CommentsService with lifecycle management
+
+### Summary
+Implemented `CommentsService` to manage the full lifecycle of `TaskComment` objects with validation, ordering, and cascade-delete support. Service integrates with existing `TodoService` and `JsonStorage` without direct file I/O.
+
+### Files Changed
+- `src/services/comments_service.py` — New CommentsService class with add/list/delete operations
+- `src/services/__init__.py` — Added CommentsService export
+- `artifacts/class_diagram.puml` — Added CommentsService class with method signatures and dependencies
+- `artifacts/component_diagram.puml` — Added Comments Service component to service layer
+
+### Test Results
+- All 7 required tests: ✓ PASS
+- All 16 new CommentsService tests: ✓ PASS
+- All 83 total tests: ✓ PASS (67 existing + 16 new)
+- No regressions in existing tests
+
+### Implementation Details
+- **In-memory cache**: `Dict[task_id → List[TaskComment]]` for fast access
+- **Task validation**: Every operation calls `todo_service.get_task(task_id)` to verify existence
+- **Content validation**: Delegates to TaskComment's `__post_init__()` for non-empty/non-whitespace check
+- **Ordering**: `list_comments()` returns comments sorted by `created_at` ascending
+- **Cascade delete**: `delete_comments_for_task()` clears all comments for a task
+- **ID generation**: UUID4 for globally unique comment identifiers
+- **No file I/O**: All storage interactions through TodoService; no JSON operations in service
+
+### Key Methods
+- `add_comment(task_id: str, content: str) → TaskComment` — Create comment with validation
+- `list_comments(task_id: str) → List[TaskComment]` — Retrieve ordered comments
+- `delete_comment(comment_id: str) → None` — Remove single comment
+- `delete_comments_for_task(task_id: str) → None` — Remove all comments for task
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
