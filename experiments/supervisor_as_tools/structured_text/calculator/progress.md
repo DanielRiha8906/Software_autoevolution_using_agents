@@ -80,4 +80,4 @@ Duration: 228.3s | Cost: $0.358443 USD | Turns: 18
 - Storage implementation details remain encapsulated in JsonStorage (duck typing supports both CalculationResult and MemoryEntry)
 - Full error tracking with status field ("success" or "error") and error_message for failed operations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 271.8s | Cost: $0.483212 USD | Turns: 21
