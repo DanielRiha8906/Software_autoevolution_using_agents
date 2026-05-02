@@ -30,4 +30,4 @@
 - Default value of 0.0 allows graceful loading of old JSON records without execution_time_ms
 - No breaking changes to API; all existing code continues to work
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 220.3s | Cost: $0.388252 USD | Turns: 13
