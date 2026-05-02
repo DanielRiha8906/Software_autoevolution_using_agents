@@ -84,4 +84,4 @@ No new dependencies added. Implementation uses Python standard library:
 - `zoneinfo.ZoneInfo` (Python 3.9+)
 - `datetime` module
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 257.2s | Cost: $0.894447 USD | Turns: 35
