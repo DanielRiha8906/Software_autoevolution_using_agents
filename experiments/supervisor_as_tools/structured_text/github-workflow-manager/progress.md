@@ -77,4 +77,4 @@ Successfully implemented state query methods on the WorkflowRun model to encapsu
 - ✅ All 100 tests pass
 - ✅ Diagrams updated
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 237.1s | Cost: $0.392888 USD | Turns: 17
