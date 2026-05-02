@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
+from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
@@ -53,3 +54,59 @@ class TodoService:
 
     def delete_task(self, task_id: str) -> None:
         self._manager.delete(task_id)
+
+    def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
+        """Add a comment to a task.
+
+        Args:
+            task_id: ID of the task to comment on
+            content: Text content of the comment (must be non-empty)
+            author: Optional author identifier
+
+        Returns:
+            The created TaskComment object
+
+        Raises:
+            ValueError: If content is empty
+            TaskNotFoundError: If task does not exist
+        """
+        if not content or not content.strip():
+            raise ValueError("Comment content cannot be empty")
+        task = self._manager.get(task_id)
+        comment = task.add_comment(content.strip(), author)
+        self._manager._persist()
+        return comment
+
+    def get_task_comments(self, task_id: str) -> list[TaskComment]:
+        """Get all comments for a task.
+
+        Args:
+            task_id: ID of the task
+
+        Returns:
+            List of TaskComment objects for the task
+
+        Raises:
+            TaskNotFoundError: If task does not exist
+        """
+        task = self._manager.get(task_id)
+        return task.comments
+
+    def delete_comment(self, task_id: str, comment_id: str) -> None:
+        """Delete a comment from a task.
+
+        Args:
+            task_id: ID of the task
+            comment_id: ID of the comment to delete
+
+        Raises:
+            TaskNotFoundError: If task does not exist
+            ValueError: If comment does not exist on the task
+        """
+        task = self._manager.get(task_id)
+        for i, comment in enumerate(task.comments):
+            if comment.id == comment_id:
+                task.comments.pop(i)
+                self._manager._persist()
+                return
+        raise ValueError(f"Comment '{comment_id}' not found on task '{task_id}'")

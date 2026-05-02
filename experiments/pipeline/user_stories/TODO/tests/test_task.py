@@ -1,6 +1,7 @@
 import pytest
 from datetime import datetime, timezone, timedelta
 from src.models.task import Task
+from src.models.task_comment import TaskComment
 from src.models.task_status import TaskStatus
 
 
@@ -263,3 +264,122 @@ def test_updated_at_changes_with_status_transitions():
     task.reopen()
     updated_at_4 = task.updated_at
     assert updated_at_4 > updated_at_3
+
+
+# Comments field tests
+def test_comments_default_to_empty_list():
+    """Test that new tasks have empty comments list."""
+    task = Task(title="Test")
+    assert task.comments == []
+    assert isinstance(task.comments, list)
+
+
+def test_add_comment_creates_and_appends():
+    """Test that add_comment creates a TaskComment and appends it."""
+    task = Task(title="Test")
+    comment = task.add_comment("Great task!", author="Alice")
+    assert isinstance(comment, TaskComment)
+    assert comment.task_id == task.id
+    assert comment.content == "Great task!"
+    assert comment.author == "Alice"
+    assert len(task.comments) == 1
+    assert task.comments[0] == comment
+
+
+def test_add_comment_without_author():
+    """Test adding a comment without author."""
+    task = Task(title="Test")
+    comment = task.add_comment("No author comment")
+    assert comment.author is None
+    assert len(task.comments) == 1
+
+
+def test_add_multiple_comments():
+    """Test adding multiple comments to a task."""
+    task = Task(title="Test")
+    comment1 = task.add_comment("First", author="Alice")
+    comment2 = task.add_comment("Second", author="Bob")
+    assert len(task.comments) == 2
+    assert task.comments[0] == comment1
+    assert task.comments[1] == comment2
+
+
+def test_task_to_dict_includes_comments():
+    """Test that to_dict includes comments array."""
+    task = Task(title="Test")
+    task.add_comment("Comment 1", author="Alice")
+    task.add_comment("Comment 2", author="Bob")
+    data = task.to_dict()
+    assert "comments" in data
+    assert len(data["comments"]) == 2
+    assert data["comments"][0]["content"] == "Comment 1"
+    assert data["comments"][1]["content"] == "Comment 2"
+
+
+def test_task_from_dict_deserializes_comments():
+    """Test that from_dict reconstructs comments."""
+    now = datetime.now(timezone.utc)
+    data = {
+        "id": "task-1",
+        "title": "Test",
+        "description": None,
+        "status": "pending",
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "due_date": None,
+        "comments": [
+            {
+                "id": "comment-1",
+                "task_id": "task-1",
+                "content": "Good work",
+                "created_at": now.isoformat(),
+                "author": "Alice",
+                "updated_at": None,
+            }
+        ],
+    }
+    task = Task.from_dict(data)
+    assert len(task.comments) == 1
+    assert task.comments[0].content == "Good work"
+    assert task.comments[0].author == "Alice"
+
+
+def test_task_from_dict_backward_compatible_missing_comments():
+    """Test that from_dict handles missing comments field (backward compatibility)."""
+    now = datetime.now(timezone.utc)
+    data = {
+        "id": "task-1",
+        "title": "Old task",
+        "description": None,
+        "status": "pending",
+        "created_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+        "due_date": None,
+    }
+    task = Task.from_dict(data)
+    assert task.comments == []
+
+
+def test_task_roundtrip_with_comments():
+    """Test full roundtrip: Task -> to_dict -> from_dict preserves comments."""
+    original = Task(title="Test")
+    original.add_comment("Comment 1", author="Alice")
+    original.add_comment("Comment 2", author="Bob")
+    data = original.to_dict()
+    restored = Task.from_dict(data)
+    assert len(restored.comments) == 2
+    assert restored.comments[0].content == "Comment 1"
+    assert restored.comments[0].author == "Alice"
+    assert restored.comments[1].content == "Comment 2"
+    assert restored.comments[1].author == "Bob"
+
+
+def test_comments_preserve_ids_in_roundtrip():
+    """Test that comment IDs are preserved during roundtrip."""
+    original = Task(title="Test")
+    comment1 = original.add_comment("Comment 1")
+    comment2 = original.add_comment("Comment 2")
+    data = original.to_dict()
+    restored = Task.from_dict(data)
+    assert restored.comments[0].id == comment1.id
+    assert restored.comments[1].id == comment2.id

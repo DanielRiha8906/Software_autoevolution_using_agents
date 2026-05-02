@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
+from .task_comment import TaskComment
 from .task_status import TaskStatus
 
 
@@ -22,6 +23,7 @@ class Task:
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     due_date: Optional[datetime] = None
+    comments: list[TaskComment] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         return {
@@ -32,12 +34,14 @@ class Task:
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
             "due_date": self.due_date.isoformat() if self.due_date else None,
+            "comments": [c.to_dict() for c in self.comments],
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> Task:
         due_date_str = data.get("due_date")
         due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
+        comments = [TaskComment.from_dict(c) for c in data.get("comments", [])]
         return cls(
             id=data["id"],
             title=data["title"],
@@ -46,6 +50,7 @@ class Task:
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
             due_date=due_date,
+            comments=comments,
         )
 
     def mark_in_progress(self) -> None:
@@ -95,3 +100,17 @@ class Task:
     def is_in_progress(self) -> bool:
         """Return True if task status is IN_PROGRESS."""
         return self.status == TaskStatus.IN_PROGRESS
+
+    def add_comment(self, content: str, author: Optional[str] = None) -> TaskComment:
+        """Create and append a comment to this task.
+
+        Args:
+            content: Text content of the comment
+            author: Optional author identifier
+
+        Returns:
+            The created TaskComment object
+        """
+        comment = TaskComment(task_id=self.id, content=content, author=author)
+        self.comments.append(comment)
+        return comment

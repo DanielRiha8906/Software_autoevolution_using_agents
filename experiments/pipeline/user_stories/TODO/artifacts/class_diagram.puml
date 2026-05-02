@@ -18,6 +18,7 @@ package "models" #DDEEFF {
         +createdAt : DateTime
         +updatedAt : DateTime
         +dueDate : DateTime [0..1]
+        +comments : TaskComment [*]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
@@ -28,6 +29,19 @@ package "models" #DDEEFF {
         +is_pending() : bool
         +is_in_progress() : bool
         +is_overdue() : bool
+        +add_comment(content: String, author: String [0..1]) : TaskComment
+    }
+
+    class TaskComment {
+        +id : String
+        +task_id : String
+        +content : String
+        +created_at : DateTime
+        +author : String [0..1]
+        +updated_at : DateTime [0..1]
+        --
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : TaskComment
     }
 }
 
@@ -93,6 +107,7 @@ package "cli" #FFE5E5 {
 }
 
 Task --> TaskStatus : status
+Task --> TaskComment : contains *
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
