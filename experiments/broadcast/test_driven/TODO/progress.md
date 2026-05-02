@@ -87,4 +87,4 @@ Candidate A implemented all required methods correctly with proper CEST timezone
 ## Implementation Summary
 All status-mutating methods correctly update `updated_at` to current CEST time, maintaining timezone-awareness. Query methods properly derive state from existing Task attributes. The `is_overdue()` method uses CEST (UTC+2) for current time comparison. No external dependencies required—implementation uses only existing imports (datetime, timezone, timedelta).
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 118.6s | Cost: $0.564042 USD | Turns: 32
