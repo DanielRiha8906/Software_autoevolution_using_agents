@@ -142,4 +142,4 @@ Implemented CommentsService that centralizes comment lifecycle management (add, 
 - edit_comment: 8 tests (content updates, timestamp management, validation)
 - cascade delete: 2 tests (implicit behavior verification in-memory and storage)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 389.4s | Cost: $0.677989 USD | Turns: 18
