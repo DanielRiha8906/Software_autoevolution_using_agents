@@ -37,6 +37,32 @@ class WorkflowRun:
             "duration_seconds": self.duration_seconds,
         }
 
+    def is_terminal(self) -> bool:
+        """Check if the workflow run is in a terminal state."""
+        return self.status == WorkflowStatus.COMPLETED
+
+    def is_running(self) -> bool:
+        """Check if the workflow run is currently running."""
+        return self.status in (
+            WorkflowStatus.QUEUED,
+            WorkflowStatus.IN_PROGRESS,
+            WorkflowStatus.WAITING,
+            WorkflowStatus.REQUESTED,
+            WorkflowStatus.PENDING,
+        )
+
+    def is_successful(self) -> bool:
+        """Check if the workflow run completed successfully."""
+        return self.status == WorkflowStatus.COMPLETED and self.conclusion == WorkflowConclusion.SUCCESS
+
+    def is_failed(self) -> bool:
+        """Check if the workflow run failed."""
+        return self.status == WorkflowStatus.COMPLETED and self.conclusion == WorkflowConclusion.FAILURE
+
+    def is_cancelled(self) -> bool:
+        """Check if the workflow run was cancelled."""
+        return self.conclusion == WorkflowConclusion.CANCELLED
+
     @classmethod
     def from_dict(cls, data: dict) -> "WorkflowRun":
         return cls(
