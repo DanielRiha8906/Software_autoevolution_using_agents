@@ -6,11 +6,13 @@ from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
+from .comments_service import CommentsService
 
 
 class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
+        self._comments_service = CommentsService(self._manager)
 
     def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if not title or not title.strip():
@@ -57,12 +59,13 @@ class TodoService:
         self._manager.delete(task_id)
 
     def add_comment_to_task(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
-        if not content or not content.strip():
-            raise ValueError("Comment content cannot be empty")
-        return self._manager.add_comment(task_id, content.strip(), author)
+        return self._comments_service.add_comment(task_id, content, author)
 
     def list_task_comments(self, task_id: str) -> list[TaskComment]:
-        return self._manager.list_comments(task_id)
+        return self._comments_service.list_comments(task_id)
 
     def delete_task_comment(self, task_id: str, comment_id: str) -> None:
-        self._manager.delete_comment(task_id, comment_id)
+        self._comments_service.delete_comment(task_id, comment_id)
+
+    def edit_task_comment(self, task_id: str, comment_id: str, new_content: str) -> TaskComment:
+        return self._comments_service.edit_comment(task_id, comment_id, new_content)

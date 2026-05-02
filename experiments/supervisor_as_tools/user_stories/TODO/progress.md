@@ -77,3 +77,56 @@ Duration: 278.1s | Cost: $0.497082 USD | Turns: 21
 - ✓ Backward compatibility maintained for old JSON without comments field
 
 Duration: 380.9s | Cost: $0.622439 USD | Turns: 26
+
+---
+
+## Task 04: CommentsService - Centralized comment management
+
+### Status: Completed ✓
+
+**Task number:** 04
+
+**Files changed:**
+- src/services/comments_service.py (new)
+- src/services/todo_service.py
+- tests/test_comments_service.py (new)
+- artifacts/class_diagram.puml
+- artifacts/component_diagram.puml
+
+**Test result:** ✓ All 70 tests passed (0 failures)
+- 29 new CommentsService tests (all passing)
+- 41 existing tests (all passing, no regressions)
+
+**Summary:**
+- Created dedicated CommentsService class in src/services/comments_service.py with centralized comment lifecycle management
+- Implemented four core methods: add_comment(), list_comments() (sorted by created_at), delete_comment(), edit_comment() (bonus)
+- Defined CommentNotFoundError exception for comment-specific error handling
+- Integrated CommentsService into TodoService with dependency injection (TodoService._comments_service)
+- Added four wrapper methods to TodoService: add_comment_to_task(), list_task_comments(), delete_task_comment(), edit_task_comment()
+- Created comprehensive test suite with 29 tests covering:
+  - Happy paths for all four methods
+  - Content validation (empty, whitespace stripping)
+  - Author handling (with/without)
+  - Task existence validation
+  - Comment existence validation
+  - Persistence and serialization
+  - Cascade delete behavior (task deletion removes comments)
+  - Timestamp ordering and updates
+  - Multiple comments per task
+- Updated class_diagram.puml to add CommentsService class and update relationships
+- Updated component_diagram.puml to add CommentsService component in Service Layer
+- All tests pass with no regressions
+
+**Acceptance Criteria Met:**
+- ✓ CommentsService supports adding comments with task existence validation
+- ✓ CommentsService supports listing all comments for a task (ordered by created_at)
+- ✓ CommentsService supports deleting a comment by id
+- ✓ Referenced task existence is validated before comment operations
+- ✓ Service integrates with existing TaskManager storage mechanism
+- ✓ Persistence details remain in storage layer (via TaskManager._persist())
+- ✓ Deleting a task cascades to its associated comments (implicit via Task containment)
+- ✓ Bonus: Editing a comment's content with updated_at tracking is fully implemented
+- ✓ Comment logic is centralized and not duplicated across codebase
+- ✓ Service is tested comprehensively (29 tests, all passing)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

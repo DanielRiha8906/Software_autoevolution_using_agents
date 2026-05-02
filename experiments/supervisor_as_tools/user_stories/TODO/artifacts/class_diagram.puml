@@ -70,8 +70,19 @@ package "services" #DDFFD4 {
         -persist() : void
     }
 
+    class CommentsService {
+        -manager : TaskManager
+        --
+        +CommentsService(manager: TaskManager)
+        +addComment(taskId: String, content: String, author: String [0..1]) : TaskComment
+        +listComments(taskId: String) : List<TaskComment>
+        +deleteComment(taskId: String, commentId: String) : void
+        +editComment(taskId: String, commentId: String, newContent: String) : TaskComment
+    }
+
     class TodoService {
         -manager : TaskManager
+        -commentsService : CommentsService
         --
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1]) : Task
@@ -85,6 +96,7 @@ package "services" #DDFFD4 {
         +addCommentToTask(taskId: String, content: String, author: String [0..1]) : TaskComment
         +listTaskComments(taskId: String) : List<TaskComment>
         +deleteTaskComment(taskId: String, commentId: String) : void
+        +editTaskComment(taskId: String, commentId: String, newContent: String) : TaskComment
     }
 }
 
@@ -110,7 +122,11 @@ TaskComment --> Task : belongs to
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TaskManager ..> CommentNotFoundError : raises
+CommentsService --> TaskManager : manager
+CommentsService ..> TaskNotFoundError : raises
+CommentsService ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
+TodoService --> CommentsService : commentsService
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 
