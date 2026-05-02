@@ -71,4 +71,4 @@ pytest tests/ -q
 
 All existing tests pass with the new implementation.
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 228.9s | Cost: $0.440207 USD | Turns: 32
