@@ -107,4 +107,4 @@ Successfully implemented four new methods on the Task class to manage task lifec
 - Pure predicate `is_completed()` has no side effects
 - Backward compatible: no changes to serialization, existing code unaffected
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 294.5s | Cost: $0.458124 USD | Turns: 21
