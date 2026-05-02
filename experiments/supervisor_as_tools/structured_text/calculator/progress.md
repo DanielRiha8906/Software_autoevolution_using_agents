@@ -50,4 +50,4 @@ Duration: 151.6s | Cost: $0.310106 USD | Turns: 14
 - Deserializes legacy CalculationResult format: assumes status="success", error_message=None for missing fields
 - All 38 existing tests pass with no changes required to test suite
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 228.3s | Cost: $0.358443 USD | Turns: 18
