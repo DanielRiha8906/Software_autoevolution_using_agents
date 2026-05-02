@@ -1,255 +1,251 @@
-# Due Date Support Implementation Analysis
+# Status Transition Methods Implementation Analysis
 
-## Current State of the Codebase
+## Task Overview
 
-### Task Model (`src/models/task.py`)
-- **Type**: Dataclass with the following attributes:
-  - `id`: UUID string (auto-generated)
-  - `title`: Required string
-  - `description`: Optional string
-  - `status`: TaskStatus enum (PENDING, IN_PROGRESS, DONE)
-  - `created_at`: datetime (UTC timezone-aware)
-  - `updated_at`: datetime (UTC timezone-aware)
-
-- **Serialization methods**:
-  - `to_dict()`: Converts task to dictionary; dates are serialized via `.isoformat()`
-  - `from_dict(data)`: Class method to reconstruct task from dictionary; uses `datetime.fromisoformat()` for date parsing
-
-- **Current datetime handling**:
-  - Uses `datetime.now(timezone.utc)` for default timestamps
-  - All datetime fields are timezone-aware (UTC)
-  - ISO 8601 format is used for serialization
-
-### Storage Layer (`src/storage/json_storage.py`)
-- **JsonStorage** class handles persistence:
-  - Loads/saves tasks as JSON to a file (default: `~/.todo_data.json`)
-  - `load()` returns list of dictionaries
-  - `save(tasks)` accepts list of dictionaries and writes to JSON
-  - No validation of dictionary schema; accepts any valid JSON
-
-### Service Layer
-- **TaskManager** (`src/services/task_manager.py`):
-  - Manages in-memory task dictionary
-  - `add()` method creates new tasks (title + optional description only)
-  - `update()` method allows changing title and description
-  - `get()` supports prefix-based task ID lookup
-  - No validation of input formats beyond empty title checks
-  - Updates `updated_at` on any modification
-
-- **TodoService** (`src/services/todo_service.py`):
-  - Higher-level API wrapping TaskManager
-  - Validates empty titles
-  - No date/datetime validation currently
-
-### CLI Layer (`src/cli/todo_cli.py` and `src/cli/interactive_menu.py`)
-- **TodoCLI**: Command-line interface with subcommands:
-  - `add --title [--description]`
-  - `update --id [--title] [--description]`
-  - `show --id` displays dates in ISO format
-  - No due date command or option exists
-
-- **InteractiveMenu**: Interactive UI:
-  - Can add/update tasks but only title and description fields
-  - Shows timestamps in human-readable format: `'%Y-%m-%d %H:%M UTC'`
-  - No due date display or input
-
-### Test Pattern (from `tests/test_task.py`)
-- Tests focus on object creation, serialization roundtrips, and status handling
-- Use `task.to_dict()` and `Task.from_dict()` for serialization testing
-- Check that attributes preserve values through serialization cycles
+Implement status transition methods on the Task domain model (in `src/models/task.py`) to allow programmatic state changes with validation, timestamp updates, and predicate queries.
 
 ---
 
-## Gap Analysis
+## Current Task Domain Model
 
-### What's Missing for Acceptance Criteria
+### Task Class Structure (`src/models/task.py`)
 
-| Criterion | Current State | Gap |
-|-----------|---------------|-----|
-| `Task` has optional `due_date` attribute | **Missing** | Need to add `due_date: Optional[datetime] = None` field to Task dataclass |
-| Tasks without due date load correctly | **Unknown** | Depends on how `from_dict()` handles missing `due_date` key |
-| `due_date` stored/loaded via storage | **Missing** | Need to include in `to_dict()` and handle in `from_dict()` |
-| Timezone-aware ISO 8601 in CEST (UTC+2) | **Partial** | Current code uses UTC; requires timezone conversion for display/storage |
-| Invalid datetime rejected before save | **Missing** | No validation layer for datetime input; need to add validation |
-| Backward compatibility (missing `due_date` field) | **At risk** | `from_dict()` uses direct key access; must use `.get()` with default |
+**Type**: Python dataclass (immutable structure, mutable attributes)
 
-### Specific Issues
+**Current Attributes**:
+```
+- id: str (UUID, auto-generated)
+- title: str (required)
+- description: Optional[str] (nullable)
+- status: TaskStatus (enum: PENDING, IN_PROGRESS, DONE)
+- created_at: datetime (UTC timezone-aware, immutable after creation)
+- updated_at: datetime (UTC timezone-aware, mutable)
+- due_date: Optional[datetime] (timezone-aware, mutable, nullable)
+```
 
-1. **Task.from_dict() is not backward-compatible**
-   - Line 31-39 in `task.py` uses direct dictionary access: `data["created_at"]`, `data["updated_at"]`
-   - If a stored task lacks `due_date` key, deserialization will fail with KeyError
-   - Must change to use `.get("due_date")` for optional fields
+**Existing Methods**:
+- `to_dict()` → dict (serialization)
+- `from_dict(data: dict)` → Task (deserialization, class method)
 
-2. **Timezone handling mismatch**
-   - Current code uses UTC (e.g., `datetime.now(timezone.utc)`)
-   - Acceptance criteria requires CEST (UTC+2) representation
-   - Question: Does this mean:
-     - (A) Store internally as UTC, display as CEST? (Most common)
-     - (B) Store as CEST, operate as CEST?
-     - Assumption: Store as UTC internally, convert to CEST for display only
+### TaskStatus Enum (`src/models/task_status.py`)
 
-3. **No datetime validation layer**
-   - TodoService validates title (empty check) but not datetime inputs
-   - Need to add validation that rejects invalid ISO 8601 strings before Task creation
+```
+PENDING = "pending"         # Initial state, task not started
+IN_PROGRESS = "in_progress" # Task is being worked on
+DONE = "done"               # Task completed
+```
 
-4. **CLI needs new due date commands**
-   - `add` command needs optional `--due-date` flag
-   - `update` command needs `--due-date` flag
-   - `show` command needs to display due date
-   - Interactive menu needs input/display for due dates
+### Datetime Behavior
 
-5. **Service method signatures unchanged**
-   - `TaskManager.add()` only accepts title + description
-   - `TaskManager.update()` only accepts title + description
-   - Both need to accept optional due_date parameter
+**Current Implementation**:
+- Uses `datetime.now(timezone.utc)` for default timestamps (UTC-based)
+- Interactive menu has helper `_to_cest()` that converts UTC to CEST (UTC+2) for display only
+- Storage uses ISO 8601 strings via `.isoformat()` and `datetime.fromisoformat()`
 
----
-
-## Files and Classes Requiring Modification
-
-### Core Model Changes
-- **`src/models/task.py`**
-  - Add `due_date: Optional[datetime] = None` field to Task dataclass
-  - Update `to_dict()` to include `due_date` (serialized as ISO 8601 string or null)
-  - Update `from_dict()` to safely load `due_date` with `.get("due_date")` as default None
-  - Handle ISO 8601 string parsing for `due_date` field
-
-### Service Layer Changes
-- **`src/services/task_manager.py`**
-  - Update `add()` signature: add `due_date: Optional[datetime] = None` parameter
-  - Update `update()` signature: add `due_date: Optional[datetime] = None` parameter
-  - Add validation: reject invalid datetime values before modifying task
-  - Ensure `updated_at` is refreshed on due_date changes
-
-- **`src/services/todo_service.py`**
-  - Update `add_task()` signature: add `due_date` parameter
-  - Update `update_task()` signature: add `due_date` parameter
-  - Add datetime validation method (parse and validate ISO 8601 strings)
-  - Raise ValueError if datetime is invalid
-
-### CLI Layer Changes
-- **`src/cli/todo_cli.py`**
-  - Add `--due-date` option to `add` subcommand (optional)
-  - Add `--due-date` option to `update` subcommand (optional)
-  - Update `_cmd_show()` to display due_date in ISO 8601 format (or "—" if None)
-  - Update `_cmd_list()` to optionally show due date in summary line
-
-- **`src/cli/interactive_menu.py`**
-  - Update `_do_add()` to prompt for optional due date
-  - Update `_do_update()` to allow changing due date
-  - Update `_do_show()` to display due date in human-readable format (CEST)
-  - Add helper method `_parse_due_date()` to convert user input to datetime
-
-### Storage Layer
-- **`src/storage/json_storage.py`**
-  - No changes required; already handles generic dictionary keys
+**Requirement**: Status-mutating methods must update `updated_at` to **current CEST time**
+- This means either:
+  - (A) Convert current UTC time to CEST and store as CEST datetime object
+  - (B) Store UTC internally but interpret the requirement as "reflect CEST equivalent of current moment"
+- **Assumption**: Store as UTC (consistent with existing `created_at` and `updated_at`), but interpret "current CEST time" as the current moment as would be observed in the CEST timezone.
 
 ---
 
-## Key Implementation Concerns
+## Valid State Transitions
 
-### 1. Datetime Parsing and Validation
-- **Issue**: Accept user input (ISO 8601 string) and convert to datetime object
-- **Approach**: 
-  - Use `datetime.fromisoformat()` for parsing (handles ISO 8601 strings)
-  - Catch `ValueError` exceptions if parsing fails
-  - Validate in TodoService before passing to TaskManager
+Based on the state diagram artifact (`artifacts/state_diagram.puml`):
 
-### 2. Timezone Handling (CEST vs UTC)
-- **Issue**: Accept criteria specifies CEST (UTC+2) representation
-- **Assumption**: This means display/user-facing format is CEST, but storage is UTC
-- **Implementation**:
-  - Store all `due_date` values as timezone-aware UTC datetimes
-  - When parsing user input, assume CEST input and convert to UTC
-  - When displaying, convert UTC to CEST using timezone offset
-  - Use `pytz` or `zoneinfo` (Python 3.9+) for timezone handling
+```
+[*] → PENDING
+PENDING → IN_PROGRESS : via start/mark_in_progress()
+IN_PROGRESS → DONE : via complete/mark_done()
+DONE → IN_PROGRESS : via reopen()
 
-### 3. Backward Compatibility (Critical)
-- **Issue**: Existing stored tasks lack `due_date` field
-- **Solution**: Use `.get()` in `from_dict()` with None default
-- **Example**: `due_date_str = data.get("due_date")` then parse only if not None
-- **Testing**: Must verify that tasks saved before this feature load without error
-
-### 4. Optional Parameter Chaining
-- **Issue**: `add()` and `update()` methods need optional due_date parameter
-- **Challenge**: Must differentiate "not provided" from "set to None"
-  - For add: no due date provided → use None (default)
-  - For update: no due date provided → keep existing value
-  - For update: due date provided as None → clear existing due date
-- **Solution**: Use sentinel value or separate boolean flag to detect "not provided"
-
-### 5. Display Format in Interactive Menu
-- **Issue**: Current format shows `'%Y-%m-%d %H:%M UTC'`
-- **Change needed**: Convert UTC to CEST before display
-- **Approach**: Add helper method to convert timezone and format output
+No direct transitions:
+- PENDING → DONE (must go through IN_PROGRESS)
+- IN_PROGRESS → PENDING (can only reopen from DONE)
+- DONE → PENDING (should reopen to IN_PROGRESS instead)
+```
 
 ---
 
-## Scope Summary
+## Required Methods
 
-### In Scope
-- Add `due_date` attribute to Task model
-- Serialization/deserialization with backward compatibility
-- Validation of datetime input before save
-- CLI commands to set/display due date
-- Interactive menu support for due date
-- Timezone conversion (UTC storage → CEST display)
+### Status-Mutating Methods (update `updated_at`)
 
-### Explicitly Out of Scope
-- Task sorting by due date (not mentioned in acceptance criteria)
-- Due date reminders or notifications
-- Recurring tasks
-- Time zone customization (fixed to CEST)
+1. **`mark_in_progress()`**
+   - Signature: `def mark_in_progress(self) -> None`
+   - Effect: `PENDING` → `IN_PROGRESS` or `DONE` → `IN_PROGRESS`
+   - Invalid: No-op or raise error if already `IN_PROGRESS`
+   - Updates: `self.status` and `self.updated_at` to current time (CEST)
 
-### Borderline (Clarification Needed)
-- Format of user input for dates (ISO 8601? Natural language? Interactive prompt?)
-  - **Assumption**: ISO 8601 string input (e.g., `2024-12-31T14:30:00+02:00`)
-- Whether CLI `show` displays due date or only in interactive menu
-  - **Assumption**: Both CLI and interactive menu should display it
+2. **`mark_done()`**
+   - Signature: `def mark_done(self) -> None`
+   - Effect: `IN_PROGRESS` → `DONE`
+   - Invalid: No-op or raise error if not `IN_PROGRESS`
+   - Updates: `self.status` and `self.updated_at` to current time (CEST)
+
+3. **`reopen()`**
+   - Signature: `def reopen(self) -> None`
+   - Effect: `DONE` → `IN_PROGRESS`
+   - Invalid: No-op or raise error if not `DONE`
+   - Updates: `self.status` and `self.updated_at` to current time (CEST)
+
+### Predicate Methods (read-only, no side effects)
+
+4. **`is_completed()`**
+   - Signature: `def is_completed(self) -> bool`
+   - Returns: `True` if `status == TaskStatus.DONE`, else `False`
+
+5. **`is_overdue()`**
+   - Signature: `def is_overdue(self) -> bool`
+   - Returns: `True` if `due_date` is set AND `due_date < now` AND `status != DONE`, else `False`
+   - Reasoning: Completed tasks are not overdue; overdue only applies to pending/in-progress work
+   - Requires comparing current time with `self.due_date`
+
+6. **`is_pending()`** (symmetry predicate)
+   - Signature: `def is_pending(self) -> bool`
+   - Returns: `True` if `status == TaskStatus.PENDING`, else `False`
+
+7. **`is_in_progress()`** (symmetry predicate)
+   - Signature: `def is_in_progress(self) -> bool`
+   - Returns: `True` if `status == TaskStatus.IN_PROGRESS`, else `False`
 
 ---
 
-## Suggested Priorities
+## Behavior Specification
 
-### Priority 1 (Blockers)
-1. **Task model and serialization** — Everything depends on this
-   - Add `due_date` field
-   - Update `to_dict()` and `from_dict()` with backward compatibility
-   - Test roundtrip serialization
+### Invalid Transitions
 
-2. **Validation layer** — Prevents invalid data entering system
-   - Add datetime validation to TodoService
-   - Reject malformed ISO 8601 strings
+**Question**: How to handle invalid transitions?
 
-### Priority 2 (Core Functionality)
-3. **Service layer parameter updates** — Enable due date setting
-   - Extend `TaskManager.add()` and `update()` signatures
-   - Extend `TodoService.add_task()` and `update_task()` signatures
+**Options**:
+- (A) Silently no-op (do nothing, return normally)
+- (B) Raise a custom exception (e.g., `InvalidStatusTransitionError`)
+- (C) Return a boolean indicating success
 
-4. **CLI support** — Minimal user-facing feature
-   - Add `--due-date` option to `add` and `update` commands
-   - Update `show` command display
+**Assumption**: Based on requirements saying "Invalid transitions are no-ops or raise errors," recommend:
+- Implement as no-ops by default (method returns `None`, does nothing if invalid)
+- Caller can check `is_completed()`, `is_pending()` before calling if strict validation needed
+- If an exception is preferred, use a custom exception class like `InvalidStatusTransitionError`
 
-### Priority 3 (User Experience)
-5. **Interactive menu enhancements** — Better UX but not blocking
-   - Add date input prompts
-   - Display dates in CEST format
-   - Add timezone conversion helper
+### CEST Timezone Requirement
 
-6. **Edge cases and testing** — Quality assurance
-   - Test backward compatibility with old saved tasks
-   - Test timezone conversions
-   - Test invalid input rejection
+**Current Behavior**:
+- `updated_at` is set via `datetime.now(timezone.utc)` (UTC timezone-aware)
+- Interactive menu shows CEST via helper function `_to_cest()` that converts UTC to CEST for display
+
+**Implementation Path**:
+- Method: `datetime.now(timezone.utc)` already gives the current moment in UTC
+- CEST equivalent: Create a timezone-aware datetime in CEST using `timezone(timedelta(hours=2))`
+- Store as: Timezone-aware `datetime` object (either UTC or CEST, but must be consistent with existing code)
+
+**Recommendation**: 
+- Store as UTC (consistent with `created_at` and existing `updated_at` behavior)
+- The requirement "update to current CEST time" means set to the current moment (which IS the current CEST moment if UTC is converted)
+- No code change to existing storage/serialization needed; UTC storage is correct
+
+---
+
+## Test Pattern Analysis
+
+From `tests/test_task.py` and `tests/test_task_manager.py`:
+
+**Patterns Observed**:
+1. **Fixture usage**: `tmp_path` for temporary storage in TaskManager tests
+2. **Assertion style**: Direct equality checks (`assert x == y`)
+3. **Exception testing**: `pytest.raises(ExceptionType)` context manager
+4. **State verification**: Create object → perform action → assert attribute changed
+5. **Serialization testing**: `task.to_dict()` → `Task.from_dict()` → compare attributes
+
+**Expected Test Structure for New Methods**:
+```python
+def test_mark_in_progress_from_pending():
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    original_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.updated_at > original_updated_at  # Or use freeze_time
+
+def test_is_completed_true():
+    task = Task(title="Test", status=TaskStatus.DONE)
+    assert task.is_completed() == True
+
+def test_invalid_transition_no_op():
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    task.mark_in_progress()  # Already IN_PROGRESS
+    assert task.status == TaskStatus.IN_PROGRESS  # No change
+```
+
+---
+
+## Imports and Dependencies
+
+**Required Imports in Task Class**:
+- `from datetime import datetime, timezone, timedelta` (already imported for `created_at`/`updated_at`)
+- Possibly: `from .task_status import TaskStatus` (already imported)
+
+**New Dependencies**:
+- None (all needed imports already present or available in standard library)
+
+---
+
+## Edge Cases and Constraints
+
+1. **Concurrent/Race Conditions**: Dataclass is not thread-safe; assume single-threaded access
+2. **Timezone Ambiguity**: CEST is UTC+2; no DST handling (always assume UTC+2 offset)
+3. **Due Date Comparison**: Must handle `None` value for `is_overdue()`
+4. **Attribute Mutability**: Methods mutate `self.status` and `self.updated_at` directly (in-place)
+5. **Serialization**: Methods don't affect `to_dict()`/`from_dict()` behavior (no new fields)
+
+---
+
+## Summary of Required Additions
+
+### New Instance Methods on Task Class
+- `mark_in_progress()` → None
+- `mark_done()` → None
+- `reopen()` → None
+- `is_completed()` → bool
+- `is_overdue()` → bool
+- `is_pending()` → bool
+- `is_in_progress()` → bool
+
+### Files to Modify
+- **`src/models/task.py`** — Add all 7 new methods
+
+### Files NOT Modified
+- `src/models/task_status.py` — No enum changes needed
+- `src/services/task_manager.py` — No changes (uses Task object directly)
+- `src/services/todo_service.py` — No changes
+- `src/cli/` — No changes at this stage
+- `src/storage/json_storage.py` — No changes
+
+### Test Files to Create/Extend
+- `tests/test_task.py` — Add comprehensive tests for all 7 methods
+
+---
+
+## Key Uncertainties and Assumptions
+
+| Uncertainty | Assumption |
+|---|---|
+| Invalid transition behavior (no-op vs exception) | Implement as no-ops; silent success if already in target state |
+| CEST timezone storage (UTC vs CEST) | Store as UTC (consistent with current code), interpret requirement as "current moment in CEST" |
+| `is_overdue()` when due_date is None | Return `False` (task with no due date cannot be overdue) |
+| `is_overdue()` when task is DONE | Return `False` (completed tasks are not overdue) |
+| Datetime comparison precision (seconds vs microseconds) | Use standard `<` operator (microsecond precision is acceptable) |
 
 ---
 
 ## File Paths (Absolute)
 
+**Primary File to Modify**:
 - `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/models/task.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/services/task_manager.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/services/todo_service.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/cli/todo_cli.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/cli/interactive_menu.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/storage/json_storage.py` (no changes needed)
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/tests/test_task.py` (will need new tests)
+
+**Test File to Extend**:
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/tests/test_task.py`
+
+**Reference Files** (read-only):
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/artifacts/state_diagram.puml`
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/artifacts/class_diagram.puml`
 
