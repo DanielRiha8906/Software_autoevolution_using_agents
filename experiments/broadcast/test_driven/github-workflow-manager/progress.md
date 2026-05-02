@@ -196,3 +196,67 @@ All required test cases validated:
 - ✓ Progress documented
 
 Duration: 225.9s | Cost: $0.552468 USD | Turns: 31
+
+---
+
+# Task 04: Create AttemptService for managing workflow run attempts
+
+## Objective
+Implement `AttemptService` that manages the lifecycle of `WorkflowRunAttempt` objects, including creation and retrieval by `run_id`, while enforcing uniqueness of `(run_id, attempt_number)` pairs.
+
+## Broadcast Architecture Results
+
+### Candidate Evaluation
+All 3 independent implementers (Candidate-A, Candidate-B, Candidate-C) converged on the identical solution:
+- **Candidate-A**: 6/6 tests passing ✓
+- **Candidate-B**: 6/6 tests passing ✓
+- **Candidate-C**: 6/6 tests passing ✓
+
+### Winner: Candidate-A
+Selected as the reference implementation. All three candidates produced identical code due to the straightforward requirements.
+
+## Implementation Details
+
+### Files Changed
+- `src/services/attempt_service.py` — New service for managing WorkflowRunAttempt lifecycle
+- `tests/test_attempt_service.py` — Complete test suite for AttemptService
+
+### Changes Made
+1. **AttemptService class** with:
+   - `__init__()` — initializes in-memory dictionary store keyed by run_id
+   - `create(attempt: WorkflowRunAttempt) -> WorkflowRunAttempt` — stores attempts and enforces (run_id, attempt_number) uniqueness
+   - `get_by_run_id(run_id: int) -> List[WorkflowRunAttempt]` — returns all attempts for a run, sorted by attempt_number ascending
+
+2. **Uniqueness enforcement**:
+   - Duplicate (run_id, attempt_number) pairs raise Exception with descriptive message
+   - Checked at create time before appending to store
+
+3. **Storage design**:
+   - Dictionary mapping run_id → List[WorkflowRunAttempt]
+   - In-memory only (no file I/O or JSON serialization)
+   - Sorting by attempt_number on retrieval
+
+### Test Results
+- **New tests**: 6/6 passing (test_attempt_service.py)
+- **Existing tests**: 45/45 passing (preserved backward compatibility)
+- **Total**: 51/51 passing ✓
+
+## Test Coverage
+
+All required test cases validated:
+- ✓ `test_attempt_service_exists` — Service instantiates correctly
+- ✓ `test_create_attempt` — create() stores and returns attempts
+- ✓ `test_retrieve_attempts_by_run_id` — get_by_run_id() filters by run_id
+- ✓ `test_duplicate_attempt_number_raises` — Duplicate (run_id, attempt_number) pairs raise Exception
+- ✓ `test_attempts_sorted_by_attempt_number` — Results sorted by attempt_number ascending
+- ✓ `test_attempt_service_does_not_contain_file_io` — No open() or json.dump() calls
+
+## Definition of Done
+- ✓ All provided tests pass
+- ✓ Existing tests still pass
+- ✓ Code compiles without syntax or import errors
+- ✓ Uniqueness of (run_id, attempt_number) enforced
+- ✓ Retrieval is deterministic and ordered
+- ✓ Progress documented
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

@@ -90,6 +90,14 @@ package "services" #DDFFD4 {
         +__init__(service: WorkflowRunService)
         +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str]) : WorkflowRun
     }
+
+    class AttemptService {
+        -_attempts : Dict[int, List[WorkflowRunAttempt]]
+        --
+        +__init__()
+        +create(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
+        +get_by_run_id(run_id: int) : List[WorkflowRunAttempt]
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -117,6 +125,7 @@ WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
+AttemptService       "1" --> "*" WorkflowRunAttempt   : manages
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService
