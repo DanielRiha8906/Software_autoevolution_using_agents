@@ -98,4 +98,4 @@ Implemented `MemoryService` domain service to manage the lifecycle of `MemoryEnt
 - ✓ MemoryService source contains no file I/O or JSON serialisation
 - ✓ UML diagrams updated to reflect new service and relationships
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 222.8s | Cost: $0.410061 USD | Turns: 32
