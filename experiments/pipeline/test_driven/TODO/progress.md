@@ -91,3 +91,58 @@ Successfully implemented 7 new methods on the Task model to move status transiti
 - Edge case handling: is_overdue() returns False for None due_date
 
 Duration: 216.7s | Cost: $0.348751 USD | Turns: 13
+
+## Task 03: Create TaskComment domain class
+
+### Summary
+Successfully implemented new `TaskComment` domain class with automatic UUID id generation, CEST timezone-aware timestamps, content validation, and full serialization support via to_dict() and from_dict() methods.
+
+### Files Changed
+1. **src/models/task_comment.py** — New TaskComment dataclass implementation
+   - Defined `CEST` constant (UTC+2)
+   - Created TaskComment dataclass with 6 fields: id, task_id, content, created_at, author, updated_at
+   - Implemented `__post_init__()` validation for non-empty content/task_id and CEST timezone
+   - Implemented `to_dict()` serialization with ISO 8601 datetime strings
+   - Implemented `from_dict()` deserialization with timezone validation
+   - Added `_validate_comment_datetime_timezone()` helper for timezone validation
+
+2. **src/models/__init__.py** — Module exports
+   - Added import and export of TaskComment class
+
+3. **tests/test_task_comment.py** — New test suite
+   - Created 12 comprehensive test cases covering construction, validation, serialization, and timezone handling
+
+4. **artifacts/class_diagram.puml** — Updated UML class diagram
+   - Added TaskComment class with fields and methods
+   - Added 1:* relationship showing Task -> TaskComment association via task_id
+
+5. **artifacts/component_diagram.puml** — Updated component diagram
+   - Added TaskComment model component
+   - Added dependencies showing TaskManager and Storage interaction with comments
+
+### Test Results
+- All 60 tests passing (48 existing + 12 new TaskComment tests)
+- All new tests cover: creation, UUID generation, CEST timezone, content validation, serialization
+- Existing tests remain unaffected (backward compatibility verified)
+
+### Key Features Implemented
+✓ Automatic UUID id generation via field(default_factory=...)
+✓ Automatic created_at timestamp with CEST timezone via field(default_factory=...)
+✓ Non-empty content validation (raises ValueError if empty)
+✓ Non-empty task_id validation (raises ValueError if empty)
+✓ CEST timezone validation for created_at and optional updated_at
+✓ ISO 8601 serialization in to_dict()
+✓ ISO 8601 deserialization in from_dict() with timezone preservation
+✓ Optional author field (nullable string)
+✓ Optional updated_at field (nullable datetime with CEST timezone if present)
+✓ Full round-trip serialization support
+
+### Validation Rules Implemented
+- task_id must not be empty string (raises ValueError)
+- content must not be empty string (raises ValueError)
+- created_at must be timezone-aware with CEST (UTC+2)
+- updated_at (if present) must be timezone-aware with CEST
+- Naive datetimes rejected with ValueError
+- Non-CEST timezones rejected with ValueError
+
+Duration: 266.0s | Cost: $0.428168 USD | Turns: 18

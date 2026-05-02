@@ -29,6 +29,20 @@ package "models" #DDEEFF {
         +is_in_progress() : bool
         +is_overdue() : bool
     }
+
+    class TaskComment {
+        +id : String
+        +task_id : String
+        +content : String
+        +created_at : DateTime
+        +author : String [0..1]
+        +updated_at : DateTime [0..1]
+        --
+        +toDict() : Dictionary
+        +fromDict(data: Dictionary) : TaskComment
+    }
+
+    Task "1" --> "*" TaskComment : has comments
 }
 
 package "storage" #FFF3CC {
