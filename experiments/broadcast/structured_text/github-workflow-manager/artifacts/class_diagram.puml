@@ -25,15 +25,16 @@ package "models" #DDEEFF {
     }
 
     class WorkflowRun {
-        +id            : str
-        +workflow_name : str
-        +branch        : str
-        +status        : WorkflowStatus
-        +conclusion    : Optional[WorkflowConclusion]
-        +created_at    : datetime
-        +updated_at    : Optional[datetime]
-        +run_number    : Optional[int]
-        +commit_sha    : Optional[str]
+        +id               : str
+        +workflow_name    : str
+        +branch           : str
+        +status           : WorkflowStatus
+        +conclusion       : Optional[WorkflowConclusion]
+        +created_at       : datetime
+        +updated_at       : Optional[datetime]
+        +run_number       : Optional[int]
+        +commit_sha       : Optional[str]
+        +duration_seconds : float
         --
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRun
