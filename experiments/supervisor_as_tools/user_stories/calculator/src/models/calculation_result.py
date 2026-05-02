@@ -12,6 +12,7 @@ class CalculationResult:
     operand_b: float
     result: float
     timestamp: str = field(default="")
+    execution_time_ms: float = field(default=0.0)
 
     def __post_init__(self) -> None:
         if not self.timestamp:
@@ -22,6 +23,8 @@ class CalculationResult:
 
     @classmethod
     def from_dict(cls, data: dict) -> "CalculationResult":
+        if "execution_time_ms" not in data:
+            data["execution_time_ms"] = 0.0
         return cls(**data)
 
     def __str__(self) -> str:

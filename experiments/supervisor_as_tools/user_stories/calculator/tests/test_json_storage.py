@@ -15,12 +15,13 @@ class TestJsonStorage:
         assert storage.load_all() == []
 
     def test_save_then_load(self, storage):
-        r = CalculationResult("add", 3, 5, 8, _TS)
+        r = CalculationResult("add", 3, 5, 8, _TS, 5.5)
         storage.save(r)
         loaded = storage.load_all()
         assert len(loaded) == 1
         assert loaded[0].operation == "add"
         assert loaded[0].result == 8
+        assert loaded[0].execution_time_ms == 5.5
 
     def test_multiple_saves_accumulate(self, storage):
         storage.save(CalculationResult("add",      1, 2, 3,  _TS))
@@ -53,3 +54,21 @@ class TestJsonStorage:
         s = JsonStorage(deep)
         s.save(CalculationResult("add", 1, 1, 2, _TS))
         assert deep.exists()
+
+    def test_load_legacy_json_without_execution_time_ms(self, storage):
+        legacy_dict = {
+            "operation": "add",
+            "operand_a": 2,
+            "operand_b": 3,
+            "result": 5,
+            "timestamp": _TS
+        }
+        result = CalculationResult.from_dict(legacy_dict)
+        assert result.execution_time_ms == 0.0
+
+    def test_persisted_json_includes_execution_time_ms(self, storage):
+        r = CalculationResult("add", 1, 2, 3, _TS, 7.1)
+        storage.save(r)
+        with open(storage.filepath) as f:
+            data = json.load(f)
+        assert data[0]["execution_time_ms"] == 7.1
