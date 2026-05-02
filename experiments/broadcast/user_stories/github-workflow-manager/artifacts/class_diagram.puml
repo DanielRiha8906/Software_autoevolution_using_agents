@@ -45,6 +45,20 @@ package "models" #DDEEFF {
         +is_cancelled() : bool
         +{static} from_dict(data: dict) : WorkflowRun
     }
+
+    class WorkflowRunAttempt {
+        +id               : int
+        +run_id           : int
+        +attempt_number   : int
+        +status           : str
+        +conclusion       : Optional[str]
+        +created_at       : datetime
+        +duration_seconds : float = 0.0
+        --
+        +__post_init() : None
+        +to_dict() : dict
+        +{static} from_dict(data: dict) : WorkflowRunAttempt
+    }
 }
 
 package "storage" #FFF3CC {
@@ -98,6 +112,7 @@ package "cli" #FFE5E5 {
 
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
+WorkflowRun           "1" <-- "*" WorkflowRunAttempt   : has attempts
 WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
