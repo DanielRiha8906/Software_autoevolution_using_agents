@@ -61,4 +61,4 @@ All provided tests passed successfully covering:
 - All methods strictly use only `status` and `conclusion` fields
 - is_running() and is_terminal() are mutually exclusive
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 142.8s | Cost: $0.287490 USD | Turns: 23
