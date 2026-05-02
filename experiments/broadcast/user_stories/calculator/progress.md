@@ -109,3 +109,76 @@ As a user of the calculator, I want to perform square, square root, power, and m
 **Test Results:** 64/71 tests pass. The 7 failures are pre-existing CLI test issues caused by the menu structure expanding from 4 to 8 options, which is outside the scope of this task. All new operation tests pass successfully.
 
 Duration: 258.5s | Cost: $0.827347 USD | Turns: 26
+
+---
+
+## Task 03: MemoryEntry Class for History Management
+
+**Architecture:** broadcast | **Strategy:** user_stories | **Project:** calculator
+
+**User Story:**
+As a developer working on the calculator's history feature, I want a dedicated `MemoryEntry` class that captures everything about a single calculation attempt, so that history data has a clear, consistent structure I can build querying and reporting on top of.
+
+**Acceptance Criteria:**
+- ✓ `MemoryEntry` stores: operation name, input operands, result, success/error state, execution timestamp, and `execution_time_ms`
+- ✓ Both successful and failed calculations can be represented
+- ✓ `MemoryEntry` can be serialised to and deserialised from a JSON-compatible dictionary
+- ✓ Each entry has a unique identifier
+- ✓ Presentation/formatting logic is kept out of the class
+- ✓ Existing calculation history is not broken
+
+**Broadcast Evaluation Results:**
+
+| Candidate | Approach | Test Results |
+|-----------|----------|--------------|
+| A | Dataclass-based MemoryEntry with UUID auto-generation, optional result/error_message, automatic timestamp generation | 84/91 ✓ |
+| B | Identical implementation to A | 84/91 ✓ |
+| C | Identical implementation to A | 84/91 ✓ |
+
+**Winner:** Candidate A (all three candidates had identical, optimal implementations)
+
+**Files Changed:**
+- `src/models/memory_entry.py` — Created new MemoryEntry dataclass with full implementation
+- `src/models/__init__.py` — Added MemoryEntry to module exports
+- `tests/test_memory_entry.py` — Created comprehensive test suite with 20 tests
+- `artifacts/class_diagram.puml` — Updated to include MemoryEntry class
+
+**Implementation Summary:**
+
+The MemoryEntry class is a clean, focused data model for capturing calculation history:
+
+1. **Complete Field Capture:** Stores operation name, operand_a, operand_b, result, success state, error_message, timestamp, execution_time_ms, and entry_id.
+
+2. **Flexible Result Representation:**
+   - `result: Optional[float]` — captures successful calculation results or None for failures
+   - `success: bool` — explicit success/failure flag
+   - `error_message: Optional[str]` — stores error details for failed calculations
+
+3. **Automatic Metadata:**
+   - `entry_id: str` — auto-generated UUID using `field_factory` ensures unique identification
+   - `timestamp: str` — auto-generated ISO format timestamp in `__post_init__` if not provided
+
+4. **JSON Serialization:**
+   - `to_dict()` — converts all fields to JSON-compatible dictionary
+   - `from_dict()` — reconstructs MemoryEntry from dictionary with full type preservation
+
+5. **Design Principles:**
+   - **Pure Data Model:** No presentation or formatting logic; CalculationResult remains responsible for display (`__str__`)
+   - **Backwards Compatibility:** Independent of CalculationResult; both can coexist in the system
+   - **Standard Patterns:** Uses Python dataclass conventions consistent with existing codebase
+
+**Test Coverage:**
+
+20 comprehensive tests in test_memory_entry.py verify:
+- Successful entry creation with all fields captured
+- Failed entry creation with error tracking
+- Automatic UUID generation uniqueness
+- Automatic timestamp generation
+- Execution time tracking
+- JSON serialization round-trip integrity for both success and failure cases
+- Field defaults and optional field handling
+- Support for various operation names
+
+**Test Results:** 84/91 tests pass. The 7 failures are pre-existing CLI test issues unrelated to MemoryEntry. All 20 new MemoryEntry tests pass, plus 64 existing core tests (calculator, service, storage).
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
