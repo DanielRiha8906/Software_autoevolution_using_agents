@@ -37,4 +37,4 @@ Successfully implemented the `duration_seconds: float` attribute for WorkflowRun
 - **Interactive menu**: Duration prompt with input validation and retry logic
 - **All tests passing**: Unit, integration, and CLI/menu tests
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 351.8s | Cost: $0.654089 USD | Turns: 15
