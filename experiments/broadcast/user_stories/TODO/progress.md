@@ -106,3 +106,61 @@ so that status changes are consistent and all business rules are enforced in one
 - No regressions introduced
 
 Duration: 323.3s | Cost: $0.656851 USD | Turns: 57
+
+---
+
+# Task 03: Add TaskComment Feature
+
+## Task
+As a user collaborating on tasks,
+I want to attach comments to a task,
+so that I can record notes, decisions, or updates alongside the task itself.
+
+## Broadcast Implementation Results
+
+### Candidate A (broadcast-candidate-a)
+- **Approach**: Core TaskComment dataclass with validation and JSON serialization
+- **Files Changed**: src/models/task_comment.py, src/models/__init__.py, tests/test_task_comment.py
+- **Test Score**: 73 passed
+- **Details**: TaskComment dataclass with id, task_id, content, created_at (CEST), optional author and updated_at. Validation rejects empty content/task_id. Comprehensive JSON roundtrip tests.
+
+### Candidate B (broadcast-candidate-b) ✅ WINNER
+- **Approach**: Identical core implementation with additional edge case test coverage
+- **Files Changed**: src/models/task_comment.py, src/models/__init__.py, tests/test_task_comment.py
+- **Test Score**: 77 passed
+- **Details**: Same TaskComment implementation as A with 21 comprehensive tests covering creation, validation, serialization, timezone handling, and edge cases. Achieved highest test count.
+
+### Candidate C (broadcast-candidate-c)
+- **Approach**: Same core implementation with 16 focused tests
+- **Files Changed**: src/models/task_comment.py, src/models/__init__.py, tests/test_task_comment.py
+- **Test Score**: 72 passed
+- **Details**: TaskComment implementation with test coverage for required functionality and optional fields.
+
+### Winner Selection
+**Candidate B** was selected because:
+1. Achieved the highest test pass rate (77/77 tests)
+2. Most comprehensive test coverage with 21 TaskComment-specific tests
+3. Covers edge cases including whitespace-only content/task_id validation
+4. Robust error handling in JSON deserialization
+5. All acceptance criteria fully validated
+
+## Acceptance Criteria Met
+✅ TaskComment has: id (UUID), task_id, content, created_at (CEST)
+✅ TaskComment can be serialized to and deserialized from JSON dictionary
+✅ Empty content is rejected with ValueError
+✅ TaskComment must reference a valid (non-empty) task_id
+✅ Optional author attribute records comment author
+✅ Optional updated_at attribute available for consistency with Task model
+✅ Rich text, markdown, and nested comments intentionally out of scope
+
+## Files Changed
+- `src/models/task_comment.py` — New TaskComment dataclass with UUID id, CEST timezone support, validation, to_dict/from_dict
+- `src/models/__init__.py` — Added TaskComment to exports
+- `tests/test_task_comment.py` — New test suite with 21 comprehensive tests
+
+## Test Results
+- All 77 tests passing (21 new TaskComment tests + 56 existing tests)
+- Full coverage of creation, validation, serialization, and timezone handling
+- No regressions introduced
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
