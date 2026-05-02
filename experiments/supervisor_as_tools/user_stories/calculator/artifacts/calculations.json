@@ -26,5 +26,53 @@
     "operand_b": 2.0,
     "result": 3.0,
     "timestamp": "2026-04-29T13:49:21.896125"
+  },
+  {
+    "operation": "square",
+    "operand_a": 5.0,
+    "operand_b": null,
+    "result": 25.0,
+    "timestamp": "2026-05-02T22:36:52.442292",
+    "execution_time_ms": 0.010846000009223644
+  },
+  {
+    "operation": "sqrt",
+    "operand_a": 9.0,
+    "operand_b": null,
+    "result": 3.0,
+    "timestamp": "2026-05-02T22:36:53.911724",
+    "execution_time_ms": 0.012028000014652207
+  },
+  {
+    "operation": "power",
+    "operand_a": 2.0,
+    "operand_b": 3.0,
+    "result": 8.0,
+    "timestamp": "2026-05-02T22:36:55.194233",
+    "execution_time_ms": 0.01896800000622534
+  },
+  {
+    "operation": "modulo",
+    "operand_a": 10.0,
+    "operand_b": 3.0,
+    "result": 1.0,
+    "timestamp": "2026-05-02T22:36:56.575919",
+    "execution_time_ms": 0.012568999977702333
+  },
+  {
+    "operation": "add",
+    "operand_a": 5.0,
+    "operand_b": 3.0,
+    "result": 8.0,
+    "timestamp": "2026-05-02T22:37:34.558058",
+    "execution_time_ms": 0.011347999986810464
+  },
+  {
+    "operation": "square",
+    "operand_a": 12.0,
+    "operand_b": null,
+    "result": 144.0,
+    "timestamp": "2026-05-02T22:37:36.318373",
+    "execution_time_ms": 0.011787999994794518
   }
 ]

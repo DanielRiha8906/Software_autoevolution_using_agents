@@ -2,14 +2,23 @@ from dataclasses import dataclass, asdict, field
 from datetime import datetime
 
 
-_SYMBOLS = {"add": "+", "subtract": "-", "multiply": "×", "divide": "÷"}
+_SYMBOLS = {
+    "add": "+",
+    "subtract": "-",
+    "multiply": "×",
+    "divide": "÷",
+    "square": "²",
+    "sqrt": "√",
+    "power": "^",
+    "modulo": "%",
+}
 
 
 @dataclass
 class CalculationResult:
     operation: str
     operand_a: float
-    operand_b: float
+    operand_b: float | None
     result: float
     timestamp: str = field(default="")
     execution_time_ms: float = field(default=0.0)
@@ -28,8 +37,20 @@ class CalculationResult:
         return cls(**data)
 
     def __str__(self) -> str:
-        symbol = _SYMBOLS.get(self.operation, self.operation)
         a = int(self.operand_a) if self.operand_a == int(self.operand_a) else self.operand_a
-        b = int(self.operand_b) if self.operand_b == int(self.operand_b) else self.operand_b
         r = int(self.result) if self.result == int(self.result) else self.result
+
+        # Unary operations (operand_b is None)
+        if self.operand_b is None:
+            if self.operation == "sqrt":
+                return f"√{a} = {r}"
+            elif self.operation == "square":
+                return f"{a}² = {r}"
+            else:
+                symbol = _SYMBOLS.get(self.operation, self.operation)
+                return f"{symbol}({a}) = {r}"
+
+        # Binary operations
+        b = int(self.operand_b) if self.operand_b == int(self.operand_b) else self.operand_b
+        symbol = _SYMBOLS.get(self.operation, self.operation)
         return f"{a} {symbol} {b} = {r}"

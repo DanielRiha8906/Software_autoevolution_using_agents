@@ -9,22 +9,26 @@ package "models" #DDEEFF {
         SUBTRACT
         MULTIPLY
         DIVIDE
+        SQUARE
+        SQRT
+        POWER
+        MODULO
         --
-        +fromString(value: String) : Operation
-        +displayName() : String
+        +from_string(value: String) : Operation
+        +display_name() : String
     }
 
     class CalculationResult {
-        +operation : Operation
-        +operandA : float
-        +operandB : float
+        +operation : str
+        +operand_a : float
+        +operand_b : float | None
         +result : float
-        +timestamp : String
-        +executionTimeMs : float
+        +timestamp : str
+        +execution_time_ms : float
         --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : CalculationResult
-        +toString() : String
+        +to_dict() : dict
+        +from_dict(data: dict) : CalculationResult
+        +__str__() : str
     }
 }
 
@@ -34,7 +38,11 @@ package "services" #DDFFD4 {
         +subtract(a: float, b: float) : float
         +multiply(a: float, b: float) : float
         +divide(a: float, b: float) : float
-        +calculate(op: Operation, a: float, b: float) : float
+        +square(a: float) : float
+        +sqrt(a: float) : float
+        +power(a: float, b: float) : float
+        +modulo(a: float, b: float) : float
+        +calculate(op: Operation, *args: float) : float
     }
 
     class CalculatorService {
