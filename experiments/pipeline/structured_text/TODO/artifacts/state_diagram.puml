@@ -1,9 +1,0 @@
-@startuml
-
-[*] --> PENDING
-
-PENDING --> IN_PROGRESS : markInProgress()
-IN_PROGRESS --> DONE : markDone()
-DONE --> PENDING : reopen()
-
-@enduml
