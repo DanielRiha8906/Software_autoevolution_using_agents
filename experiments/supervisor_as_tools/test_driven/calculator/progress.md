@@ -64,3 +64,38 @@ Implemented `MemoryEntry` domain class to capture calculation history with suppo
 - ✓ UML diagrams updated to reflect current implementation
 
 Duration: 189.2s | Cost: $0.340711 USD | Turns: 22
+
+## Task 04: MemoryService Domain Service
+
+### Summary
+Implemented `MemoryService` domain service to manage the lifecycle of `MemoryEntry` objects. The service provides `store()` and `retrieve()` operations while keeping all persistence details out of the service itself, maintaining clean separation of concerns.
+
+### Files Changed
+- `tests/test_memory_service.py` - Created new test file with 5 MemoryService tests covering store/retrieve operations, multiple entries, list type validation, and file I/O restriction verification
+- `src/services/memory_service.py` - Created new MemoryService class with in-memory entry management, store() method to add entries, retrieve() method to return all stored entries as list
+- `src/services/__init__.py` - Added MemoryService import and export to module __all__ for clean API
+- `artifacts/class_diagram.puml` - Added MemoryService class to services package with private `_entries` field, store() and retrieve() methods, and manages relationship to MemoryEntry
+- `artifacts/component_diagram.puml` - Added Memory Service component and updated dependencies showing CalculatorService uses Memory Service
+
+### Test Results
+- **Total Tests:** 59 (54 existing + 5 new)
+- **Passed:** 59
+- **Failed:** 0
+- **Status:** ✓ All tests pass
+
+### Key Implementation Details
+1. **MemoryService** - Domain service for entry lifecycle management
+2. **In-memory storage** - Internal `_entries` list maintains state across store/retrieve calls
+3. **Store operation** - Appends MemoryEntry objects to internal list without modification
+4. **Retrieve operation** - Returns copy of entries list, maintaining type as list (not generator)
+5. **No persistence layer needed in service** - File I/O excluded per test requirement (passes `open()` and `json.dump` checks)
+6. **Clean API** - Two focused methods with clear contracts following existing service patterns
+
+### Acceptance Criteria
+- ✓ All provided tests pass (5/5 new tests)
+- ✓ Existing tests still pass (54/54 existing tests)
+- ✓ Code compiles without syntax or import errors
+- ✓ MemoryService source contains no file I/O or JSON serialisation
+- ✓ UML diagrams updated to reflect new service and relationships
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
