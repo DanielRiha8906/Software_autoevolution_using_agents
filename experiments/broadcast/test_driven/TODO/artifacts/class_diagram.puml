@@ -29,6 +29,18 @@ package "models" #DDEEFF {
         +is_pending() : Boolean
         +is_in_progress() : Boolean
     }
+
+    class TaskComment {
+        +id : String
+        +task_id : String
+        +content : String
+        +created_at : DateTime
+        +updated_at : DateTime [0..1]
+        +author : String [0..1]
+        --
+        +toDict() : Dictionary
+        +fromDict(data: Dictionary) : TaskComment
+    }
 }
 
 package "storage" #FFF3CC {
