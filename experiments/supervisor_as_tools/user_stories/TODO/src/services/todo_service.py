@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
+from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
@@ -54,3 +55,14 @@ class TodoService:
 
     def delete_task(self, task_id: str) -> None:
         self._manager.delete(task_id)
+
+    def add_comment_to_task(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
+        if not content or not content.strip():
+            raise ValueError("Comment content cannot be empty")
+        return self._manager.add_comment(task_id, content.strip(), author)
+
+    def list_task_comments(self, task_id: str) -> list[TaskComment]:
+        return self._manager.list_comments(task_id)
+
+    def delete_task_comment(self, task_id: str, comment_id: str) -> None:
+        self._manager.delete_comment(task_id, comment_id)
