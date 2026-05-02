@@ -30,6 +30,33 @@ package "models" #DDEEFF {
         +fromDict(data: Dictionary) : CalculationResult
         +toString() : String
     }
+
+    class MemoryEntry {
+        +operation : str
+        +operand_a : float
+        +operand_b : float
+        +result : float | None
+        +success : bool
+        +error_message : str | None
+        +timestamp : str
+        +execution_time_ms : float
+        +entry_id : str
+        --
+        +__init__()
+        +__post_init__() : void
+        +to_dict() : dict
+        +from_dict(data: dict) : MemoryEntry
+        +__str__() : str
+    }
+
+    note right of MemoryEntry
+        Represents a stored calculation attempt
+        (successful or failed). Unlike
+        CalculationResult which only tracks
+        successful results, MemoryEntry
+        captures both success and failure
+        states with comprehensive metadata.
+    end note
 }
 
 package "services" #DDFFD4 {
