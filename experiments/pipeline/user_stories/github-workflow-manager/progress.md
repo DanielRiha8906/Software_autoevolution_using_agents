@@ -72,4 +72,4 @@ Implemented 5 encapsulated state-checking methods on the WorkflowRun class to pr
 - ✅ Bonus is_cancelled() method implemented
 - ✅ Existing enum definitions not modified
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 321.7s | Cost: $0.587702 USD | Turns: 16
