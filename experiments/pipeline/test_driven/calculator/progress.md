@@ -22,4 +22,4 @@
 - Fully backward compatible with existing code
 - All serialization/deserialization works transparently
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 259.3s | Cost: $0.404111 USD | Turns: 16
