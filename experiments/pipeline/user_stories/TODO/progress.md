@@ -77,4 +77,4 @@ Duration: 614.7s | Cost: $1.099172 USD | Turns: 14
 ✓ Invalid transitions (e.g., reopen() on PENDING) raise ValueError
 ✓ Method chaining supported (all mutating methods return self)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 240.4s | Cost: $0.399010 USD | Turns: 14
