@@ -1,220 +1,414 @@
-# Task 03 Analysis: MemoryEntry Domain Class
+# Task 04 Analysis: Add MemoryService for managing MemoryEntry
 
 ## Task Summary
 
-Create a new `MemoryEntry` domain class that represents a stored calculation attempt. This class must:
-- Store operation name, input operands, result, success/error state, execution timestamp, and execution_time_ms
-- Support both successful and failed calculations
-- Provide JSON serialization/deserialization
-- Maintain compatibility with existing calculation history
-- Use clear field names for querying and reporting
-- Keep display formatting out of the domain class
+Implement `MemoryService` to manage `MemoryEntry` objects with basic operations (store, retrieve), ensuring integration with the calculation flow. The service must:
 
-## Current Structure
+**Must:**
+- Implement MemoryService to manage MemoryEntry objects with basic operations (store, retrieve)
+- Ensure integration with calculation flow
+- Service responsibilities limited to MemoryEntry lifecycle management (store/retrieve)
+- Keep storage implementation separate from service
 
-### Existing Calculation Representation
+**Should:**
+- Service responsibilities limited to MemoryEntry lifecycle management
+- Storage implementation must stay separate
 
-**CalculationResult** (src/models/calculation_result.py):
-- Dataclass using `@dataclass` decorator
-- Fields: `operation` (str), `operand_a` (float), `operand_b` (float), `result` (float), `timestamp` (str, ISO 8601), `execution_time_ms` (float)
-- Auto-generates timestamp via `__post_init__` if not provided
-- Methods: `to_dict()` and `from_dict()` for JSON serialization
-- String representation with symbol mapping (displays as "a + b = r" format)
-- Currently assumes all calculations are successful (no error state)
+**Could:**
+- Add filtering/querying capabilities (later task)
 
-### Storage Implementation
+**Won't:**
+- Place persistence implementation inside service class
 
-**JsonStorage** (src/storage/json_storage.py):
-- Persists `CalculationResult` objects to JSON (artifacts/calculations.json)
-- Methods: `save(result: CalculationResult)`, `load_all()` → list[CalculationResult]
-- Handles missing files gracefully, returns empty list
-- Supports backward compatibility (old JSON without execution_time_ms field)
+---
 
-### Current JSON Format
+## Current State: Existing Architecture
 
-```json
-[
-  {
-    "operation": "add",
-    "operand_a": 3.0,
-    "operand_b": 5.0,
-    "result": 8.0,
-    "timestamp": "2026-04-29T12:01:36.308310",
-    "execution_time_ms": null  // optional, defaults to 0.0
-  }
-]
+### 1. Domain Models
+
+#### MemoryEntry (src/models/memory_entry.py)
+**Status:** Already implemented in Task 03
+
+A dataclass representing a stored calculation attempt (successful or failed):
+- Fields: `operation` (str), `operand_a` (float), `operand_b` (float), `result` (float | None), `success` (bool), `error_message` (str | None), `timestamp` (str, ISO 8601), `execution_time_ms` (float), `entry_id` (str)
+- Auto-generates timestamp if missing
+- Auto-generates entry_id (UUID) if not provided
+- Validates state consistency: if `success=True`, result must not be None; if `success=False`, error_message must not be None
+- Methods: `to_dict()` and `from_dict()` with backward compatibility (treats missing success/error_message as success=True/None)
+- `__str__()` for debugging (not display)
+
+#### CalculationResult (src/models/calculation_result.py)
+**Status:** Pre-existing, represents only successful calculations
+- Fields: `operation` (str), `operand_a` (float), `operand_b` (float), `result` (float), `timestamp` (str), `execution_time_ms` (float)
+- Does NOT support error state
+- Used by existing code (CLI, storage, tests)
+
+#### Operation (src/models/operation.py)
+**Status:** Existing enum with 8 operations: ADD, SUBTRACT, MULTIPLY, DIVIDE, SQUARE, SQRT, POWER, MODULO
+
+### 2. Services (Current)
+
+#### Calculator (src/services/calculator.py)
+**Status:** Pre-existing, pure arithmetic engine
+- Methods: `add()`, `subtract()`, `multiply()`, `divide()`, `square()`, `sqrt()`, `power()`, `modulo()`, `calculate(operation, a, b)`
+- Raises ValueError on error (division by zero, negative sqrt, modulo by zero)
+
+#### CalculatorService (src/services/calculator_service.py)
+**Status:** Pre-existing orchestration layer
+- Current responsibilities:
+  - Measures execution time with `time.perf_counter()`
+  - Delegates arithmetic to Calculator
+  - Creates CalculationResult
+  - Persists via JsonStorage
+  - Retrieves history via JsonStorage
+- Current signature:
+  - `__init__(calculator: Calculator, storage: JsonStorage)`
+  - `perform(operation: Operation, a: float, b: float) -> CalculationResult`
+  - `get_history() -> list[CalculationResult]`
+- **Critical gap:** Does NOT catch exceptions; errors propagate to CLI and are never persisted
+
+### 3. Storage
+
+#### JsonStorage (src/storage/json_storage.py)
+**Status:** Pre-existing, handles persistence
+- Persists to artifacts/calculations.json
+- Methods: `save(result: CalculationResult)`, `load_all() -> list[CalculationResult]`
+- Handles missing files, corrupted JSON, backward compatibility
+- Current contract: accepts CalculationResult, returns list[CalculationResult]
+
+### 4. CLI Integration
+
+#### CalculatorCLI (src/cli/calculator_cli.py)
+**Status:** Pre-existing user interface
+- `run_interactive()` → Interactive menu
+- `run_command(operation_str, a, b)` → Single calculation
+- `_show_history()` → Displays results from CalculatorService.get_history()
+- Does NOT display error states (because CalculationService never persists them)
+
+---
+
+## Key Findings: What Must Change
+
+### 1. MemoryService Does NOT Yet Exist
+**Finding:** There is no `src/services/memory_service.py` file.
+- MemoryService must be created with basic operations for MemoryEntry lifecycle.
+
+### 2. No Service Manages MemoryEntry Currently
+**Finding:** MemoryEntry dataclass exists but is never instantiated or persisted by any service.
+- MemoryEntry is a well-designed domain model but unused
+- No service bridges MemoryEntry and storage
+
+### 3. Parallel Class Hierarchy Exists
+**Finding:** Two separate result classes designed to coexist:
+- **CalculationResult** → represents successful calculations (existing, legacy)
+- **MemoryEntry** → represents all calculations including failures (new capability)
+- Both have similar fields but different semantics
+- Both have serialization support
+
+### 4. Storage Abstraction Needed
+**Finding:** JsonStorage is tightly coupled to CalculationResult.
+- Current: `save(result: CalculationResult)` expects CalculationResult
+- Current: `load_all()` returns list[CalculationResult]
+- Task requires storage to remain separate from service
+- **Decision point:** Does MemoryService use JsonStorage directly, or a new MemoryEntryStorage?
+
+### 5. Error Handling Not Yet Integrated
+**Finding:** Calculator throws errors; CalculatorService does not catch them.
+- Example: `test_perform_divide_by_zero_does_not_save()` verifies errors don't persist
+- This is intentional design (current system = success-only)
+- MemoryService would enable error persistence but integration comes later
+
+---
+
+## Integration Points: How MemoryService Fits
+
+### Current Calculation Flow
+```
+User Input (CLI)
+  ↓
+CalculatorCLI.run_interactive() / run_command()
+  ↓
+CalculatorService.perform(operation, a, b)
+  ↓
+Calculator.calculate(operation, a, b) → float (may raise ValueError)
+  ↓
+Creates CalculationResult
+  ↓
+JsonStorage.save(CalculationResult)
+  ↓
+artifacts/calculations.json
 ```
 
-### How Results Flow
+### Proposed MemoryService Role (Task 04)
+**MemoryService will manage MemoryEntry lifecycle:**
+- Store MemoryEntry objects (delegate persistence to storage)
+- Retrieve stored MemoryEntry objects (delegate loading to storage)
+- NOT responsible for: arithmetic, error catching, timestamp generation (those stay where they are)
 
-1. **CalculatorService.perform()** → Measures execution time, creates CalculationResult, calls storage.save()
-2. **CalculationResult.__str__()** → Used by CLI for display (formatting happens here, not in domain class)
-3. **JsonStorage** → Persists via `to_dict()`, loads via `from_dict()`
-4. **CalculatorCLI._show_history()** → Iterates history, prints each entry with timestamp
+### Future Integration (Not in Task 04 but visible in code structure)
+Future tasks will likely:
+1. CalculatorService catches errors from Calculator.calculate()
+2. CalculatorService creates MemoryEntry (success or failed state)
+3. MemoryService stores it via storage
+4. CLI displays error entries from MemoryService history
 
-### Error Handling in Current System
+---
 
-- **Calculator.calculate()** → Raises ValueError for invalid operations or math errors (division by zero, negative sqrt, modulo by zero)
-- **CalculatorService.perform()** → Does NOT catch exceptions; they propagate to CLI
-- **CLI** → Catches ValueError, prints to stderr, exits with code 1
-- **No failures are persisted** — only successful calculations are saved to storage
+## Requirements Analysis: MoSCoW Breakdown
 
-## Critical Gap: Error State Support
+### Must (Non-negotiable)
 
-The current system has a significant constraint:
-- **CalculationResult only represents successful calculations**
-- Errors during calculation abort the entire flow before storage
-- Test evidence: `test_perform_divide_by_zero_does_not_save()` confirms failed calculations are never saved
-- This is intentional behavior to avoid storing erroneous results
+1. **MemoryService class exists**
+   - File: `src/services/memory_service.py`
+   - Can be instantiated
+   
+2. **Basic store operation**
+   - Method: `store(entry: MemoryEntry) -> None` (or similar name)
+   - Accepts a MemoryEntry
+   - Delegates to storage layer
 
-## What MemoryEntry Should Provide
+3. **Basic retrieve operation**
+   - Method: `get_all() -> list[MemoryEntry]` (or similar name)
+   - Returns list of MemoryEntry objects
+   - Delegates to storage layer
 
-### Required Fields
+4. **Integration with calculation flow**
+   - Must be ready to accept MemoryEntry objects from CalculatorService (in future)
+   - Must work with existing storage infrastructure
+   - Tests must pass
 
-1. **operation**: str (operation name: "add", "subtract", etc.)
-2. **operand_a**: float (first operand)
-3. **operand_b**: float (second operand)
-4. **result**: float (result value; only valid if success=True)
-5. **success**: bool (True if calculation succeeded, False if error occurred)
-6. **error_message**: str | None (error text if success=False, None otherwise)
-7. **timestamp**: str (ISO 8601 execution time)
-8. **execution_time_ms**: float (milliseconds to execute)
+### Should (Strongly Expected)
 
-### Optional Fields (Could)
+1. **Limited responsibilities**
+   - Service ONLY manages MemoryEntry lifecycle (create/retrieve patterns)
+   - Does NOT implement persistence logic
+   - Does NOT implement business logic (arithmetic, validation)
+   - Clear separation of concerns
 
-- **entry_id**: str (unique identifier, e.g., UUID or auto-incrementing integer)
+2. **Storage stays separate**
+   - Persistence logic in storage layer (JsonStorage or new MemoryEntryStorage)
+   - MemoryService depends on storage abstraction
+   - Service injects storage via constructor
 
-### Design Implications
+3. **Backward compatibility**
+   - MemoryEntry.from_dict() already handles old CalculationResult format
+   - Storage layer must load old JSON correctly
+   - Existing tests must still pass
 
-1. **result field must be optional** — Only populated when success=True
-   - Could use float | None, or keep as float with sentinel value like NaN
-   - JSON serialization needs handling for None values
+### Could (Enhancement, Out of Scope)
 
-2. **Field naming for clarity**
-   - Use `operand_a` and `operand_b` (matches existing CalculationResult)
-   - Use `success` (boolean) for clarity vs. storing only successful results
-   - Use `error_message` (explicit) vs. generic error field
+1. **Filtering/querying** → Later task
+2. **Get by ID** → Later task
+3. **Delete/update** → Later task
 
-3. **JSON compatibility**
-   - Current format expects only successful calculations
-   - New format must be backward-compatible: old records have no `success` or `error_message` fields
-   - Default interpretation: missing `success` field → assume success=True for old data
-   - Missing `error_message` → assume None
+### Won't
 
-4. **Display formatting**
-   - MemoryEntry should provide access to fields, not formatted strings
-   - CLI/services remain responsible for display logic
-   - Keep `__str__()` minimal or descriptive (e.g., for logging)
+1. Persistence implementation inside MemoryService
+2. Business logic inside MemoryService
 
-## Existing Classes That May Interact with MemoryEntry
+---
 
-1. **JsonStorage** — Will need to support loading/saving MemoryEntry objects
-   - Current code: `save(result: CalculationResult)` → must change to accept MemoryEntry
-   - Backward compatibility: `from_dict()` must handle both old and new JSON formats
+## Ambiguities & Working Assumptions
 
-2. **CalculatorService** — Creates CalculationResult today
-   - May need refactoring to create MemoryEntry instead
-   - Or MemoryEntry becomes the persistent model while CalculationResult is a view
+### 1. Storage Abstraction Question
+**Ambiguity:** Should MemoryService use JsonStorage directly or a new MemoryEntryStorage?
 
-3. **CalculatorCLI** — Consumes CalculationResult from get_history()
-   - If MemoryEntry replaces CalculationResult in storage, must handle error states
-   - Must not break existing display logic (the `__str__()` method)
+**Evidence:**
+- JsonStorage is type-hinted for CalculationResult
+- Task says "storage implementation must stay separate" (implies new abstraction)
+- MemoryEntry and CalculationResult are separate classes
 
-## Compatibility Constraints
+**Working Assumption:** 
+- Either:
+  - (A) Create MemoryEntryStorage class (new file, parallel to JsonStorage)
+  - (B) Make JsonStorage generic/overloaded to accept both types
+  - (C) Create a shared base class or interface
+- Most likely: (A) or (C) to maintain clean separation
+- Will be clarified by system-architect design
 
-### Backward Compatibility
+### 2. Method Naming
+**Ambiguity:** What should basic operations be called?
 
-1. **Existing JSON** → Must load without modification
-   - Old records lack `success`, `error_message`, `entry_id` fields
-   - Logic: treat missing `success` field as True
-   - Logic: treat missing `error_message` as None
+**Evidence:**
+- Task says "store, retrieve" (generic)
+- CalculatorService uses `perform()` (domain-specific)
+- JsonStorage uses `save()` and `load_all()` (low-level)
 
-2. **Existing CalculationResult** → Should not break
-   - Option A: Keep CalculationResult, add separate MemoryEntry class
-   - Option B: Refactor CalculationResult to support error states (more intrusive)
-   - Option C: MemoryEntry extends or wraps CalculationResult (tighter coupling)
-   - **Recommendation**: Option A — parallel classes with conversion logic
+**Working Assumption:**
+- Likely names: `store(entry: MemoryEntry)` and `get_all()` or `retrieve_all()` or `load_all()`
+- More specific query methods (get_by_id, filter_by_success) come later
 
-3. **Existing Tests** → 87 tests currently pass
-   - Tests use CalculationResult directly
-   - Adding MemoryEntry should not require rewriting existing tests
-   - New tests should cover MemoryEntry separately
+### 3. Constructor Signature
+**Ambiguity:** What dependencies does MemoryService take?
 
-### Storage Format Evolution
+**Evidence:**
+- CalculatorService: `__init__(calculator, storage)`
+- Pattern: receive dependencies via constructor
 
-Current approach: JsonStorage reads/writes a list of plain dicts, relies on `from_dict()` for deserialization.
+**Working Assumption:**
+- MemoryService takes storage as a dependency:
+  - `__init__(self, storage: JsonStorage)` or
+  - `__init__(self, storage: MemoryEntryStorage)` or
+  - `__init__(self, storage: StorageInterface)`
+- Constructor injection pattern already established
 
-If MemoryEntry is added:
-- Option 1: Create `MemoryEntryStorage` class (separate from JsonStorage)
-- Option 2: Refactor JsonStorage to handle both CalculationResult and MemoryEntry
-- **Recommendation**: Option 1 — keeps separation of concerns, allows parallel operation
+### 4. Error Handling in Service
+**Ambiguity:** Should MemoryService catch storage exceptions?
 
-## Implementation Approach Outline
+**Evidence:**
+- JsonStorage handles missing files gracefully (returns [])
+- JsonStorage handles corrupted JSON (returns [])
+- Existing code doesn't explicitly handle exceptions from storage
 
-### Phase 1: Define MemoryEntry Class
+**Working Assumption:**
+- MemoryService delegates error handling to storage layer
+- Storage layer returns safe defaults or raises explicitly
+- Service responsibility: propagate storage state to caller
 
-Create `src/models/memory_entry.py`:
-- Dataclass with fields listed above
-- `to_dict()` → JSON-compatible dict
-- `from_dict(data: dict)` → MemoryEntry with backward-compatibility logic
-- `__post_init__()` → Auto-generate timestamp if missing, validate state
-- Minimal `__str__()` for debugging (not for display)
+---
 
-### Phase 2: Serialization Support
+## Scope Signals: What's Clearly In/Out
 
-- Implement `to_dict()` to handle None result field
-- Implement `from_dict()` with:
-  - Default success=True if field missing
-  - Default error_message=None if field missing
-  - Handle result field safely (use None or NaN as sentinel)
-- Add validation: if success=False, result should be None
+### Clearly IN
+- MemoryService class with basic operations
+- Store (persist) MemoryEntry
+- Retrieve (load) MemoryEntry objects
+- Use dependency injection for storage
+- Tests for MemoryService
+- Update diagrams to show MemoryService
 
-### Phase 3: Optional: MemoryEntryStorage
+### Clearly OUT (Later Tasks)
+- Error catching in CalculatorService
+- Creating MemoryEntry from failed calculations
+- Displaying error states in CLI
+- Complex querying (filter by success, by date range, etc.)
+- Updating CalculatorService.perform() to use MemoryService
+- Integration test between CalculatorService and MemoryService
 
-Create `src/storage/memory_entry_storage.py` (or extend JsonStorage):
-- Similar interface to JsonStorage
-- Methods: `save(entry: MemoryEntry)`, `load_all() → list[MemoryEntry]`
-- Uses same JSON file or separate file
-- Handles backward compatibility with CalculationResult format
+### Borderline (Need Design Input)
+- New storage class vs. existing JsonStorage refactoring
+- Exact method signatures and names
+- Whether MemoryService updates CalculatorService constructor
+- Whether new storage file or shared with CalculationResult
 
-### Phase 4: Integration Points (NOT in this task, but noted for system-architect)
+---
 
-- CalculatorService could be extended to catch errors and create failed MemoryEntry objects
-- CLI could display error entries separately
-- Query/report functions could filter by success state
+## Existing Code Dependencies
 
-## Key Assumptions
+### Files that Import MemoryEntry (as of Task 03)
+- `tests/test_memory_entry.py` — 22 comprehensive tests
+- `src/models/__init__.py` — exports MemoryEntry
 
-1. **Error persistence is new capability** — Current system intentionally doesn't save failed calculations. MemoryEntry enables this, but actual error-saving logic comes in a later task.
+### Files that Could Depend on MemoryService (not yet)
+- `src/services/__init__.py` — may export MemoryService
+- Future: `src/services/calculator_service.py` (in later task)
+- Future: `src/cli/calculator_cli.py` (for displaying memory)
+- Tests: `tests/test_memory_service.py` (to be created)
 
-2. **Operands are always floats** — System uses float(a), float(b) throughout. MemoryEntry assumes same type.
+### Files NOT to Modify (Task 03 already did this)
+- `src/models/memory_entry.py` — already complete
+- `tests/test_memory_entry.py` — already complete
 
-3. **Entry ID is optional** — Task says "Could", so primary implementation uses (operation, timestamp, operands) as natural identity. UUID can be added in a future enhancement.
+---
 
-4. **Backward compatibility is required** — Existing artifacts/calculations.json must remain loadable by existing tests.
+## Test Coverage Expectations
 
-5. **CalculationResult remains unchanged** — New MemoryEntry class is added, not refactoring existing code to reduce risk and test impact.
+Based on existing patterns (test_calculator_service.py, test_memory_entry.py), tests should cover:
 
-## Test Coverage Priorities
+### Basic Operations (Must)
+1. Store a single MemoryEntry
+2. Retrieve empty list when nothing stored
+3. Retrieve multiple entries in order
+4. Entry contents are preserved after store/retrieve
 
-When tests are written, prioritize:
-1. **Successful calculation serialization/deserialization** — matches current behavior
-2. **Failed calculation handling** — new, represents error state
-3. **Backward compatibility** — old JSON loads correctly as successful entries
-4. **Field validation** — error_message should be None when success=True
-5. **JSON format** — produced JSON is valid and readable
+### Integration (Should)
+5. Works with successful MemoryEntry
+6. Works with failed MemoryEntry (success=False)
+7. Works with backward-compatible old CalculationResult format
+8. Entry ID is preserved
+9. Timestamp is preserved
 
-## Files to Create/Modify
+### Error Cases (Could)
+10. Storage exceptions propagate (or handled gracefully)
 
-### Create
-- `src/models/memory_entry.py` — MemoryEntry class definition
+---
 
-### Potentially Modify (in later tasks)
-- `src/storage/json_storage.py` or new `src/storage/memory_entry_storage.py` — if integration with storage is required
-- `src/models/__init__.py` — to export MemoryEntry
-- Tests — to validate MemoryEntry behavior
+## Files Involved
 
-### Do NOT Modify (for compatibility)
-- `src/models/calculation_result.py` — keep existing
-- Existing test files — don't require changes to pass this task
-- `artifacts/class_diagram.puml` — updated by UML designer in later step
+### To Create
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/services/memory_service.py` (NEW)
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/tests/test_memory_service.py` (NEW)
+- Possibly: `src/storage/memory_entry_storage.py` (if new storage abstraction is chosen)
+
+### To Modify
+- `src/services/__init__.py` — export MemoryService
+- `artifacts/class_diagram.puml` — add MemoryService
+- `artifacts/component_diagram.puml` — add MemoryService component
+- Possibly: `src/storage/__init__.py` — export new storage if created
+
+### To Review (but not modify yet)
+- `src/storage/json_storage.py` — understand current persistence
+- `src/models/memory_entry.py` — already correct, no changes needed
+- `src/services/calculator_service.py` — no changes yet (integration in Task 05)
+
+---
+
+## Key Constraints
+
+1. **Storage stays separate** — MemoryService must not contain JSON/file logic
+2. **MemoryEntry already valid** — Don't modify Task 03 implementation
+3. **Backward compatibility** — Old CalculationResult JSON must still load correctly
+4. **Existing tests must pass** — 109 tests from Tasks 01-03 cannot break
+5. **Clean separation** — MemoryService focuses only on lifecycle, not business logic
+
+---
+
+## Specific Requirements for MemoryService Based on MoSCoW
+
+### Must: Implement MemoryService Class
+**Location:** `src/services/memory_service.py`
+**Minimum Interface:**
+```python
+class MemoryService:
+    def __init__(self, storage):  # storage: JsonStorage or MemoryEntryStorage
+        ...
+    
+    def store(self, entry: MemoryEntry) -> None:
+        """Persist a MemoryEntry to storage."""
+        ...
+    
+    def get_all(self) -> list[MemoryEntry]:
+        """Retrieve all stored MemoryEntry objects."""
+        ...
+```
+
+### Must: Integration with Calculation Flow
+**What exists:**
+- CalculatorService currently persists CalculationResult to JsonStorage
+- MemoryEntry is a new model designed to replace/augment this
+
+**What's needed:**
+- MemoryService must be ready to receive MemoryEntry from CalculatorService (later)
+- MemoryService must persist to storage (storage layer handles format)
+- MemoryService must retrieve from storage (storage layer handles parsing)
+
+### Should: Separate Concerns
+**Service responsibilities:** Lifecycle operations only (store, retrieve)
+**Storage responsibilities:** Persistence logic (read/write JSON, backward compatibility)
+**Business logic:** Stays with Calculator and CalculatorService
+
+### Should: Storage Implementation Separate
+**Pattern to follow:**
+```python
+# MemoryService delegates to storage
+class MemoryService:
+    def __init__(self, storage):
+        self.storage = storage
+    
+    def store(self, entry: MemoryEntry):
+        self.storage.save(entry)  # Storage knows HOW to persist
+    
+    def get_all(self):
+        return self.storage.load_all()  # Storage knows HOW to load
+```
+

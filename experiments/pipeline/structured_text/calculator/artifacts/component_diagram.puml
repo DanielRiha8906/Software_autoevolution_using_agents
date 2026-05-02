@@ -11,21 +11,29 @@ package "Calculator Application" {
     component "Application Service\n(CalculatorService)" as Service
     component "Calculation Engine\n(Calculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
+    component "Memory Service\n(MemoryService)" as MemService
+    component "Memory Storage\n(MemoryEntryStorage)" as MemStore
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
 
     Main --> CLI : initializes
     Main --> Service : initializes
+    Main --> MemService : initializes
 
     CLI --> Service : uses
     Service --> Calc : uses
     Service --> Store : uses
+
+    MemService --> MemStore : uses
+    MemStore ..> Models : accesses
 
     Service ..> Models
     Store ..> Models
 }
 
 database "calculations.json" as DB
+database "memory.json" as MemDB
 
 Store --> DB : read/write
+MemStore --> MemDB : read/write
 
 @enduml

@@ -80,6 +80,14 @@ package "services" #DDFFD4 {
         +perform(operation: Operation, a: float, b: float) : CalculationResult
         +getHistory() : List<CalculationResult>
     }
+
+    class MemoryService {
+        -storage : MemoryEntryStorage
+        --
+        +MemoryService(storage: MemoryEntryStorage)
+        +store(entry: MemoryEntry) : void
+        +get_all() : List<MemoryEntry>
+    }
 }
 
 package "storage" #FFF3CC {
@@ -91,6 +99,16 @@ package "storage" #FFF3CC {
         +loadAll() : List<CalculationResult>
         -readRaw() : List<Dictionary>
         -writeRaw(records: List<Dictionary>) : void
+    }
+
+    class MemoryEntryStorage {
+        -filepath : String | Path
+        --
+        +MemoryEntryStorage(filepath: String | Path)
+        +save(entry: MemoryEntry) : void
+        +load_all() : List<MemoryEntry>
+        -_read_raw() : List<Dictionary>
+        -_write_raw(records: List<Dictionary>) : void
     }
 }
 
@@ -113,10 +131,14 @@ CalculatorCLI --> CalculatorService : service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 
+MemoryService --> MemoryEntryStorage : storage
+MemoryEntryStorage ..> MemoryEntry : stores
+
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
+MemoryService ..> MemoryEntry : manages
 
 @enduml
