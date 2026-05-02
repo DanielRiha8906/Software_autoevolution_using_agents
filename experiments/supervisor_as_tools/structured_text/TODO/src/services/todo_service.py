@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
@@ -39,3 +40,6 @@ class TodoService:
 
     def delete_task(self, task_id: str) -> None:
         self._manager.delete(task_id)
+
+    def set_due_date(self, task_id: str, due_date: Optional[datetime] = None) -> Task:
+        return self._manager.set_due_date(task_id, due_date)
