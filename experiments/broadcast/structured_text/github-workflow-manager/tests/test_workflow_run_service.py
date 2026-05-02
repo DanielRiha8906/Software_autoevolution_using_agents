@@ -19,6 +19,7 @@ def _make_run(run_id: str = "run-1", branch: str = "main") -> WorkflowRun:
         updated_at=None,
         run_number=1,
         commit_sha="abc123",
+        duration_seconds=60.0,
     )
 
 

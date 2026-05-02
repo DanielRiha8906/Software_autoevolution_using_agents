@@ -18,7 +18,9 @@ repeat
       :Run change status flow;
     case (5 — Update task)
       :Run update task flow;
-    case (6 — Delete task)
+    case (6 — Set due date)
+      :Run set due date flow;
+    case (7 — Delete task)
       :Run delete task flow;
     case (0/q — Quit)
       :Clear screen;

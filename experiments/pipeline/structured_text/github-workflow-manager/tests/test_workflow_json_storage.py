@@ -25,6 +25,7 @@ def _sample_run() -> WorkflowRun:
         updated_at=None,
         run_number=42,
         commit_sha="deadbeef",
+        duration_seconds=45.5,
     )
 
 
@@ -51,3 +52,38 @@ def test_save_persists_json(tmp_storage):
     raw = json.loads(Path(tmp_storage.filepath).read_text())
     assert raw[0]["id"] == "r1"
     assert raw[0]["conclusion"] == "success"
+
+
+def test_save_and_load_duration_roundtrip(tmp_storage):
+    run = _sample_run()
+    tmp_storage.save([run])
+    loaded = tmp_storage.load()
+    assert loaded[0].duration_seconds == 45.5
+
+
+def test_duration_in_json(tmp_storage):
+    run = _sample_run()
+    tmp_storage.save([run])
+    raw = json.loads(Path(tmp_storage.filepath).read_text())
+    assert raw[0]["duration_seconds"] == 45.5
+
+
+def test_load_json_without_duration_defaults_to_zero(tmp_storage):
+    # Simulate old JSON file without duration_seconds field
+    old_format = [
+        {
+            "id": "r1",
+            "workflow_name": "Deploy",
+            "branch": "main",
+            "status": "completed",
+            "conclusion": "success",
+            "created_at": "2024-01-01T00:00:00+00:00",
+            "updated_at": None,
+            "run_number": 42,
+            "commit_sha": "deadbeef",
+        }
+    ]
+    Path(tmp_storage.filepath).parent.mkdir(parents=True, exist_ok=True)
+    Path(tmp_storage.filepath).write_text(json.dumps(old_format))
+    loaded = tmp_storage.load()
+    assert loaded[0].duration_seconds == 0.0

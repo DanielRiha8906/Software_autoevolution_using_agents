@@ -1,6 +1,7 @@
+from datetime import datetime
 from typing import Optional
 
-from ..models.task import Task
+from ..models.task import Task, _validate_timezone_aware_datetime
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
@@ -10,10 +11,12 @@ class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
 
-    def add_task(self, title: str, description: Optional[str] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description)
+        if due_date is not None:
+            _validate_timezone_aware_datetime(due_date)
+        return self._manager.add(title.strip(), description, due_date)
 
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)

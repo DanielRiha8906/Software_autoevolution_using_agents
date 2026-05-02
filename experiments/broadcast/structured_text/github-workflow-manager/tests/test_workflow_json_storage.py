@@ -25,6 +25,7 @@ def _sample_run() -> WorkflowRun:
         updated_at=None,
         run_number=42,
         commit_sha="deadbeef",
+        duration_seconds=120.5,
     )
 
 

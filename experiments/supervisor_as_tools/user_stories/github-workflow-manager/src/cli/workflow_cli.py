@@ -20,6 +20,7 @@ def _fmt_run(run: WorkflowRun) -> str:
         f"  conclusion  : {conclusion}\n"
         f"  run_number  : {run.run_number or '—'}\n"
         f"  commit_sha  : {run.commit_sha or '—'}\n"
+        f"  duration_s  : {run.duration_seconds}\n"
         f"  created_at  : {run.created_at.isoformat()}\n"
         f"  updated_at  : {updated}\n"
     )

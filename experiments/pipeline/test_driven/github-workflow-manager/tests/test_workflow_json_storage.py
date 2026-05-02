@@ -22,6 +22,7 @@ def _sample_run() -> WorkflowRun:
         status=WorkflowStatus.COMPLETED,
         conclusion=WorkflowConclusion.SUCCESS,
         created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        duration_seconds=0.0,
         updated_at=None,
         run_number=42,
         commit_sha="deadbeef",

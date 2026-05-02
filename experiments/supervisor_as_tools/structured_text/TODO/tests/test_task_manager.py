@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime, timezone
 from src.models.task_status import TaskStatus
 from src.services.task_manager import TaskManager, TaskNotFoundError
 from src.storage.json_storage import JsonStorage
@@ -79,3 +80,36 @@ def test_persistence(tmp_path):
     task = m1.add("Persisted")
     m2 = TaskManager(JsonStorage(path))
     assert m2.get(task.id).title == "Persisted"
+
+
+def test_set_due_date_updates_timestamp(manager):
+    task = manager.add("Test")
+    old_updated_at = task.updated_at
+    due = datetime(2025, 12, 31, tzinfo=timezone.utc)
+    updated_task = manager.set_due_date(task.id, due)
+    assert updated_task.due_date == due
+    assert updated_task.updated_at > old_updated_at
+
+
+def test_set_due_date_persists(tmp_path):
+    path = str(tmp_path / "tasks.json")
+    m1 = TaskManager(JsonStorage(path))
+    task = m1.add("Test")
+    due = datetime(2025, 12, 31, tzinfo=timezone.utc)
+    m1.set_due_date(task.id, due)
+    m2 = TaskManager(JsonStorage(path))
+    retrieved = m2.get(task.id)
+    assert retrieved.due_date == due
+
+
+def test_add_with_due_date(manager):
+    due = datetime(2025, 12, 31, tzinfo=timezone.utc)
+    task = manager.add("Test", due_date=due)
+    assert task.due_date == due
+
+
+def test_update_with_due_date(manager):
+    task = manager.add("Test")
+    due = datetime(2025, 12, 31, tzinfo=timezone.utc)
+    updated = manager.update(task.id, due_date=due)
+    assert updated.due_date == due

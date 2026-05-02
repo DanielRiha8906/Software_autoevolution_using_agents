@@ -17,9 +17,11 @@ package "models" #DDEEFF {
         +status : TaskStatus
         +createdAt : DateTime
         +updatedAt : DateTime
+        +due_date : DateTime [0..1]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
+        +is_overdue() : Boolean
     }
 }
 
@@ -41,12 +43,13 @@ package "services" #DDFFD4 {
         -tasks : Dictionary<String, Task>
         --
         +TaskManager(storage: JsonStorage [0..1])
-        +add(title: String, description: String [0..1]) : Task
+        +add(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
         +get(taskId: String) : Task
         +listAll() : List<Task>
         +listByStatus(status: TaskStatus) : List<Task>
-        +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
+        +update(taskId: String, title: String [0..1], description: String [0..1], due_date: DateTime [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
+        +set_due_date(taskId: String, due_date: DateTime [0..1]) : Task
         +delete(taskId: String) : void
         -load() : void
         -persist() : void

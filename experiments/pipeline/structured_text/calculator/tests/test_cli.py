@@ -14,7 +14,7 @@ def _make_cli():
 class TestRunCommand:
     def test_prints_result(self, capsys):
         cli, service = _make_cli()
-        service.perform.return_value = CalculationResult("add", 3, 5, 8, _TS)
+        service.perform.return_value = CalculationResult("add", 3, 5, 8, _TS, 0.0)
         cli.run_command("add", 3, 5)
         assert "8" in capsys.readouterr().out
 
@@ -46,7 +46,7 @@ class TestRunInteractive:
 
     def test_add_operation(self, capsys):
         cli, service = _make_cli()
-        service.perform.return_value = CalculationResult("add", 3, 5, 8, _TS)
+        service.perform.return_value = CalculationResult("add", 3, 5, 8, _TS, 0.0)
         with patch("builtins.input", side_effect=["1", "3", "5", "6"]):
             cli.run_interactive()
         assert "8" in capsys.readouterr().out
@@ -73,7 +73,7 @@ class TestRunInteractive:
     def test_history_shows_entries(self, capsys):
         cli, service = _make_cli()
         service.get_history.return_value = [
-            CalculationResult("add", 1, 2, 3, _TS),
+            CalculationResult("add", 1, 2, 3, _TS, 0.0),
         ]
         with patch("builtins.input", side_effect=["5", "6"]):
             cli.run_interactive()

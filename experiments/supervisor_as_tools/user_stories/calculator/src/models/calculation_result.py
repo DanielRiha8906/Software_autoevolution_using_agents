@@ -11,6 +11,7 @@ class CalculationResult:
     operand_a: float
     operand_b: float
     result: float
+    execution_time_ms: int = 0
     timestamp: str = field(default="")
 
     def __post_init__(self) -> None:

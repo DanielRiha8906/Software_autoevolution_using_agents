@@ -19,6 +19,7 @@ package "models" #DDEEFF {
         +operandA : float
         +operandB : float
         +result : float
+        +execution_time_ms : int
         +timestamp : String
         --
         +toDict() : Dictionary

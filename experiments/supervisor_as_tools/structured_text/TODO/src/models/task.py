@@ -16,6 +16,7 @@ class Task:
     status: TaskStatus = TaskStatus.PENDING
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    due_date: Optional[datetime] = None
 
     def to_dict(self) -> dict:
         return {
@@ -25,10 +26,12 @@ class Task:
             "status": self.status.value,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
+            "due_date": self.due_date.isoformat() if self.due_date else None,
         }
 
     @classmethod
     def from_dict(cls, data: dict) -> Task:
+        due_date_str = data.get("due_date")
         return cls(
             id=data["id"],
             title=data["title"],
@@ -36,4 +39,12 @@ class Task:
             status=TaskStatus(data["status"]),
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
+            due_date=datetime.fromisoformat(due_date_str) if due_date_str is not None else None,
         )
+
+    def is_overdue(self) -> bool:
+        if self.due_date is None:
+            return False
+        now_utc = datetime.now(timezone.utc)
+        due_date_utc = self.due_date if self.due_date.tzinfo else self.due_date.replace(tzinfo=timezone.utc)
+        return due_date_utc < now_utc
