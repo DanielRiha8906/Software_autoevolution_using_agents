@@ -77,4 +77,4 @@ Duration: 278.1s | Cost: $0.497082 USD | Turns: 21
 - DONE ↔ PENDING (reopen transition)
 - All invalid transitions silently ignored (no-op)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 300.2s | Cost: $0.497598 USD | Turns: 26
