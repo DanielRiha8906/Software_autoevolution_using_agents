@@ -44,3 +44,53 @@ class WorkflowRun:
             run_number=data.get("run_number"),
             commit_sha=data.get("commit_sha"),
         )
+
+    def is_terminal(self) -> bool:
+        """Check if the run is in a terminal (completed) state.
+
+        A terminal state means the workflow has finished execution.
+
+        Returns:
+            True if status is COMPLETED, False otherwise.
+        """
+        return self.status == WorkflowStatus.COMPLETED
+
+    def is_running(self) -> bool:
+        """Check if the run is currently executing.
+
+        A running state means the workflow is actively processing.
+
+        Returns:
+            True if status is IN_PROGRESS, False otherwise.
+        """
+        return self.status == WorkflowStatus.IN_PROGRESS
+
+    def is_successful(self) -> bool:
+        """Check if the run completed successfully.
+
+        A successful conclusion requires the conclusion to be SUCCESS.
+
+        Returns:
+            True if conclusion is SUCCESS, False otherwise.
+        """
+        return self.conclusion == WorkflowConclusion.SUCCESS
+
+    def is_failed(self) -> bool:
+        """Check if the run failed.
+
+        A failed conclusion requires the conclusion to be FAILURE.
+
+        Returns:
+            True if conclusion is FAILURE, False otherwise.
+        """
+        return self.conclusion == WorkflowConclusion.FAILURE
+
+    def is_cancelled(self) -> bool:
+        """Check if the run was cancelled.
+
+        A cancelled conclusion requires the conclusion to be CANCELLED.
+
+        Returns:
+            True if conclusion is CANCELLED, False otherwise.
+        """
+        return self.conclusion == WorkflowConclusion.CANCELLED
