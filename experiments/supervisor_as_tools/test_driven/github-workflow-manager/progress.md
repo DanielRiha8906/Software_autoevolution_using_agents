@@ -68,4 +68,4 @@ Test coverage:
 - Full round-trip serialization support with timezone preservation
 - Updated class diagram to show WorkflowRunAttempt with one-to-many relationship to WorkflowRun
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 218.5s | Cost: $0.373930 USD | Turns: 20
