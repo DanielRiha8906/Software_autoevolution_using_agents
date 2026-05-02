@@ -17,21 +17,29 @@ class TestCalculatorService:
         assert result.operation == "add"
         assert result.operand_a == 3
         assert result.operand_b == 5
+        assert result.execution_time_ms > 0
 
     def test_perform_subtract(self):
-        assert self.service.perform(Operation.SUBTRACT, 10, 4).result == 6
+        result = self.service.perform(Operation.SUBTRACT, 10, 4)
+        assert result.result == 6
+        assert result.execution_time_ms > 0
 
     def test_perform_multiply(self):
-        assert self.service.perform(Operation.MULTIPLY, 3, 4).result == 12
+        result = self.service.perform(Operation.MULTIPLY, 3, 4)
+        assert result.result == 12
+        assert result.execution_time_ms > 0
 
     def test_perform_divide(self):
-        assert self.service.perform(Operation.DIVIDE, 9, 3).result == 3.0
+        result = self.service.perform(Operation.DIVIDE, 9, 3)
+        assert result.result == 3.0
+        assert result.execution_time_ms > 0
 
     def test_perform_saves_to_storage(self):
         self.service.perform(Operation.ADD, 3, 5)
         self.storage.save.assert_called_once()
         saved: CalculationResult = self.storage.save.call_args[0][0]
         assert saved.result == 8
+        assert saved.execution_time_ms > 0
 
     def test_perform_divide_by_zero_raises(self):
         with pytest.raises(ValueError, match="Division by zero"):
@@ -50,3 +58,12 @@ class TestCalculatorService:
     def test_result_has_timestamp(self):
         result = self.service.perform(Operation.ADD, 1, 1)
         assert result.timestamp != ""
+
+    def test_perform_execution_time_is_measured(self):
+        result = self.service.perform(Operation.ADD, 3, 5)
+        assert 0 < result.execution_time_ms < 100
+
+    def test_perform_execution_time_all_operations(self):
+        for operation in [Operation.ADD, Operation.SUBTRACT, Operation.MULTIPLY, Operation.DIVIDE]:
+            result = self.service.perform(operation, 3, 5)
+            assert result.execution_time_ms > 0
