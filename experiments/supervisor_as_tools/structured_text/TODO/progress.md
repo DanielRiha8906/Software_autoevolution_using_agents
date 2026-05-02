@@ -94,3 +94,75 @@ Duration: 269.9s | Cost: $0.435138 USD | Turns: 24
 - No modifications to Task, TaskManager, or JsonStorage classes
 
 Duration: 192.6s | Cost: $0.335670 USD | Turns: 17
+
+---
+
+# Task Progress: Task 04
+
+## Task: Add CommentsService for managing TaskComments
+
+### Status: Completed ✅
+
+### Files Changed:
+- `src/services/comments_service.py` — Created CommentsService class with full CRUD operations
+- `src/storage/json_storage.py` — Extended with load_all() and save_all() methods, automatic format migration
+- `src/services/task_manager.py` — Integrated cascade delete, added optional comments_service dependency
+- `tests/test_comments_service.py` — Created 58 comprehensive test cases
+- `artifacts/class_diagram.puml` — Added CommentsService class and relationships
+- `artifacts/component_diagram.puml` — Added CommentsService component to service layer
+
+### Test Results:
+✅ All 127 tests passing
+  - 69 existing tests (unchanged)
+  - 58 new CommentsService tests (all passing)
+
+### Implementation Summary:
+
+#### Must (All Implemented):
+- ✅ Implemented `CommentsService` class to manage `TaskComment` objects
+- ✅ Provided add() operation to add comment to task
+- ✅ Provided list_for_task() operation returning comments ordered by created_at
+- ✅ Provided delete() operation to delete comment by id
+- ✅ Validates that referenced task exists before adding comment (when TaskManager provided)
+- ✅ Integrated with existing storage mechanism via load_all()/save_all()
+
+#### Should (All Implemented):
+- ✅ Service responsibilities limited to TaskComment lifecycle management
+- ✅ Storage implementation kept separate (JsonStorage handles both tasks and comments)
+- ✅ Deleting a task cascades to its associated comments (TaskManager.delete() calls delete_by_task_id())
+
+#### Could (Implemented):
+- ✅ Added update() method supporting editing comment content and author
+- ✅ Updates automatically set updated_at timestamp
+
+#### Won't:
+- Threaded or nested comment structures (as specified)
+
+### Additional Notes:
+- Extended JsonStorage to support unified storage with {"tasks": [...], "comments": [...]} format
+- Implemented automatic backward compatibility: old list-based JSON files transparently migrate to new dict format
+- CommentsService follows identical pattern to TaskManager: in-memory dict + _load()/_persist()
+- Supports UUID prefix lookup like TaskManager (e.g., first 8 chars of comment ID)
+- Ambiguous prefix lookups raise CommentNotFoundError with descriptive message
+- Optional TaskManager dependency for task existence validation (can work without it for testing)
+- Circular import prevention using TYPE_CHECKING pattern with forward references
+- Comments sorted by created_at ascending in list_for_task()
+- All datetime fields are UTC timezone-aware, preserved through ISO format serialization
+
+### Storage Format Changes:
+**Old Format (migrated automatically):**
+```json
+[
+  {"id": "...", "title": "...", ...}
+]
+```
+
+**New Format:**
+```json
+{
+  "tasks": [...],
+  "comments": [...]
+}
+```
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

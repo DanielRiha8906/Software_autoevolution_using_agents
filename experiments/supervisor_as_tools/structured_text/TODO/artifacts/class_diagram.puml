@@ -44,17 +44,21 @@ package "storage" #FFF3CC {
         +JsonStorage(path: String [0..1])
         +load() : List<Dictionary>
         +save(tasks: List<Dictionary>) : void
+        +load_all() : Dictionary
+        +save_all(data: Dictionary) : void
     }
 }
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
+    exception CommentNotFoundError
 
     class TaskManager {
         -storage : JsonStorage
         -tasks : Dictionary<String, Task>
+        -comments_service : CommentsService [0..1]
         --
-        +TaskManager(storage: JsonStorage [0..1])
+        +TaskManager(storage: JsonStorage [0..1], comments_service: CommentsService [0..1])
         +add(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
         +get(taskId: String) : Task
         +listAll() : List<Task>
@@ -63,6 +67,23 @@ package "services" #DDFFD4 {
         +setStatus(taskId: String, status: TaskStatus) : Task
         +set_due_date(taskId: String, due_date: DateTime [0..1]) : Task
         +delete(taskId: String) : void
+        -load() : void
+        -persist() : void
+    }
+
+    class CommentsService {
+        -storage : JsonStorage
+        -comments : Dictionary<String, TaskComment>
+        -task_manager : TaskManager [0..1]
+        --
+        +CommentsService(storage: JsonStorage [0..1], task_manager: TaskManager [0..1])
+        +add(task_id: String, content: String, author: String [0..1]) : TaskComment
+        +get(comment_id: String) : TaskComment
+        +listAll() : List<TaskComment>
+        +list_for_task(task_id: String) : List<TaskComment>
+        +update(comment_id: String, content: String [0..1], author: String [0..1]) : TaskComment
+        +delete(comment_id: String) : void
+        +delete_by_task_id(task_id: String) : void
         -load() : void
         -persist() : void
     }
@@ -101,6 +122,10 @@ package "cli" #FFE5E5 {
 Task --> TaskStatus : status
 TaskComment --> Task : task_id references
 TaskManager --> JsonStorage : storage
+TaskManager "1" --> "0..1" CommentsService : optional dependency
+CommentsService --> JsonStorage : storage
+CommentsService "0..1" --> "1" TaskManager : optional dependency
+CommentsService ..> CommentNotFoundError : raises
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
 TodoCLI --> TodoService : service
