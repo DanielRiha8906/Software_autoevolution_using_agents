@@ -69,3 +69,49 @@ class TestCalculatorService:
         assert result.execution_time_ms == 0.0
         assert result.operation == "add"
         assert result.result == 3
+
+    # Square operation service tests
+    def test_perform_square(self):
+        result = self.service.perform(Operation.SQUARE, 5, 0)
+        assert result.result == 25
+
+    def test_perform_square_saves_to_storage(self):
+        self.service.perform(Operation.SQUARE, 5, 0)
+        self.storage.save.assert_called_once()
+
+    # Sqrt operation service tests
+    def test_perform_sqrt(self):
+        result = self.service.perform(Operation.SQRT, 4, 0)
+        assert result.result == 2.0
+
+    def test_perform_sqrt_negative_raises(self):
+        with pytest.raises(ValueError, match="Cannot calculate square root of negative number"):
+            self.service.perform(Operation.SQRT, -1, 0)
+
+    def test_perform_sqrt_negative_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.SQRT, -1, 0)
+        self.storage.save.assert_not_called()
+
+    # Power operation service tests
+    def test_perform_power(self):
+        result = self.service.perform(Operation.POWER, 2, 3)
+        assert result.result == 8
+
+    def test_perform_power_saves_to_storage(self):
+        self.service.perform(Operation.POWER, 2, 3)
+        self.storage.save.assert_called_once()
+
+    # Modulo operation service tests
+    def test_perform_modulo(self):
+        result = self.service.perform(Operation.MODULO, 10, 3)
+        assert result.result == 1
+
+    def test_perform_modulo_by_zero_raises(self):
+        with pytest.raises(ValueError, match="Modulo by zero is not allowed"):
+            self.service.perform(Operation.MODULO, 5, 0)
+
+    def test_perform_modulo_by_zero_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.MODULO, 5, 0)
+        self.storage.save.assert_not_called()
