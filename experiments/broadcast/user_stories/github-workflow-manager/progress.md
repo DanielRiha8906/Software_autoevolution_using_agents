@@ -157,3 +157,70 @@ Candidate A was selected as the winner (arbitrary choice since all implementatio
 - artifacts/class_diagram.puml — Updated to show WorkflowRunAttempt class and its 1:* relationship with WorkflowRun
 
 Duration: 370.6s | Cost: $0.701894 USD | Turns: 39
+
+## Task 04: Create AttemptService for attempt management
+
+**Broadcast Architecture Results:**
+
+### Candidate A (SELECTED WINNER)
+- **Approach:** Created `AttemptService` class that manages `WorkflowRunAttempt` objects with `create_attempt()` method preventing duplicates via (run_id, attempt_number) tuple checking, and `get_attempts_for_run()` returning attempts sorted by attempt_number in ascending order. Integrated with separate `AttemptJsonStorage` class storing attempts in `artifacts/workflow_attempts.json`. Implemented `_persist()` for automatic storage updates. Created comprehensive test suite with 23 tests covering creation, duplicate prevention, retrieval, sorting, and storage integration.
+- **Test Results:** 73 passed (50 existing + 23 new)
+- **Files Changed:**
+  - src/services/attempt_service.py (created)
+  - src/storage/attempt_json_storage.py (created)
+  - src/services/__init__.py (updated)
+  - src/storage/__init__.py (updated)
+  - tests/test_attempt_service.py (created)
+
+### Candidate B
+- **Approach:** Identical implementation to Candidate A
+- **Test Results:** 73 passed (50 existing + 23 new)
+- **Files Changed:**
+  - src/services/attempt_service.py (created)
+  - src/storage/attempt_json_storage.py (created)
+  - src/services/__init__.py (updated)
+  - src/storage/__init__.py (updated)
+  - tests/test_attempt_service.py (created)
+
+### Candidate C
+- **Approach:** Identical implementation to Candidates A and B
+- **Test Results:** 73 passed (50 existing + 23 new)
+- **Files Changed:**
+  - src/services/attempt_service.py (created)
+  - src/storage/attempt_json_storage.py (created)
+  - src/services/__init__.py (updated)
+  - src/storage/__init__.py (updated)
+  - tests/test_attempt_service.py (created)
+
+**Selection Rationale:**
+
+All three candidates produced identical implementations with 100% test pass rate (73/73 tests). They all:
+- Created `AttemptService` class with `create_attempt()` and `get_attempts_for_run()` methods
+- Implemented duplicate prevention via (run_id, attempt_number) tuple checking before creation
+- Integrated with separate `AttemptJsonStorage` for JSON persistence
+- Implemented `_persist()` method for automatic storage updates on creation
+- Added comprehensive test suite (23 tests) covering:
+  - Creating single and multiple attempts
+  - Duplicate prevention enforcement
+  - Retrieval of attempts by run_id
+  - Sorting of attempts by attempt_number in ascending order
+  - Storage integration and persistence behavior
+  - Edge cases and boundary conditions
+- Maintained consistency with existing `WorkflowRunService` and `WorkflowJsonStorage` patterns
+
+Candidate A was selected as the winner (arbitrary choice since all implementations were functionally identical).
+
+**Acceptance Criteria Met:**
+✓ `AttemptService` supports creating an attempt via `create_attempt()`
+✓ `AttemptService` retrieves all attempts for a given `run_id` via `get_attempts_for_run()`
+✓ The service integrates with the existing storage mechanism (`AttemptJsonStorage`)
+✓ Duplicate attempt numbers per run are prevented (raises ValueError if (run_id, attempt_number) exists)
+✓ Attempts are returned sorted by attempt_number in ascending order
+✓ No caching layer added - only loads from storage on init
+✓ Storage mechanism stores attempts separately from runs (`artifacts/workflow_attempts.json`)
+✓ All existing tests continue to pass (no regression)
+
+**Diagrams Updated:**
+- artifacts/class_diagram.puml — Added `AttemptService` and `AttemptJsonStorage` classes with relationships
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
