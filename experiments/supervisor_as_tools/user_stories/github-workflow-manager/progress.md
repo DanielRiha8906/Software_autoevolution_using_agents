@@ -72,4 +72,4 @@ Successfully implemented encapsulated state checking methods for the WorkflowRun
 ## Diagram Updates
 - `artifacts/class_diagram.puml` — Updated WorkflowRun class to show new methods
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 161.1s | Cost: $0.351685 USD | Turns: 28
