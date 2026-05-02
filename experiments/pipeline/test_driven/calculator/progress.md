@@ -137,3 +137,80 @@ The implementation satisfies all provided Task 02 test requirements:
 - No changes to activity, component, use case, or state diagrams (operations handled polymorphically)
 
 Duration: 364.5s | Cost: $0.564171 USD | Turns: 17
+
+---
+
+## Task 03: Create MemoryEntry Domain Class
+
+### Task Number
+Task 03
+
+### Files Changed
+- `src/models/memory_entry.py` — New file: MemoryEntry dataclass with all calculation history attributes
+- `src/models/__init__.py` — Added MemoryEntry export
+- `tests/test_memory_entry.py` — New file: 9 test cases for MemoryEntry
+- `artifacts/class_diagram.puml` — Added MemoryEntry class to models package
+- `artifacts/component_diagram.puml` — Updated Domain Models component label
+
+### Test Results
+- **Status:** ✓ All tests passed
+- **Output:** 47 passed in 0.10s (9 new MemoryEntry tests + 38 existing calculator tests)
+- **New tests:** All 9 MemoryEntry tests pass
+- **Regression:** All 38 existing calculator tests continue to pass (no regressions)
+
+### Implementation Details
+
+#### New Class in `src/models/memory_entry.py`
+```python
+@dataclass
+class MemoryEntry:
+    operation: str
+    operands: list
+    result: float | None
+    success: bool
+    execution_time_ms: float
+    id: str = field(default="")
+    timestamp: str = field(default="")
+```
+
+**Methods:**
+- `__post_init__()` — Auto-generates UUID id and ISO timestamp if not provided (preserves values during deserialization)
+- `to_dict()` — Serializes to dictionary using `asdict()`
+- `from_dict(data: dict)` — Deserializes from dictionary, preserves id and timestamp
+
+#### Updated `src/models/__init__.py`
+- Added import: `from .memory_entry import MemoryEntry`
+- Added MemoryEntry to `__all__` exports
+
+### Key Design Decisions
+1. **Unique IDs:** Each MemoryEntry gets a UUID4 auto-generated in `__post_init__()`
+2. **Timestamps:** ISO8601 format auto-generated in `__post_init__()` via `datetime.now().isoformat()`
+3. **Serialization:** Follows CalculationResult pattern: optional id/timestamp fields (empty string defaults) allow round-trip preservation
+4. **Failed Calculations:** result field can be None when success=False
+5. **Operands:** list type to support variable-arity operations (unary, binary, etc.)
+6. **No Formatting:** No print statements or presentation logic in MemoryEntry class (belongs in interface layer)
+
+### Test Coverage
+The implementation satisfies all 9 provided test requirements:
+- ✓ test_memory_entry_can_be_created — Basic instantiation with all fields
+- ✓ test_memory_entry_has_unique_id — Each instance gets unique UUID
+- ✓ test_memory_entry_id_is_uuid_string — ID is valid UUID4 string
+- ✓ test_memory_entry_has_timestamp — Timestamp auto-populated on construction
+- ✓ test_memory_entry_supports_failed_calculation — result=None, success=False supported
+- ✓ test_memory_entry_serializes_to_dict — to_dict() returns dict with all fields
+- ✓ test_memory_entry_serializes_timestamp_as_string — timestamp is string in dict
+- ✓ test_memory_entry_round_trips_via_dict — from_dict() preserves original id/timestamp
+- ✓ test_memory_entry_contains_no_formatting_logic — No print statements in module
+
+### Architecture Compliance
+- **Pipeline Architecture:** Followed strict sequential pipeline: Data Analyst → System Architect → Programmer → Tests → UML Designer
+- **Test-Driven Strategy:** All changes driven by provided test requirements
+- **Code Quality:** Minimal changes, follows existing patterns (mirrors CalculationResult design)
+- **No External Dependencies:** Used only Python standard library (uuid, dataclasses, datetime)
+
+### UML Updates
+- Updated `artifacts/class_diagram.puml` to show MemoryEntry class in models package with all attributes and methods
+- Updated `artifacts/component_diagram.puml` to reflect MemoryEntry in Domain Models component
+- Both PlantUML files remain valid and properly formatted
+
+Duration: 290.2s | Cost: $0.498561 USD | Turns: 21
