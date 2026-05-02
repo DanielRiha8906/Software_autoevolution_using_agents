@@ -47,4 +47,4 @@ Duration: 313.4s | Cost: $0.456656 USD | Turns: 16
 - is_successful() and is_failed() are mutually exclusive
 - All state combinations tested
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 257.1s | Cost: $0.443694 USD | Turns: 18
