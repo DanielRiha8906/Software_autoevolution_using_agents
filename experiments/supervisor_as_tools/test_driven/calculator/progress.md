@@ -30,3 +30,41 @@ Implemented execution time tracking for `CalculationResult` to expose elapsed ex
 - ✓ UML diagrams updated to reflect current implementation
 
 Duration: 236.9s | Cost: $0.373270 USD | Turns: 22
+
+## Task 02: Extended Calculator Operations
+
+### Summary
+Extended the `Calculator` class with four new mathematical operations: `square`, `sqrt`, `power`, and `modulo`, following the same interface conventions as existing operations and handling relevant edge cases.
+
+### Files Changed
+- `src/services/calculator.py` - Added four new methods:
+  - `square(x: float) -> float` - Returns x²
+  - `sqrt(x: float) -> float` - Returns square root with exception handling for negative inputs
+  - `power(base: float, exponent: float) -> float` - Returns base^exponent, handles negative and fractional exponents
+  - `modulo(x: float, y: float) -> float` - Returns x % y with exception handling for zero divisor
+- `tests/test_calculator.py` - Added 10 new test cases covering all new operations and edge cases
+- `artifacts/class_diagram.puml` - Updated Calculator class definition to include new methods
+
+### Test Results
+- **Total Tests:** 55 (45 existing + 10 new)
+- **Passed:** 55
+- **Failed:** 0
+- **Status:** ✓ All tests pass
+
+### Key Implementation Details
+1. **square()** - Uses `x ** 2` operator, simple and direct
+2. **sqrt()** - Uses `math.sqrt()` after validation; raises `Exception` if x < 0
+3. **power()** - Uses `base ** exponent` operator; naturally handles negative and fractional exponents
+4. **modulo()** - Uses `x % y` operator; raises `Exception` if y == 0
+5. All methods follow existing code patterns and maintain backward compatibility
+6. Error handling uses generic `Exception` for sqrt of negative and modulo by zero
+
+### Acceptance Criteria
+- ✓ All provided tests pass
+- ✓ Existing tests still pass (55 total tests)
+- ✓ Code compiles without syntax or import errors
+- ✓ New operations follow same interface conventions as existing operations
+- ✓ Edge cases handled with exceptions (sqrt of negative, modulo by zero)
+- ✓ UML diagrams updated to reflect current implementation
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
