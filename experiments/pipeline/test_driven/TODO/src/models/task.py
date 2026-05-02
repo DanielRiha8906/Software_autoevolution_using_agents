@@ -65,3 +65,39 @@ class Task:
             updated_at=datetime.fromisoformat(data["updated_at"]),
             due_date=due_date,
         )
+
+    def mark_in_progress(self) -> None:
+        """Mark the task as in progress and update the timestamp."""
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(tz=CEST)
+
+    def mark_done(self) -> None:
+        """Mark the task as done and update the timestamp."""
+        self.status = TaskStatus.DONE
+        self.updated_at = datetime.now(tz=CEST)
+
+    def reopen(self) -> None:
+        """Reopen the task by marking it as pending and update the timestamp."""
+        self.status = TaskStatus.PENDING
+        self.updated_at = datetime.now(tz=CEST)
+
+    def is_completed(self) -> bool:
+        """Check if the task is completed."""
+        return self.status == TaskStatus.DONE
+
+    def is_pending(self) -> bool:
+        """Check if the task is pending."""
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Check if the task is in progress."""
+        return self.status == TaskStatus.IN_PROGRESS
+
+    def is_overdue(self) -> bool:
+        """Check if the task is overdue (past due_date and not completed)."""
+        if self.due_date is None:
+            return False
+        if self.status == TaskStatus.DONE:
+            return False
+        now_cest = datetime.now(tz=CEST)
+        return self.due_date < now_cest
