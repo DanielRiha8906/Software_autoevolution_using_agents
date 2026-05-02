@@ -45,4 +45,4 @@ Duration: 272.1s | Cost: $0.494900 USD | Turns: 16
 - is_successful() and is_failed() are mutually exclusive
 - No enum modifications required
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 246.1s | Cost: $0.424028 USD | Turns: 14
