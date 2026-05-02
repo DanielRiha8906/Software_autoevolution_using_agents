@@ -38,4 +38,4 @@
 - Two CLI modes: interactive (option 6) and one-shot (`due-date` subcommand)
 - UML diagrams updated to reflect new classes and methods
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 367.9s | Cost: $0.723867 USD | Turns: 18
