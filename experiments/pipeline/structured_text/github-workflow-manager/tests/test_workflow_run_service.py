@@ -8,7 +8,7 @@ from src.models.workflow_conclusion import WorkflowConclusion
 from src.services.workflow_run_service import WorkflowRunService
 
 
-def _make_run(run_id: str = "run-1", branch: str = "main") -> WorkflowRun:
+def _make_run(run_id: str = "run-1", branch: str = "main", duration_seconds: float = 0.0) -> WorkflowRun:
     return WorkflowRun(
         id=run_id,
         workflow_name="CI",
@@ -19,6 +19,7 @@ def _make_run(run_id: str = "run-1", branch: str = "main") -> WorkflowRun:
         updated_at=None,
         run_number=1,
         commit_sha="abc123",
+        duration_seconds=duration_seconds,
     )
 
 
@@ -71,3 +72,12 @@ def test_filter_by_conclusion(service):
     service.add_workflow_run(run)
     assert service.filter_by_conclusion(WorkflowConclusion.SUCCESS) == [run]
     assert service.filter_by_conclusion(WorkflowConclusion.FAILURE) == []
+
+
+def test_duration_seconds_persisted(service):
+    """Verify duration_seconds is preserved when adding and retrieving a run."""
+    run = _make_run("run-duration", "main", duration_seconds=45.67)
+    service.add_workflow_run(run)
+    retrieved = service.get_run_detail("run-duration")
+    assert retrieved is not None
+    assert retrieved.duration_seconds == 45.67
