@@ -24,6 +24,59 @@ class WorkflowRun:
         if self.duration_seconds < 0:
             raise ValueError("duration_seconds must be non-negative")
 
+    def is_terminal(self) -> bool:
+        """Return True if the run is in a final state.
+
+        A run is terminal when its status is COMPLETED.
+        """
+        return self.status == WorkflowStatus.COMPLETED
+
+    def is_running(self) -> bool:
+        """Return True if the run is actively running.
+
+        A run is considered running when status is IN_PROGRESS, QUEUED, WAITING,
+        REQUESTED, or PENDING.
+        """
+        return self.status in (
+            WorkflowStatus.IN_PROGRESS,
+            WorkflowStatus.QUEUED,
+            WorkflowStatus.WAITING,
+            WorkflowStatus.REQUESTED,
+            WorkflowStatus.PENDING,
+        )
+
+    def is_successful(self) -> bool:
+        """Return True if the run completed successfully.
+
+        A run is successful when status is COMPLETED and conclusion is SUCCESS.
+        """
+        return (
+            self.status == WorkflowStatus.COMPLETED
+            and self.conclusion == WorkflowConclusion.SUCCESS
+        )
+
+    def is_failed(self) -> bool:
+        """Return True if the run failed.
+
+        A run is failed when status is COMPLETED and conclusion is FAILURE,
+        TIMED_OUT, or ACTION_REQUIRED.
+        """
+        return (
+            self.status == WorkflowStatus.COMPLETED
+            and self.conclusion in (
+                WorkflowConclusion.FAILURE,
+                WorkflowConclusion.TIMED_OUT,
+                WorkflowConclusion.ACTION_REQUIRED,
+            )
+        )
+
+    def is_cancelled(self) -> bool:
+        """Return True if the run was cancelled.
+
+        A run is cancelled when conclusion is CANCELLED.
+        """
+        return self.conclusion == WorkflowConclusion.CANCELLED
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
