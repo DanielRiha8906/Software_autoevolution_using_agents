@@ -43,3 +43,54 @@ All three candidates produced identical implementations with identical test resu
 ✓ No breaking changes to Task constructor or API
 
 Duration: 20.5s | Cost: $0.530492 USD | Turns: 5
+
+---
+
+# Task 02: Add status transition methods to Task model
+
+## Broadcast Evaluation Results
+
+### Candidate A - SELECTED
+**Test Score:** 61/61 ✓
+**Approach:** Direct status mutations with CEST timezone handling
+
+**Implementation Details:**
+- Added `mark_in_progress()`: sets status to IN_PROGRESS, updates updated_at to current CEST time
+- Added `mark_done()`: sets status to DONE, updates updated_at to current CEST time
+- Added `reopen()`: resets status to PENDING, updates updated_at to current CEST time
+- Added `is_completed()`: returns True if status == DONE
+- Added `is_overdue()`: returns True if due_date is set and in the past (using CEST for comparison)
+- Added `is_pending()`: returns True if status == PENDING
+- Added `is_in_progress()`: returns True if status == IN_PROGRESS
+
+All status-mutating methods properly update `updated_at` to `datetime.now(CEST)` and maintain timezone awareness.
+
+**Why Selected:**
+All three candidates produced identical implementations with identical test results (61/61). All implementations use clean, direct status mutations with proper CEST timezone handling. Candidate A selected arbitrarily as the first successful implementation.
+
+### Candidate B
+**Test Score:** 61/61 ✓
+**Approach:** Identical to Candidate A
+
+### Candidate C
+**Test Score:** 61/61 ✓
+**Approach:** Identical to Candidate A
+
+## Files Changed
+- `src/models/task.py`: Added 7 status transition methods to Task class
+- `tests/test_task_02.py`: Created new test file with 13 tests for status transitions
+
+## Test Results
+**All Tests Passing:** 61/61
+- 13 new tests in test_task_02.py (all status transition tests)
+- 48 existing tests (from Task 01 and other modules)
+
+## Implementation Quality
+✓ All status-mutating methods update updated_at to current CEST time
+✓ All timestamps remain timezone-aware
+✓ State-checking methods derive strictly from existing attributes
+✓ is_overdue() properly handles None due_date case
+✓ No external dependencies required
+✓ Full backward compatibility maintained
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
