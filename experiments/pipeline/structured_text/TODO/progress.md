@@ -104,4 +104,4 @@ Duration: 260.0s | Cost: $0.403842 USD | Turns: 13
 - ✓ Should: Maintain relationship integrity (task_id validation in from_dict)
 - ⊘ Could: Not implemented — author, updated_at, edit() method (out of scope for Must/Should)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 297.2s | Cost: $0.466100 USD | Turns: 12
