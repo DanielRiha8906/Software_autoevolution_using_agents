@@ -107,4 +107,4 @@ Duration: 313.8s | Cost: $0.517612 USD | Turns: 18
 - ✅ Attempts can be returned sorted by attempt_number (filter_by_run returns sorted list)
 - ✅ No caching layer added (pure service + storage pattern)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 348.2s | Cost: $0.701826 USD | Turns: 13
