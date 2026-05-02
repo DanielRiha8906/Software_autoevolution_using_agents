@@ -44,3 +44,25 @@ Duration: 272.1s | Cost: $0.494900 USD | Turns: 16
 - Comprehensive docstrings and test coverage for all state combinations
 
 Duration: 299.8s | Cost: $0.540868 USD | Turns: 20
+
+## Task 03: Model Individual Workflow Run Attempts
+
+**Status:** ✅ Complete
+
+**Files Changed:**
+- src/models/workflow_run_attempt.py (created new model with 7 fields, validation, serialization)
+- src/models/__init__.py (added WorkflowRunAttempt export)
+- tests/test_workflow_run_attempt.py (created new test file with 43 test cases)
+- artifacts/class_diagram.puml (added WorkflowRunAttempt class and relationship to WorkflowRun)
+- artifacts/component_diagram.puml (added WorkflowRunAttempt to domain model)
+
+**Test Result:** ✅ 76/76 tests passed (43 new tests + 33 existing tests)
+
+**Key Implementation Details:**
+- WorkflowRunAttempt dataclass with fields: id (int), run_id (int), attempt_number (int), status (str), conclusion (Optional[str]), created_at (datetime), duration_seconds (float = 0.0)
+- Validation in __post_init__(): attempt_number >= 1, duration_seconds >= 0
+- Serialization/deserialization: to_dict() converts to JSON-compatible dict, from_dict() reconstructs from dict with timezone preservation
+- Parent-child relationship: run_id foreign key to WorkflowRun.id
+- Comprehensive test coverage: instantiation, validation, serialization, deserialization, round-trip, edge cases
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
