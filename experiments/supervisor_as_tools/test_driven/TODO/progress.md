@@ -25,3 +25,28 @@ Extended Task model with an optional `due_date: Optional[datetime]` field that p
 - Validation occurs in `from_dict()` and service layer entry points
 
 Duration: 193.5s | Cost: $0.364279 USD | Turns: 19
+
+## Task 02: Add status management methods to Task model
+
+### Summary
+Extended Task model with 7 methods for status management and state querying. Status transitions now have proper logic with automatic timestamp updates in CEST timezone.
+
+### Files Changed
+- `src/models/task.py` — Added 7 methods: mark_in_progress(), mark_done(), reopen(), is_completed(), is_overdue(), is_pending(), is_in_progress()
+- `artifacts/class_diagram.puml` — Updated Task class definition with new methods
+
+### Test Results
+- All 12 new task status tests: ✓ PASS
+- All 48 total tests: ✓ PASS
+- No regressions in existing tests
+
+### Implementation Details
+- `mark_in_progress()`, `mark_done()`, `reopen()` — Update status and set `updated_at` to current CEST (UTC+2) time
+- `is_completed()` — Returns True if status is DONE
+- `is_pending()` — Returns True if status is PENDING
+- `is_in_progress()` — Returns True if status is IN_PROGRESS
+- `is_overdue()` — Returns True if due_date exists and is in the past (current time in CEST), False otherwise
+- All methods derive state strictly from existing Task attributes
+- All timestamps remain timezone-aware after status changes
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
