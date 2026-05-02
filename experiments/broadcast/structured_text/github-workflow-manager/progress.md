@@ -142,3 +142,85 @@ Duration: 301.8s | Cost: $0.547521 USD | Turns: 35
 - Test coverage includes edge cases and all state combinations
 
 Duration: 114.6s | Cost: $0.855491 USD | Turns: 39
+
+## Task 03: Create WorkflowRunAttempt Class
+
+**Branch:** task/broadcast-structured_text-github-workflow-manager-03
+
+### Broadcast Architecture Evaluation
+
+**Candidates Evaluated:**
+- **broadcast-candidate-a**: 60 tests passing ✓
+- **broadcast-candidate-b**: 60 tests passing ✓
+- **broadcast-candidate-c**: 60 tests passing ✓
+
+**Selected Winner:** broadcast-candidate-a
+
+**Reason:** All three candidates produced identical implementations with identical test coverage (60/60 passing). Candidate-a was selected as the first successful completion with comprehensive implementation of all requirements.
+
+### Implementation Summary
+
+**Files Changed:**
+1. `src/models/workflow_run_attempt.py` (NEW)
+   - Created WorkflowRunAttempt dataclass with all required attributes
+   - Attributes: id, run_id, attempt_number, status, conclusion, created_at, duration_seconds
+   - Implemented to_dict() method for serialization (ISO format timestamps)
+   - Implemented from_dict() classmethod for deserialization with validation
+
+2. `src/models/workflow_run.py`
+   - Added `attempts: list[WorkflowRunAttempt]` field to WorkflowRun
+   - Added TYPE_CHECKING import to avoid circular import issues
+   - Updated to_dict() to serialize attempts list
+   - Updated from_dict() to deserialize attempts and reconstruct WorkflowRunAttempt objects
+
+3. `src/models/__init__.py`
+   - Added WorkflowRunAttempt to module imports and __all__ exports
+
+4. `artifacts/class_diagram.puml`
+   - Added WorkflowRunAttempt class definition with all attributes and methods
+   - Added one-to-many relationship (1 WorkflowRun → * WorkflowRunAttempt)
+
+### Requirements Met
+
+**Must Have:**
+- ✓ Created WorkflowRunAttempt class with all required attributes
+  - id: int (attempt identifier)
+  - run_id: int (reference to parent WorkflowRun)
+  - attempt_number: int (sequence number within a run)
+  - status: str (execution status)
+  - conclusion: Optional[str] (terminal outcome)
+  - created_at: datetime (timestamp in CEST, UTC+2 format via ISO)
+- ✓ Established one-to-many relationship to WorkflowRun via attempts list
+
+**Should Have:**
+- ✓ Serialization via to_dict() method with ISO timestamp handling
+- ✓ Deserialization via from_dict() classmethod with validation
+
+**Could Have:**
+- ✓ duration_seconds: float attribute for attempt-specific execution time tracking
+
+**Won't Have:**
+- Not implemented (not required per specification)
+
+### Test Results
+
+**Final test run:** 60/60 tests passing
+- All 9 existing storage and service tests pass
+- All 51 existing state method tests pass
+- Integration with JSON serialization and storage layer verified
+- Datetime serialization/deserialization verified across all tests
+
+**Test execution time:** 0.08s
+
+### Implementation Details
+
+- Used @dataclass decorator for consistency with WorkflowRun pattern
+- TYPE_CHECKING guard in WorkflowRun prevents circular imports
+- Datetime serialized using isoformat() for CEST/UTC timestamp handling
+- Validation in from_dict() ensures duration_seconds is non-negative
+- Seamless integration with existing WorkflowJsonStorage and WorkflowRunService
+- No new dependencies added (standard library only)
+
+Files changed: src/models/workflow_run_attempt.py, src/models/workflow_run.py, src/models/__init__.py, artifacts/class_diagram.puml
+
+Duration: 234.5s | Cost: $0.459188 USD | Turns: 27
