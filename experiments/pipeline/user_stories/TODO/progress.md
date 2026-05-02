@@ -100,4 +100,4 @@ Implemented TaskComment domain model allowing users to attach timestamped notes 
 - No circular dependencies: TaskComment.task_id is string, not Task object reference
 - All timestamps stored as UTC, compatible with existing Task model patterns
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 354.1s | Cost: $0.622307 USD | Turns: 17
