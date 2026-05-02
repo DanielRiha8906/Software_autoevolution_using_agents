@@ -38,6 +38,42 @@ class Task:
             raise ValueError("due_date must be a datetime object or None")
         self.due_date = due_date
 
+    def mark_in_progress(self) -> None:
+        """Transition PENDING → IN_PROGRESS. Invalid transitions are no-op."""
+        if self.status == TaskStatus.PENDING:
+            self.status = TaskStatus.IN_PROGRESS
+            self.updated_at = datetime.now(CEST)
+
+    def mark_done(self) -> None:
+        """Transition IN_PROGRESS → DONE. Invalid transitions are no-op."""
+        if self.status == TaskStatus.IN_PROGRESS:
+            self.status = TaskStatus.DONE
+            self.updated_at = datetime.now(CEST)
+
+    def reopen(self) -> None:
+        """Transition DONE → IN_PROGRESS. Invalid transitions are no-op."""
+        if self.status == TaskStatus.DONE:
+            self.status = TaskStatus.IN_PROGRESS
+            self.updated_at = datetime.now(CEST)
+
+    def is_completed(self) -> bool:
+        """Return True if status == DONE."""
+        return self.status == TaskStatus.DONE
+
+    def is_overdue(self) -> bool:
+        """Return True if due_date is set, due_date < now, and status != DONE."""
+        if self.due_date is None or self.status == TaskStatus.DONE:
+            return False
+        return self.due_date < datetime.now(CEST)
+
+    def is_pending(self) -> bool:
+        """Return True if status == PENDING."""
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Return True if status == IN_PROGRESS."""
+        return self.status == TaskStatus.IN_PROGRESS
+
     @classmethod
     def from_dict(cls, data: dict) -> Task:
         due_date_str = data.get("due_date")
