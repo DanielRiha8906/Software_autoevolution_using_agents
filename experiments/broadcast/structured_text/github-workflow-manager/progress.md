@@ -70,3 +70,75 @@
 - Follows existing code patterns and style
 
 Duration: 301.8s | Cost: $0.547521 USD | Turns: 35
+
+## Task 02: Implement Workflow Run State Methods
+
+**Branch:** task/broadcast-structured_text-github-workflow-manager-02
+
+### Broadcast Architecture Evaluation
+
+**Candidates Evaluated:**
+- **broadcast-candidate-a**: No commits (implementation not pushed)
+- **broadcast-candidate-b**: 1 commit (799495d) - 60/60 tests passing ✓
+- **broadcast-candidate-c**: 1 commit (2edc6ea) - 60/60 tests passing ✓
+
+**Selected Winner:** broadcast-candidate-b
+
+**Reason:** Candidates B and C produced identical implementations with identical test coverage (60/60 passing). Selected candidate-b as the first successful implementation chronologically and merged its work into the task branch.
+
+### Implementation Summary
+
+**Files Changed:**
+1. `src/models/workflow_run.py`
+   - Added 5 new state query methods to WorkflowRun class:
+     - `is_running()` - Returns True if status in (in_progress, queued, waiting, requested, pending)
+     - `is_terminal()` - Returns True if status is completed (mutually exclusive with is_running)
+     - `is_successful()` - Returns True if status is completed AND conclusion is success
+     - `is_failed()` - Returns True if status is completed AND conclusion in (failure, timed_out)
+     - `is_cancelled()` - Returns True if conclusion is cancelled (convenience method)
+
+2. `tests/test_workflow_run_state.py` (new file)
+   - Comprehensive test suite with 51 tests organized into 6 test classes:
+     - TestIsRunning (6 tests)
+     - TestIsTerminal (8 tests)
+     - TestIsSuccessful (13 tests)
+     - TestIsFailed (13 tests)
+     - TestIsCancelled (9 tests)
+     - TestMutualExclusivity (2 tests)
+
+3. `artifacts/class_diagram.puml`
+   - Added all 5 new state query methods to WorkflowRun class diagram
+
+### Requirements Met
+
+**Must Have:**
+- ✓ Implemented methods: `is_terminal()`, `is_successful()`, `is_failed()`, `is_running()`
+- ✓ Methods derive state strictly from `status` and `conclusion`
+
+**Should Have:**
+- ✓ `is_terminal()` and `is_running()` are mutually exclusive
+- ✓ `is_successful()` and `is_failed()` are mutually exclusive
+- ✓ Comprehensive unit tests covering all state combinations
+
+**Could Have:**
+- ✓ Added bonus method `is_cancelled()` derived from conclusion
+
+### Test Results
+
+**Final test run:** 60/60 tests passing
+- 51 new state-specific tests (organized in 6 test classes)
+- 9 existing tests (storage and service tests)
+- Full coverage of all status and conclusion combinations
+- All mutual exclusivity constraints verified
+
+**Test execution time:** 0.11s
+
+### Implementation Details
+
+- All methods derive state strictly from `status` and `conclusion` enum values
+- Methods check: queued, in_progress, completed, waiting, requested, pending (status)
+- Conclusions: success, failure, cancelled, skipped, timed_out, action_required, neutral, stale
+- Each method has clear docstrings explaining the logic
+- Test coverage includes edge cases and all state combinations
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
