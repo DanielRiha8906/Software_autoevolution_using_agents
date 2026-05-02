@@ -59,4 +59,4 @@ Successfully implemented four new mathematical operations (square, sqrt, power, 
 - Unary operations display formatted as "symbol(a) = result" (e.g., "²(5) = 25")
 - Binary operations display as "a symbol b = result" (e.g., "2 ^ 8 = 256")
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 324.8s | Cost: $0.603179 USD | Turns: 27
