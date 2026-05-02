@@ -73,4 +73,4 @@ Duration: 220.3s | Cost: $0.388252 USD | Turns: 13
 - Error messages are descriptive (e.g., "Square root of negative number", "Modulo by zero")
 - No breaking changes; all existing operations and tests continue to pass
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 446.0s | Cost: $0.778298 USD | Turns: 24
