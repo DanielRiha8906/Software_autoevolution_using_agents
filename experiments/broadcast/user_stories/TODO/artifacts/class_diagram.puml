@@ -20,6 +20,13 @@ package "models" #DDEEFF {
         +due_date : DateTime [0..1]
         --
         +__post_init__() : void
+        +mark_in_progress() : void
+        +mark_done() : void
+        +reopen() : void
+        +is_pending() : bool
+        +is_in_progress() : bool
+        +is_completed() : bool
+        +is_overdue() : bool
         +to_dict() : Dictionary
         +from_dict(data: Dictionary) : Task
     }
