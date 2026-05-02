@@ -115,4 +115,4 @@ Successfully implemented a `MemoryService` class that handles storing and retrie
 - All existing tests continue to pass with no regressions
 - New MemoryService can coexist with existing CalculationResult/CalculatorService without breaking changes
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 286.2s | Cost: $0.527704 USD | Turns: 33
