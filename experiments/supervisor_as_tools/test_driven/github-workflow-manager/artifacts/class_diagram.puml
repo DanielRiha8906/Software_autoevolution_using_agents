@@ -38,6 +38,11 @@ package "models" #DDEEFF {
         --
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRun
+        +is_running() : boolean
+        +is_terminal() : boolean
+        +is_successful() : boolean
+        +is_failed() : boolean
+        +is_cancelled() : boolean
     }
 }
 
