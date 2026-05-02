@@ -49,4 +49,4 @@ Extended Task model with 7 methods for status management and state querying. Sta
 - All methods derive state strictly from existing Task attributes
 - All timestamps remain timezone-aware after status changes
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 212.0s | Cost: $0.205552 USD | Turns: 14
