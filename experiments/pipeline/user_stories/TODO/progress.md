@@ -63,4 +63,4 @@ Implemented status transition and state query methods on Task domain model to pr
 - is_overdue() returns False if: due_date is None, task is completed, or due_date is in future
 - All predicates are read-only with no side effects
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 227.6s | Cost: $0.402283 USD | Turns: 18
