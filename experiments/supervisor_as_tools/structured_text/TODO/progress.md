@@ -94,4 +94,4 @@ Duration: 269.9s | Cost: $0.435138 USD | Turns: 24
 - All tests verify timestamp updates with proper timezone handling
 - Complex transition chains tested to ensure robustness
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 212.7s | Cost: $0.390255 USD | Turns: 27
