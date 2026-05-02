@@ -1,392 +1,613 @@
-# Task 02: Implement Task Status Predicates and State Transitions — Analysis Report
+# CommentsService Implementation Analysis
 
-**Date:** 2026-05-02  
-**Status:** Analysis complete
+## Executive Summary
 
----
-
-## What the Task is Asking For
-
-Implement five new methods on the Task class that manage status transitions and state queries:
-1. **`mark_in_progress()`** — transition status from any state to IN_PROGRESS
-2. **`mark_done()`** — transition status to DONE
-3. **`reopen()`** — transition status back to PENDING
-4. **`is_completed()`** — query whether status is DONE
-5. **`is_overdue()`** — query whether due_date is set and in the past (already exists)
-
-Each status-mutating method must update `updated_at` to the current CEST time. Methods must derive their behavior strictly from existing Task attributes (status, due_date, updated_at). The implementation should prevent invalid status transitions (SHOULD requirement), add comprehensive unit tests (SHOULD requirement), and optionally add symmetrical predicates for PENDING and IN_PROGRESS states (COULD requirement).
+The TODO project needs a new CommentsService to manage TaskComment objects. The TaskComment model is already defined and tested. This analysis identifies the current architecture patterns, storage mechanism, service validation strategies, and the exact changes needed to integrate CommentsService into the existing codebase.
 
 ---
 
-## Current Task Class Structure
+## Current Codebase Structure
 
-**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/src/models/task.py`
-
-### Current Attributes
+### Directory Layout
 ```
-task.id: str (UUID, auto-generated)
-task.title: str (required)
-task.description: Optional[str] (defaults to None)
-task.status: TaskStatus (enum: PENDING, IN_PROGRESS, DONE)
-task.created_at: datetime (UTC, auto-generated at creation)
-task.updated_at: datetime (UTC, auto-generated at creation, updated on mutations)
-task.due_date: Optional[datetime] (CEST timezone-aware, defaults to None, added in Task 01)
+src/
+├── __init__.py
+├── __main__.py
+├── models/
+│   ├── __init__.py         (exports Task, TaskStatus, TaskComment)
+│   ├── task.py             (Task dataclass)
+│   ├── task_comment.py     (TaskComment dataclass)
+│   └── task_status.py      (TaskStatus enum)
+├── services/
+│   ├── __init__.py         (exports TaskManager, TaskNotFoundError, TodoService)
+│   ├── task_manager.py     (CRUD for Task objects)
+│   └── todo_service.py     (High-level API wrapping TaskManager)
+├── storage/
+│   ├── __init__.py
+│   └── json_storage.py     (JSON persistence layer)
+└── cli/
+    ├── __init__.py
+    ├── interactive_menu.py
+    └── todo_cli.py
 ```
 
-### Current Methods
-- `to_dict() -> dict` — serializes Task to JSON-compatible dict
-- `from_dict(data: dict) -> Task` — reconstructs Task from dict
-- `is_overdue() -> bool` — returns True if due_date is set and earlier than current CEST time
+### Models Layer
+
+#### TaskComment (already exists)
+**File:** `src/models/task_comment.py` (lines 1-54)
+**Class definition:**
+```python
+@dataclass
+class TaskComment:
+    task_id: str                      # Foreign key to Task
+    content: str                      # Comment text
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone(timedelta(hours=2))))
+    
+    def to_dict(self) -> dict:        # Serializes to JSON-compatible dict
+    @classmethod
+    def from_dict(cls, data: dict) -> TaskComment:  # Deserializes with validation
+```
+
+**Validation in from_dict():**
+- Checks all required fields present: id, task_id, content, created_at
+- Validates content is not empty or whitespace-only
+- Parses created_at using datetime.fromisoformat() with error handling
+- Raises ValueError for validation failures
+
+**Timezone:** CEST (UTC+2) via `timezone(timedelta(hours=2))`
+**ID generation:** UUID (auto-generated)
+**Ordering field:** created_at (ISO 8601 format when serialized)
+
+#### Task (existing)
+**File:** `src/models/task.py` (lines 1-85)
+- Primary key: id (UUID)
+- Fields: title, description (optional), status (TaskStatus enum), created_at, updated_at, due_date (optional)
+- Methods: to_dict(), from_dict(), is_overdue(), mark_in_progress(), mark_done(), reopen(), is_completed()
 
 ---
 
-## Status Enum Definition
+## Storage Mechanism
 
-**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/src/models/task_status.py`
+**Single storage implementation:** JsonStorage
+**File:** `src/storage/json_storage.py` (lines 1-24)
 
 ```python
-class TaskStatus(Enum):
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    DONE = "done"
+class JsonStorage:
+    def __init__(self, path: Optional[str] = None) -> None:
+        self._path = Path(path) if path else Path.home() / ".todo_data.json"
+    
+    def load(self) -> list[dict]:      # Returns raw list of dicts
+    def save(self, tasks: list[dict]) -> None:  # Saves list of dicts to JSON
 ```
+
+**Current behavior:**
+- Single file: `~/.todo_data.json`
+- Returns/accepts `list[dict]` (not type-specific; currently used only for Tasks)
+- No schema validation at storage layer
+- Path can be overridden in constructor (used in tests with tmp_path)
+- Parent directory creation: `mkdir(parents=True, exist_ok=True)`
+- JSON serialization: `json.dump(tasks, f, indent=2, ensure_ascii=False)`
+
+**Integration pattern:**
+1. Service loads raw dicts from storage
+2. Service deserializes dicts to model objects (validation happens in from_dict())
+3. Service performs business logic
+4. Service serializes model objects back to dicts
+5. Service calls storage.save() with list of dicts
 
 ---
 
-## Current Due Date Handling
+## Service Architecture
 
-Task 01 already implemented `due_date` as `Optional[datetime]` with CEST (UTC+2) timezone support. The `is_overdue()` method is implemented:
+### TaskManager (Low-level CRUD service)
+**File:** `src/services/task_manager.py` (lines 1-79)
 
+**Responsibilities:**
+- Load/persist Task objects via JsonStorage
+- CRUD operations on Task collection
+- In-memory cache of Task objects (dict[task_id, Task])
+- Task lookup with prefix matching (e.g., "abc123..." can be found by "abc12")
+
+**Methods:**
+- `add(title, description=None, due_date=None) -> Task`
+- `get(task_id: str) -> Task` (raises TaskNotFoundError if not found; supports prefix lookup)
+- `list_all() -> list[Task]`
+- `list_by_status(status: TaskStatus) -> list[Task]`
+- `update(task_id, title=None, description=None, due_date=None) -> Task`
+- `set_status(task_id, status: TaskStatus) -> Task`
+- `set_due_date(task_id, due_date) -> Task`
+- `delete(task_id: str) -> None`
+
+**Internal methods:**
+- `_load()` → deserializes Task objects from storage
+- `_persist()` → serializes Task objects to storage
+
+**Error handling:**
+- TaskNotFoundError (custom exception) raised when task_id not found (supports prefix matching)
+
+**Pattern: Load/Persist cycle**
 ```python
-def is_overdue(self) -> bool:
-    """Check if task is overdue (due_date is in the past in CEST timezone)."""
-    if self.due_date is None:
-        return False
-    cest = timezone(timedelta(hours=2))
-    now = datetime.now(cest)
-    return self.due_date < now
+def _load(self) -> None:
+    raw = self._storage.load()
+    self._tasks = {d["id"]: Task.from_dict(d) for d in raw}
+
+def _persist(self) -> None:
+    self._storage.save([t.to_dict() for t in self._tasks.values()])
 ```
 
----
+### TodoService (High-level API)
+**File:** `src/services/todo_service.py` (lines 1-46)
 
-## State Transition Model
+**Responsibilities:**
+- Wrap TaskManager for public-facing API
+- Input validation (non-empty titles)
+- Delegate CRUD to TaskManager
 
-Per the state diagram in `artifacts/state_diagram.puml`:
+**Methods:**
+- `add_task(title, description=None, due_date=None) -> Task` (validates non-empty title)
+- `get_task(task_id: str) -> Task`
+- `list_tasks(status: TaskStatus | None) -> list[Task]`
+- `start_task(task_id) -> Task` (set status to IN_PROGRESS)
+- `complete_task(task_id) -> Task` (set status to DONE)
+- `reopen_task(task_id) -> Task` (set status to PENDING)
+- `update_task(task_id, title=None, description=None, due_date=None) -> Task` (validates non-empty title)
+- `set_due_date(task_id, due_date) -> Task`
+- `delete_task(task_id) -> None`
 
-```
-[*] --> PENDING
-PENDING --> IN_PROGRESS (via mark_in_progress or start)
-IN_PROGRESS --> DONE (via mark_done or complete)
-DONE --> IN_PROGRESS (not directly reachable via reopen, which goes to PENDING)
-PENDING --> PENDING (reopen on PENDING is a no-op or error)
-IN_PROGRESS --> IN_PROGRESS (mark_in_progress on IN_PROGRESS is a no-op)
-DONE --> DONE (mark_done on DONE is a no-op)
-```
-
-Note: The state diagram shows `reopen` transitions DONE → IN_PROGRESS, but the task requirements state `reopen()` should transition to PENDING. This is a discrepancy that must be resolved by the next agent.
-
----
-
-## Methods to Implement on Task Class
-
-### 1. `mark_in_progress() -> None`
-- **Purpose:** Transition task status to IN_PROGRESS
-- **Signature:** `def mark_in_progress(self) -> None:`
-- **Behavior:**
-  - Set `self.status = TaskStatus.IN_PROGRESS`
-  - Update `self.updated_at = datetime.now(timezone(timedelta(hours=2)))` (CEST)
-  - If already IN_PROGRESS, should be a no-op (or raise, per SHOULD requirement)
-- **Preconditions:** None (any status can transition to IN_PROGRESS)
-- **Side effects:** Mutates self; persists via caller
-
-### 2. `mark_done() -> None`
-- **Purpose:** Transition task status to DONE
-- **Signature:** `def mark_done(self) -> None:`
-- **Behavior:**
-  - Set `self.status = TaskStatus.DONE`
-  - Update `self.updated_at = datetime.now(timezone(timedelta(hours=2)))` (CEST)
-  - If already DONE, should be a no-op (or raise)
-- **Preconditions:** None (any status can transition to DONE)
-- **Side effects:** Mutates self; persists via caller
-
-### 3. `reopen() -> None`
-- **Purpose:** Transition task status to PENDING (reopen a closed or in-progress task)
-- **Signature:** `def reopen(self) -> None:`
-- **Behavior:**
-  - Set `self.status = TaskStatus.PENDING`
-  - Update `self.updated_at = datetime.now(timezone(timedelta(hours=2)))` (CEST)
-  - If already PENDING, should be a no-op (or raise)
-- **Preconditions:** None (any status can reopen to PENDING)
-- **Side effects:** Mutates self; persists via caller
-
-### 4. `is_completed() -> bool`
-- **Purpose:** Check if task is in DONE state
-- **Signature:** `def is_completed(self) -> bool:`
-- **Behavior:**
-  - Return `True` if `self.status == TaskStatus.DONE`
-  - Return `False` otherwise
-- **Pure function:** No side effects
-
-### 5. `is_overdue() -> bool` (Already exists)
-- **Purpose:** Check if task is overdue
-- **Current implementation** is correct per Task 01
-- **No changes needed** for Task 02
-
----
-
-## CEST Timezone Handling
-
-All datetime updates must use CEST (UTC+2 fixed offset), not UTC:
-
+**Validation pattern:**
 ```python
-from datetime import datetime, timezone, timedelta
-
-cest = timezone(timedelta(hours=2))
-now = datetime.now(cest)
+def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
+    if not title or not title.strip():
+        raise ValueError("Task title cannot be empty")
+    return self._manager.add(title.strip(), description, due_date)
 ```
 
-Currently, `updated_at` is set to UTC in TaskManager (`datetime.now(timezone.utc)`). The Task methods should use CEST directly when they update `updated_at`.
-
 ---
 
-## Validation & Invalid Transitions (SHOULD Requirement)
+## Task Validation Pattern in Other Services
 
-Methods should prevent or warn about invalid transitions:
+**Where validation happens:**
+1. **High-level API (TodoService):** Input validation (non-empty title)
+2. **Model layer (TaskComment, Task):** Serialization validation in from_dict()
+3. **Manager layer (TaskManager):** Task existence validation via get() method
 
-1. **No-op transitions:** 
-   - `mark_in_progress()` on an already IN_PROGRESS task
-   - `mark_done()` on an already DONE task
-   - `reopen()` on an already PENDING task
-
-2. **Options for handling:**
-   - **Option A (Silent no-op):** Silently return without changing status or updated_at
-   - **Option B (Raise):** Raise a custom exception (e.g., `InvalidStatusTransition`) with a clear message
-   - **Option C (Conditional update):** Only update `updated_at` if status actually changed
-
-3. **Recommendation:** Option A (silent no-op) is idempotent and user-friendly. Implement it unless tests specify otherwise.
-
----
-
-## Test Requirements
-
-### Unit Tests to Add (test_task.py)
-
-Must cover:
-1. **Status transitions from each initial state:**
-   - `test_mark_in_progress_from_pending()`
-   - `test_mark_in_progress_from_done()`
-   - `test_mark_in_progress_idempotent()` (SHOULD: no-op when already IN_PROGRESS)
-   - `test_mark_done_from_pending()`
-   - `test_mark_done_from_in_progress()`
-   - `test_mark_done_idempotent()` (SHOULD: no-op when already DONE)
-   - `test_reopen_from_in_progress()`
-   - `test_reopen_from_done()`
-   - `test_reopen_idempotent()` (SHOULD: no-op when already PENDING)
-
-2. **Predicate methods:**
-   - `test_is_completed_returns_true_when_done()`
-   - `test_is_completed_returns_false_when_pending()`
-   - `test_is_completed_returns_false_when_in_progress()`
-
-3. **`updated_at` timestamp behavior:**
-   - `test_mark_in_progress_updates_timestamp()`
-   - `test_mark_done_updates_timestamp()`
-   - `test_reopen_updates_timestamp()`
-   - Verify new `updated_at` > old `updated_at`
-
-4. **Timezone correctness (CEST):**
-   - Verify `updated_at` is set with correct offset (+02:00 or equivalent)
-   - Or test that CEST comparison works correctly
-
-5. **Idempotence (SHOULD):**
-   - Calling a transition method twice should not change `updated_at` the second time (or should be a no-op)
-
-### Test Patterns
-
-Tests should follow the existing pattern in `test_task.py`:
-- Import `pytest`, `datetime`, `timezone`, `timedelta`, `Task`, `TaskStatus`
-- Create tasks with default or explicit status
-- Call method
-- Assert status changed and `updated_at` was updated
-- For predicates, assert boolean return value
-
-Example pattern:
+**Reference validation example:**
+TaskManager.delete() uses get() to resolve prefix and validate existence:
 ```python
-def test_mark_in_progress_from_pending():
-    task = Task(title="Do work", status=TaskStatus.PENDING)
-    old_updated_at = task.updated_at
-    task.mark_in_progress()
-    assert task.status == TaskStatus.IN_PROGRESS
-    assert task.updated_at > old_updated_at
+def delete(self, task_id: str) -> None:
+    task = self.get(task_id)  # resolves prefix; raises if missing
+    del self._tasks[task.id]
+    self._persist()
+```
+
+**No explicit reference validation at model level:**
+- TaskComment.from_dict() does NOT validate that task_id exists
+- It assumes validation happens at service layer (where TaskManager.get() can be called)
+
+---
+
+## Existing Architecture Diagrams
+
+### Class Diagram Reference
+**File:** `artifacts/class_diagram.puml`
+
+**Task-to-TaskComment Relationship (lines 104-110):**
+```
+Task "1" --> "*" TaskComment : has
+```
+
+This indicates:
+- One Task has many TaskComments
+- TaskComment has a reference to Task via task_id field
+- No explicit cascade delete specified in UML (needs to be handled by CommentsService)
+
+### Component Diagram Reference
+**File:** `artifacts/component_diagram.puml`
+
+**Structure:**
+- Entry Point (main) → CLI Layer (InteractiveMenu, TodoCLI)
+- CLI Layer → Service Layer (TodoService, TaskManager)
+- Service Layer → Domain Model (Task, TaskStatus, TaskComment)
+- Domain Model → Persistence Layer (JsonStorage)
+- Storage → Database (todo_data.json)
+
+**Note:** CommentsService should be added to Service Layer, not CLI Layer.
+
+---
+
+## Storage Mechanism Details for Comments
+
+**Current JSON storage structure (single file):**
+The file `~/.todo_data.json` currently stores only Tasks:
+```json
+[
+  {
+    "id": "task-uuid-1",
+    "title": "Buy milk",
+    "description": null,
+    "status": "pending",
+    "created_at": "2026-05-02T10:30:00+02:00",
+    "updated_at": "2026-05-02T10:30:00+02:00",
+    "due_date": null
+  }
+]
+```
+
+**Key observation:**
+JsonStorage is generic (accepts/returns `list[dict]`, no type checking). It does NOT distinguish between Task, TaskComment, or other types.
+
+**For CommentsService integration, options:**
+
+1. **Separate storage file for comments** (Recommended for simplicity)
+   - CommentsStorage or reuse JsonStorage with different path
+   - File: `~/.todo_comments.json`
+   - Allows independent persistence of comments
+
+2. **Unified storage file** (More complex)
+   - Store both tasks and comments in single JSON structure
+   - Would require: `{"tasks": [...], "comments": [...]}`
+   - Would need JsonStorage enhancement to understand structure
+
+**Recommended approach:** Separate file because:
+- Maintains independence of TaskManager and CommentsService
+- Simpler storage mechanism (no schema changes)
+- Aligns with single-responsibility principle
+- Comments can be independently versioned/migrated
+
+---
+
+## CommentsService Requirements Analysis
+
+### Functional Requirements
+
+1. **Add comment to task**
+   - Input: task_id, content
+   - Validation: task_id must exist (call TaskManager.get() to validate)
+   - Output: TaskComment object
+   - Side effect: Persist to storage
+
+2. **List comments for task** (ordered by created_at)
+   - Input: task_id
+   - Output: list[TaskComment] sorted by created_at ascending
+   - Optional: filter/pagination (not specified, so assume basic list)
+
+3. **Delete comment**
+   - Input: comment_id
+   - Validation: comment must exist
+   - Side effect: Persist to storage
+   - Note: No task validation needed (we're just deleting the comment)
+
+4. **Cascade delete on task deletion**
+   - When TaskManager.delete() is called, CommentsService must delete associated comments
+   - Trigger: Need to hook into task deletion somehow
+   - Integration point: Modify delete_task() in TodoService or add cascade logic
+
+### Service Responsibilities (Per Requirements)
+
+**Explicit:** Limited to TaskComment lifecycle (storage separate)
+- Add comment
+- List comments
+- Delete comment
+
+**Implicit:** Integration points
+- Validate task_id exists (call TaskManager.get)
+- Cascade delete when task is deleted
+
+**Out of scope:**
+- Edit/update existing comment (not mentioned)
+- Comment author/metadata beyond id, task_id, content, created_at (TaskComment model already defined)
+- Soft deletes or comment visibility flags
+
+---
+
+## What Needs to Be Added/Changed
+
+### 1. New Service: CommentsService
+**File:** `src/services/comments_service.py` (new)
+
+**Should implement:**
+```python
+class CommentsService:
+    def __init__(self, storage: Optional[JsonStorage] = None, task_manager: TaskManager) -> None:
+        # Store task_manager for validation
+        # Initialize storage (separate file or parameter)
+        
+    def add_comment(self, task_id: str, content: str) -> TaskComment:
+        # Validate task exists: task_manager.get(task_id) raises TaskNotFoundError if missing
+        # Validate content non-empty
+        # Create TaskComment
+        # Persist to storage
+        # Return TaskComment
+        
+    def list_comments(self, task_id: str) -> list[TaskComment]:
+        # Optionally validate task exists (nice-to-have)
+        # Load all comments for task_id
+        # Sort by created_at ascending
+        # Return sorted list
+        
+    def delete_comment(self, comment_id: str) -> None:
+        # Validate comment exists
+        # Delete comment
+        # Persist to storage
+        
+    def delete_task_comments(self, task_id: str) -> None:
+        # Delete all comments for task_id
+        # Persist to storage
+        # (Helper for cascade delete)
+```
+
+**Exceptions:**
+- Should define `CommentNotFoundError` (parallel to TaskNotFoundError)
+- May raise ValueError for validation failures (empty content)
+
+### 2. Update services/__init__.py
+**File:** `src/services/__init__.py`
+
+Add exports:
+```python
+from .comments_service import CommentsService, CommentNotFoundError
+__all__ = [..., "CommentsService", "CommentNotFoundError"]
+```
+
+### 3. Update TodoService for cascade delete
+**File:** `src/services/todo_service.py`
+
+**Current delete_task() method:**
+```python
+def delete_task(self, task_id: str) -> None:
+    self._manager.delete(task_id)
+```
+
+**Should become:**
+```python
+def __init__(self, storage: Optional[JsonStorage] = None) -> None:
+    self._manager = TaskManager(storage)
+    self._comments_service = CommentsService(storage, self._manager)
+
+def delete_task(self, task_id: str) -> None:
+    # Cascade delete comments first
+    self._comments_service.delete_task_comments(task_id)
+    # Then delete task
+    self._manager.delete(task_id)
+```
+
+### 4. Storage for Comments
+**File:** `src/storage/json_storage.py` or new service-level logic
+
+**Option 1 (Simpler):** Reuse JsonStorage with different path in CommentsService constructor
+```python
+# In CommentsService.__init__
+self._storage = storage or JsonStorage(path=str(Path.home() / ".todo_comments.json"))
+```
+
+**Option 2 (More explicit):** Create CommentStorage class (mirroring JsonStorage)
+- Would add: `src/storage/comment_storage.py`
+- But this violates DRY (duplicates JsonStorage logic)
+- Not recommended unless comments need different serialization
+
+### 5. Update Class Diagram
+**File:** `artifacts/class_diagram.puml`
+
+Add to services section:
+```
+class CommentsService {
+    -storage : JsonStorage
+    -taskManager : TaskManager
+    --
+    +CommentsService(storage: JsonStorage [0..1], taskManager: TaskManager)
+    +addComment(taskId: String, content: String) : TaskComment
+    +listComments(taskId: String) : List<TaskComment>
+    +deleteComment(commentId: String) : void
+    +deleteTaskComments(taskId: String) : void
+}
+
+exception CommentNotFoundError
+
+TodoService --> CommentsService : comments
+TodoService ..> CommentNotFoundError : raises
+CommentsService --> TaskManager : validates
+CommentsService --> JsonStorage : storage
+```
+
+Update TodoService relationship:
+```
+TodoService --> CommentsService : delegates
+```
+
+### 6. Update Component Diagram
+**File:** `artifacts/component_diagram.puml`
+
+Add to Service Layer:
+```
+component "Comment Manager" as CMgr
+```
+
+Update relationships:
+```
+SVC --> CMgr : comments
+CMgr --> Storage : (separate comments file)
+```
+
+### 7. Tests for CommentsService
+**File:** `tests/test_comments_service.py` (new)
+
+Patterns (from test_todo_service.py and test_task_manager.py):
+```python
+@pytest.fixture
+def service(tmp_path):
+    storage = JsonStorage(str(tmp_path / "comments.json"))
+    task_manager = TaskManager(JsonStorage(str(tmp_path / "tasks.json")))
+    return CommentsService(storage, task_manager)
+
+# Test cases:
+# - add_comment with valid task_id returns TaskComment
+# - add_comment with invalid task_id raises TaskNotFoundError
+# - add_comment with empty content raises ValueError
+# - list_comments returns sorted list by created_at
+# - list_comments with no comments returns empty list
+# - delete_comment removes comment
+# - delete_comment with invalid comment_id raises CommentNotFoundError
+# - delete_task_comments deletes all comments for task
+# - Persistence: add/load cycle preserves comment data
 ```
 
 ---
 
-## Integration Points (Service Layer)
+## Key Implementation Patterns to Follow
 
-The Task methods are **on the Task class itself** (instance methods), not on TaskManager or TodoService. However, the service layer may use them:
+### 1. Storage Integration
+From TaskManager:
+```python
+def _load(self) -> None:
+    raw = self._storage.load()
+    self._tasks = {d["id"]: Task.from_dict(d) for d in raw}
 
-**Current service patterns:**
-- `TaskManager.set_status()` directly mutates `task.status` and `task.updated_at`
-- `TodoService.start_task()`, `complete_task()`, `reopen_task()` call `TaskManager.set_status()`
-
-**Post-Task-02 integration:**
-- Service methods may call Task instance methods instead of direct mutation
-- Or Task methods may be used in tests to verify service behavior indirectly
-- No changes to service signatures are required by this task
-
----
-
-## Special Handling Required
-
-### 1. Timezone: CEST vs UTC
-- **Current state:** Task creation and updates in TaskManager use UTC (`timezone.utc`)
-- **Task 02 requirement:** Status-mutating methods use CEST (`timezone(timedelta(hours=2))`)
-- **Implication:** After `mark_in_progress()`, `updated_at` will have a +02:00 offset; subsequent updates may differ
-- **Decision:** This is intentional; Task methods are independent of the service layer
-
-### 2. Immutability vs Mutability
-- Task is a mutable dataclass, not frozen
-- These methods mutate `self.status` and `self.updated_at` in-place
-- Callers (TaskManager, tests) are responsible for persisting changes
-
-### 3. Return Type Convention
-- All three transition methods (`mark_in_progress`, `mark_done`, `reopen`) should return `None` (not `self`)
-- This follows Python conventions and prevents accidental chaining
-- The predicates (`is_completed`, `is_overdue`) return `bool`
-
----
-
-## Potential Ambiguities
-
-### 1. Idempotence vs Exception Raising
-**Ambiguity:** Should a no-op transition raise an exception or silently return?
-
-**Evidence:**
-- SHOULD requirement says "prevent invalid status transitions"
-- "prevent" could mean raise, or could mean make a no-op
-- Current service layer uses `set_status()` which performs no validation
-
-**Assumption:** Implement silent no-ops (idempotent). If tests require exceptions, that will be caught in the pytest-tester step.
-
-### 2. CEST Offset vs Daylight Saving
-**Ambiguity:** CEST is Central European **Summer** Time (UTC+2). Winter is CET (UTC+1).
-
-**Current evidence:**
-- Task 01 used a fixed +2 offset (`timezone(timedelta(hours=2))`)
-- UML diagram shows DateTime without specifying DST handling
-- Requirement says "CEST timezone-aware datetime"
-
-**Assumption:** Use the same fixed +2 offset as Task 01. A full DST-aware solution would require `zoneinfo` (Python 3.9+) and is out of scope.
-
-### 3. State Diagram Inconsistency
-**Ambiguity:** The state diagram in artifacts/state_diagram.puml shows:
-```
-DONE --> IN_PROGRESS : reopen
+def _persist(self) -> None:
+    self._storage.save([t.to_dict() for t in self._tasks.values()])
 ```
 
-But the task requirement says `reopen()` transitions to PENDING.
+**Apply to CommentsService:**
+- Use dict[comment_id, TaskComment] for in-memory cache
+- Call _load() in __init__
+- Call _persist() after any mutation
+- Maintain comments keyed by comment_id (not task_id)
 
-**Evidence:**
-- Task requirements explicitly state: "reopen() — transitions status to PENDING"
-- State diagram shows reopen → IN_PROGRESS
-- Current TodoService.reopen_task() calls `set_status(..., TaskStatus.PENDING)`
+### 2. Error Handling
+From TaskManager:
+```python
+class TaskNotFoundError(Exception):
+    pass
 
-**Assumption:** Follow the task requirement: `reopen()` transitions to PENDING, not IN_PROGRESS. The diagram is outdated and will be corrected in the UML-designer step.
+def get(self, task_id: str) -> Task:
+    if task_id in self._tasks:
+        return self._tasks[task_id]
+    # ... prefix lookup ...
+    raise TaskNotFoundError(f"Task '{task_id}' not found")
+```
+
+**Apply to CommentsService:**
+- Define CommentNotFoundError
+- Raise from delete_comment() if comment_id not found
+- Use TaskManager.get() to validate task_id (which raises TaskNotFoundError)
+
+### 3. Validation
+From TodoService:
+```python
+def add_task(self, title: str, ...) -> Task:
+    if not title or not title.strip():
+        raise ValueError("Task title cannot be empty")
+    return self._manager.add(title.strip(), description, due_date)
+```
+
+**Apply to CommentsService:**
+- Validate content in add_comment (non-empty, non-whitespace)
+- Validate task_id by calling task_manager.get(task_id)
+
+### 4. Sorting
+From requirements: "ordered by created_at"
+
+**Apply to CommentsService.list_comments():**
+```python
+def list_comments(self, task_id: str) -> list[TaskComment]:
+    comments = [c for c in self._comments.values() if c.task_id == task_id]
+    return sorted(comments, key=lambda c: c.created_at)
+```
 
 ---
 
-## Scope Summary
+## Dependencies and Integration Points
 
-### In Scope
-- Implement five methods on Task: `mark_in_progress()`, `mark_done()`, `reopen()`, `is_completed()`, and verify `is_overdue()`
-- Each status-mutating method updates `updated_at` to CEST time
-- Idempotent behavior: no-op transitions don't change state or timestamp
-- Comprehensive unit tests covering all transitions, predicates, and edge cases
-- CEST timezone handling (fixed +2 offset)
+### Internal Dependencies
+- **TaskComment model:** Already defined in src/models/task_comment.py
+- **TaskManager:** Needed in CommentsService.__init__ for task_id validation
+- **JsonStorage:** For persistence (can be separate file)
+- **CommentNotFoundError:** New exception, define in comments_service.py
+
+### Integration Points
+1. **TodoService.delete_task()** — Must call comments_service.delete_task_comments() first
+2. **TodoService.__init__()** — Must initialize CommentsService with task_manager reference
+3. **services/__init__.py** — Must export CommentsService and CommentNotFoundError
+4. **Diagrams** — Must update class_diagram.puml and component_diagram.puml
+
+### No Changes Needed To
+- Task model (already has relationship to TaskComment)
+- TaskManager (comments are separate concern)
+- JsonStorage (generic, works with any list[dict])
+- CLI layer (out of scope for this task)
+- Existing tests (except add new CommentsService tests)
+
+---
+
+## Storage Data Structure Example
+
+**~/.todo_comments.json** (recommended separate file):
+```json
+[
+  {
+    "id": "comment-uuid-1",
+    "task_id": "task-uuid-1",
+    "content": "Remember to buy quality milk",
+    "created_at": "2026-05-02T10:45:00+02:00"
+  },
+  {
+    "id": "comment-uuid-2",
+    "task_id": "task-uuid-1",
+    "content": "Check expiration date",
+    "created_at": "2026-05-02T11:00:00+02:00"
+  }
+]
+```
+
+When task-uuid-1 is deleted:
+- TaskManager.delete() removes from tasks
+- TodoService.delete_task() calls CommentsService.delete_task_comments("task-uuid-1")
+- CommentsService removes both comments from in-memory cache
+- CommentsService persists empty list (or list without these comments)
+
+---
+
+## Scope Signals
+
+### In Scope (Must Implement)
+- CommentsService class with add_comment, list_comments, delete_comment methods
+- Task existence validation via TaskManager.get()
+- Comment persistence via JsonStorage
+- Cascade delete via delete_task_comments() helper
+- CommentNotFoundError exception
+- Sorting by created_at in list_comments()
+- Tests for all CommentsService methods
 
 ### Out of Scope
-- Changes to TaskManager or TodoService (they already exist and work)
-- Daylight saving time auto-detection
-- Workflow approval framework or state machine library
-- Persistence changes (handled by caller via TaskManager)
-- CLI or interactive menu updates (not required by this task)
+- Edit/update existing comments
+- Comment author, edited_at, edit history
+- Soft deletes or archiving
+- Comment visibility/permissions
+- CLI commands for comments (that's a separate task)
+- Interactive menu for comments (that's a separate task)
 
-### Borderline (COULD-Have)
-- Add `is_pending()` and `is_in_progress()` predicates for symmetry with `is_completed()`
-  - Task requirement explicitly lists this as optional
-  - Recommend implementing if time permits; add tests if done
-
----
-
-## Implementation Priority
-
-1. **First:** Implement the five methods on Task class
-   - `mark_in_progress()`, `mark_done()`, `reopen()` with status and timestamp updates
-   - `is_completed()` as a simple boolean check
-   - Verify `is_overdue()` is correct
-   
-2. **Second:** Write comprehensive unit tests
-   - All 9+ status transition test cases
-   - 3 predicate test cases
-   - Timestamp update verification
-   - Idempotence tests for no-op transitions
-   
-3. **Third (COULD):** Add optional predicates
-   - `is_pending()` and `is_in_progress()` for symmetry
-   - Add corresponding test cases if implemented
-
-4. **Fourth:** Update UML class diagram
-   - Add new method signatures
-   - Correct state diagram to show reopen → PENDING (not IN_PROGRESS)
+### Borderline (Not Specified)
+- Validation of task_id in list_comments() (nice-to-have, not essential)
+- Pagination or filtering in list_comments() (not specified, assume no)
+- Unique constraint on comment content (not specified, assume no)
+- Comment threading/replies (not specified, assume flat list)
 
 ---
 
-## File Paths & Dependencies
+## Summary of Findings
 
-### Primary File to Modify
-- **Task model:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/src/models/task.py`
-  - Add methods here; no imports needed beyond current (datetime, timezone, timedelta, TaskStatus)
+1. **Model ready:** TaskComment is fully defined with proper serialization, validation, and CEST timezone awareness
 
-### Test File to Modify
-- **Task tests:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/tests/test_task.py`
-  - Add 9+ new test functions
-  - Follow existing pattern (Task creation, method call, assertion)
+2. **Storage mechanism:** JsonStorage is generic and extensible. Recommend separate file (~/.todo_comments.json) to avoid schema complexity
 
-### Diagram Files to Update
-- **Class diagram:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/artifacts/class_diagram.puml`
-  - Add method signatures to Task class
-  
-- **State diagram:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/artifacts/state_diagram.puml`
-  - Correct reopen transition to PENDING (not IN_PROGRESS)
+3. **Service patterns established:** TaskManager and TodoService show clear patterns for load/persist cycle, validation, error handling, and in-memory caching
 
-### No Changes Needed
-- TaskManager, TodoService, CLI modules
-- Storage layer
-- Baseline files
-- Governance files (CLAUDE.md, prompts/, agents/)
+4. **Task validation:** Done via TaskManager.get(), which raises TaskNotFoundError. CommentsService should call this to validate task_id before adding comments
 
----
+5. **Cascade delete:** Requires integration point in TodoService.delete_task() to call CommentsService.delete_task_comments() before deleting task
 
-## Summary of Methods to Implement
+6. **Architecture alignment:** CommentsService belongs in Service Layer (parallel to TodoService/TaskManager), NOT in CLI layer. Diagrams need updating
 
-| Method | Signature | Returns | Mutates | Purpose |
-|--------|-----------|---------|---------|---------|
-| `mark_in_progress` | `def mark_in_progress(self) -> None:` | None | status, updated_at | Transition to IN_PROGRESS, update timestamp to CEST |
-| `mark_done` | `def mark_done(self) -> None:` | None | status, updated_at | Transition to DONE, update timestamp to CEST |
-| `reopen` | `def reopen(self) -> None:` | None | status, updated_at | Transition to PENDING, update timestamp to CEST |
-| `is_completed` | `def is_completed(self) -> bool:` | bool | none | Return True if status is DONE |
-| `is_overdue` | (already exists) | bool | none | Return True if due_date set and in past |
+7. **Test patterns:** Follow fixtures with tmp_path for storage isolation, parallel to existing test_task_manager.py and test_todo_service.py
 
----
-
-## Expected Test Count
-
-Current baseline: 59 tests (41 original + 18 for Task 01 due_date feature)
-
-Expected after Task 02: ~70+ tests
-- Add 9-13 tests for status transitions (including idempotence)
-- Add 3 tests for is_completed predicate
-- Add 2-3 tests for timestamp behavior
-- Optional: 2 tests for is_pending/is_in_progress if implemented
-
+8. **Sorting:** TaskComment has created_at field ready for ordering. list_comments() should sort ascending by created_at

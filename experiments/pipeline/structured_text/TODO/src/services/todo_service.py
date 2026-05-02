@@ -5,11 +5,13 @@ from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
+from .comments_service import CommentsService
 
 
 class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
+        self._comments_service = CommentsService(task_manager=self._manager)
 
     def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if not title or not title.strip():
@@ -42,4 +44,7 @@ class TodoService:
         return self._manager.set_due_date(task_id, due_date)
 
     def delete_task(self, task_id: str) -> None:
+        # Cascade delete comments first
+        self._comments_service.delete_task_comments(task_id)
+        # Then delete task
         self._manager.delete(task_id)

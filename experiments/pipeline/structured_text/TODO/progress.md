@@ -105,3 +105,41 @@ Duration: 260.0s | Cost: $0.403842 USD | Turns: 13
 - ⊘ Could: Not implemented — author, updated_at, edit() method (out of scope for Must/Should)
 
 Duration: 297.2s | Cost: $0.466100 USD | Turns: 12
+
+## Task 04: Add CommentsService for managing TaskComments
+
+### Status: Complete
+
+### Files Changed
+- src/services/comments_service.py (new — CommentsService class with CRUD operations, CommentNotFoundError exception)
+- src/services/todo_service.py (modified — integrated CommentsService, cascade delete in delete_task())
+- src/services/__init__.py (modified — added CommentsService and CommentNotFoundError exports)
+- tests/test_comments_service.py (new — 21 comprehensive tests for CommentsService)
+- artifacts/class_diagram.puml (modified — added CommentsService class, CommentNotFoundError, relationships)
+- artifacts/component_diagram.puml (modified — added CommentsService component, separate comment storage)
+
+### Test Results
+✓ 114 tests passed (93 existing + 21 new for CommentsService)
+
+### Implementation Summary
+- Created CommentsService class following TaskManager pattern: _load()/_persist() lifecycle with in-memory cache
+- Implements CRUD operations: add_comment(task_id, content), list_comments(task_id), delete_comment(comment_id), delete_task_comments(task_id)
+- CommentNotFoundError exception for missing comment handling
+- Comments stored in separate file (~/.todo_comments.json) via JsonStorage
+- Task validation via TaskManager.get() before adding comments (raises TaskNotFoundError if task doesn't exist)
+- list_comments() returns comments sorted by created_at (ascending), empty list for non-existent tasks
+- delete_comment() validates comment exists (raises CommentNotFoundError)
+- delete_task_comments() is idempotent helper for cascade delete
+- Integrated into TodoService: cascade delete removes all comments before deleting task
+- 21 comprehensive tests covering add, list, delete, cascade delete, persistence, and edge cases
+
+### Requirements Met
+- ✓ Must: Implement CommentsService to manage TaskComment objects
+- ✓ Must: Provide add_comment, list_comments (ordered by created_at), delete_comment operations
+- ✓ Must: Validate task exists before adding comment
+- ✓ Must: Integrate with existing storage mechanism (JsonStorage)
+- ✓ Should: Service responsibilities limited to TaskComment lifecycle; storage implementation separate
+- ✓ Should: Cascade delete when task is deleted
+- ⊘ Could: Not implemented — editing a comment's content (out of scope)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

@@ -17,6 +17,7 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Comments Service" as CommentSVC
     }
 
     package "Domain Model" {
@@ -24,11 +25,13 @@ package "TODO Application" {
     }
 
     package "Persistence Layer" {
-        component "JSON Storage\n(JsonStorage)" as Storage
+        component "JSON Storage\n(Tasks)" as Storage
+        component "JSON Storage\n(Comments)" as CommentsStorage
     }
 }
 
 database "todo_data.json" as DB
+database "todo_comments.json" as CommentsDB
 
 Main --> IM : interactive mode
 Main --> CLI : command mode
@@ -37,10 +40,15 @@ IM --> SVC
 CLI --> SVC
 
 SVC --> MGR
+SVC --> CommentSVC
 MGR --> Storage
+CommentSVC --> CommentsStorage
+CommentSVC --> MGR : validates tasks
 MGR ..> Model
+CommentsStorage ..> Model
 Storage ..> Model
 
 Storage --> DB : read/write
+CommentsStorage --> CommentsDB : read/write
 
 @enduml
