@@ -53,4 +53,4 @@ Duration: 281.6s | Cost: $0.482583 USD | Turns: 18
 - ✓ is_cancelled() bonus method available
 - ✓ Existing enum definitions not modified
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 138.8s | Cost: $0.279586 USD | Turns: 25
