@@ -66,3 +66,29 @@ Duration: 281.6s | Cost: $0.482583 USD | Turns: 18
 - ✓ JSON persistence layer with separate storage file
 
 Duration: 344.5s | Cost: $0.663813 USD | Turns: 27
+
+## Task 04: AttemptService for attempt tracking
+
+**Status:** Completed
+
+**Description:** Implement an `AttemptService` that manages the creation and retrieval of `WorkflowRunAttempt` objects, centralising attempt management and decoupling from the domain model.
+
+**Files Changed:**
+- No new files (WorkflowRunAttemptService was already fully implemented in Task 03)
+- Verified: src/services/workflow_run_attempt_service.py
+- Verified: artifacts/class_diagram.puml (current and accurate)
+
+**Test Result:** ✓ All 31 tests passed
+- 11 WorkflowRunAttemptService tests (all passing)
+- 5 WorkflowRunAttemptJsonStorage tests (all passing)
+- 15 existing tests (no regressions)
+
+**Acceptance Criteria Met:**
+- ✓ `AttemptService` (WorkflowRunAttemptService) supports creating an attempt via `add_workflow_run_attempt()`
+- ✓ Service supports retrieving all attempts for a given `run_id` via `list_attempts_by_run_id(run_id)`
+- ✓ Service integrates with existing storage mechanism (WorkflowRunAttemptJsonStorage)
+- ✓ Duplicate attempt numbers per run are prevented via composite key (run_id, attempt_number) uniqueness constraint
+- ✓ Attempts can be returned sorted by attempt number (list_attempts_by_run_id returns sorted results)
+- ✓ No caching layer is added (service manages in-memory list loaded from storage)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
