@@ -223,4 +223,4 @@ Candidate A was selected as the winner (arbitrary choice since all implementatio
 **Diagrams Updated:**
 - artifacts/class_diagram.puml — Added `AttemptService` and `AttemptJsonStorage` classes with relationships
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 312.3s | Cost: $0.690316 USD | Turns: 40
