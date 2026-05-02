@@ -37,6 +37,11 @@ package "models" #DDEEFF {
         +duration_seconds  : float
         --
         +__post_init() : None
+        +is_running() : bool
+        +is_terminal() : bool
+        +is_successful() : bool
+        +is_failed() : bool
+        +is_cancelled() : bool
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRun
     }
