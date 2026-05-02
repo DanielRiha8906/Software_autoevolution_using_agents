@@ -36,6 +36,11 @@ package "models" #DDEEFF {
         +commit_sha       : Optional[str]
         +duration_seconds : float
         --
+        +is_running() : bool
+        +is_terminal() : bool
+        +is_successful() : bool
+        +is_failed() : bool
+        +is_cancelled() : bool
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRun
     }
