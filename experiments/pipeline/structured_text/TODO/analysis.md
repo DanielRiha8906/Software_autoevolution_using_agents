@@ -1,379 +1,255 @@
-# Due Date Feature Analysis
+# Task 02: Add Status and Due Date Methods to Task
 
 ## Task Summary
 
-Add optional `due_date: Optional[datetime]` field to the Task class with the following requirements:
-- Must: Add field, allow None default, persist through storage, update serialization methods, use CEST timezone (ISO 8601)
-- Should: Backward compatibility with existing JSON (tasks without due_date must load without error), validate datetime
-- Could: Add is_overdue() predicate method
+Implement five status-mutation and status-query methods on the Task class to support task lifecycle management. Task status transitions follow a workflow: PENDING → IN_PROGRESS → DONE, with reopen() reverting to PENDING. Each mutation method must update the `updated_at` timestamp to current CEST time.
 
 ---
 
-## Current Task Class Structure
+## Current Task Implementation
 
 **File:** `/src/models/task.py`
 
-**Current definition (dataclass):**
-```python
-@dataclass
-class Task:
-    title: str
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    description: Optional[str] = None
-    status: TaskStatus = TaskStatus.PENDING
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+### Existing State
+
+The Task class is a dataclass with the following attributes:
+- `title: str` (required)
+- `id: str` (UUID, auto-generated)
+- `description: Optional[str]` (default: None)
+- `status: TaskStatus` (default: PENDING; values: PENDING, IN_PROGRESS, DONE)
+- `due_date: Optional[datetime]` (default: None; supports ISO 8601 with timezone)
+- `created_at: datetime` (default: current UTC time)
+- `updated_at: datetime` (default: current UTC time)
+
+### Existing Methods
+- `to_dict() -> dict` — serializes task to JSON-compatible dict; conditionally includes due_date only if not None
+- `from_dict(cls, data: dict) -> Task` — deserializes from dict; uses `.get("due_date")` for backward compatibility
+- `is_overdue() -> bool` — returns True if due_date is set, task is not DONE, and current UTC time is past due_date
+
+### TaskStatus Enum
 ```
-
-**Key observations:**
-- Uses dataclass with field defaults
-- Timestamps (created_at, updated_at) use UTC timezone via `timezone.utc`
-- Serialization methods: `to_dict()` and `from_dict(cls, data: dict)` already exist
-- Both timestamps are initialized to current UTC time using `datetime.now(timezone.utc)`
-
-**Current serialization (to_dict):**
-```python
-def to_dict(self) -> dict:
-    return {
-        "id": self.id,
-        "title": self.title,
-        "description": self.description,
-        "status": self.status.value,
-        "created_at": self.created_at.isoformat(),
-        "updated_at": self.updated_at.isoformat(),
-    }
-```
-
-**Current deserialization (from_dict):**
-```python
-@classmethod
-def from_dict(cls, data: dict) -> Task:
-    return cls(
-        id=data["id"],
-        title=data["title"],
-        description=data.get("description"),
-        status=TaskStatus(data["status"]),
-        created_at=datetime.fromisoformat(data["created_at"]),
-        updated_at=datetime.fromisoformat(data["updated_at"]),
-    )
+PENDING = "pending"
+IN_PROGRESS = "in_progress"
+DONE = "done"
 ```
 
 ---
 
-## Storage Layer Implementation
+## Required Implementation
 
-**File:** `/src/storage/json_storage.py`
+### 1. Status Mutation Methods (Must)
 
-**Structure:**
-- Simple JSON file storage with default location: `~/.todo_data.json`
-- Two methods: `load()` returns `list[dict]` and `save(tasks: list[dict])`
-- Handles path creation, missing files gracefully
-- Uses standard json module (no custom serialization logic)
+#### `mark_in_progress() -> None`
+- Transitions `status` from PENDING to IN_PROGRESS
+- Updates `updated_at` to current CEST time
+- Should be a no-op if already IN_PROGRESS (prevent redundant mutations)
 
-**JSON persistence flow:**
-1. TaskManager calls `Task.to_dict()` on each task
-2. JsonStorage.save() receives list of dicts and writes as JSON
-3. On load: JsonStorage.load() returns raw dicts
-4. TaskManager calls `Task.from_dict(d)` to reconstruct Task objects
+#### `mark_done() -> None`
+- Transitions `status` to DONE
+- Updates `updated_at` to current CEST time
+- Should be a no-op if already DONE (prevent redundant mutations)
 
-**Current sample JSON structure (created 2026-05-02):**
-```json
-{
-  "id": "2c97feb8-de4d-4175-9094-5040fa0e0f8b",
-  "title": "Test Task",
-  "description": "A test task",
-  "status": "pending",
-  "created_at": "2026-05-02T21:25:29.121374+00:00",
-  "updated_at": "2026-05-02T21:25:29.121378+00:00"
-}
-```
+#### `reopen() -> None`
+- Transitions `status` back to PENDING
+- Updates `updated_at` to current CEST time
+- Should be a no-op if already PENDING (prevent redundant mutations)
 
----
+### 2. Status Query Methods (Must)
 
-## Files That Will Need Changes
+#### `is_completed() -> bool`
+- Returns True if and only if `status == TaskStatus.DONE`
+- No side effects; purely a predicate
 
-### Core (Must Change)
+### 3. Existing Methods (Already Implemented)
 
-1. **`/src/models/task.py`**
-   - Add `due_date: Optional[datetime] = None` field to Task dataclass
-   - Update `to_dict()` to include due_date (only if not None, or always as null?)
-   - Update `from_dict()` to handle missing due_date key (backward compatibility)
-   - Optionally add `is_overdue()` method
-
-2. **`/tests/test_task.py`**
-   - Add test for Task with due_date
-   - Add test for Task.from_dict() with missing due_date (backward compatibility)
-   - Add roundtrip test including due_date
-   - Optionally test is_overdue() predicate
-
-### Service Layer (May Change)
-
-3. **`/src/services/task_manager.py`**
-   - May need to add `add()` parameter for due_date (currently: `add(title, description=None)`)
-   - May need to add `update()` parameter for due_date (currently: `update(task_id, title=None, description=None)`)
-   - May need setter/update method for due_date specifically
-
-4. **`/src/services/todo_service.py`**
-   - May need to add due_date parameters to `add_task()` and `update_task()`
-   - May need new method to update due_date (if not through generic update)
-
-### CLI/UI Layer (May Change)
-
-5. **`/src/cli/todo_cli.py`**
-   - May add `--due-date` flag to `add` command
-   - May add due_date display to `show` command
-   - May add `--due-date` flag to `update` command
-   - May add filtering/sorting by due_date
-   - May add `--overdue` flag to `list` command
-
-6. **`/src/cli/interactive_menu.py`**
-   - May add due_date input prompt to add task flow
-   - May add due_date display in `_do_show()`
-   - May add due_date editing to `_do_update()`
-   - May add due_date to task line display (with visual indicator for overdue)
-
-### Tests (Must Change)
-
-7. **`/tests/test_task_manager.py`**
-   - Add tests for add/update with due_date parameter
-   - Test persistence of due_date
-
-8. **`/tests/test_todo_service.py`**
-   - Add tests for add_task/update_task with due_date
-
-9. **`/tests/test_todo_cli.py`**
-   - Add tests for add command with --due-date flag
-   - Add tests for show command displaying due_date
-   - Test backward compatibility (loading old JSON without due_date)
-
-10. **`/tests/test_json_storage.py`**
-    - May add test for loading JSON with missing due_date field
+#### `is_overdue() -> bool` (Lines 48-55)
+- Already correctly implemented
+- Returns False if no due_date set or status is DONE
+- Returns True if current UTC time > due_date
+- No changes needed
 
 ---
 
-## How to_dict / from_dict Currently Work
+## Implementation Notes
 
-### to_dict() Pattern
-- Converts all fields to JSON-serializable types
-- datetime objects are converted via `.isoformat()` → RFC 3339 string (includes timezone)
-- Enum values converted to their `.value` (string)
-- Optional fields included as-is (None passes through)
+### Timestamp Handling: CEST vs UTC
 
-### from_dict() Pattern
-- Uses `.get()` for optional fields (description)
-- Uses direct dict access with KeyError for required fields
-- `datetime.fromisoformat()` can parse ISO 8601 strings with timezone info
-- `TaskStatus(value)` enum lookup by string value
-
-### Backward Compatibility Consideration
-Currently `from_dict()` uses direct dict access for required fields:
-```python
-created_at=datetime.fromisoformat(data["created_at"])  # KeyError if missing
-```
-But uses `.get()` for optional fields:
-```python
-description=data.get("description")  # Returns None if missing
-```
-
-For due_date to be backward compatible, must use `.get()` like description does.
-
----
-
-## Timezone / Datetime Handling Approach
-
-### Current Approach
-- Uses UTC timezone exclusively (`timezone.utc`)
-- Serializes with `.isoformat()` → produces RFC 3339 format
+**Current system state:**
+- All timestamps (created_at, updated_at) are stored and compared in UTC (`timezone.utc`)
+- Serialization uses `.isoformat()` → RFC 3339 format with timezone suffix
 - Example: `"2026-05-02T21:25:29.121374+00:00"`
 
-### Requirement Conflict
-**Task requirement states:** "use CEST timezone (ISO 8601)"
-**Current system uses:** UTC
+**Task requirement:** "update `updated_at` to the current CEST time"
 
-### Options to Resolve
+**Resolution:**
+The requirement is ambiguous. Two valid interpretations exist:
 
-**Option A (Recommended):** Store in UTC internally, display in CEST
-- Store due_date as UTC in the Task object (consistent with created_at/updated_at)
-- Serialize to UTC ISO 8601 in JSON (standard practice)
-- Convert to CEST only in UI layer (CLI/menu) for display
-- Rationale: Maintains consistency, enables multi-timezone support, standard database practice
+1. **Store in UTC, interpret requirement as UTC**: Keep existing pattern (simplest, consistent)
+   - Mutation methods update to `datetime.now(timezone.utc)` 
+   - No code changes to TaskManager behavior (it already does this)
 
-**Option B:** Store in CEST locally
-- Use `ZoneInfo('Europe/Paris')` or similar for CEST
-- Serialize to CEST ISO 8601 string
-- Breaks consistency with existing created_at/updated_at fields
-- Less portable (different timezones have different daylight saving transitions)
+2. **Convert to CEST when mutating**: Use CEST for mutation but store as UTC
+   - Import `zoneinfo.ZoneInfo` (Python 3.9+)
+   - Use `datetime.now(ZoneInfo('Europe/Paris')).astimezone(timezone.utc)`
+   - More complex; unclear if requirement truly demands CEST storage vs CEST display
 
-**Option C:** Store as naive datetime, interpret as CEST
-- Don't include timezone in stored datetime
-- Interpret as CEST when loading
-- Rationale: Simple, but loses information and is fragile
+**Assumption for implementation:** Interpret "current CEST time" as "current time converted to CEST" but store in UTC (consistent with created_at/updated_at pattern). This maintains:
+- Consistency with existing system
+- Timezone portability
+- Standard database practice (UTC storage)
+- Serialization compatibility
 
-### Recommended Implementation
-- Add `due_date: Optional[datetime] = None` to dataclass
-- Use CEST when creating due_date via CLI (pass ZoneInfo('Europe/Paris') or equivalent)
-- Store as UTC (convert on input if needed)
-- Display as CEST in UI
-- Serialize as ISO 8601 with timezone
-
-**Python approach:**
+If stricter CEST requirement is intended, mutation methods can be adjusted to:
 ```python
-from datetime import datetime, timezone
-from zoneinfo import ZoneInfo  # Python 3.9+
-
-# Creating a due date with CEST timezone
+from zoneinfo import ZoneInfo
 cest = ZoneInfo('Europe/Paris')
-due_date = datetime(2026-06-01, 14, 30, tzinfo=cest)  # User input
-# or: datetime.fromisoformat("2026-06-01T14:30:00+02:00")
+self.updated_at = datetime.now(cest).astimezone(timezone.utc)
+```
 
-# Store internally (convert to UTC for consistency)
-due_date_utc = due_date.astimezone(timezone.utc)
+### State Transition Rules
 
-# Serialize
-due_date_utc.isoformat()  # "2026-06-01T12:30:00+00:00"
+No explicit state machine framework is required. Suggested behavior for mutation methods:
 
-# Display (convert back to CEST for UI)
-due_date_utc.astimezone(cest).strftime('%Y-%m-%d %H:%M CEST')
+| Current State | mark_in_progress() | mark_done() | reopen() |
+|---|---|---|---|
+| PENDING | Transition → IN_PROGRESS, update timestamp | Transition → DONE, update timestamp | No-op |
+| IN_PROGRESS | No-op | Transition → DONE, update timestamp | Transition → PENDING, update timestamp |
+| DONE | Transition → IN_PROGRESS, update timestamp | No-op | Transition → PENDING, update timestamp |
+
+**Should behavior:** Methods should be no-ops if transitioning to their current state (prevent spurious timestamp updates). This is straightforward with simple checks:
+```python
+def mark_in_progress(self) -> None:
+    if self.status != TaskStatus.IN_PROGRESS:
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(timezone.utc)
 ```
 
 ---
 
-## Backward Compatibility Concerns
+## Files That Must Be Modified
 
-### JSON Compatibility (Should)
-**Concern:** Old JSON files without due_date field should load without error
+### Core Implementation
+1. **`/src/models/task.py`**
+   - Add `mark_in_progress()` method
+   - Add `mark_done()` method
+   - Add `reopen()` method
+   - Add `is_completed()` method
+   - No dataclass changes needed (all methods operate on existing fields)
 
-**Current risk:** `from_dict()` would crash if key is missing for required fields
-**Solution:** Use `.get("due_date")` in `from_dict()` to return None if missing
+### Test Coverage
+2. **`/tests/test_task.py`**
+   - Test mark_in_progress() transitions
+   - Test mark_done() transitions
+   - Test reopen() transitions
+   - Test is_completed() returns correct boolean
+   - Test no-op behavior when transitioning to current state
+   - Test updated_at timestamp is refreshed (or not, if no-op)
+   - Test all combinations of transitions (state machine matrix)
 
-**Test case needed:**
-```python
-def test_load_task_without_due_date():
-    # Old format JSON (no due_date key)
-    old_data = {
-        "id": "123",
-        "title": "Old Task",
-        "status": "pending",
-        "created_at": "2026-05-02T21:25:29+00:00",
-        "updated_at": "2026-05-02T21:25:29+00:00"
-    }
-    task = Task.from_dict(old_data)
-    assert task.due_date is None
-```
+### Service Layer (May Need Updates)
+3. **`/src/services/task_manager.py`** — Current `set_status()` method handles status mutations via direct assignment. Task methods will become the canonical way to mutate status. Manager may need to call Task methods instead of direct assignment. Review for consistency.
 
-### Serialization Consistency
-**Concern:** New tasks will have `due_date: None` in JSON, creating inconsistency
+4. **`/src/services/todo_service.py`** — Current methods (`start_task()`, `complete_task()`, `reopen_task()`) delegate to `TaskManager.set_status()`. May need refactoring to use Task methods or remain unchanged if TaskManager internally calls them.
 
-**Options:**
-1. Include `"due_date": null` always (verbose but consistent)
-2. Omit null due_date from JSON (cleaner, but must use `.get()` on load)
-3. Have `to_dict()` skip null due_date: `if self.due_date: {...}`
+### CLI Layer (May Need Updates)
+5. **`/src/cli/todo_cli.py`** — Already supports mark-in-progress, mark-done, and reopen via service methods. No changes required if service layer remains compatible.
 
-**Recommendation:** Option 2 (skip null) - consistent with optional description pattern in existing code
+6. **`/src/cli/interactive_menu.py`** — Already has start, complete, and reopen operations. No changes required if service layer remains compatible.
 
 ---
 
-## Current Datetime Handling Details
+## Scope: In vs Out
 
-### Created/Updated Timestamps
-- Both use `field(default_factory=lambda: datetime.now(timezone.utc))`
-- Set at object creation time (created_at) or modification (updated_at)
-- Updated whenever status or content changes (in TaskManager.update/set_status)
+### In (Must Do)
+- ✓ Five methods: mark_in_progress, mark_done, reopen, is_completed, is_overdue (already done)
+- ✓ Each mutation updates updated_at to current time
+- ✓ All methods derive state from existing Task attributes only
+- ✓ Unit tests covering all transitions and combinations
+- ✓ is_completed predicate
 
-### Display in UI
-**In interactive_menu.py (lines 167-168):**
-```python
-print(f"  Created:     {task.created_at.strftime('%Y-%m-%d %H:%M UTC')}")
-print(f"  Updated:     {task.updated_at.strftime('%Y-%m-%d %H:%M UTC')}")
-```
+### Out (Won't Do)
+- ✗ Workflow approval framework
+- ✗ State machine framework with guards
+- ✗ Event/hook system on state transitions
 
-**In todo_cli.py (lines 121-122):**
-```python
-print(f"Created:     {task.created_at.isoformat()}")
-print(f"Updated:     {task.updated_at.isoformat()}")
-```
-
-Note: CLI displays ISO format; menu displays formatted string with explicit UTC label.
+### Should (Optional but Recommended)
+- Invalid transition handling: make mutations no-ops if already in target state (prevent spurious timestamp updates)
+- Symmetry predicates: is_pending() and is_in_progress() for consistency with is_completed()
 
 ---
 
-## Design Implications for Implementation
+## Key Constraints & Dependencies
 
-### Dataclass Field Ordering
-Dataclass fields must have a specific order: fields with defaults must come after fields without.
+1. **Timestamp consistency**: All timestamp updates use `datetime.now(timezone.utc)` throughout the codebase. Methods should follow this pattern.
 
-**Current order:** title (no default) → id, description, status, created_at, updated_at (all with defaults)
+2. **No persistence in Task**: Task methods only modify object state; they don't call storage. TaskManager handles persistence (see line 29 in task_manager.py calling `self._persist()` after calling methods).
 
-**Adding due_date:**
-- Must come after title (has no default)
-- Should come after status and before/after timestamps (convention-dependent)
-- Suggested: after status, before timestamps (semantic grouping)
+3. **Integration point**: TaskManager currently uses `task.status = status` directly (line 61). If Task methods become the canonical interface, TaskManager should be updated to use them for consistency.
 
-```python
-@dataclass
-class Task:
-    title: str
-    id: str = field(default_factory=...)
-    description: Optional[str] = None
-    status: TaskStatus = TaskStatus.PENDING
-    due_date: Optional[datetime] = None  # NEW
-    created_at: datetime = field(default_factory=...)
-    updated_at: datetime = field(default_factory=...)
-```
-
-### Optional: is_overdue() Method
-**Signature:**
-```python
-def is_overdue(self) -> bool:
-    if self.due_date is None:
-        return False
-    return datetime.now(timezone.utc) > self.due_date.astimezone(timezone.utc)
-```
-
-**Logic:**
-- Return False if no due_date set
-- Compare current UTC time to due_date (must normalize both to same timezone)
-- Account for completed tasks (DONE status) - could return False regardless
-
-**Alternative (include status):**
-```python
-def is_overdue(self) -> bool:
-    if self.due_date is None or self.status == TaskStatus.DONE:
-        return False
-    return datetime.now(timezone.utc) > self.due_date.astimezone(timezone.utc)
-```
+4. **Backward compatibility**: Task serialization/deserialization already handles due_date gracefully. No new compatibility concerns.
 
 ---
 
-## Summary of Findings
+## Test Matrix to Cover
 
-| Category | Finding |
-|----------|---------|
-| **Current Task structure** | Dataclass with 6 fields; optional description uses `.get()` on deserialize |
-| **Storage mechanism** | Simple JSON file; uses to_dict/from_dict round-trip |
-| **Serialization** | datetime → isoformat() string; uses ISO 8601 with timezone |
-| **Required changes** | Task.py (field + methods), all tests, optional CLI/service updates |
-| **Backward compatibility** | Use `.get("due_date")` in from_dict() to match description pattern |
-| **Timezone approach** | Recommend: Store UTC internally, display CEST in UI (consistent with created/updated) |
-| **Test coverage** | Must add roundtrip test with due_date, must add backward compat test |
-| **is_overdue() complexity** | Low; simple comparison with timezone normalization |
+Minimum test cases for complete coverage:
+
+**Transition tests (3 methods × 3 states = 9 tests):**
+- From PENDING: mark_in_progress(), mark_done(), reopen()
+- From IN_PROGRESS: mark_in_progress(), mark_done(), reopen()
+- From DONE: mark_in_progress(), mark_done(), reopen()
+
+**Timestamp update tests:**
+- Verify updated_at changes when transitioning to new state
+- Verify updated_at stays same when already in target state (or verify it updates regardless, per requirement)
+
+**Predicate tests:**
+- is_completed() returns True only for DONE status
+- is_completed() returns False for PENDING and IN_PROGRESS
+- is_overdue() (already tested, no changes needed)
+
+**Symmetry tests (optional):**
+- Test is_pending(), is_in_progress() if added
+
+---
+
+## Summary Table
+
+| Item | Status | Notes |
+|------|--------|-------|
+| Task.mark_in_progress() | Not implemented | Required method |
+| Task.mark_done() | Not implemented | Required method |
+| Task.reopen() | Not implemented | Required method |
+| Task.is_completed() | Not implemented | Required method |
+| Task.is_overdue() | ✓ Implemented | Already present; meets requirement |
+| Unit test coverage | Partial | Due date tests exist; status method tests do not |
+| CEST timestamp handling | Unclear | Recommendation: store UTC (consistent), display CEST in UI |
+| Service layer integration | Potential issue | TaskManager uses direct assignment; consider refactor for consistency |
+| CLI/menu compatibility | ✓ OK | No changes expected; service layer compatibility maintained |
+
+---
+
+## Implementation Order
+
+1. Add four methods to Task class (mark_in_progress, mark_done, reopen, is_completed)
+2. Write comprehensive tests for status transitions
+3. Review TaskManager.set_status() for consistency; optionally refactor to use Task methods
+4. Run full test suite; ensure backward compatibility
+5. Update class diagram if status methods are added (already have is_overdue)
 
 ---
 
 ## Files Summary (Absolute Paths)
 
-Must Change:
-- `/src/models/task.py` — Add field and update serialization
-- `/tests/test_task.py` — Add due_date tests
+**Must modify:**
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/src/models/task.py` — Add methods
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/tests/test_task.py` — Add tests
 
-Should Change:
-- `/tests/test_task_manager.py` — Test persistence of due_date
-- `/tests/test_todo_service.py` — Validate due_date parameter (if added to service)
-- `/tests/test_todo_cli.py` — Test backward compatibility and CLI flags
+**Should review:**
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/src/services/task_manager.py` — Consider refactoring to use Task methods
 
-May Change:
-- `/src/services/task_manager.py` — Add due_date parameter to add/update if needed
-- `/src/services/todo_service.py` — Add due_date parameter to add_task/update_task if needed
-- `/src/cli/todo_cli.py` — Add --due-date flag to add/update commands if needed
-- `/src/cli/interactive_menu.py` — Add due_date input/display in menus if needed
+**May impact:**
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/src/services/todo_service.py`
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/src/cli/todo_cli.py`
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/TODO/src/cli/interactive_menu.py`
 

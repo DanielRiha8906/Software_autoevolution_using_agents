@@ -54,3 +54,57 @@ Successfully implemented due_date feature for Task model with full backward comp
 - is_overdue() returns False for tasks without due_date, DONE status, or future dates
 
 Duration: 358.9s | Cost: $0.528996 USD | Turns: 18
+
+## Task 02: Add status and due date methods to Task
+
+### Summary
+
+Successfully implemented four new methods on the Task class to manage task lifecycle with proper status transitions and timestamp handling. All requirements met with comprehensive test coverage.
+
+### Files Changed
+
+**Source Code:**
+- `src/models/task.py` — Added four methods: `mark_in_progress()`, `mark_done()`, `reopen()`, `is_completed()`
+
+**Tests:**
+- `tests/test_task.py` — Added 21 new tests covering status transitions, timestamp updates, and edge cases
+
+**Documentation:**
+- `artifacts/class_diagram.puml` — Updated Task class diagram with four new method signatures
+- `artifacts/state_diagram.puml` — Updated transition labels to reference method names
+
+### Test Results
+
+✅ All 78 tests passed
+- New tests: 21 (status transitions, timestamp behavior, edge cases)
+- Existing tests: 57 (all still passing)
+- test_task.py: 39 tests passed (18 existing + 21 new)
+
+### Features Implemented
+
+**Must (All Completed):**
+- ✅ `mark_in_progress()` — transitions status to IN_PROGRESS
+- ✅ `mark_done()` — transitions status to DONE
+- ✅ `reopen()` — transitions status to PENDING
+- ✅ `is_completed()` — returns True when status is DONE
+- ✅ `is_overdue()` — verified working (already existed from Task 01)
+- ✅ Status-mutating methods update `updated_at` to current UTC time
+- ✅ All methods derive state strictly from existing Task attributes
+
+**Should (All Completed):**
+- ✅ Invalid status transitions prevented via no-op checks (e.g., reopen() on PENDING is a no-op)
+- ✅ Comprehensive unit tests covering all status transitions and overdue combinations
+
+**Could (Not Implemented):**
+- `is_pending()` and `is_in_progress()` predicates not added (optional for symmetry)
+
+### Implementation Details
+
+- All mutation methods check current status before transitioning
+- No-op safe: timestamp only updates when status actually changes
+- Uses `datetime.now(timezone.utc)` for consistency with `created_at` and `updated_at`
+- All status transitions allowed (any state → any state via appropriate method)
+- Pure predicate `is_completed()` has no side effects
+- Backward compatible: no changes to serialization, existing code unaffected
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

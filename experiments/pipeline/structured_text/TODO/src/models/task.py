@@ -53,3 +53,37 @@ class Task:
         if self.due_date is None or self.status == TaskStatus.DONE:
             return False
         return datetime.now(timezone.utc) > self.due_date
+
+    def mark_in_progress(self) -> None:
+        """Transition task status to IN_PROGRESS.
+
+        Updates updated_at only if status changes.
+        """
+        if self.status != TaskStatus.IN_PROGRESS:
+            self.status = TaskStatus.IN_PROGRESS
+            self.updated_at = datetime.now(timezone.utc)
+
+    def mark_done(self) -> None:
+        """Transition task status to DONE.
+
+        Updates updated_at only if status changes.
+        """
+        if self.status != TaskStatus.DONE:
+            self.status = TaskStatus.DONE
+            self.updated_at = datetime.now(timezone.utc)
+
+    def reopen(self) -> None:
+        """Transition task status back to PENDING.
+
+        Updates updated_at only if status changes.
+        """
+        if self.status != TaskStatus.PENDING:
+            self.status = TaskStatus.PENDING
+            self.updated_at = datetime.now(timezone.utc)
+
+    def is_completed(self) -> bool:
+        """Check if task is completed.
+
+        Returns True if and only if status is DONE.
+        """
+        return self.status == TaskStatus.DONE

@@ -165,3 +165,156 @@ def test_task_roundtrip_with_due_date():
     assert restored.status == task.status
     assert restored.created_at == task.created_at
     assert restored.updated_at == task.updated_at
+
+
+# ===== Status Transition Tests (9 combinations) =====
+
+@pytest.mark.parametrize(
+    "initial_status,method,expected_status",
+    [
+        # PENDING transitions
+        (TaskStatus.PENDING, "mark_in_progress", TaskStatus.IN_PROGRESS),
+        (TaskStatus.PENDING, "mark_done", TaskStatus.DONE),
+        (TaskStatus.PENDING, "reopen", TaskStatus.PENDING),
+        # IN_PROGRESS transitions
+        (TaskStatus.IN_PROGRESS, "mark_in_progress", TaskStatus.IN_PROGRESS),
+        (TaskStatus.IN_PROGRESS, "mark_done", TaskStatus.DONE),
+        (TaskStatus.IN_PROGRESS, "reopen", TaskStatus.PENDING),
+        # DONE transitions
+        (TaskStatus.DONE, "mark_in_progress", TaskStatus.IN_PROGRESS),
+        (TaskStatus.DONE, "mark_done", TaskStatus.DONE),
+        (TaskStatus.DONE, "reopen", TaskStatus.PENDING),
+    ],
+    ids=[
+        "PENDING->IN_PROGRESS",
+        "PENDING->DONE",
+        "PENDING->PENDING_noop",
+        "IN_PROGRESS->IN_PROGRESS_noop",
+        "IN_PROGRESS->DONE",
+        "IN_PROGRESS->PENDING",
+        "DONE->IN_PROGRESS",
+        "DONE->DONE_noop",
+        "DONE->PENDING",
+    ]
+)
+def test_status_transitions(initial_status, method, expected_status):
+    """Test all 9 status transition combinations."""
+    task = Task(title="Test", status=initial_status)
+    getattr(task, method)()
+    assert task.status == expected_status
+
+
+# ===== Timestamp Update Tests (6 tests) =====
+
+def test_mark_in_progress_updates_timestamp_on_transition():
+    """Verify updated_at changes when marking PENDING task as IN_PROGRESS."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    old_timestamp = task.updated_at
+    task.mark_in_progress()
+    assert task.updated_at > old_timestamp
+
+
+def test_mark_in_progress_skips_timestamp_on_noop():
+    """Verify updated_at unchanged when calling mark_in_progress on IN_PROGRESS task."""
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    old_timestamp = task.updated_at
+    task.mark_in_progress()
+    assert task.updated_at == old_timestamp
+
+
+def test_mark_done_updates_timestamp_on_transition():
+    """Verify updated_at changes when marking IN_PROGRESS task as DONE."""
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    old_timestamp = task.updated_at
+    task.mark_done()
+    assert task.updated_at > old_timestamp
+
+
+def test_mark_done_skips_timestamp_on_noop():
+    """Verify updated_at unchanged when calling mark_done on DONE task."""
+    task = Task(title="Test", status=TaskStatus.DONE)
+    old_timestamp = task.updated_at
+    task.mark_done()
+    assert task.updated_at == old_timestamp
+
+
+def test_reopen_updates_timestamp_on_transition():
+    """Verify updated_at changes when reopening DONE task."""
+    task = Task(title="Test", status=TaskStatus.DONE)
+    old_timestamp = task.updated_at
+    task.reopen()
+    assert task.updated_at > old_timestamp
+
+
+def test_reopen_skips_timestamp_on_noop():
+    """Verify updated_at unchanged when calling reopen on PENDING task."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    old_timestamp = task.updated_at
+    task.reopen()
+    assert task.updated_at == old_timestamp
+
+
+# ===== Query Method Tests (3 tests) =====
+
+def test_is_completed_returns_true_for_done():
+    """Verify is_completed returns True when status is DONE."""
+    task = Task(title="Test", status=TaskStatus.DONE)
+    assert task.is_completed() is True
+
+
+def test_is_completed_returns_false_for_pending():
+    """Verify is_completed returns False when status is PENDING."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    assert task.is_completed() is False
+
+
+def test_is_completed_returns_false_for_in_progress():
+    """Verify is_completed returns False when status is IN_PROGRESS."""
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    assert task.is_completed() is False
+
+
+# ===== Edge Case Tests =====
+
+def test_chained_mutations_with_timestamp_updates():
+    """Test PENDING → IN_PROGRESS → DONE → PENDING with timestamp verification."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    ts1 = task.updated_at
+
+    task.mark_in_progress()
+    ts2 = task.updated_at
+    assert ts2 > ts1
+    assert task.status == TaskStatus.IN_PROGRESS
+
+    task.mark_done()
+    ts3 = task.updated_at
+    assert ts3 > ts2
+    assert task.status == TaskStatus.DONE
+
+    task.reopen()
+    ts4 = task.updated_at
+    assert ts4 > ts3
+    assert task.status == TaskStatus.PENDING
+
+
+def test_multiple_noop_calls_do_not_change_timestamp():
+    """Verify timestamp stays unchanged across multiple no-op calls."""
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    original_timestamp = task.updated_at
+
+    task.mark_in_progress()
+    assert task.updated_at == original_timestamp
+
+    task.mark_in_progress()
+    assert task.updated_at == original_timestamp
+
+    task.mark_in_progress()
+    assert task.updated_at == original_timestamp
+
+
+def test_mark_done_from_pending_skips_intermediate_in_progress():
+    """Verify can transition directly from PENDING to DONE without intermediate IN_PROGRESS."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+    assert task.is_completed() is True

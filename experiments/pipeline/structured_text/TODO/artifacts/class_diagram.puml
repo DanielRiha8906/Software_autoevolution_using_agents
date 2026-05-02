@@ -22,12 +22,18 @@ package "models" #DDEEFF {
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
         +isOverdue() : Boolean
+        +markInProgress() : void
+        +markDone() : void
+        +reopen() : void
+        +isCompleted() : Boolean
     }
     note right of Task
         toDict() conditionally includes due_date
         fromDict() safely parses due_date with backward compatibility
         isOverdue() returns True if due_date is set,
         task is not DONE, and current time is past due_date
+        Mutation methods (mark*) update updatedAt only if status changes
+        isCompleted() returns True if and only if status is DONE
     end note
 }
 
