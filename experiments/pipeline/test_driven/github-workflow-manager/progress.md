@@ -90,4 +90,4 @@ Duration: 346.6s | Cost: $0.606393 USD | Turns: 21
 - Mutual exclusivity: is_successful() and is_failed() are mutually exclusive
 - Immutable state checks (read-only methods)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 190.7s | Cost: $0.325816 USD | Turns: 19
