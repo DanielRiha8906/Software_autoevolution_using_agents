@@ -60,6 +60,14 @@ package "services" #DDFFD4 {
         +perform(operation: Operation, a: float, b: float) : CalculationResult
         +getHistory() : List<CalculationResult>
     }
+
+    class MemoryService {
+        -storage : JsonStorage
+        --
+        +MemoryService(storage: JsonStorage)
+        +store(entry: MemoryEntry) : void
+        +retrieve() : List<MemoryEntry>
+    }
 }
 
 package "storage" #FFF3CC {
@@ -92,11 +100,13 @@ package "cli" #FFE5E5 {
 CalculatorCLI --> CalculatorService : service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
+MemoryService --> JsonStorage : storage
 
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 Calculator ..> Operation
+MemoryService ..> MemoryEntry : create/use
 JsonStorage ..> CalculationResult : stores
 JsonStorage ..> MemoryEntry : stores
 

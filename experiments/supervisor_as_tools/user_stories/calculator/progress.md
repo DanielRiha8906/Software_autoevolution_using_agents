@@ -69,3 +69,50 @@ Successfully implemented a dedicated `MemoryEntry` class to capture complete inf
 - Coexists with CalculationResult without breaking changes
 
 Duration: 285.0s | Cost: $0.495623 USD | Turns: 23
+
+## Task 04: Implement MemoryService for History Management
+
+### Summary
+Successfully implemented a `MemoryService` class that handles storing and retrieving `MemoryEntry` objects with clean separation of concerns. The service provides a thin abstraction layer for memory operations, delegating all persistence logic to a pluggable storage backend. This enables centralized management of calculation history without scattering logic through the calculation flow.
+
+### Files Changed
+1. **src/services/memory_service.py** — Created new MemoryService class with store(entry) and retrieve() methods, accepting storage backend via dependency injection
+2. **src/services/__init__.py** — Added MemoryService export to make it available from services module
+3. **tests/test_memory_service.py** — Created comprehensive test suite with 9 unit tests covering initialization, storage delegation, retrieval, and round-trip scenarios
+4. **artifacts/class_diagram.puml** — Added MemoryService class with relationships to JsonStorage and MemoryEntry
+
+### Test Results
+- **Status:** ✅ All tests PASSED
+- **New tests:** 9 (all passing)
+- **Total tests:** 62 (9 new + 53 existing)
+- **Passed:** 62
+- **Failed:** 0
+
+### Acceptance Criteria
+- ✅ `MemoryService` provides `store(entry)` and `retrieve()` operations
+- ✅ Every completed calculation can be recorded via the service (design pattern established)
+- ✅ Persistence details (file I/O, serialization) are NOT inside MemoryService — they live in JsonStorage (storage layer)
+- ✅ The service's responsibilities are limited to `MemoryEntry` lifecycle; no business logic included
+
+### Implementation Details
+- MemoryService uses dependency injection: constructor accepts any storage object with `save()` and `load_all()` methods (duck typing)
+- store(entry: MemoryEntry) -> None: delegates to storage.save(), returns void
+- retrieve() -> list[MemoryEntry]: delegates to storage.load_all(), returns unmodified list
+- No validation, error handling, or business logic — service is a thin lifecycle manager
+- Works with existing JsonStorage without modification
+- Follows existing code patterns: type hints, imports, method structure
+
+### Key Design Decisions
+1. **Duck typing instead of interfaces:** MemoryService accepts any storage object, not a specific type
+2. **Minimal responsibility:** Only lifecycle management, no business logic or domain rules
+3. **No error handling:** Lets storage exceptions propagate to caller
+4. **No default storage:** Requires explicit dependency injection at construction time
+5. **No filtering/pagination:** retrieve() returns all entries as-is; filtering belongs in higher layers
+
+### Notes
+- Integration with CalculatorService (recording failed calculations) deferred to future task
+- MemoryEntry model unchanged (complete from task 03)
+- All existing tests continue to pass with no regressions
+- New MemoryService can coexist with existing CalculationResult/CalculatorService without breaking changes
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
