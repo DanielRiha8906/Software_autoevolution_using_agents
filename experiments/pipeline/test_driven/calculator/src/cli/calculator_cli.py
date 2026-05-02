@@ -10,7 +10,23 @@ class CalculatorCLI:
         (Operation.SUBTRACT, "Subtract"),
         (Operation.MULTIPLY, "Multiply"),
         (Operation.DIVIDE,   "Divide"),
+        (Operation.SQUARE,   "Square"),
+        (Operation.SQRT,     "Square Root"),
+        (Operation.POWER,    "Power"),
+        (Operation.MODULO,   "Modulo"),
     ]
+
+    # Map operations to their arity (1 for unary, 2 for binary)
+    _ARITY = {
+        Operation.ADD: 2,
+        Operation.SUBTRACT: 2,
+        Operation.MULTIPLY: 2,
+        Operation.DIVIDE: 2,
+        Operation.SQUARE: 1,
+        Operation.SQRT: 1,
+        Operation.POWER: 2,
+        Operation.MODULO: 2,
+    }
 
     def __init__(self, service: CalculatorService) -> None:
         self.service = service
@@ -44,9 +60,15 @@ class CalculatorCLI:
             a = self._prompt_number("Enter first number: ")
             if a is None:
                 continue
-            b = self._prompt_number("Enter second number: ")
-            if b is None:
-                continue
+
+            # For unary operations, use b = 0 as a placeholder
+            arity = self._ARITY.get(operation, 2)
+            if arity == 1:
+                b = 0.0
+            else:
+                b = self._prompt_number("Enter second number: ")
+                if b is None:
+                    continue
 
             try:
                 result = self.service.perform(operation, a, b)

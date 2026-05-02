@@ -25,19 +25,19 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide} A B]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A [B]]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide"],
-        help="Operation to perform (add | subtract | multiply | divide)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
+        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
     )
     parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
-        help="Two operands (required when --operation is given)",
+        help="Operands: one for unary ops (square, sqrt) or two for binary ops",
     )
 
     args = parser.parse_args()
@@ -45,13 +45,29 @@ def main() -> None:
     cli = CalculatorCLI(service)
 
     if args.operation:
-        if len(args.operands) != 2:
-            parser.error("Exactly two operands are required when using --operation")
-        try:
-            a = _as_number(args.operands[0])
-            b = _as_number(args.operands[1])
-        except argparse.ArgumentTypeError as exc:
-            parser.error(str(exc))
+        # Determine expected operand count based on operation
+        unary_ops = {"square", "sqrt"}
+        binary_ops = {"add", "subtract", "multiply", "divide", "power", "modulo"}
+
+        if args.operation in unary_ops:
+            if len(args.operands) != 1:
+                parser.error(f"Operation '{args.operation}' requires exactly one operand")
+            try:
+                a = _as_number(args.operands[0])
+                b = 0.0  # Placeholder for unary operations
+            except argparse.ArgumentTypeError as exc:
+                parser.error(str(exc))
+        elif args.operation in binary_ops:
+            if len(args.operands) != 2:
+                parser.error(f"Operation '{args.operation}' requires exactly two operands")
+            try:
+                a = _as_number(args.operands[0])
+                b = _as_number(args.operands[1])
+            except argparse.ArgumentTypeError as exc:
+                parser.error(str(exc))
+        else:
+            parser.error(f"Unknown operation: '{args.operation}'")
+
         cli.run_command(args.operation, a, b)
     else:
         cli.run_interactive()

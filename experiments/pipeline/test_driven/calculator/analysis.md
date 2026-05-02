@@ -1,247 +1,271 @@
-# Execution Time Tracking for CalculationResult — Analysis Report
+# Test-Driven Evolution Analysis: Calculator Enhancement
 
-## Task Summary
-
-Implement execution time tracking for the `CalculationResult` class to measure and store the duration (in milliseconds) of arithmetic calculations. The feature must:
-- Add an `execution_time_ms` field to `CalculationResult`
-- Populate this field during the calculation flow in `CalculatorService.perform()`
-- Include it in serialization/deserialization (`to_dict()` / `from_dict()`)
-- Support both implicit initialization (when timing is measured automatically) and explicit initialization (for deserialization tests)
-- Preserve all existing constructor and method signatures
+**Date:** 2026-05-02  
+**Task:** Identify changes required to pass new test requirements for square, sqrt, power, and modulo operations.
 
 ---
 
-## Current Structure Analysis
+## Current System State
 
-### 1. CalculationResult (src/models/calculation_result.py)
+### Calculator Class (src/services/calculator.py)
 
-**Current structure:**
+**Current Interface:**
 ```python
-@dataclass
-class CalculationResult:
-    operation: str
-    operand_a: float
-    operand_b: float
-    result: float
-    timestamp: str = field(default="")
+class Calculator:
+    def add(a: float, b: float) -> float
+    def subtract(a: float, b: float) -> float
+    def multiply(a: float, b: float) -> float
+    def divide(a: float, b: float) -> float
+    def calculate(operation: Operation, a: float, b: float) -> float
 ```
 
-**Current behavior:**
-- Uses `@dataclass` with `asdict()` for serialization
-- Has a `__post_init__()` method that auto-generates `timestamp` if not provided
-- `to_dict()` returns `asdict(self)` — includes all fields
-- `from_dict(cls, data)` constructs via `cls(**data)` — accepts all keys as kwargs
-- `__str__()` formats for display using the `_SYMBOLS` map
+**Implementation Patterns:**
+1. **Binary operations** — All existing methods take two operands (a, b)
+2. **Error handling** — Only `divide()` validates input; raises `ValueError` on invalid state
+3. **Dispatch mechanism** — `calculate()` method uses a dictionary lookup to dispatch to operation methods based on `Operation` enum
+4. **Type handling** — Methods accept and return `float`; no strict type validation at method entry
 
-**Current test coverage:**
-- Existing tests in `test_calculator_service.py` verify timestamp is generated
-- No tests for the execution_time field yet
+### Operation Enum (src/models/operation.py)
 
-### 2. CalculatorService (src/services/calculator_service.py)
+**Current Members:**
+- `ADD = "add"`
+- `SUBTRACT = "subtract"`
+- `MULTIPLY = "multiply"`
+- `DIVIDE = "divide"`
 
-**Current flow in `perform()` method (lines 12–21):**
-```
-1. Call calculator.calculate(operation, a, b) → returns numeric result
-2. Create CalculationResult with operation, operand_a, operand_b, result
-3. Call storage.save(calc_result)
-4. Return calc_result
-```
+**Methods:**
+- `from_string(value: str) -> Operation` — case-insensitive lookup
+- `display_name() -> str` — returns capitalized value
 
-**Timing insertion point:**
-- Timing measurement must wrap the `calculator.calculate()` call
-- Measurement should happen before `CalculationResult` instantiation
-- The computed duration should be passed to the `CalculationResult` constructor
+### CalculationResult Model (src/models/calculation_result.py)
 
-**Current state:**
-- No timing instrumentation
-- No reference to time module
+**Fields:**
+- `operation: str` — operation name (matches Operation enum values)
+- `operand_a: float`, `operand_b: float` — operands
+- `result: float` — calculation result
+- `timestamp: str`, `execution_time_ms: float` — metadata
 
-### 3. JsonStorage (src/storage/json_storage.py)
-
-**Current serialization:**
-- `save()` calls `result.to_dict()` and stores the dict
-- `load_all()` calls `CalculationResult.from_dict()` on each stored dict
-- Uses standard `json` module (from Python stdlib, no 3rd party deps)
-
-**Impact on execution_time_ms:**
-- If `execution_time_ms` is a dataclass field, it will be included in `asdict()` output automatically
-- If it's provided in the dict during `from_dict()`, it will be passed as a kwarg to the constructor
-- No changes needed to JsonStorage — it will transparently handle the new field
-
-### 4. Calculator (src/services/calculator.py)
-
-**Status:** No changes required
-- Pure arithmetic logic; timing wrapper will be in CalculatorService, not here
-
----
-
-## Test Requirements Analysis
-
-The test suite (provided in task description) expects:
-
-1. **test_calculation_result_has_execution_time_ms()**
-   - Verify `execution_time_ms` attribute exists after construction
-   - Constructed with positional args: `operation, operand_a, operand_b, result`
-
-2. **test_execution_time_ms_is_numeric()**
-   - Type check: `isinstance(execution_time_ms, (int, float))`
-
-3. **test_execution_time_ms_is_non_negative()**
-   - Verify `>= 0` (never negative)
-
-4. **test_service_sets_execution_time_ms(tmp_path)**
-   - Call `CalculatorService.perform()` and verify the returned result has `execution_time_ms >= 0`
-   - This confirms automatic population during the service flow
-
-5. **test_execution_time_ms_included_in_serialization()**
-   - `result.to_dict()` must include `execution_time_ms` key
-
-6. **test_execution_time_ms_restored_from_serialization()**
-   - Construct with `execution_time_ms=12.5` explicitly
-   - Call `to_dict()` then `from_dict()` and verify value is preserved
-   - Use `pytest.approx()` for floating-point comparison
-
-7. **test_existing_fields_unchanged()**
-   - Verify backward compatibility: `operation, operand_a, operand_b, result` still work
-
-**Key implications:**
-- Constructor must accept `execution_time_ms` as optional parameter (tests 1, 6)
-- Must support default initialization without timing provided (tests 1–3)
-- Default value should be non-negative (probably `0` or auto-measured)
-- Serialization/deserialization must round-trip the value
-
----
-
-## Files That Need Modification
-
-### 1. src/models/calculation_result.py — **REQUIRED**
-
-**Changes needed:**
-- Add `execution_time_ms: float = field(default=0.0)` to the dataclass
-- Keep the field optional with a default value (for backward compatibility)
-- No changes to `to_dict()` (asdict will include it automatically)
-- No changes to `from_dict()` (cls(**data) will accept it if present)
-- No changes to `__post_init__()` (timestamp logic unchanged)
-- No changes to `__str__()` (timing display not required by tests)
-
-**Rationale:**
-- Using `field(default=0.0)` ensures tests 1–3 pass (object creation with default)
-- When `execution_time_ms` is not provided during deserialization, it defaults to `0.0`
-- When provided (test 6), the value is accepted and stored
-- Dataclass + `asdict()` automatically include the field in serialization
-
-### 2. src/services/calculator_service.py — **REQUIRED**
-
-**Changes needed:**
-- Import `time` module (Python stdlib, standard for time measurement)
-- Wrap the `calculator.calculate()` call with timing:
-  - Record start time before the call
-  - Record end time after the call
-  - Calculate `duration_ms = (end - start) * 1000` (convert seconds to milliseconds)
-- Pass the computed `execution_time_ms` to the `CalculationResult` constructor
-
-**Code pattern:**
+**Symbol Mapping:** 
 ```python
-import time
-
-# In perform() method:
-start = time.time()
-result = self.calculator.calculate(operation, a, b)
-end = time.time()
-execution_time_ms = (end - start) * 1000
-
-calc_result = CalculationResult(
-    operation=operation.value,
-    operand_a=a,
-    operand_b=b,
-    result=result,
-    execution_time_ms=execution_time_ms,
-)
+_SYMBOLS = {"add": "+", "subtract": "-", "multiply": "×", "divide": "÷"}
 ```
 
-**Rationale:**
-- `time.time()` is the standard Python method for measuring wall-clock duration
-- Multiplication by 1000 converts from seconds to milliseconds (test requirement)
-- Measurement wraps only the arithmetic logic, not storage I/O
-- Constructor now receives the measured value instead of relying on a default
+---
 
-### 3. src/models/operation.py — **NOT REQUIRED**
-No changes needed.
+## New Methods Required
 
-### 4. src/services/calculator.py — **NOT REQUIRED**
-No changes needed.
+### 1. square(a: float) -> float
 
-### 5. src/storage/json_storage.py — **NOT REQUIRED**
-No changes needed; will automatically serialize/deserialize the new field.
+**Test Requirements:**
+- `square(4)` returns `16`
+- `square(0)` returns `0`
 
-### 6. tests/ — **NOT REQUIRED**
-Task explicitly states: "Do not modify the tests."
+**Characteristics:**
+- **Arity:** Unary (single operand) — differs from existing binary pattern
+- **Edge Cases:** 
+  - Zero input (must return 0, not undefined)
+  - Negative inputs (mathematically valid; e.g., `square(-4) = 16`)
+  - Large inputs (should handle floats without precision loss)
+
+**Implementation Pattern:**
+- Return `a * a` or `a ** 2`
+- No error conditions expected
 
 ---
 
-## Execution Time Measurement Strategy
+### 2. sqrt(a: float) -> float
 
-### Where to Measure
-- **Start point:** Immediately before `self.calculator.calculate(operation, a, b)`
-- **End point:** Immediately after the call returns
-- **Why here:** Measures only the arithmetic operation, not I/O or object construction
+**Test Requirements:**
+- `sqrt(9)` returns `pytest.approx(3.0)` (floating-point tolerance required)
+- `sqrt(-1)` raises `Exception` (must not allow negative input)
 
-### Unit: Milliseconds
-- Python's `time.time()` returns seconds as a float
-- Formula: `duration_ms = (end_time - start_time) * 1000`
-- Float precision is acceptable per tests (test 2: `isinstance(..., (int, float))`)
+**Characteristics:**
+- **Arity:** Unary
+- **Error Handling:** Must raise exception for negative operands
+- **Float Precision:** Result requires `pytest.approx()` comparison tolerance
 
-### Non-negative Guarantee
-- `time.time()` is monotonic within a single function scope
-- Duration will always be >= 0 (end >= start)
-- Test 3 will pass automatically
+**Edge Cases:**
+- Negative numbers → must raise exception
+- Zero → should return 0.0
+- Non-perfect squares → returns float with potential precision issues
+- Very large numbers → may lose precision
 
-### Default Value
-- Set to `0.0` in dataclass to satisfy tests 1–3 (object creation without timing)
-- The service layer will override with actual measurement during normal use
-- Deserialization will accept a value from storage if present (test 6)
-
----
-
-## Backward Compatibility Considerations
-
-1. **Constructor compatibility:** The new field is optional with a default, so existing code that creates `CalculationResult(op, a, b, result)` still works.
-
-2. **Serialization:** Existing JSON records without `execution_time_ms` will deserialize to `0.0`, which is safe and semantically neutral.
-
-3. **Existing tests:** No changes needed to existing test files. The new tests are additive.
-
-4. **Public interfaces:** No method signatures change; no new public methods added.
+**Implementation Pattern:**
+- Use `math.sqrt()` for correctness
+- Validate input: `if a < 0: raise Exception(...)`
+- Consider whether to use generic `Exception` or `ValueError`
 
 ---
 
-## Summary of Changes
+### 3. power(a: float, b: float) -> float
 
-| File | Change Type | Details |
-|------|-------------|---------|
-| `src/models/calculation_result.py` | Add field | Add `execution_time_ms: float = field(default=0.0)` to dataclass |
-| `src/services/calculator_service.py` | Timing instrumentation | Import `time`, wrap `calculator.calculate()` call, pass duration to `CalculationResult` |
-| `src/storage/json_storage.py` | None | Serialization handled automatically |
-| `src/services/calculator.py` | None | No changes |
-| `src/models/operation.py` | None | No changes |
-| `tests/` | None | Task restriction: do not modify |
+**Test Requirements:**
+- `power(2, 10)` returns `1024` (integer exponent)
+- `power(8, 1/3)` returns `pytest.approx(2.0, rel=1e-5)` (fractional exponent, looser tolerance)
+- `power(2, -1)` returns `pytest.approx(0.5)` (negative exponent)
+
+**Characteristics:**
+- **Arity:** Binary (base and exponent)
+- **Error Handling:** None specified in tests; behavior for edge cases undefined
+- **Precision:** Fractional exponents require relative tolerance of 1e-5 (stricter than default `pytest.approx()`)
+
+**Edge Cases:**
+- Integer exponents (must be exact for small integers)
+- Fractional exponents (cube roots, square roots via exponent)
+- Negative exponents (reciprocal behavior)
+- Zero base with negative exponent (mathematically undefined; behavior TBD)
+- Negative base with fractional exponent (complex result; behavior TBD)
+
+**Implementation Pattern:**
+- Use `a ** b` or `math.pow(a, b)`
+- No validation specified; assume valid inputs or handle edge cases gracefully
+- Test accepts `rel=1e-5` tolerance for fractional cases
 
 ---
 
-## Test Validation Mapping
+### 4. modulo(a: float, b: float) -> float
 
-| Test | Validation | Expected Result |
-|------|-----------|-----------------|
-| `test_calculation_result_has_execution_time_ms()` | Attribute existence | Pass — field will be in dataclass |
-| `test_execution_time_ms_is_numeric()` | Type check | Pass — float type from `field(default=0.0)` |
-| `test_execution_time_ms_is_non_negative()` | Value check | Pass — time delta is always >= 0 |
-| `test_service_sets_execution_time_ms()` | Integration | Pass — CalculatorService measures and passes duration |
-| `test_execution_time_ms_included_in_serialization()` | Serialization | Pass — `asdict()` includes all fields |
-| `test_execution_time_ms_restored_from_serialization()` | Round-trip | Pass — `from_dict()` accepts the value |
-| `test_existing_fields_unchanged()` | Backward compat | Pass — no signature changes to constructor |
+**Test Requirements:**
+- `modulo(10, 3)` returns `1`
+- `modulo(10, 0)` raises `Exception` (must not allow zero divisor)
+
+**Characteristics:**
+- **Arity:** Binary
+- **Error Handling:** Must raise exception for zero divisor
+- **Float Support:** Tests use integer inputs, but method signature accepts floats
+
+**Edge Cases:**
+- Divisor is zero → must raise exception
+- Negative operands → Python's `%` operator behavior (floor modulo)
+- Float operands → Python's `%` operator supports floats; result precision TBD
+- Negative divisor → valid in Python; behavior inherited from `%` operator
+
+**Implementation Pattern:**
+- Return `a % b`
+- Validate input: `if b == 0: raise Exception(...)`
+- Consider type consistency with `divide()`
 
 ---
 
-## No Ambiguities Detected
+## Operation Enum Impact
 
-All test requirements are clear and directly implementable from the provided test suite. The timing measurement point is unambiguous (before/after `calculator.calculate()`). The unit (milliseconds) is explicit. The default behavior (0.0 when not measured) is safe and well-defined.
+**Required Changes:**
+1. Add four new enum members:
+   - `SQUARE = "square"`
+   - `SQRT = "sqrt"`
+   - `POWER = "power"`
+   - `MODULO = "modulo"`
+
+2. Update `from_string()` lookup to recognize new operations
+3. Update symbol mapping in `CalculationResult` for string representation
+
+---
+
+## CalculationResult Model Impact
+
+**Unary vs. Binary Operations:**
+- Current model assumes binary operations (`operand_a`, `operand_b`)
+- `square()` and `sqrt()` are unary
+- **Decision Required:** 
+  - Option A: Store unary operation in `operand_a` with `operand_b = 0` or `None`
+  - Option B: Extend model to support optional `operand_b`
+  - Option C: Store unary operations with operand in `operand_a` and mark `operand_b` as unused
+
+- No test requirement constrains this choice; implementation team must decide
+
+---
+
+## Error Handling Consistency
+
+**Current Pattern:**
+- `divide()` raises `ValueError` with descriptive message
+- Tests expect generic `Exception` for new methods
+
+**Decision Points:**
+1. Should `sqrt(-1)` raise `ValueError` or `math.ValueError` or generic `Exception`?
+2. Should `modulo(10, 0)` raise the same exception type as `divide(10, 0)`?
+3. Should exception messages be consistent across operations?
+
+**Assumption:** Use `ValueError` for consistency with `divide()`, since test uses bare `Exception` and `ValueError` is a subclass of `Exception`.
+
+---
+
+## Dispatch Mechanism Update
+
+**Calculator.calculate() Method:**
+Current dispatch dictionary only includes binary operations. Options:
+1. Extend `calculate()` to accept variable arguments and dispatch based on operation arity
+2. Keep `calculate()` for binary-only operations; leave unary operations for direct method calls
+3. Create separate dispatcher for unary operations
+
+**Assumption:** Tests only test direct method calls (`Calculator().square(4)`, not `Calculator().calculate(...)`), so `calculate()` update is secondary. However, CLI and CalculatorService may need updates if they call `calculate()`.
+
+---
+
+## Test Coverage
+
+### Existing Tests (test_calculator.py)
+- 13 tests for existing operations (add, subtract, multiply, divide)
+- Tests cover: positive/negative inputs, floats, edge cases, error conditions, dispatch
+
+### Required New Tests (from specification)
+- 10 tests for new operations (square, sqrt, power, modulo)
+- Tests cover:
+  - **square:** positive result, zero input
+  - **sqrt:** positive result, negative input error
+  - **power:** integer exponent, fractional exponent, negative exponent
+  - **modulo:** normal result, zero divisor error
+- All new methods tested via direct instantiation and method call
+
+### Test Structure
+- Tests use `pytest.approx()` for floating-point comparisons where needed
+- Tests expect bare `Exception` for error cases, not specific subtypes
+- Tests assume methods return float even for operations that could be int
+
+---
+
+## Summary of Required Changes
+
+| Component | Change | Detail |
+|-----------|--------|--------|
+| `Calculator` | Add 4 methods | `square(a)`, `sqrt(a)`, `power(a, b)`, `modulo(a, b)` |
+| `Operation` enum | Add 4 members | `SQUARE`, `SQRT`, `POWER`, `MODULO` |
+| `Calculator.calculate()` | Update dispatch | Add entries for new operations (if needed) |
+| `CalculationResult` | Symbol mapping | Add symbols for new operations |
+| `CalculationResult` | Model structure | Handle unary operations (design TBD) |
+| `CalculatorService` | Potentially | Update if it restricts operations |
+| `CalculatorCLI` | Potentially | Add menu items and one-shot flags for new operations |
+| `tests/test_calculator.py` | Append tests | Add 10 new test methods per specification |
+
+---
+
+## Key Ambiguities & Working Assumptions
+
+1. **Unary operation storage in CalculationResult:**
+   - **Ambiguity:** Current model designed for binary operations
+   - **Assumption:** Store unary operand in `operand_a`, set `operand_b = 0.0` (or handle in service layer)
+
+2. **Exception type for validation errors:**
+   - **Ambiguity:** Tests use bare `Exception`; current code uses `ValueError`
+   - **Assumption:** Raise `ValueError` (subclass of `Exception`); tests will pass
+
+3. **Float vs. Int handling:**
+   - **Ambiguity:** `modulo(10, 3)` uses integers but returns as float
+   - **Assumption:** All methods return `float` for consistency
+
+4. **Power operation edge cases:**
+   - **Ambiguity:** No test for `power(0, 0)`, `power(-1, 0.5)`, etc.
+   - **Assumption:** Rely on Python's `**` operator behavior; let math exceptions propagate if needed
+
+5. **CLI/Service integration:**
+   - **Ambiguity:** Tests don't require CLI or CalculatorService updates
+   - **Assumption:** May be needed for full feature completeness per governance rules
+
+---
+
+## Relevant Files
+
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/services/calculator.py` — main implementation target
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/models/operation.py` — enum to extend
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/models/calculation_result.py` — symbol mapping to update
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/tests/test_calculator.py` — new tests to add
