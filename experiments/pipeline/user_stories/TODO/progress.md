@@ -34,3 +34,33 @@ Implemented optional due_date attribute for tasks with full support for creation
 - Interactive menu prompts for optional due_date and converts for display
 
 Duration: 372.3s | Cost: $0.624776 USD | Turns: 14
+
+## Task 02: Task Status Transition Methods
+
+### Summary
+Implemented status transition and state query methods on Task domain model to provide clear, consistent state management with automatic timestamp updates.
+
+### Files Changed
+- src/models/task.py — Added 7 new methods: mark_in_progress(), mark_done(), reopen(), is_completed(), is_pending(), is_in_progress(), is_overdue()
+- tests/test_task.py — Added 26 comprehensive tests for all methods, transitions, and edge cases
+- artifacts/class_diagram.puml — Updated Task class diagram with method signatures
+
+### Test Result
+✓ All 67 tests passed (30 new tests + 37 existing tests)
+
+### Acceptance Criteria Met
+- ✓ Task provides mark_in_progress(), mark_done(), reopen() with automatic updated_at updates
+- ✓ Task provides is_completed(), is_pending(), is_in_progress(), is_overdue() predicates
+- ✓ Each status-mutating method updates updated_at to current UTC time
+- ✓ Methods derive state strictly from existing Task attributes
+- ✓ Invalid transitions are silent no-ops (no exceptions)
+- ✓ All state transition rules enforced: PENDING→IN_PROGRESS, IN_PROGRESS→DONE, DONE→IN_PROGRESS
+
+### Implementation Details
+- Status transitions: PENDING↔IN_PROGRESS, IN_PROGRESS→DONE, DONE→IN_PROGRESS
+- Invalid transitions silently ignored (method returns None, does nothing)
+- Timestamps stored as UTC (consistent with existing created_at behavior)
+- is_overdue() returns False if: due_date is None, task is completed, or due_date is in future
+- All predicates are read-only with no side effects
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
