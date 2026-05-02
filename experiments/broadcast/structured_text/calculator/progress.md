@@ -231,4 +231,4 @@ Used the broadcast architecture with 3 independent implementer agents working in
 
 - **No new dependencies**: Uses only stdlib (json, pathlib)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 278.1s | Cost: $1.107722 USD | Turns: 51
