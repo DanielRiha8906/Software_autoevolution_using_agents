@@ -143,4 +143,4 @@ Duration: 301.8s | Cost: $0.547521 USD | Turns: 35
 - Test suite validates edge cases with all 8 possible WorkflowConclusion values
 - No new dependencies added
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 274.3s | Cost: $0.488362 USD | Turns: 24
