@@ -164,3 +164,75 @@ so that I can record notes, decisions, or updates alongside the task itself.
 - No regressions introduced
 
 Duration: 380.1s | Cost: $0.796575 USD | Turns: 55
+
+---
+
+# Task 04: CommentsService Implementation
+
+## Task
+As a developer building comment functionality,
+I want a `CommentsService` that manages the full lifecycle of `TaskComment` objects,
+so that comment logic is centralised and not duplicated across the codebase.
+
+## Broadcast Implementation Results
+
+### Candidate A (broadcast-candidate-a)
+- **Approach**: CommentsService with full lifecycle management and persistence
+- **Files Changed**: src/services/comments_service.py, src/services/__init__.py, tests/test_comments_service.py
+- **Test Score**: 103 passed (26 new CommentsService tests + 77 existing tests)
+- **Details**: Complete implementation with add_comment, list_comments (ordered by created_at), delete_comment, delete_comments_for_task (cascade), and bonus edit_comment functionality. Uses separate JSON storage file for comments.
+
+### Candidate B (broadcast-candidate-b) ✅ CONVERGED
+- **Approach**: Identical implementation to Candidate A
+- **Files Changed**: src/services/comments_service.py, src/services/__init__.py, tests/test_comments_service.py
+- **Test Score**: 103 passed (26 new CommentsService tests + 77 existing tests)
+- **Details**: Same CommentsService implementation as A - converged solution.
+
+### Candidate C (broadcast-candidate-c) ✅ CONVERGED
+- **Approach**: Identical implementation to Candidates A and B
+- **Files Changed**: src/services/comments_service.py, src/services/__init__.py, tests/test_comments_service.py
+- **Test Score**: 103 passed (26 new CommentsService tests + 77 existing tests)
+- **Details**: All three candidates independently converged on the exact same solution.
+
+### Winner Selection
+**All three candidates produced identical implementations** — a strong indicator of solution convergence and correctness. Selected Candidate A as the final implementation.
+
+## Acceptance Criteria Met
+✅ CommentsService supports: adding a comment to a task with task existence validation
+✅ CommentsService supports: listing all comments for a task (ordered by created_at)
+✅ CommentsService supports: deleting a comment by id
+✅ CommentsService supports: cascading delete all comments for a task (when task is deleted)
+✅ Adding a comment validates that the referenced task exists
+✅ The service integrates with the existing storage mechanism (separate JSON file)
+✅ Persistence details stay in the storage layer, not inside the service
+✅ BONUS: Editing a comment's content (with updated_at updated) is supported
+
+## Implementation Details
+The CommentsService provides:
+1. **add_comment(task_id, content, author=None)** — Adds a comment with task validation
+2. **list_comments(task_id)** — Returns all comments for a task, sorted by created_at ascending
+3. **delete_comment(comment_id)** — Deletes a single comment by ID
+4. **delete_comments_for_task(task_id)** — Cascade deletes all comments for a task (when task is deleted)
+5. **edit_comment(comment_id, content)** — Edits comment content and sets updated_at timestamp (BONUS)
+
+## Files Changed
+- `src/services/comments_service.py` — New CommentsService class with 140 lines of implementation
+- `src/services/__init__.py` — Added CommentsService and CommentNotFoundError exports
+- `tests/test_comments_service.py` — New test suite with 26 comprehensive tests covering all functionality
+- `artifacts/class_diagram.puml` — Updated to show CommentsService class and relationships
+- `artifacts/component_diagram.puml` — Updated to show CommentsService component
+
+## Test Results
+- All 103 tests passing (26 new CommentsService tests + 77 existing tests)
+- Test categories:
+  - Add comment operations (6 tests)
+  - List comment operations (3 tests)
+  - Delete individual comments (4 tests)
+  - Delete comments for task (4 tests)
+  - Edit comment operations (5 tests)
+  - Persistence and ordering (2 tests)
+  - Integration scenarios (2 tests)
+- No regressions introduced
+- Full test coverage of persistence, error handling, filtering, ordering, and cascading deletes
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
