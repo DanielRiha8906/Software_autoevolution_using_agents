@@ -106,4 +106,4 @@ As a developer working with the Task domain model, I want clear methods for tran
 - CEST timezone behavior verified
 - Overdue logic confirmed with various date/status combinations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 179.0s | Cost: $0.464584 USD | Turns: 33
