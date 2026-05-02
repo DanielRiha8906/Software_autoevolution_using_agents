@@ -57,6 +57,9 @@ package "services" #DDFFD4 {
     class TaskNotFoundError {
     }
 
+    class CommentNotFoundError {
+    }
+
     class TaskManager {
         -storage : JsonStorage
         -tasks : Dictionary<String, Task>
@@ -69,6 +72,22 @@ package "services" #DDFFD4 {
         +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
         +delete(taskId: String) : void
+        -load() : void
+        -persist() : void
+    }
+
+    class CommentsService {
+        -storage : JsonStorage
+        -taskManager : TaskManager
+        -comments : Dictionary<String, TaskComment>
+        --
+        +CommentsService(storage: JsonStorage [0..1], taskManager: TaskManager [0..1])
+        +addComment(taskId: String, content: String, author: String [0..1]) : TaskComment
+        +listComments(taskId: String) : List<TaskComment>
+        +deleteComment(commentId: String) : void
+        +getComment(commentId: String) : TaskComment
+        +updateComment(commentId: String, content: String) : TaskComment
+        +deleteCommentsForTask(taskId: String) : void
         -load() : void
         -persist() : void
     }
@@ -108,6 +127,10 @@ Task --> TaskStatus : status
 Task "1" --> "0..*" TaskComment : contains
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
+CommentsService --> JsonStorage : storage
+CommentsService --> TaskManager : validates with
+CommentsService ..> CommentNotFoundError : raises
+CommentsService "1" --> "0..*" TaskComment : manages
 TodoService --> TaskManager : manager
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service

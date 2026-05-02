@@ -17,10 +17,12 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Comments Service" as CMTS
     }
 
     package "Domain Model" {
-        component "Task Model\n(Task, TaskStatus,\nTaskComment)" as Model
+        component "Task Model\n(Task, TaskStatus)" as Model
+        component "Comment Model\n(TaskComment)" as Comments
     }
 
     package "Persistence Layer" {
@@ -37,9 +39,14 @@ IM --> SVC
 CLI --> SVC
 
 SVC --> MGR
+SVC ..> CMTS
+CMTS --> MGR : validates with
 MGR --> Storage
+CMTS --> Storage
 MGR ..> Model
+CMTS ..> Comments
 Storage ..> Model
+Storage ..> Comments
 
 Storage --> DB : read/write
 

@@ -216,3 +216,91 @@ Duration: 386.4s | Cost: $1.164348 USD | Turns: 39
 - 19 new TaskComment tests cover all requirements, validation, serialization, timezone handling, and edge cases
 
 Duration: 301.5s | Cost: $0.586463 USD | Turns: 34
+
+---
+
+## Task 04: Add CommentsService for managing TaskComments
+
+### Broadcast Candidates Evaluation
+
+#### Candidate A (broadcast-candidate-a) ⭐ **WINNER**
+- **Approach**: Implemented CommentsService with full lifecycle management for TaskComment objects, including optional task validation, cascade deletion, and comment editing support
+- **Test Results**: 114 tests pass (93 original + 21 new)
+- **Status**: Complete ✓
+- **Key Implementation Details**:
+  - CommentsService with methods: add_comment, list_comments, delete_comment, get_comment, update_comment, delete_comments_for_task
+  - Task existence validation using TaskManager.get() before adding comments
+  - Comments ordered by created_at in list_comments()
+  - Cascade deletion via delete_comments_for_task() for task deletion support
+  - Comment editing with update_comment() that updates both content and updated_at timestamp
+  - Optional task_manager parameter allows operation without task validation (for flexibility)
+  - Separate JsonStorage path (~/.todo_comments.json) for comments persistence
+  - Comprehensive test coverage: 21 new tests covering all operations, edge cases, and persistence
+
+#### Candidate B (broadcast-candidate-b)
+- **Approach**: Implemented CommentsService with similar structure but slightly fewer test cases
+- **Test Results**: 110 tests pass (93 original + 17 new)
+- **Status**: Complete ✓
+- **Key Implementation Details**:
+  - Core functionality equivalent to Candidate A
+  - 17 new tests covering basic CRUD operations and cascade deletion
+  - Less comprehensive test coverage compared to Candidate A
+
+#### Candidate C (broadcast-candidate-c)
+- **Approach**: Implemented CommentsService but did not include test_comments_service.py file
+- **Test Results**: 93 tests pass (no new tests written)
+- **Status**: Incomplete - implementation only, no new test coverage
+- **Issues**: CommentsService created but lacked accompanying test suite
+
+### Selection Rationale
+
+**Candidate A was selected** because:
+1. **Most comprehensive test coverage**: 114 passing tests (21 new) vs 110 (B) and 93 (C); best quality assurance
+2. **Complete feature implementation**: Includes all MUST and SHOULD requirements plus COULD items (update_comment)
+3. **Production-ready code**: Extensive test suite ensures reliability and maintainability
+4. **Flexible task validation**: Optional task_manager parameter allows operation both with and without validation
+5. **Best practices**: Comprehensive documentation, proper error handling with custom exceptions, follows established patterns
+
+### Files Changed
+- `src/services/comments_service.py` - New CommentsService class with full lifecycle management
+- `src/services/__init__.py` - Added exports for CommentsService and CommentNotFoundError
+- `tests/test_comments_service.py` - 21 comprehensive tests covering all operations
+- `artifacts/class_diagram.puml` - Added CommentsService class and relationships
+- `artifacts/component_diagram.puml` - Updated Service Layer with CommentsService, separated comment/task models
+
+### Requirements Met
+
+**MUST (all implemented)**:
+- ✓ `CommentsService` class manages TaskComment objects
+- ✓ `add_comment(task_id, content, author=None)` — creates comments with task existence validation
+- ✓ `list_comments(task_id)` — returns comments ordered by created_at
+- ✓ `delete_comment(comment_id)` — removes individual comments
+- ✓ Task existence validation before adding comments (raises TaskNotFoundError)
+- ✓ JsonStorage integration with separate comments file
+- ✓ JSON serialization/deserialization via TaskComment.to_dict/from_dict
+
+**SHOULD (all implemented)**:
+- ✓ Service responsibilities separated from storage (CommentsService manages lifecycle, JsonStorage handles persistence)
+- ✓ Cascade deletion via `delete_comments_for_task()` for when tasks are deleted
+
+**COULD (implemented)**:
+- ✓ `update_comment(comment_id, content)` — supports editing comment content with updated_at timestamp refresh
+
+**WON'T**:
+- Threaded/nested comments (not implemented, as specified)
+
+### Test Results Summary
+- Total passing: 114/114 (100%)
+- All original 93 tests maintain backward compatibility
+- 21 new CommentsService tests cover:
+  - Comment creation with/without author
+  - Task validation (nonexistent task rejection)
+  - Content validation (empty content rejection)
+  - Listing with proper ordering by created_at
+  - Multiple comments per task handling
+  - Deletion (individual and cascade)
+  - Comment retrieval and updating
+  - Persistence across instances
+  - Multi-task isolation
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
