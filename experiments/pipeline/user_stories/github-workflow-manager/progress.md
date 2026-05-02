@@ -65,4 +65,4 @@ Duration: 299.8s | Cost: $0.540868 USD | Turns: 20
 - Parent-child relationship: run_id foreign key to WorkflowRun.id
 - Comprehensive test coverage: instantiation, validation, serialization, deserialization, round-trip, edge cases
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 313.8s | Cost: $0.517612 USD | Turns: 18
