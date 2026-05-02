@@ -20,4 +20,4 @@ Broadcast architecture with 3 independent implementers (candidate-a, candidate-b
 ### Test Results
 - pytest: 9/9 tests passing ✓
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 241.2s | Cost: $1.093258 USD | Turns: 31
