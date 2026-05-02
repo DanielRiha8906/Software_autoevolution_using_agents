@@ -30,3 +30,42 @@ Test results:
 - Updated `from_dict()` to deserialize with backward compatibility (defaults to 0.0)
 
 Duration: 175.0s | Cost: $0.298459 USD | Turns: 14
+
+## Task 02: Add state-checking methods to WorkflowRun
+
+### Summary
+Successfully implemented five state-checking methods on the WorkflowRun model that encapsulate workflow state logic derived from `status` and `conclusion` attributes.
+
+### Files Changed
+- `src/models/workflow_run.py` — Added is_running(), is_terminal(), is_successful(), is_failed(), is_cancelled() methods
+- `tests/test_workflow_run_status_methods.py` — Created new test suite with 11 comprehensive tests
+- `artifacts/class_diagram.puml` — Updated to reflect new state-checking methods
+
+### Test Results
+✅ All tests passed (20/20)
+
+State-checking method tests (11 tests):
+- test_is_running_when_in_progress ✓
+- test_is_running_false_when_completed ✓
+- test_is_terminal_when_completed_success ✓
+- test_is_terminal_when_completed_failure ✓
+- test_is_terminal_false_when_running ✓
+- test_is_running_and_is_terminal_are_mutually_exclusive ✓
+- test_is_successful ✓
+- test_is_failed ✓
+- test_is_successful_and_is_failed_are_mutually_exclusive ✓
+- test_is_cancelled ✓
+- test_methods_use_only_status_and_conclusion ✓
+
+Existing tests: All 9 existing tests continue to pass (no regressions)
+
+### Implementation Details
+- `is_running()` — Returns True if status == IN_PROGRESS
+- `is_terminal()` — Returns True if status == COMPLETED
+- `is_successful()` — Returns True if status == COMPLETED and conclusion == SUCCESS
+- `is_failed()` — Returns True if status == COMPLETED and conclusion == FAILURE
+- `is_cancelled()` — Returns True if status == COMPLETED and conclusion == CANCELLED
+
+All methods derive state strictly from `status` and `conclusion` attributes. No external I/O or libraries used.
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
