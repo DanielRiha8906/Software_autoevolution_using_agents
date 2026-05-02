@@ -72,4 +72,4 @@ Duration: 266.9s | Cost: $0.485983 USD | Turns: 15
 
 **Backward Compatibility:** ✓ Verified with test_load_json_without_attempts_defaults_to_empty_list — old JSON files without attempts key load successfully with empty list
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 405.7s | Cost: $0.688061 USD | Turns: 16
