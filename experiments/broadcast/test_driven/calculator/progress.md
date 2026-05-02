@@ -33,4 +33,4 @@
 ✓ Serializable/deserializable
 ✓ All existing tests still pass
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 375.6s | Cost: $0.870246 USD | Turns: 49
