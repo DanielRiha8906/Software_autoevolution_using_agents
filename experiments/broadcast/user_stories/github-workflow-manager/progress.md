@@ -96,3 +96,64 @@ Candidate C was selected as the winner.
 - artifacts/class_diagram.puml — Updated to show new state-checking methods
 
 Duration: 176.1s | Cost: $0.467889 USD | Turns: 37
+
+## Task 03: Create WorkflowRunAttempt model
+
+**Broadcast Architecture Results:**
+
+### Candidate A (SELECTED WINNER)
+- **Approach:** Created `WorkflowRunAttempt` dataclass with all required attributes: `id` (int), `run_id` (int), `attempt_number` (int), `status` (str), `conclusion` (Optional[str]), `created_at` (datetime with CEST support), and optional `duration_seconds` (float). Implemented `__post_init__()` validation for attempt_number >= 1 and duration_seconds >= 0. Added `to_dict()` and `from_dict()` methods for JSON serialization/deserialization. Created comprehensive test suite with 41 tests covering all acceptance criteria.
+- **Test Results:** 50 passed (41 new + 9 existing)
+- **Files Changed:**
+  - src/models/workflow_run_attempt.py (created)
+  - src/models/__init__.py (updated)
+  - tests/test_workflow_run_attempt.py (created)
+
+### Candidate B
+- **Approach:** Identical implementation to Candidate A
+- **Test Results:** 50 passed (41 new + 9 existing)
+- **Files Changed:**
+  - src/models/workflow_run_attempt.py (created)
+  - src/models/__init__.py (updated)
+  - tests/test_workflow_run_attempt.py (created)
+
+### Candidate C
+- **Approach:** Identical implementation to Candidates A and B
+- **Test Results:** 50 passed (41 new + 9 existing)
+- **Files Changed:**
+  - src/models/workflow_run_attempt.py (created)
+  - src/models/__init__.py (updated)
+  - tests/test_workflow_run_attempt.py (created)
+
+**Selection Rationale:**
+
+All three candidates produced identical implementations with 100% test pass rate (50/50 tests). They all:
+- Created `WorkflowRunAttempt` dataclass with all required attributes
+- Implemented `__post_init__()` validation: attempt_number >= 1, duration_seconds >= 0
+- Added `to_dict()` and `from_dict()` methods for JSON serialization/deserialization
+- Created comprehensive test suite (41 tests) covering:
+  - Object creation and instantiation
+  - Validation of attempt_number and duration_seconds constraints
+  - Parent-child associations via run_id
+  - JSON round-trip serialization
+  - CEST (UTC+2) timezone handling
+  - Attribute type verification
+  - Edge cases and boundary conditions
+- Ensured (run_id, attempt_number) uniqueness constraint is documented
+
+Candidate A was selected as the winner (arbitrary choice since all implementations were functionally identical).
+
+**Acceptance Criteria Met:**
+✓ WorkflowRunAttempt has all required attributes: id (int), run_id (int), attempt_number (int), status (str), conclusion (Optional[str]), created_at (datetime), duration_seconds (float)
+✓ (run_id, attempt_number) uniqueness constraint documented
+✓ attempt_number is positive integer >= 1 (validated in __post_init__)
+✓ Associated with parent WorkflowRun via run_id field
+✓ JSON serialization/deserialization via to_dict() and from_dict()
+✓ Optional duration_seconds attribute with >= 0 validation
+✓ CEST (UTC+2) timezone support with datetime.isoformat()
+✓ All existing tests continue to pass (no regression)
+
+**Diagrams Updated:**
+- artifacts/class_diagram.puml — Updated to show WorkflowRunAttempt class and its 1:* relationship with WorkflowRun
+
+Duration: 370.6s | Cost: $0.701894 USD | Turns: 39
