@@ -17,6 +17,11 @@ class WorkflowRun:
     updated_at: Optional[datetime]
     run_number: Optional[int]
     commit_sha: Optional[str]
+    duration_seconds: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.duration_seconds < 0.0:
+            raise ValueError(f"duration_seconds must be non-negative, got {self.duration_seconds}")
 
     def to_dict(self) -> dict:
         return {
@@ -29,6 +34,7 @@ class WorkflowRun:
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "run_number": self.run_number,
             "commit_sha": self.commit_sha,
+            "duration_seconds": self.duration_seconds,
         }
 
     @classmethod
@@ -43,4 +49,5 @@ class WorkflowRun:
             updated_at=datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else None,
             run_number=data.get("run_number"),
             commit_sha=data.get("commit_sha"),
+            duration_seconds=float(data.get("duration_seconds", 0.0)),
         )
