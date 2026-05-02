@@ -1,100 +1,105 @@
-# Analysis: Add Execution Time Tracking to Calculator
+# Analysis: Add Additional Mathematical Operations
 
 ## Task Summary
 
-Add an `execution_time_ms` attribute to the `CalculationResult` class to track how long each calculation takes (in milliseconds). The timing should be measured during actual calculation execution, set for every calculation, be reasonably accurate, follow naming conventions, and preserve backward compatibility. Use only built-in Python timing (no external libraries).
+Task 02 requires implementing four new mathematical operations to extend the calculator with:
+- **square(x)** — x^2
+- **sqrt(x)** — square root
+- **power(x, y)** — x raised to power y
+- **modulo(x, y)** — remainder after division
+
+These operations must follow the existing architecture and operation interface, handle edge cases properly, and maintain the testing patterns already established in Task 01.
 
 ## Current Architecture
 
-### CalculationResult Structure
+### Operation Enum and Registration
 
-**File**: `/src/models/calculation_result.py`
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/models/operation.py`
 
-Current dataclass with 5 attributes:
-- `operation: str` — operation name (e.g., "add")
-- `operand_a: float` — first operand
-- `operand_b: float` — second operand
-- `result: float` — calculation result
-- `timestamp: str` — ISO format timestamp, auto-generated in `__post_init__`
+```python
+class Operation(Enum):
+    ADD = "add"
+    SUBTRACT = "subtract"
+    MULTIPLY = "multiply"
+    DIVIDE = "divide"
 
-Key methods:
-- `__post_init__()` — auto-generates timestamp if not provided
-- `to_dict()` — serializes to dictionary using `asdict()`
-- `from_dict()` — deserializes from dictionary using `cls(**data)`
-- `__str__()` — formats result as readable string (e.g., "3 + 5 = 8")
+    @classmethod
+    def from_string(cls, value: str) -> "Operation":
+        # Case-insensitive lookup by string value
+        # Raises ValueError if unknown
 
-### Calculation Execution Flow
-
-**Primary calculation path** (line 12-21 in `calculator_service.py`):
-
-1. `CalculatorService.perform()` is called with operation and operands
-2. Calls `self.calculator.calculate(operation, a, b)` → returns float result
-3. Creates `CalculationResult` with operation, operands, and computed result
-4. Calls `self.storage.save(calc_result)` → persists to JSON
-5. Returns `CalculationResult` to caller
-
-**Calculation implementation** (in `calculator.py`):
-- `Calculator.calculate()` dispatches to specific method (add/subtract/multiply/divide)
-- Each method performs simple arithmetic (no intentional delay)
-- Only `divide()` has control logic (zero-check raises ValueError)
-
-**Storage** (in `json_storage.py`):
-- `CalculationResult.to_dict()` converts object to dictionary
-- Dictionary is appended to list and written to `artifacts/calculations.json`
-- Deserialization uses `CalculationResult.from_dict()` to reconstruct objects
-
-### Testing Patterns
-
-**Test files**:
-- `test_calculator.py` — unit tests for Calculator arithmetic methods
-- `test_calculator_service.py` — tests CalculatorService.perform() and get_history()
-- `test_json_storage.py` — tests JSON persistence
-- `test_cli.py` — tests CLI interaction
+    def display_name(self) -> str:
+        return self.value.capitalize()
+```
 
 **Key observations**:
-- Tests use `MagicMock` for storage in service tests
-- Tests instantiate `CalculationResult` directly with hardcoded timestamp "2026-01-01T00:00:00"
-- Tests verify result attributes: operation, operands, result, timestamp
-- No current tests verify execution timing
+- Operations are registered as enum members with string values (lowercase)
+- `from_string()` is case-insensitive and used by CLI to parse operation names
+- `display_name()` is used for menu display (capitalizes the operation name)
 
-## What Needs to Change
+### Calculator Implementation
 
-### 1. CalculationResult Class (`src/models/calculation_result.py`)
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/services/calculator.py`
 
-**Add new attribute**:
+Current structure:
+```python
+class Calculator:
+    def add(self, a: float, b: float) -> float
+    def subtract(self, a: float, b: float) -> float
+    def multiply(self, a: float, b: float) -> float
+    def divide(self, a: float, b: float) -> float
+        # Raises ValueError("Division by zero is not allowed") if b == 0
+
+    def calculate(self, operation: Operation, a: float, b: float) -> float
+        # Dispatch table maps Operation to method
+        # Raises ValueError if operation not in dispatch
 ```
-execution_time_ms: float = field(default=0.0)
+
+**Key patterns**:
+- Each operation is a named method taking two float operands (a, b)
+- Exception handling for error cases (e.g., division by zero) occurs in the method itself
+- The `calculate()` method dispatches via a dictionary mapping Operation enum members to methods
+- Methods return float directly or raise ValueError for invalid inputs
+
+### Operation Dispatch Mechanism
+
+The dispatch table in `calculate()` shows the coupling point:
+```python
+dispatch = {
+    Operation.ADD: self.add,
+    Operation.SUBTRACT: self.subtract,
+    Operation.MULTIPLY: self.multiply,
+    Operation.DIVIDE: self.divide,
+}
 ```
-- Type: `float` (milliseconds as decimal for sub-millisecond precision)
-- Default: 0.0 (fallback for backward compatibility, but should always be set by service)
-- Naming follows convention: `execution_time_ms` (not `exec_time`, `timing`, or `duration_ms`)
 
-**Impact on serialization**:
-- `to_dict()` will automatically include `execution_time_ms` via `asdict()`
-- `from_dict()` will automatically accept it (with default if missing)
-- **Backward compatibility**: Old JSON records lacking `execution_time_ms` will get 0.0 when loaded, allowing graceful upgrade
+To add new operations, this dispatch table must be updated to include new enum values.
 
-**Impact on `__str__()`**:
-- Current implementation does not display execution time
-- No change needed (execution_time_ms is internal/persisted, not user-facing display)
+### CalculationResult Persistence
 
-### 2. CalculatorService (`src/services/calculator_service.py`)
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/models/calculation_result.py`
 
-**Timing implementation location**: The `perform()` method is the orchestrator that:
-1. Has access to the raw execution point
-2. Controls the CalculationResult creation
-3. Must wrap the calculation call
+```python
+@dataclass
+class CalculationResult:
+    operation: str           # stores operation.value (e.g., "add")
+    operand_a: float
+    operand_b: float
+    result: float
+    timestamp: str = field(default="")
+    execution_time_ms: float = field(default=0.0)
+```
 
-**Key implementation detail**:
-- Import `time.perf_counter()` (built-in, highest resolution, monotonic)
-- Measure time between calculator.calculate() call boundaries
-- Convert nanoseconds/seconds to milliseconds: `(end - start) * 1000`
+**Key observation**: Operation is stored as a string (operation.value), not the enum itself. This allows JSON serialization.
 
-**Code structure**:
+### CalculatorService Orchestration
+
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/services/calculator_service.py`
+
 ```python
 def perform(self, operation: Operation, a: float, b: float) -> CalculationResult:
     start = time.perf_counter()
-    result = self.calculator.calculate(operation, a, b)  # ← measure this
+    result = self.calculator.calculate(operation, a, b)  # May raise ValueError
     elapsed_ms = (time.perf_counter() - start) * 1000
     
     calc_result = CalculationResult(
@@ -102,174 +107,535 @@ def perform(self, operation: Operation, a: float, b: float) -> CalculationResult
         operand_a=a,
         operand_b=b,
         result=result,
-        execution_time_ms=elapsed_ms,  # ← new parameter
+        execution_time_ms=elapsed_ms,
     )
     self.storage.save(calc_result)
     return calc_result
 ```
 
-**Error behavior**:
-- If `calculator.calculate()` raises ValueError (division by zero), the exception propagates before result creation
-- Timing is not recorded for failed calculations (current code already does not save failures)
-- This is correct behavior per task requirements (only "every calculation" that succeeds)
+**Error handling**: Exceptions from `calculator.calculate()` propagate uncaught, preventing result creation and storage. This is correct for fatal errors like division by zero.
 
-### 3. Test Updates (`tests/`)
+### CLI Integration
 
-**Backward compatibility tests needed**:
-- Test loading old JSON records without `execution_time_ms` field
-- Verify `from_dict()` defaults to 0.0 gracefully
-- Verify serialization includes `execution_time_ms`
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/cli/calculator_cli.py`
 
-**Calculator service tests**:
-- Existing tests instantiate `CalculationResult` with hardcoded timestamp
-- Must add `execution_time_ms=0.0` to all direct instantiations to match new signature
-- Add assertions that returned results have `execution_time_ms > 0.0` (non-negative and non-zero for real calls)
-- Add test verifying execution_time_ms is always set after perform()
+Menu definition:
+```python
+_MENU: list[tuple[Operation, str]] = [
+    (Operation.ADD,      "Add"),
+    (Operation.SUBTRACT, "Subtract"),
+    (Operation.MULTIPLY, "Multiply"),
+    (Operation.DIVIDE,   "Divide"),
+]
+```
 
-**JSON storage tests**:
-- Verify persisted JSON includes execution_time_ms field
-- Verify round-trip: save with execution_time_ms, load, verify field preserved
+**Key observation**: Menu entries are hardcoded. Adding new operations requires updating this list.
 
-**CLI tests**:
-- No changes needed — CLI only calls service, doesn't directly instantiate CalculationResult
-- Service returns results with execution_time_ms already set
-- If CLI test fixtures create CalculationResult directly (for mocking), add execution_time_ms parameter
+Command parsing uses `Operation.from_string()`:
+```python
+def run_command(self, operation_str: str, a: float, b: float) -> None:
+    try:
+        operation = Operation.from_string(operation_str)
+        result = self.service.perform(operation, a, b)
+        print(result)
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+```
 
-## Backward Compatibility Analysis
+### Testing Patterns
 
-### Serialized JSON Format
-**Current format** (artifacts/calculations.json):
-```json
-{
-  "operation": "add",
-  "operand_a": 3.0,
-  "operand_b": 5.0,
-  "result": 8.0,
-  "timestamp": "2026-04-29T12:01:36.308310"
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/tests/test_calculator.py`
+
+Pattern for operation tests:
+```python
+def test_operation_name(self):
+    assert self.calc.operation_method(operand1, operand2) == expected_result
+
+def test_operation_edge_case(self):
+    with pytest.raises(ValueError, match="error message"):
+        self.calc.operation_method(operand1, operand2)
+```
+
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/tests/test_calculator_service.py`
+
+Pattern for service integration:
+```python
+def test_perform_operation_returns_result(self):
+    result = self.service.perform(Operation.OPERATION, operand1, operand2)
+    assert result.result == expected
+    assert result.operation == "operation_name"
+
+def test_perform_operation_error_raises(self):
+    with pytest.raises(ValueError, match="error message"):
+        self.service.perform(Operation.OPERATION, operand1, operand2)
+```
+
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/tests/test_cli.py`
+
+Pattern for CLI:
+```python
+def test_operation_via_command(self, capsys):
+    cli, service = _make_cli()
+    service.perform.return_value = CalculationResult("operation", a, b, result, _TS, 0.0)
+    cli.run_command("operation", a, b)
+    assert "result" in capsys.readouterr().out
+```
+
+### Result Display
+
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/models/calculation_result.py`
+
+```python
+_SYMBOLS = {"add": "+", "subtract": "-", "multiply": "×", "divide": "÷"}
+
+def __str__(self) -> str:
+    symbol = _SYMBOLS.get(self.operation, self.operation)
+    # formats as "a symbol b = result"
+```
+
+**Key observation**: New operations need symbols in `_SYMBOLS` dictionary for proper display. If not present, the operation name is used as fallback.
+
+## What New Operations Need to Be Added
+
+### 1. Square Operation (x^2)
+
+**Enum value**: `SQUARE = "square"`
+
+**Method signature**: `square(self, a: float, b: float=None) -> float`
+
+**Issue**: The task specifies "square(x)" (unary), but the Calculator interface takes two operands. Options:
+- Option A: Ignore the second operand (simpler, consistent interface)
+- Option B: Interpret as square of (a+b) or other binary variant
+- Option C: Modify Calculator.calculate() signature
+
+**Assumption**: Use Option A — implement as `a * a`, ignoring `b`. This keeps the interface uniform and follows principle of least surprise.
+
+**Edge cases**: None for floating-point square (always valid).
+
+### 2. Sqrt Operation (√x)
+
+**Enum value**: `SQRT = "sqrt"`
+
+**Method signature**: `sqrt(self, a: float, b: float=None) -> float`
+
+**Edge case**: Negative numbers must raise an error.
+- `math.sqrt()` raises ValueError for negative inputs
+- Error message should be clear: "Cannot compute square root of negative number"
+
+**Assumption**: Second operand is ignored; sqrt(a) computes the square root of a only.
+
+### 3. Power Operation (x^y)
+
+**Enum value**: `POWER = "power"`
+
+**Method signature**: `power(self, a: float, b: float) -> float`
+
+**Behavior**: a ** b (both operands used)
+
+**Edge cases**:
+- Negative base with fractional exponent: e.g., (-2) ** 0.5 produces complex number
+  - Python handles this by raising ValueError: "negative number cannot be raised to a fractional power"
+- Zero base with negative exponent: e.g., 0 ** -1 produces ZeroDivisionError
+  - Python raises ZeroDivisionError: "0.0 cannot be raised to a negative power"
+- These exceptions should propagate naturally (no special handling needed)
+
+**Assumption**: Let Python's built-in ** operator handle edge cases and raise appropriate errors.
+
+### 4. Modulo Operation (x % y)
+
+**Enum value**: `MODULO = "modulo"`
+
+**Method signature**: `modulo(self, a: float, b: float) -> float`
+
+**Behavior**: a % b (remainder after division)
+
+**Edge case**: Division by zero (b == 0) must raise an error.
+- Error message should be: "Modulo by zero is not allowed"
+
+**Assumption**: Follow the pattern from divide() — check for zero before operation and raise ValueError explicitly.
+
+## Implementation Checklist
+
+### Required Changes to Add All Four Operations
+
+#### 1. `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/models/operation.py`
+
+Add enum members:
+```python
+SQUARE = "square"
+SQRT = "sqrt"
+POWER = "power"
+MODULO = "modulo"
+```
+
+No changes to `from_string()` or `display_name()` (they're generic).
+
+#### 2. `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/services/calculator.py`
+
+Add four methods:
+```python
+def square(self, a: float, b: float) -> float:
+    return a * a
+
+def sqrt(self, a: float, b: float) -> float:
+    if a < 0:
+        raise ValueError("Cannot compute square root of negative number")
+    return a ** 0.5  # or import math; return math.sqrt(a)
+
+def power(self, a: float, b: float) -> float:
+    return a ** b
+
+def modulo(self, a: float, b: float) -> float:
+    if b == 0:
+        raise ValueError("Modulo by zero is not allowed")
+    return a % b
+```
+
+Update dispatch table in `calculate()`:
+```python
+dispatch = {
+    Operation.ADD: self.add,
+    Operation.SUBTRACT: self.subtract,
+    Operation.MULTIPLY: self.multiply,
+    Operation.DIVIDE: self.divide,
+    Operation.SQUARE: self.square,
+    Operation.SQRT: self.sqrt,
+    Operation.POWER: self.power,
+    Operation.MODULO: self.modulo,
 }
 ```
 
-**New format**:
-```json
-{
-  "operation": "add",
-  "operand_a": 3.0,
-  "operand_b": 5.0,
-  "result": 8.0,
-  "timestamp": "2026-04-29T12:01:36.308310",
-  "execution_time_ms": 0.123
+#### 3. `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/src/cli/calculator_cli.py`
+
+Add symbols in `calculation_result.py`:
+```python
+_SYMBOLS = {
+    "add": "+",
+    "subtract": "-",
+    "multiply": "×",
+    "divide": "÷",
+    "square": "²",        # or "^2"
+    "sqrt": "√",
+    "power": "^",
+    "modulo": "%",
 }
 ```
 
-**Upgrade path**:
-- Old JSON without `execution_time_ms` can still be loaded
-- `from_dict()` uses `cls(**data)`, which allows missing fields with dataclass defaults
-- Old records will have `execution_time_ms=0.0` when loaded
-- New records will have accurate timing
-- Mixed history (old + new) will work correctly
+Update menu in `calculator_cli.py`:
+```python
+_MENU: list[tuple[Operation, str]] = [
+    (Operation.ADD,      "Add"),
+    (Operation.SUBTRACT, "Subtract"),
+    (Operation.MULTIPLY, "Multiply"),
+    (Operation.DIVIDE,   "Divide"),
+    (Operation.SQUARE,   "Square"),
+    (Operation.SQRT,     "Square Root"),
+    (Operation.POWER,    "Power"),
+    (Operation.MODULO,   "Modulo"),
+]
+```
 
-### Interface Compatibility
-- `CalculatorService.perform()` signature unchanged (still returns CalculationResult)
-- `CalculationResult` constructor will require new parameter or use default
-- **Dataclass fields with defaults** must come after those without defaults
-- Current order: operation, operand_a, operand_b, result, timestamp (last has default)
-- New field: execution_time_ms (should also have default)
-- **No breaking change** to callers passing positional args if we append with default
+No changes to `run_command()` or `run_interactive()` — they automatically adapt to new menu items.
 
-## Files to Modify
+#### 4. Tests
 
-1. **src/models/calculation_result.py**
-   - Add `execution_time_ms: float = field(default=0.0)` to dataclass
-   - No changes to methods (auto-handled by dataclass machinery)
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/tests/test_calculator.py`
 
-2. **src/services/calculator_service.py**
-   - Import `time` module (built-in)
-   - Wrap `calculator.calculate()` with `time.perf_counter()` timing
-   - Pass `execution_time_ms` to CalculationResult constructor
+Add test methods following existing pattern:
 
-3. **tests/test_calculator_service.py**
-   - Update mock CalculationResult instantiations to include execution_time_ms
-   - Add assertion that returned results have execution_time_ms >= 0
-   - Add test for backward compatibility (loading old format)
+```python
+def test_square(self):
+    assert self.calc.square(3, 0) == 9  # Note: second arg ignored
 
-4. **tests/test_json_storage.py**
-   - Update mock CalculationResult instantiations to include execution_time_ms
-   - Add test verifying execution_time_ms is persisted and loaded correctly
-   - Add test for loading old JSON records without execution_time_ms
+def test_square_zero(self):
+    assert self.calc.square(0, 0) == 0
 
-5. **tests/test_cli.py**
-   - Update CalculationResult instantiations to include execution_time_ms (lines 17, 49, 76)
+def test_square_negative(self):
+    assert self.calc.square(-3, 0) == 9
 
-6. **tests/test_calculator.py**
-   - No changes (only tests Calculator class, not CalculationResult creation)
+def test_square_float(self):
+    assert self.calc.square(2.5, 0) == pytest.approx(6.25)
 
-## Ambiguities & Assumptions
+def test_sqrt(self):
+    assert self.calc.sqrt(9, 0) == 3.0
 
-### 1. What counts as "execution time"?
-**Assumption**: Only the time spent in `Calculator.calculate()` method.
-- Does NOT include: JSON serialization, storage I/O, CLI overhead
-- Rationale: Task says "execution time" for "calculation results," implying only the arithmetic operation
-- This is measured by wrapping the call in `CalculatorService.perform()`
+def test_sqrt_zero(self):
+    assert self.calc.sqrt(0, 0) == 0.0
 
-### 2. Timing precision / unit choice
-**Assumption**: Milliseconds as float (e.g., 0.123 ms for very fast operations)
-- Task specifies: "execution_time_ms attribute (milliseconds)"
-- Using `time.perf_counter()` (nanosecond resolution on Linux) and converting to ms gives adequate precision
-- Alternative (nanoseconds) rejected because: task explicitly says "milliseconds"
-- Alternative (integers) rejected because: Python integers would round very fast operations to 0, losing information
+def test_sqrt_float(self):
+    assert self.calc.sqrt(2, 0) == pytest.approx(1.414213562)
 
-### 3. Failed calculations (division by zero)
-**Assumption**: Do not record execution_time_ms for failed calculations.
-- Division by zero raises ValueError before CalculationResult is created
-- Current code does not persist failed calculations
-- Task says "set for every calculation" — a failed calculation is arguably not "a calculation" (no result produced)
-- This matches existing behavior (no special case needed)
+def test_sqrt_negative_raises(self):
+    with pytest.raises(ValueError, match="Cannot compute square root of negative"):
+        self.calc.sqrt(-1, 0)
 
-### 4. Backward compatibility loading
-**Assumption**: Missing `execution_time_ms` in loaded JSON defaults to 0.0.
-- Dataclass field with `default=0.0` handles this automatically
-- Allows old history to coexist with new records
-- Does not require JSON migration script
+def test_power(self):
+    assert self.calc.power(2, 3) == 8
+
+def test_power_zero_exponent(self):
+    assert self.calc.power(5, 0) == 1
+
+def test_power_fractional_exponent(self):
+    assert self.calc.power(4, 0.5) == pytest.approx(2.0)
+
+def test_power_negative_base_negative_exponent(self):
+    assert self.calc.power(-2, -1) == pytest.approx(-0.5)
+
+def test_power_zero_negative_exponent_raises(self):
+    with pytest.raises(ZeroDivisionError):
+        self.calc.power(0, -1)
+
+def test_power_negative_base_fractional_exponent_raises(self):
+    with pytest.raises(ValueError):
+        self.calc.power(-2, 0.5)
+
+def test_modulo(self):
+    assert self.calc.modulo(10, 3) == 1
+
+def test_modulo_negative_dividend(self):
+    assert self.calc.modulo(-10, 3) == 2  # Python's modulo behavior
+
+def test_modulo_zero_divisor_raises(self):
+    with pytest.raises(ValueError, match="Modulo by zero"):
+        self.calc.modulo(5, 0)
+
+def test_modulo_float(self):
+    assert self.calc.modulo(7.5, 2.5) == pytest.approx(0.0)
+```
+
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/tests/test_calculator_service.py`
+
+Add service tests:
+```python
+def test_perform_square_returns_result(self):
+    result = self.service.perform(Operation.SQUARE, 3, 0)
+    assert result.result == 9
+    assert result.operation == "square"
+
+def test_perform_sqrt_returns_result(self):
+    result = self.service.perform(Operation.SQRT, 9, 0)
+    assert result.result == 3.0
+
+def test_perform_sqrt_negative_raises(self):
+    with pytest.raises(ValueError, match="Cannot compute square root"):
+        self.service.perform(Operation.SQRT, -1, 0)
+
+def test_perform_power_returns_result(self):
+    result = self.service.perform(Operation.POWER, 2, 3)
+    assert result.result == 8
+
+def test_perform_modulo_returns_result(self):
+    result = self.service.perform(Operation.MODULO, 10, 3)
+    assert result.result == 1
+
+def test_perform_modulo_by_zero_raises(self):
+    with pytest.raises(ValueError, match="Modulo by zero"):
+        self.service.perform(Operation.MODULO, 5, 0)
+```
+
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/tests/test_calculator.py`
+
+Also add dispatch test:
+```python
+def test_calculate_dispatches_new_operations(self):
+    assert self.calc.calculate(Operation.SQUARE, 3, 0) == 9
+    assert self.calc.calculate(Operation.SQRT, 9, 0) == 3.0
+    assert self.calc.calculate(Operation.POWER, 2, 3) == 8
+    assert self.calc.calculate(Operation.MODULO, 10, 3) == 1
+```
+
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/tests/test_cli.py`
+
+Add command tests:
+```python
+def test_square_via_command(self, capsys):
+    cli, service = _make_cli()
+    service.perform.return_value = CalculationResult("square", 3, 0, 9, _TS, 0.0)
+    cli.run_command("square", 3, 0)
+    assert "9" in capsys.readouterr().out
+
+def test_sqrt_via_command(self, capsys):
+    cli, service = _make_cli()
+    service.perform.return_value = CalculationResult("sqrt", 9, 0, 3.0, _TS, 0.0)
+    cli.run_command("sqrt", 9, 0)
+    assert "3" in capsys.readouterr().out
+
+def test_power_via_command(self, capsys):
+    cli, service = _make_cli()
+    service.perform.return_value = CalculationResult("power", 2, 3, 8, _TS, 0.0)
+    cli.run_command("power", 2, 3)
+    assert "8" in capsys.readouterr().out
+
+def test_modulo_via_command(self, capsys):
+    cli, service = _make_cli()
+    service.perform.return_value = CalculationResult("modulo", 10, 3, 1, _TS, 0.0)
+    cli.run_command("modulo", 10, 3)
+    assert "1" in capsys.readouterr().out
+```
+
+#### 5. Diagrams
+
+Update UML diagrams to reflect new operations:
+
+**File**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/calculator/artifacts/class_diagram.puml`
+
+Update Operation enum:
+```
+enum Operation {
+    ADD
+    SUBTRACT
+    MULTIPLY
+    DIVIDE
+    SQUARE
+    SQRT
+    POWER
+    MODULO
+    ...
+}
+```
+
+Update Calculator methods list:
+```
+class Calculator {
+    ...
+    +square(a: float, b: float) : float
+    +sqrt(a: float, b: float) : float
+    +power(a: float, b: float) : float
+    +modulo(a: float, b: float) : float
+    ...
+}
+```
+
+## Ambiguities and Assumptions
+
+### 1. Unary vs Binary Operations
+
+**Question**: How should unary operations (square, sqrt) handle the binary interface?
+
+**Assumption**: Implement all operations with two float parameters. For unary operations (square, sqrt), the second parameter is ignored. This:
+- Keeps the Calculator.calculate() signature uniform
+- Maintains consistency with existing dispatch mechanism
+- Simplifies CLI (doesn't need separate unary/binary handling)
+- The second operand can be documented as "ignored for unary operations"
+
+**Alternative rejected**: Modify Calculator.calculate() to accept variable arguments — would break existing dispatch mechanism and require major refactoring.
+
+### 2. Sqrt Implementation
+
+**Question**: Should we use `a ** 0.5` or `import math; math.sqrt(a)`?
+
+**Assumption**: Use `a ** 0.5` to avoid external dependencies. The task says "Use only built-in Python" (implicitly, as Task 01 established). The power operator is sufficient and more consistent with power() implementation.
+
+**Alternative**: `import math; math.sqrt()` is equally valid but adds an import for what power already does.
+
+### 3. Error Messages
+
+**Question**: What exact error messages should be used?
+
+**Assumption**: Follow existing pattern from divide():
+- "Modulo by zero is not allowed" (matches "Division by zero is not allowed")
+- "Cannot compute square root of negative number" (clear and specific)
+- Let Python's native errors propagate for power edge cases (ZeroDivisionError, ValueError for negative fractional roots)
+
+### 4. Second Operand in CLI for Unary Ops
+
+**Question**: When user calls `square` from CLI, should they be required to provide two operands?
+
+**Assumption**: Yes, for consistency. The CLI interface remains uniform: all operations take two operands. For unary operations, the second is simply ignored. This is simpler than:
+- Detecting operation type and prompting differently
+- Modifying the CLI logic (fragile)
 
 ## Scope Signals
 
-### In Scope
-- Adding execution_time_ms attribute to CalculationResult
-- Measuring time in CalculatorService.perform()
-- Persisting execution_time_ms to JSON
-- Backward-compatible loading of old records
-- Test coverage for timing and serialization
+### Must (In Scope)
+- Implement all four operations (square, sqrt, power, modulo)
+- Each follows the existing operation interface (Operation enum member + Calculator method + dispatch entry)
+- Edge case handling as specified (sqrt negative → error, modulo zero → error, power exceptions pass through)
+- Unit tests for all operations and edge cases
+- Service-level tests for integration
+- CLI tests for command parsing
 
-### Out of Scope (Won't)
-- External timing libraries (task explicitly excludes)
-- Complex timing scenarios (multi-threaded, async)
-- Performance optimization of calculator methods
-- Execution time display in CLI output (not requested)
+### Could (Optional but Beneficial)
+- Add display symbols (^2, √, ^, %) in _SYMBOLS dictionary for prettier output
+- Update diagrams to reflect new operations
+- Add docstrings to operation methods
 
-### Borderline (Should Consider)
-- Measuring time for CLI input/output overhead — out of scope (task is about calculation, not I/O)
-- Reusable timing utility class — mentioned in "Could" section; simple wrapping in perform() is sufficient for now
+### Won't (Out of Scope)
+- Support operator aliases ('^' for power) — not required
+- Reuse shared computation logic — each method is simple, no duplication
+- Introduce new operation types beyond these four
+- Modify CLI interface (keep uniform binary operand handling)
 
-## Priorities
+## Suggested Priorities
 
-1. **High**: Add `execution_time_ms` field to CalculationResult with default (prevents deserialization errors)
-2. **High**: Implement timing in CalculatorService.perform() (core requirement)
-3. **High**: Test that execution_time_ms is set on new calculations
-4. **High**: Test backward compatibility (old JSON loads without errors)
-5. **Medium**: Update all test instantiations of CalculationResult to include execution_time_ms
-6. **Medium**: Verify JSON round-trip includes execution_time_ms
-7. **Low**: Document the change in docstrings (optional, not requested)
+1. **High**: Add four Operation enum members (square, sqrt, power, modulo)
+   - Blocking: everything else depends on this
 
-## Summary of Implementation Strategy
+2. **High**: Implement four Calculator methods
+   - Blocking: service and CLI need these
 
-**Minimal, non-breaking change**:
-1. Add one dataclass field with a default (safe for deserialization)
-2. Add 2-3 lines of timing code in one method
-3. Update test fixtures to match new signature
-4. Verify backward compatibility of JSON loading
+3. **High**: Update dispatch table in Calculator.calculate()
+   - Blocking: dispatch won't find new operations without this
 
-**Expected outcome**:
-- All new calculations have execution_time_ms set to measured time (milliseconds, float)
-- Old history records load with execution_time_ms=0.0 (no errors)
-- No changes to public APIs or CLI behavior
-- 38 existing tests pass with minimal fixture updates
+4. **High**: Write unit tests for all four operations and edge cases
+   - Ensures correctness before integration
+
+5. **High**: Update CalculatorCLI menu to include new operations
+   - Required for interactive mode access
+
+6. **Medium**: Add service-level tests (test_calculator_service.py)
+   - Verifies integration and persistence
+
+7. **Medium**: Add CLI-level tests (test_cli.py)
+   - Verifies command parsing and output
+
+8. **Medium**: Add symbols to _SYMBOLS dictionary
+   - Improves user experience but not critical
+
+9. **Low**: Update diagrams (class_diagram.puml, activity_diagram.puml)
+   - Documentation, doesn't affect functionality
+
+## Implementation Notes
+
+### Unary Operations Behavior
+For square and sqrt, the second operand is accepted by the method signature but ignored:
+```python
+def square(self, a: float, b: float) -> float:
+    return a * a  # b is ignored
+
+def sqrt(self, a: float, b: float) -> float:
+    if a < 0:
+        raise ValueError("Cannot compute square root of negative number")
+    return a ** 0.5  # b is ignored
+```
+
+The method must accept `b` to match the dispatcher's expectations (all operations take 2 args), but it doesn't use it. This is acceptable in Python and a common pattern for polyadic interfaces.
+
+### Edge Case Propagation
+For power operation, Python's built-in exceptions are sufficient:
+- `0 ** -1` → ZeroDivisionError: "0.0 cannot be raised to a negative power"
+- `(-1) ** 0.5` → ValueError: "negative number cannot be raised to a fractional power"
+
+These exceptions naturally propagate through Calculator.calculate() to CalculatorService.perform() to the CLI, where they're caught and displayed as errors. No custom handling needed.
+
+### Modulo with Negative Numbers
+Python's modulo has specific behavior with negative operands (different from some languages):
+```python
+-10 % 3 == 2  # Not -1
+10 % -3 == -2  # Not 1
+```
+
+This is Python's defined behavior and should be preserved (no special cases).
+
+## Summary
+
+Task 02 requires adding 8 methods across 3 files:
+- 4 new Operation enum members
+- 4 new Calculator methods
+- 1 updated dispatch table
+- 1 updated menu
+- 1 updated symbols dictionary
+- Approximately 20-30 test methods to cover new operations and edge cases
+
+All changes fit within the existing architecture and require no breaking changes to public APIs or CLI behavior. The implementation is straightforward; the main complexity is comprehensive edge case testing.

@@ -69,3 +69,65 @@ class TestCalculatorService:
         assert result.execution_time_ms == 0.0
         assert result.operation == "add"
         assert result.result == 3
+
+    def test_perform_square_returns_result(self):
+        result = self.service.perform(Operation.SQUARE, 3, 0)
+        assert result.result == 9
+        assert result.operation == "square"
+
+    def test_perform_sqrt_returns_result(self):
+        result = self.service.perform(Operation.SQRT, 9, 0)
+        assert result.result == 3.0
+        assert result.operation == "sqrt"
+
+    def test_perform_sqrt_negative_raises(self):
+        with pytest.raises(ValueError, match="Cannot compute square root"):
+            self.service.perform(Operation.SQRT, -1, 0)
+
+    def test_perform_power_returns_result(self):
+        result = self.service.perform(Operation.POWER, 2, 3)
+        assert result.result == 8
+        assert result.operation == "power"
+
+    def test_perform_modulo_returns_result(self):
+        result = self.service.perform(Operation.MODULO, 10, 3)
+        assert result.result == 1
+        assert result.operation == "modulo"
+
+    def test_perform_modulo_by_zero_raises(self):
+        with pytest.raises(ValueError, match="Modulo by zero"):
+            self.service.perform(Operation.MODULO, 5, 0)
+
+    def test_perform_square_saves_to_storage(self):
+        self.service.perform(Operation.SQUARE, 3, 0)
+        self.storage.save.assert_called_once()
+        saved: CalculationResult = self.storage.save.call_args[0][0]
+        assert saved.result == 9
+
+    def test_perform_sqrt_saves_to_storage(self):
+        self.service.perform(Operation.SQRT, 9, 0)
+        self.storage.save.assert_called_once()
+        saved: CalculationResult = self.storage.save.call_args[0][0]
+        assert saved.result == 3.0
+
+    def test_perform_power_saves_to_storage(self):
+        self.service.perform(Operation.POWER, 2, 3)
+        self.storage.save.assert_called_once()
+        saved: CalculationResult = self.storage.save.call_args[0][0]
+        assert saved.result == 8
+
+    def test_perform_modulo_saves_to_storage(self):
+        self.service.perform(Operation.MODULO, 10, 3)
+        self.storage.save.assert_called_once()
+        saved: CalculationResult = self.storage.save.call_args[0][0]
+        assert saved.result == 1
+
+    def test_perform_sqrt_error_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.SQRT, -1, 0)
+        self.storage.save.assert_not_called()
+
+    def test_perform_modulo_error_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.MODULO, 5, 0)
+        self.storage.save.assert_not_called()
