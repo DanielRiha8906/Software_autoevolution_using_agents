@@ -129,4 +129,4 @@ Duration: 380.9s | Cost: $0.622439 USD | Turns: 26
 - ✓ Comment logic is centralized and not duplicated across codebase
 - ✓ Service is tested comprehensively (29 tests, all passing)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 400.7s | Cost: $0.642642 USD | Turns: 21
