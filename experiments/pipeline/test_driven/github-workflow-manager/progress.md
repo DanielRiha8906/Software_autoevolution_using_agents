@@ -89,4 +89,4 @@ All methods derive state strictly from status and conclusion fields only.
 - No dependencies: Uses only == comparisons with enum fields
 - Pure queries: No side effects or I/O operations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 197.0s | Cost: $0.340231 USD | Turns: 15
