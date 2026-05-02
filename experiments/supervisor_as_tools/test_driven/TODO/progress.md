@@ -28,4 +28,4 @@ Successfully added an optional `due_date: Optional[datetime]` field to the Task 
 - Updated `from_dict()` to handle backward compatibility with records missing due_date field
 - Type: Optional[datetime] with default value None
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 111.4s | Cost: $0.234763 USD | Turns: 25
