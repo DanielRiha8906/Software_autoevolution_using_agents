@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from ..models.task import Task
+from ..models.task import Task, _validate_timezone_aware_datetime
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 
@@ -23,8 +23,10 @@ class TaskManager:
     def _persist(self) -> None:
         self._storage.save([t.to_dict() for t in self._tasks.values()])
 
-    def add(self, title: str, description: Optional[str] = None) -> Task:
-        task = Task(title=title, description=description)
+    def add(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
+        if due_date is not None:
+            _validate_timezone_aware_datetime(due_date)
+        task = Task(title=title, description=description, due_date=due_date)
         self._tasks[task.id] = task
         self._persist()
         return task
