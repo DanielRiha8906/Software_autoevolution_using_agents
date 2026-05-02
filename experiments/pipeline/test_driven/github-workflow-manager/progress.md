@@ -28,4 +28,4 @@ Extended the `WorkflowRun` model with a new `duration_seconds: float` field that
 - Existing fields and behavior unchanged
 - No schema migration required
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 211.4s | Cost: $0.336953 USD | Turns: 16
