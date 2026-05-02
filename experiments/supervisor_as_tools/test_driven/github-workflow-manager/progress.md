@@ -14,4 +14,4 @@
 - Backward compatibility verified
 - Serialization round-trip confirmed
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 90.2s | Cost: $0.185309 USD | Turns: 21
