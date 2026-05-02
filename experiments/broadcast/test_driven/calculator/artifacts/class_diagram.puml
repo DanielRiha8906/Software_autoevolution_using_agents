@@ -35,6 +35,10 @@ package "services" #DDFFD4 {
         +multiply(a: float, b: float) : float
         +divide(a: float, b: float) : float
         +calculate(op: Operation, a: float, b: float) : float
+        +square(a: float) : float
+        +sqrt(a: float) : float
+        +power(base: float, exponent: float) : float
+        +modulo(a: float, b: float) : float
     }
 
     class CalculatorService {
