@@ -17,30 +17,9 @@ package "models" #DDEEFF {
         +status : TaskStatus
         +createdAt : DateTime
         +updatedAt : DateTime
-        +dueDate : DateTime [0..1]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
-        +setDueDate(dueDate: DateTime [0..1]) : void
-        +markInProgress() : void
-        +markDone() : void
-        +reopen() : void
-        +isPending() : Boolean
-        +isInProgress() : Boolean
-        +isCompleted() : Boolean
-        +isOverdue() : Boolean
-    }
-
-    class TaskComment {
-        +id : String
-        +taskId : String
-        +content : String
-        +author : String [0..1]
-        +createdAt : DateTime (CEST)
-        +updatedAt : DateTime [0..1]
-        --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : TaskComment
     }
 }
 
@@ -68,7 +47,6 @@ package "services" #DDFFD4 {
         +listByStatus(status: TaskStatus) : List<Task>
         +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
-        +setDueDate(taskId: String, dueDate: DateTime [0..1]) : Task
         +delete(taskId: String) : void
         -load() : void
         -persist() : void
@@ -85,7 +63,6 @@ package "services" #DDFFD4 {
         +completeTask(taskId: String) : Task
         +reopenTask(taskId: String) : Task
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
-        +setDueDate(taskId: String, dueDate: DateTime [0..1]) : Task
         +deleteTask(taskId: String) : void
     }
 }
@@ -107,7 +84,6 @@ package "cli" #FFE5E5 {
 }
 
 Task --> TaskStatus : status
-Task "1" -- "0..*" TaskComment : has
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager

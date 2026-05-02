@@ -14,26 +14,12 @@ package "models" #DDEEFF {
         +id : String
         +title : String
         +description : String [0..1]
-        +due_date : DateTime [0..1]
         +status : TaskStatus
         +createdAt : DateTime
         +updatedAt : DateTime
-        +comments : List<TaskComment> [0..*]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
-    }
-
-    class TaskComment {
-        +id : String
-        +task_id : String
-        +content : String
-        +author : String [0..1]
-        +created_at : DateTime
-        +updated_at : DateTime [0..1]
-        --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : TaskComment
     }
 }
 
@@ -49,7 +35,6 @@ package "storage" #FFF3CC {
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
-    exception CommentNotFoundError
 
     class TaskManager {
         -storage : JsonStorage
@@ -60,12 +45,9 @@ package "services" #DDFFD4 {
         +get(taskId: String) : Task
         +listAll() : List<Task>
         +listByStatus(status: TaskStatus) : List<Task>
-        +update(taskId: String, title: String [0..1], description: String [0..1], due_date: DateTime [0..1]) : Task
+        +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
         +delete(taskId: String) : void
-        +addComment(taskId: String, content: String, author: String [0..1]) : TaskComment
-        +listComments(taskId: String) : List<TaskComment>
-        +deleteComment(taskId: String, commentId: String) : void
         -load() : void
         -persist() : void
     }
@@ -82,9 +64,6 @@ package "services" #DDFFD4 {
         +reopenTask(taskId: String) : Task
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +deleteTask(taskId: String) : void
-        +addCommentToTask(taskId: String, content: String, author: String [0..1]) : TaskComment
-        +listTaskComments(taskId: String) : List<TaskComment>
-        +deleteTaskComment(taskId: String, commentId: String) : void
     }
 }
 
@@ -105,11 +84,8 @@ package "cli" #FFE5E5 {
 }
 
 Task --> TaskStatus : status
-Task --> TaskComment : comments
-TaskComment --> Task : belongs to
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
-TaskManager ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service

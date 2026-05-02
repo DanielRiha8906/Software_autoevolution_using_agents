@@ -9,42 +9,21 @@ package "models" #DDEEFF {
         SUBTRACT
         MULTIPLY
         DIVIDE
-        SQUARE
-        SQRT
-        POWER
-        MODULO
         --
         +fromString(value: String) : Operation
         +displayName() : String
     }
 
     class CalculationResult {
-        +operation : str
+        +operation : Operation
         +operandA : float
         +operandB : float
         +result : float
-        +timestamp : str
-        +executionTimeMs : float
+        +timestamp : String
         --
-        +toDict() : dict
-        +fromDict(data: dict) : CalculationResult
-        +toString() : str
-    }
-
-    class MemoryEntry <<dataclass>> {
-        +entry_id : str
-        +operation : str
-        +operand_a : float
-        +operand_b : float
-        +result : Optional[float]
-        +success : bool
-        +error_message : Optional[str]
-        +timestamp : str
-        +execution_time_ms : float
-        --
-        +__post_init__() : void
-        +to_dict() : dict
-        +from_dict(data: dict) : MemoryEntry
+        +toDict() : Dictionary
+        +fromDict(data: Dictionary) : CalculationResult
+        +toString() : String
     }
 }
 
@@ -54,10 +33,6 @@ package "services" #DDFFD4 {
         +subtract(a: float, b: float) : float
         +multiply(a: float, b: float) : float
         +divide(a: float, b: float) : float
-        +square(a: float, b: float) : float
-        +sqrt(a: float, b: float) : float
-        +power(a: float, b: float) : float
-        +modulo(a: float, b: float) : float
         +calculate(op: Operation, a: float, b: float) : float
     }
 
@@ -107,6 +82,5 @@ CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
-MemoryEntry ..> Operation : references
 
 @enduml

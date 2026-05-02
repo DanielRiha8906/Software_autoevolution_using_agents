@@ -1,23 +1,9 @@
-@startuml state_diagram
-
-title Task State Transitions (via Task methods)
+@startuml
 
 [*] --> PENDING
 
-PENDING --> IN_PROGRESS : mark_in_progress()
-IN_PROGRESS --> DONE : mark_done()
-DONE --> PENDING : reopen()
-
-note right of PENDING
-  is_pending() returns true
-end note
-
-note right of IN_PROGRESS
-  is_in_progress() returns true
-end note
-
-note right of DONE
-  is_completed() returns true
-end note
+PENDING --> IN_PROGRESS : start
+IN_PROGRESS --> DONE : complete
+DONE --> IN_PROGRESS : reopen
 
 @enduml

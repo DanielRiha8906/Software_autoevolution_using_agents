@@ -53,39 +53,3 @@ class TestJsonStorage:
         s = JsonStorage(deep)
         s.save(CalculationResult("add", 1, 1, 2, _TS))
         assert deep.exists()
-
-    def test_load_legacy_record_without_execution_time(self, tmp_path):
-        path = tmp_path / "calc.json"
-        # Write a legacy record without execution_time_ms field
-        legacy_data = [
-            {
-                "operation": "add",
-                "operand_a": 3.0,
-                "operand_b": 5.0,
-                "result": 8.0,
-                "timestamp": _TS
-            }
-        ]
-        with open(path, "w") as f:
-            json.dump(legacy_data, f)
-
-        # Load should succeed with default execution_time_ms=0.0
-        storage = JsonStorage(path)
-        loaded = storage.load_all()
-        assert len(loaded) == 1
-        assert loaded[0].execution_time_ms == 0.0
-        assert loaded[0].operation == "add"
-
-    def test_save_and_load_with_execution_time(self, storage):
-        r = CalculationResult("add", 3, 5, 8, _TS, execution_time_ms=12.345)
-        storage.save(r)
-        loaded = storage.load_all()
-        assert len(loaded) == 1
-        assert loaded[0].execution_time_ms == 12.345
-
-    def test_persisted_execution_time_as_json_number(self, storage):
-        storage.save(CalculationResult("subtract", 9, 3, 6, _TS, execution_time_ms=5.678))
-        with open(storage.filepath) as f:
-            data = json.load(f)
-        assert data[0]["execution_time_ms"] == 5.678
-        assert isinstance(data[0]["execution_time_ms"], float)

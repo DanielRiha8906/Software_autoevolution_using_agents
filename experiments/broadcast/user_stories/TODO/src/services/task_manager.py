@@ -2,7 +2,6 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from ..models.task import Task
-
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 
@@ -60,13 +59,6 @@ class TaskManager:
     def set_status(self, task_id: str, status: TaskStatus) -> Task:
         task = self.get(task_id)
         task.status = status
-        task.updated_at = datetime.now(timezone.utc)
-        self._persist()
-        return task
-
-    def set_due_date(self, task_id: str, due_date: Optional[datetime]) -> Task:
-        task = self.get(task_id)
-        task.set_due_date(due_date)
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task

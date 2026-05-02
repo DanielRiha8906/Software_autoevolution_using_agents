@@ -17,40 +17,6 @@ class WorkflowRun:
     updated_at: Optional[datetime]
     run_number: Optional[int]
     commit_sha: Optional[str]
-    duration_seconds: float = 0.0
-
-    def __post_init__(self) -> None:
-        if self.duration_seconds < 0.0:
-            raise ValueError("duration_seconds must not be negative")
-
-    def is_running(self) -> bool:
-        """Return True if the workflow is currently running."""
-        return self.status == WorkflowStatus.IN_PROGRESS
-
-    def is_terminal(self) -> bool:
-        """Return True if the workflow has reached a terminal state (completed)."""
-        return self.status == WorkflowStatus.COMPLETED
-
-    def is_successful(self) -> bool:
-        """Return True if the workflow completed successfully."""
-        return (
-            self.status == WorkflowStatus.COMPLETED
-            and self.conclusion == WorkflowConclusion.SUCCESS
-        )
-
-    def is_failed(self) -> bool:
-        """Return True if the workflow completed with a failure."""
-        return (
-            self.status == WorkflowStatus.COMPLETED
-            and self.conclusion == WorkflowConclusion.FAILURE
-        )
-
-    def is_cancelled(self) -> bool:
-        """Return True if the workflow was cancelled."""
-        return (
-            self.status == WorkflowStatus.COMPLETED
-            and self.conclusion == WorkflowConclusion.CANCELLED
-        )
 
     def to_dict(self) -> dict:
         return {
@@ -63,7 +29,6 @@ class WorkflowRun:
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
             "run_number": self.run_number,
             "commit_sha": self.commit_sha,
-            "duration_seconds": self.duration_seconds,
         }
 
     @classmethod
@@ -78,5 +43,4 @@ class WorkflowRun:
             updated_at=datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else None,
             run_number=data.get("run_number"),
             commit_sha=data.get("commit_sha"),
-            duration_seconds=data.get("duration_seconds", 0.0),
         )

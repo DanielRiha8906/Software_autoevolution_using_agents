@@ -23,7 +23,6 @@ class WorkflowRunTracker:
         run_number: Optional[int] = None,
         commit_sha: Optional[str] = None,
         run_id: Optional[str] = None,
-        duration_seconds: float = 0.0,
     ) -> WorkflowRun:
         run = WorkflowRun(
             id=run_id or str(uuid.uuid4()),
@@ -35,6 +34,5 @@ class WorkflowRunTracker:
             updated_at=None,
             run_number=run_number,
             commit_sha=commit_sha,
-            duration_seconds=duration_seconds,
         )
         return self._service.add_workflow_run(run)

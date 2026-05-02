@@ -23,7 +23,6 @@ class WorkflowRunTracker:
         run_number: Optional[int] = None,
         commit_sha: Optional[str] = None,
         run_id: Optional[str] = None,
-        duration_seconds: float = 0.0,
     ) -> WorkflowRun:
         run = WorkflowRun(
             id=run_id or str(uuid.uuid4()),
@@ -32,7 +31,6 @@ class WorkflowRunTracker:
             status=status,
             conclusion=conclusion,
             created_at=datetime.now(timezone.utc),
-            duration_seconds=duration_seconds,
             updated_at=None,
             run_number=run_number,
             commit_sha=commit_sha,

@@ -6,22 +6,10 @@ class Operation(Enum):
     SUBTRACT = "subtract"
     MULTIPLY = "multiply"
     DIVIDE = "divide"
-    SQUARE = "square"
-    SQRT = "sqrt"
-    POWER = "power"
-    MODULO = "modulo"
 
     @classmethod
     def from_string(cls, value: str) -> "Operation":
         normalized = value.lower()
-        # Handle operator aliases
-        aliases = {
-            "^": "power",
-            "%": "modulo",
-        }
-        if normalized in aliases:
-            normalized = aliases[normalized]
-
         for member in cls:
             if member.value == normalized:
                 return member

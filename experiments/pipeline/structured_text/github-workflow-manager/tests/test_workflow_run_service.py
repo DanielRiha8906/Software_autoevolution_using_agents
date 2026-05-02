@@ -19,7 +19,6 @@ def _make_run(run_id: str = "run-1", branch: str = "main") -> WorkflowRun:
         updated_at=None,
         run_number=1,
         commit_sha="abc123",
-        duration_seconds=0.0,
     )
 
 
@@ -72,19 +71,3 @@ def test_filter_by_conclusion(service):
     service.add_workflow_run(run)
     assert service.filter_by_conclusion(WorkflowConclusion.SUCCESS) == [run]
     assert service.filter_by_conclusion(WorkflowConclusion.FAILURE) == []
-
-
-def test_workflow_run_rejects_negative_duration():
-    with pytest.raises(ValueError, match="duration_seconds must be non-negative"):
-        WorkflowRun(
-            id="r1",
-            workflow_name="Test",
-            branch="main",
-            status=WorkflowStatus.COMPLETED,
-            conclusion=WorkflowConclusion.SUCCESS,
-            created_at=datetime.now(timezone.utc),
-            updated_at=None,
-            run_number=1,
-            commit_sha="abc",
-            duration_seconds=-1.0,
-        )

@@ -31,33 +31,12 @@ package "models" #DDEEFF {
         +status        : WorkflowStatus
         +conclusion    : Optional[WorkflowConclusion]
         +created_at    : datetime
-        +duration_seconds : float
         +updated_at    : Optional[datetime]
         +run_number    : Optional[int]
         +commit_sha    : Optional[str]
         --
-        +__post_init__() : None
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRun
-        +is_running() : bool
-        +is_terminal() : bool
-        +is_successful() : bool
-        +is_failed() : bool
-        +is_cancelled() : bool
-    }
-
-    class WorkflowRunAttempt {
-        +id            : str
-        +run_id        : str
-        +attempt_number : int
-        +status        : WorkflowStatus
-        +conclusion    : Optional[WorkflowConclusion]
-        +created_at    : datetime
-        +duration_seconds : Optional[float]
-        --
-        +__post_init__() : None
-        +to_dict() : dict
-        +{static} from_dict(data: dict) : WorkflowRunAttempt
     }
 }
 
@@ -90,7 +69,7 @@ package "services" #DDFFD4 {
         -_service : WorkflowRunService
         --
         +__init__(service: WorkflowRunService)
-        +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str],\n  duration_seconds: float) : WorkflowRun
+        +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str]) : WorkflowRun
     }
 }
 
@@ -112,9 +91,6 @@ package "cli" #FFE5E5 {
 
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
-WorkflowRunAttempt         ..>  WorkflowRun           : run_id
-WorkflowRunAttempt         ..>  WorkflowStatus        : status
-WorkflowRunAttempt         ..>  WorkflowConclusion    : conclusion
 WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus

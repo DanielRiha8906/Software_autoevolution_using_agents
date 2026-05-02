@@ -43,7 +43,7 @@ class TestCalculatorService:
         self.storage.save.assert_not_called()
 
     def test_get_history_delegates_to_storage(self):
-        mock_history = [CalculationResult("add", 1, 2, 3, execution_time_ms=0, timestamp="2026-01-01T00:00:00")]
+        mock_history = [CalculationResult("add", 1, 2, 3, "2026-01-01T00:00:00")]
         self.storage.load_all.return_value = mock_history
         assert self.service.get_history() == mock_history
 

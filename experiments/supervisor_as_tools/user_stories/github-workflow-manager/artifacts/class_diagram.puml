@@ -24,20 +24,6 @@ package "models" #DDEEFF {
         STALE = "stale"
     }
 
-    enum RunAttemptStatus {
-        QUEUED
-        IN_PROGRESS
-        COMPLETED
-    }
-
-    enum RunAttemptConclusion {
-        SUCCESS
-        FAILURE
-        CANCELLED
-        TIMED_OUT
-        SKIPPED
-    }
-
     class WorkflowRun {
         +id            : str
         +workflow_name : str
@@ -48,23 +34,9 @@ package "models" #DDEEFF {
         +updated_at    : Optional[datetime]
         +run_number    : Optional[int]
         +commit_sha    : Optional[str]
-        +duration_seconds : float
         --
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRun
-    }
-
-    class WorkflowRunAttempt {
-        +id            : int
-        +run_id        : int
-        +attempt_number : int
-        +status        : RunAttemptStatus
-        +conclusion    : Optional[RunAttemptConclusion]
-        +created_at    : datetime
-        +duration_seconds : Optional[float]
-        --
-        +to_dict() : dict
-        +{static} from_dict(data: dict) : WorkflowRunAttempt
     }
 }
 
@@ -75,14 +47,6 @@ package "storage" #FFF3CC {
         +__init__(filepath: str)
         +save(runs: List[WorkflowRun]) : None
         +load() : List[WorkflowRun]
-    }
-
-    class WorkflowRunAttemptJsonStorage {
-        +filepath : str
-        --
-        +__init__(filepath: str)
-        +save(attempts: List[WorkflowRunAttempt]) : None
-        +load() : List[WorkflowRunAttempt]
     }
 }
 
@@ -107,27 +71,6 @@ package "services" #DDFFD4 {
         +__init__(service: WorkflowRunService)
         +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str]) : WorkflowRun
     }
-
-    class WorkflowRunAttemptService {
-        -_storage : WorkflowRunAttemptJsonStorage
-        -_attempts : List[WorkflowRunAttempt]
-        --
-        +__init__(storage: WorkflowRunAttemptJsonStorage)
-        +add_workflow_run_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
-        +list_attempts() : List[WorkflowRunAttempt]
-        +get_attempt(run_id: int, attempt_number: int) : Optional[WorkflowRunAttempt]
-        +list_attempts_by_run_id(run_id: int) : List[WorkflowRunAttempt]
-        +filter_by_status(status: RunAttemptStatus) : List[WorkflowRunAttempt]
-        +filter_by_conclusion(conclusion: RunAttemptConclusion) : List[WorkflowRunAttempt]
-        -_persist() : None
-    }
-
-    class WorkflowRunAttemptTracker {
-        -_service : WorkflowRunAttemptService
-        --
-        +__init__(service: WorkflowRunAttemptService)
-        +track(...) : WorkflowRunAttempt
-    }
 }
 
 package "cli" #FFE5E5 {
@@ -148,20 +91,12 @@ package "cli" #FFE5E5 {
 
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
-WorkflowRunAttempt         ..>  RunAttemptStatus      : status
-WorkflowRunAttempt         ..>  RunAttemptConclusion  : conclusion
 WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
-WorkflowRunAttemptService "1" --> "1" WorkflowRunAttemptJsonStorage : -_storage
-WorkflowRunAttemptService  ..>  WorkflowRunAttempt
-WorkflowRunAttemptService  ..>  RunAttemptStatus
-WorkflowRunAttemptService  ..>  RunAttemptConclusion
-WorkflowRunAttemptTracker "1" --> "1" WorkflowRunAttemptService : -_service
-WorkflowRunAttemptTracker  ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService

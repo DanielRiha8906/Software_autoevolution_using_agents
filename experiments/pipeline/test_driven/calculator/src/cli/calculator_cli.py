@@ -10,10 +10,6 @@ class CalculatorCLI:
         (Operation.SUBTRACT, "Subtract"),
         (Operation.MULTIPLY, "Multiply"),
         (Operation.DIVIDE,   "Divide"),
-        (Operation.SQUARE,   "Square"),
-        (Operation.SQRT,     "Square Root"),
-        (Operation.POWER,    "Power"),
-        (Operation.MODULO,   "Modulo"),
     ]
 
     def __init__(self, service: CalculatorService) -> None:

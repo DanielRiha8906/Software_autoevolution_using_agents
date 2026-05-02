@@ -48,12 +48,6 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Install PlantUML
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y plantuml graphviz jq bc
-          plantuml -version
-          dot -V
       - name: Prepare prompts
         id: prompts
         shell: bash
@@ -102,10 +96,13 @@ jobs:
 
           3. Spawn a Programmer sub-agent.
              Input: read design.md.
-             Goal: implement the design in src/ and add or update tests in tests/.
+             Goal: implement the design in src/ only. Do not write tests.
+             Output: list of new or changed functions/classes and which need test coverage.
 
-          4. Run pytest. If tests fail, spawn the Programmer sub-agent again passing the full test output
-             so it can fix the failures. Repeat up to 3 times.
+          4. Spawn a pytest-tester sub-agent, passing the Programmer's output (new/changed functions and classes).
+             Goal: write tests in tests/ for the reported code and run the full suite.
+             If tests reveal production bugs, spawn the Programmer sub-agent with the full failure report so it can fix src/.
+             Repeat (tester → programmer → tester) up to 3 cycles.
 
           5. Spawn a UML Designer sub-agent.
              Goal: update artifacts/*.puml to reflect the current state of src/ after all changes."
@@ -372,23 +369,3 @@ jobs:
 
           git commit -m "chore: patch progress.md with actual cost (task ${{ inputs.task_num }})"
           git push origin "$BRANCH"
-
-      - name: Generate UML diagrams
-        if: always()
-        shell: bash
-        run: |
-          WORK_DIR="experiments/${{ inputs.architecture }}/${{ inputs.strategy }}/${{ inputs.project }}"
-
-          bash "$WORK_DIR/generate_diagrams.sh"
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add "$WORK_DIR/artifacts/"
-
-          if git diff --cached --quiet; then
-          echo "No UML diagram changes to commit."
-          else
-              git commit -m "chore: update generated UML diagrams"
-              git push
-          fi

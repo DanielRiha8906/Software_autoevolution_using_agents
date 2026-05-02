@@ -21,7 +21,6 @@ repeat
       :Choose conclusion (optional, 0 to skip);
       :Prompt run number (optional);
       :Prompt commit SHA (optional);
-      :Prompt duration (seconds, optional);
       :WorkflowRunTracker.track();
       :Print "Added run <id>";
 

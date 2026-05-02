@@ -20,7 +20,7 @@ package "TODO Application" {
     }
 
     package "Domain Model" {
-        component "Task Model\n(Task, TaskStatus,\nTaskComment)" as Model
+        component "Task Model\n(Task, TaskStatus)" as Model
     }
 
     package "Persistence Layer" {

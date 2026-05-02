@@ -50,7 +50,6 @@ class TodoCLI:
         p_add = sub.add_parser("add", help="Add a new task")
         p_add.add_argument("title", help="Task title")
         p_add.add_argument("-d", "--description", help="Optional description")
-        p_add.add_argument("--due-date", help="Optional due date (ISO 8601 format)")
         p_add.set_defaults(func=self._cmd_add)
 
         # list
@@ -87,7 +86,6 @@ class TodoCLI:
         p_update.add_argument("id", help="Task ID")
         p_update.add_argument("-t", "--title", help="New title")
         p_update.add_argument("-d", "--description", help="New description")
-        p_update.add_argument("--due-date", help="New due date (ISO 8601 format)")
         p_update.set_defaults(func=self._cmd_update)
 
         # delete
@@ -98,7 +96,7 @@ class TodoCLI:
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
-        task = self._service.add_task(args.title, args.description, args.due_date)
+        task = self._service.add_task(args.title, args.description)
         print(f"Added task {task.id[:8]}  {task.title}")
         return 0
 
@@ -122,7 +120,6 @@ class TodoCLI:
         print(f"Status:      {task.status.value}")
         print(f"Created:     {task.created_at.isoformat()}")
         print(f"Updated:     {task.updated_at.isoformat()}")
-        print(f"Due date:    {task.due_date.isoformat() if task.due_date else '—'}")
         return 0
 
     def _cmd_start(self, args: argparse.Namespace) -> int:
@@ -141,7 +138,7 @@ class TodoCLI:
         return 0
 
     def _cmd_update(self, args: argparse.Namespace) -> int:
-        task = self._service.update_task(args.id, title=args.title, description=args.description, due_date=args.due_date)
+        task = self._service.update_task(args.id, title=args.title, description=args.description)
         print(f"Updated {task.id[:8]}  {task.title}")
         return 0
 

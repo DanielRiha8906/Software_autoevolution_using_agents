@@ -2,16 +2,11 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from ..models.task import Task
-from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 
 
 class TaskNotFoundError(Exception):
-    pass
-
-
-class CommentNotFoundError(Exception):
     pass
 
 
@@ -51,14 +46,12 @@ class TaskManager:
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
 
-    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
+    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
         task = self.get(task_id)
         if title is not None:
             task.title = title
         if description is not None:
             task.description = description
-        if due_date is not None:
-            task.due_date = due_date
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task
@@ -73,27 +66,4 @@ class TaskManager:
     def delete(self, task_id: str) -> None:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
-        self._persist()
-
-    def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
-        task = self.get(task_id)  # resolves prefix and validates
-        comment = TaskComment(task_id=task.id, content=content, author=author)
-        task.comments.append(comment)
-        self._persist()
-        return comment
-
-    def list_comments(self, task_id: str) -> list[TaskComment]:
-        task = self.get(task_id)  # validates task exists
-        return task.comments
-
-    def delete_comment(self, task_id: str, comment_id: str) -> None:
-        task = self.get(task_id)  # validates task exists
-        comment_to_delete = None
-        for comment in task.comments:
-            if comment.id == comment_id:
-                comment_to_delete = comment
-                break
-        if comment_to_delete is None:
-            raise CommentNotFoundError(f"Comment '{comment_id}' not found in task '{task.id}'")
-        task.comments.remove(comment_to_delete)
         self._persist()

@@ -27,7 +27,6 @@ package "GitHub Workflow Manager" {
 
   package "Domain model" {
     component "WorkflowRun" as RUN
-    component "WorkflowRunAttempt" as ATTEMPT
     component "WorkflowStatus" as STATUS
     component "WorkflowConclusion" as CONCLUSION
   }
@@ -49,8 +48,5 @@ STOR --> JSON_FILE
 SVC ..> RUN
 RUN --> STATUS
 RUN --> CONCLUSION
-ATTEMPT --> RUN
-ATTEMPT --> STATUS
-ATTEMPT --> CONCLUSION
 
 @enduml

@@ -22,7 +22,6 @@ class WorkflowRunTracker:
         conclusion: Optional[WorkflowConclusion] = None,
         run_number: Optional[int] = None,
         commit_sha: Optional[str] = None,
-        duration_seconds: float = 0.0,
         run_id: Optional[str] = None,
     ) -> WorkflowRun:
         run = WorkflowRun(
@@ -35,6 +34,5 @@ class WorkflowRunTracker:
             updated_at=None,
             run_number=run_number,
             commit_sha=commit_sha,
-            duration_seconds=duration_seconds,
         )
         return self._service.add_workflow_run(run)

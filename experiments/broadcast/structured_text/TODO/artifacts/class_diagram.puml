@@ -17,29 +17,9 @@ package "models" #DDEEFF {
         +status : TaskStatus
         +createdAt : DateTime
         +updatedAt : DateTime
-        +dueDate : DateTime [0..1]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
-        +isOverdue() : Boolean
-        +markInProgress() : void
-        +markDone() : void
-        +reopen() : void
-        +isCompleted() : Boolean
-        +isPending() : Boolean
-        +isInProgress() : Boolean
-    }
-
-    class TaskComment {
-        +id : String
-        +taskId : String
-        +content : String
-        +author : String [0..1]
-        +createdAt : DateTime
-        +updatedAt : DateTime
-        --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : TaskComment
     }
 }
 
@@ -54,8 +34,7 @@ package "storage" #FFF3CC {
 }
 
 package "services" #DDFFD4 {
-    class TaskNotFoundError {
-    }
+    exception TaskNotFoundError
 
     class TaskManager {
         -storage : JsonStorage
@@ -105,7 +84,6 @@ package "cli" #FFE5E5 {
 }
 
 Task --> TaskStatus : status
-Task "1" --> "0..*" TaskComment : contains
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager

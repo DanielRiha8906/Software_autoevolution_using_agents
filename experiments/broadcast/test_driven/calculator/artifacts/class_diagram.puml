@@ -9,10 +9,6 @@ package "models" #DDEEFF {
         SUBTRACT
         MULTIPLY
         DIVIDE
-        SQUARE
-        SQRT
-        POWER
-        MODULO
         --
         +fromString(value: String) : Operation
         +displayName() : String
@@ -24,24 +20,10 @@ package "models" #DDEEFF {
         +operandB : float
         +result : float
         +timestamp : String
-        +executionTimeMs : float
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : CalculationResult
         +toString() : String
-    }
-
-    class MemoryEntry {
-        +operation : String
-        +operands : List<float>
-        +result : Optional[float]
-        +success : bool
-        +execution_time_ms : float
-        +id : String
-        +timestamp : String
-        --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : MemoryEntry
     }
 }
 
@@ -51,10 +33,6 @@ package "services" #DDFFD4 {
         +subtract(a: float, b: float) : float
         +multiply(a: float, b: float) : float
         +divide(a: float, b: float) : float
-        +square(a: float) : float
-        +sqrt(a: float) : float
-        +power(a: float, b: float) : float
-        +modulo(a: float, b: float) : float
         +calculate(op: Operation, a: float, b: float) : float
     }
 

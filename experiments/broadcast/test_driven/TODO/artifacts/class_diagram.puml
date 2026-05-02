@@ -17,29 +17,9 @@ package "models" #DDEEFF {
         +status : TaskStatus
         +createdAt : DateTime
         +updatedAt : DateTime
-        +dueDate : DateTime [0..1]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
-        +mark_in_progress() : void
-        +mark_done() : void
-        +reopen() : void
-        +is_completed() : Boolean
-        +is_overdue() : Boolean
-        +is_pending() : Boolean
-        +is_in_progress() : Boolean
-    }
-
-    class TaskComment {
-        +id : String
-        +task_id : String
-        +content : String
-        +created_at : DateTime
-        +updated_at : DateTime [0..1]
-        +author : String [0..1]
-        --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : TaskComment
     }
 }
 

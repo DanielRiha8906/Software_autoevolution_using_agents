@@ -19,27 +19,11 @@ package "models" #DDEEFF {
         +operandA : float
         +operandB : float
         +result : float
-        +execution_time_ms : int
         +timestamp : String
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : CalculationResult
         +toString() : String
-    }
-
-    class MemoryEntry {
-        +operation : String
-        +operand_a : float
-        +operand_b : float
-        +result : float | None
-        +success : bool
-        +error_message : String | None
-        +execution_time_ms : float
-        +entry_id : String
-        +timestamp : String
-        --
-        +to_dict() : Dictionary
-        +from_dict(data: Dictionary) : MemoryEntry
     }
 }
 
@@ -98,6 +82,5 @@ CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
-JsonStorage ..> MemoryEntry : stores
 
 @enduml
