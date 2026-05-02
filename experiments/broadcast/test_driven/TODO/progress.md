@@ -143,4 +143,4 @@ All three candidates produced functionally equivalent implementations with ident
 ✓ No external dependencies required
 ✓ Follows existing Task model patterns for consistency
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 237.6s | Cost: $0.692382 USD | Turns: 41
