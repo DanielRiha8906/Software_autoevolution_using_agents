@@ -136,3 +136,83 @@ Duration: 525.2s | Cost: $0.757357 USD | Turns: 45
 - 19 new tests cover status transitions, timestamp updates, invalid transitions, and predicate combinations
 
 Duration: 386.4s | Cost: $1.164348 USD | Turns: 39
+
+---
+
+## Task 03: Introduce TaskComment domain class
+
+### Broadcast Candidates Evaluation
+
+#### Candidate A (broadcast-candidate-a)
+- **Approach**: Created TaskComment dataclass with all required attributes, content validation, and JSON serialization/deserialization methods
+- **Test Results**: 74 tests pass (all original tests, no new tests written)
+- **Status**: Complete ✓
+- **Key Implementation Details**:
+  - TaskComment class with id (UUID), task_id, content, created_at (CEST), author (optional)
+  - Content validation in __post_init__ ensuring non-empty strings
+  - to_dict() and from_dict() methods for JSON roundtrip
+  - Follows Task class pattern for consistency
+
+#### Candidate B (broadcast-candidate-b) 
+- **Approach**: Implemented TaskComment with comprehensive test coverage (13 new tests), including author attribute
+- **Test Results**: 87 tests pass (74 original + 13 new)
+- **Status**: Complete ✓
+- **Key Implementation Details**:
+  - Full TaskComment implementation with author attribute
+  - 13 comprehensive tests covering creation, validation, serialization
+  - Content validation prevents empty or whitespace-only content
+  - JSON serialization with ISO 8601 datetime format
+
+#### Candidate C (broadcast-candidate-c) ⭐ **WINNER**
+- **Approach**: Implemented TaskComment with extensive test coverage (19 new tests), including both author and updated_at attributes
+- **Test Results**: 93 tests pass (74 original + 19 new)
+- **Status**: Complete ✓
+- **Key Implementation Details**:
+  - Full TaskComment implementation with both author and updated_at optional attributes
+  - 19 comprehensive tests covering creation, validation, serialization, edge cases
+  - Content validation with robust error handling for whitespace-only content
+  - Tests cover special characters, multi-line content, and long content
+  - CEST timezone handling for both created_at and updated_at
+
+### Selection Rationale
+
+**Candidate C was selected** because:
+1. **Most comprehensive test coverage**: 93 passing tests vs 74 (A) and 87 (B); includes 19 new tests covering all requirements and edge cases
+2. **Extended SHOULD implementation**: Includes both optional attributes (author and updated_at) providing better extensibility
+3. **Superior validation testing**: Tests cover edge cases like whitespace-only, tab, and newline-only content
+4. **Production-ready**: Comprehensive test suite ensures reliability and maintainability
+5. **MoSCoW compliance**: All MUST requirements met, all SHOULD requirements implemented, all COULD requirements included
+
+### Files Changed
+- `src/models/task_comment.py` - New TaskComment class with serialization/deserialization and validation
+- `src/models/__init__.py` - Added TaskComment export
+- `tests/test_task_comment.py` - 19 comprehensive tests covering all functionality
+- `artifacts/class_diagram.puml` - Added TaskComment class and Task-TaskComment relationship
+- `artifacts/component_diagram.puml` - Updated Domain Model component to include TaskComment
+
+### Requirements Met
+
+**MUST (all implemented)**:
+- ✓ `id: str` (UUID) attribute auto-generated
+- ✓ `task_id: str` references parent Task by id
+- ✓ `content: str` attribute for comment text
+- ✓ `created_at: datetime` with CEST (UTC+2) timezone
+- ✓ to_dict() and from_dict() for JSON serialization/deserialization
+
+**SHOULD (all implemented)**:
+- ✓ Content validation: ensures content is not empty or whitespace-only
+- ✓ Relationship integrity: task_id maintains reference to parent Task
+
+**COULD (all implemented)**:
+- ✓ `author: Optional[str]` attribute to track who wrote the comment
+- ✓ `updated_at: datetime` for consistency with Task model
+
+**WON'T**:
+- No rich text, markdown rendering, or nested/threaded comments (as required)
+
+### Test Results Summary
+- Total passing: 93/93 (100%)
+- All original 74 tests maintain compatibility
+- 19 new TaskComment tests cover all requirements, validation, serialization, timezone handling, and edge cases
+
+Duration: 301.5s | Cost: $0.586463 USD | Turns: 34
