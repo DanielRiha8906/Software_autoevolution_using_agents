@@ -91,4 +91,4 @@ Duration: 344.5s | Cost: $0.663813 USD | Turns: 27
 - ✓ Attempts can be returned sorted by attempt number (list_attempts_by_run_id returns sorted results)
 - ✓ No caching layer is added (service manages in-memory list loaded from storage)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 87.1s | Cost: $0.222299 USD | Turns: 17
