@@ -181,4 +181,4 @@ The MemoryEntry class is a clean, focused data model for capturing calculation h
 
 **Test Results:** 84/91 tests pass. The 7 failures are pre-existing CLI test issues unrelated to MemoryEntry. All 20 new MemoryEntry tests pass, plus 64 existing core tests (calculator, service, storage).
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 345.9s | Cost: $0.711444 USD | Turns: 47
