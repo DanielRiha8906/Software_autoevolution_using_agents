@@ -1,0 +1,45 @@
+@startuml sequence_diagram
+
+actor User
+participant CalculatorCLI
+participant CalculatorService
+participant Calculator
+participant JsonStorage
+participant CalculationResult
+
+User -> CalculatorCLI: perform(operation, a, b)
+activate CalculatorCLI
+
+CalculatorCLI -> CalculatorService: perform(operation, a, b)
+activate CalculatorService
+
+note over CalculatorService: start_time = perf_counter()
+
+CalculatorService -> Calculator: calculate(operation, a, b)
+activate Calculator
+
+Calculator -> Calculator: dispatch[operation](a, b)
+note over Calculator: arithmetic computation
+
+Calculator --> CalculatorService: result
+deactivate Calculator
+
+note over CalculatorService: end_time = perf_counter()\nexecution_time_ms = (end_time - start_time) * 1000
+
+CalculatorService -> CalculationResult: create(operation, operand_a, operand_b, result, execution_time_ms)
+activate CalculationResult
+CalculationResult --> CalculatorService: instance
+deactivate CalculationResult
+
+CalculatorService -> JsonStorage: save(calc_result)
+activate JsonStorage
+JsonStorage --> CalculatorService: saved
+deactivate JsonStorage
+
+CalculatorService --> CalculatorCLI: CalculationResult
+deactivate CalculatorService
+
+CalculatorCLI -> User: show result with execution_time_ms
+deactivate CalculatorCLI
+
+@enduml
