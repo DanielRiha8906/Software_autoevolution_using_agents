@@ -128,4 +128,4 @@ Test breakdown:
 - State matrix test: 54 tests covering all 6 statuses × 9 conclusions
 - Edge cases: None conclusion, all status values, all conclusion values
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 247.3s | Cost: $0.455655 USD | Turns: 24
