@@ -153,3 +153,82 @@ Used the broadcast architecture with 3 independent implementer agents working in
 - **No new dependencies**: Uses only stdlib (dataclasses, datetime, typing, uuid)
 
 Duration: 332.7s | Cost: $0.940807 USD | Turns: 36
+
+## Task 04: Add MemoryService for managing MemoryEntry
+
+### Approach
+Used the broadcast architecture with 3 independent implementer agents working in parallel on separate branches. Each implementer created MemoryService and MemoryEntryStorage with similar implementations.
+
+### Candidate Results
+- **Implementer A (broadcast-candidate-a)**: 54 tests passed ✓ Winner
+- **Implementer B (broadcast-candidate-b)**: 46 tests passed
+- **Implementer C (broadcast-candidate-c)**: 46 tests passed
+
+**Winner**: Implementer A (8 additional passing tests - included comprehensive MemoryService tests)
+
+### Files Changed
+1. `src/services/memory_service.py` (Created)
+   - MemoryService class for managing MemoryEntry lifecycle
+   - Constructor takes MemoryEntryStorage as dependency (dependency injection pattern)
+   - store(entry: MemoryEntry) - persists a single MemoryEntry
+   - get_all() - retrieves all stored entries
+   - retrieve_all() - alias for get_all() for API flexibility
+
+2. `src/storage/memory_entry_storage.py` (Created)
+   - MemoryEntryStorage class for JSON-based persistence of MemoryEntry objects
+   - Follows same pattern as existing JsonStorage
+   - save(entry: MemoryEntry) - appends entry to JSON file
+   - load_all() - loads all entries from persistent storage
+   - _read_raw(), _write_raw() - private helpers for JSON file operations
+   - Handles missing/corrupted files gracefully
+
+3. `src/services/__init__.py`
+   - Added MemoryService export
+
+4. `src/storage/__init__.py`
+   - Added MemoryEntryStorage export
+
+5. `tests/test_memory_service.py` (Created)
+   - 8 comprehensive tests covering:
+     - store() delegation to storage
+     - get_all() and retrieve_all() delegation
+     - Successful and failed entry handling
+     - Multiple entry retrieval
+     - Alias method consistency
+
+6. `artifacts/class_diagram.puml`
+   - Added MemoryService class to services package
+   - Added MemoryEntryStorage class to storage package
+   - Showed dependencies and relationships
+
+7. `artifacts/component_diagram.puml`
+   - Added Memory Service and Memory Storage components
+   - Added relationships to domain models
+
+### Test Results
+- **Total tests**: 61 (46 core tests + 8 new MemoryService tests + 7 pre-existing CLI failures)
+- **Passed**: 54 (100% of non-CLI tests)
+- **Failed**: 7 (pre-existing CLI test failures, unrelated to MemoryService)
+- **Success rate**: 100% for MemoryService functionality
+
+### Implementation Details
+- **MUST requirements**: All implemented ✓
+  - MemoryService created for managing MemoryEntry objects ✓
+  - store() and retrieve_all()/get_all() methods provided ✓
+  - Integration ready with calculation flow ✓
+
+- **SHOULD requirements**: Both implemented ✓
+  - Service responsibilities limited to MemoryEntry lifecycle management ✓
+  - Storage implementation separated from service logic ✓
+
+- **COULD requirements**: Not implemented (deferred to later task)
+  - Filtering/querying capabilities can be added as enhancement
+
+- **Design principles**: Followed ✓
+  - Dependency injection pattern matches CalculatorService ✓
+  - Storage interface matches JsonStorage pattern ✓
+  - Separation of concerns maintained ✓
+
+- **No new dependencies**: Uses only stdlib (json, pathlib)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
