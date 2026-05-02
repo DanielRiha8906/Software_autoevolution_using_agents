@@ -112,4 +112,22 @@ All methods use existing CEST constant and maintain timezone-aware datetime obje
 - ✓ No syntax errors or import issues
 - ✓ All tests pass (55/55)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 110889
+3541
+2388
+1518
+1584
+1194
+3.6s | Cost: $0.9608190.9608186499999998
+0.9722798999999998
+0.9826033499999998
+0.9924729499999998
+1.0022894999999998
+1.0120972999999998
+1.0219024999999997 USD | Turns: 27
+1
+1
+1
+1
+1
+1
