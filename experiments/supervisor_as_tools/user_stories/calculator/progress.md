@@ -73,4 +73,4 @@ Successfully implemented four new mathematical operations: square(x), sqrt(x), p
 - CalculationResult displays unary operations as binary (e.g., "4 sqrt 4 = 2") to maintain formatting consistency
 - All changes follow existing code conventions and style
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 294.1s | Cost: $0.525926 USD | Turns: 19
