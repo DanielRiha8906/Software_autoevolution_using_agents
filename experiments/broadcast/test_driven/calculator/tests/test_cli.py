@@ -21,7 +21,7 @@ class TestRunCommand:
     def test_invalid_operation_exits(self):
         cli, _ = _make_cli()
         with pytest.raises(SystemExit):
-            cli.run_command("modulo", 3, 5)
+            cli.run_command("invalid_op", 3, 5)
 
     def test_service_error_exits(self):
         cli, service = _make_cli()
