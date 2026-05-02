@@ -70,3 +70,77 @@
 - Follows existing code patterns and style
 
 Duration: 301.8s | Cost: $0.547521 USD | Turns: 35
+
+## Task 02: Add domain logic methods to workflow run states
+
+**Branch:** task/broadcast-structured_text-github-workflow-manager-02
+
+### Broadcast Architecture Evaluation
+
+**Candidates Evaluated:**
+- **broadcast-candidate-a**: 53 tests passing
+- **broadcast-candidate-b**: 53 tests passing
+- **broadcast-candidate-c**: 54 tests passing ✓
+
+**Selected Winner:** broadcast-candidate-c
+
+**Reason:** Candidate-C achieved the highest test count (54 tests), demonstrating comprehensive coverage of all state combinations, including edge cases with all possible WorkflowConclusion enum values. All three implementations met requirements, but candidate-C provided superior test depth with 45 new tests vs 44 in candidates A/B.
+
+### Implementation Summary
+
+**Files Changed:**
+1. `src/models/workflow_run.py`
+   - Added 5 domain logic methods to WorkflowRun class:
+     - `is_terminal()` → True if status == COMPLETED
+     - `is_running()` → True if status == IN_PROGRESS
+     - `is_successful()` → True if status == COMPLETED AND conclusion == SUCCESS
+     - `is_failed()` → True if status == COMPLETED AND conclusion == FAILURE
+     - `is_cancelled()` → True if conclusion == CANCELLED (convenience method)
+
+2. `tests/test_workflow_run_state.py` (new file)
+   - 45 comprehensive test cases organized into 7 test classes:
+     - TestIsTerminal (8 tests): All status values
+     - TestIsRunning (6 tests): All status values
+     - TestIsSuccessful (7 tests): Various conclusion combinations
+     - TestIsFailed (6 tests): Various conclusion combinations
+     - TestIsCancelled (6 tests): Cancelled and non-cancelled states
+     - TestMutualExclusivity (7 tests): Enforces exclusivity constraints
+     - TestEdgeCases (5 tests): All conclusion enum values
+
+3. `artifacts/class_diagram.puml`
+   - Updated WorkflowRun class diagram with 5 new methods
+
+### Requirements Met
+
+**Must Have:**
+- ✓ Implemented `is_terminal()` method
+- ✓ Implemented `is_successful()` method
+- ✓ Implemented `is_failed()` method
+- ✓ Implemented `is_running()` method
+- ✓ All methods derive state strictly from status and conclusion fields
+
+**Should Have:**
+- ✓ `is_terminal()` and `is_running()` are mutually exclusive
+- ✓ `is_successful()` and `is_failed()` are mutually exclusive
+- ✓ Comprehensive unit tests for all state combinations (queued, in_progress, completed with various conclusions)
+
+**Could Have:**
+- ✓ `is_cancelled()` convenience method implemented
+
+### Test Results
+
+**Final test run:** 54/54 tests passing
+- All 45 new workflow state tests PASSED
+- All 9 existing tests (storage, service) continue to PASSED
+- 100% test pass rate with zero failures
+
+### Implementation Details
+
+- Methods use direct enum comparisons with WorkflowStatus and WorkflowConclusion enums
+- Methods are pure predicates with no side effects
+- All docstrings follow existing codebase style
+- Natural mutual exclusivity through implementation design
+- Test suite validates edge cases with all 8 possible WorkflowConclusion values
+- No new dependencies added
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
