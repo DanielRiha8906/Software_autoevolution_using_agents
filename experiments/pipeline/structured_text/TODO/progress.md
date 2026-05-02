@@ -53,4 +53,4 @@ Successfully implemented due_date feature for Task model with full backward comp
 - from_dict() safely parses using .get() for backward compatibility
 - is_overdue() returns False for tasks without due_date, DONE status, or future dates
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 358.9s | Cost: $0.528996 USD | Turns: 18
