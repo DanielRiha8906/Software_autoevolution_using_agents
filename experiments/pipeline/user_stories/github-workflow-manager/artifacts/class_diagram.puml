@@ -69,6 +69,14 @@ package "storage" #FFF3CC {
         +save(runs: List[WorkflowRun]) : None
         +load() : List[WorkflowRun]
     }
+
+    class AttemptJsonStorage {
+        +filepath : str
+        --
+        +__init__(filepath: str)
+        +save(attempts: List[WorkflowRunAttempt]) : None
+        +load() : List[WorkflowRunAttempt]
+    }
 }
 
 package "services" #DDFFD4 {
@@ -83,6 +91,19 @@ package "services" #DDFFD4 {
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
         +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        -_persist() : None
+    }
+
+    class AttemptService {
+        -_storage : AttemptJsonStorage
+        -_attempts : List[WorkflowRunAttempt]
+        --
+        +__init__(storage: AttemptJsonStorage)
+        +add_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
+        +list_attempts() : List[WorkflowRunAttempt]
+        +get_attempt_by_id(attempt_id: int) : Optional[WorkflowRunAttempt]
+        +filter_by_run(run_id: int) : List[WorkflowRunAttempt]
+        +filter_by_status(status: str) : List[WorkflowRunAttempt]
         -_persist() : None
     }
 
@@ -117,6 +138,8 @@ WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
+AttemptService       "1" --> "1" AttemptJsonStorage : -_storage
+AttemptService            ..>  WorkflowRunAttempt
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 "workflow_cli"             ..>  WorkflowRunService

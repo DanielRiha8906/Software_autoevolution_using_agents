@@ -66,3 +66,45 @@ Duration: 299.8s | Cost: $0.540868 USD | Turns: 20
 - Comprehensive test coverage: instantiation, validation, serialization, deserialization, round-trip, edge cases
 
 Duration: 313.8s | Cost: $0.517612 USD | Turns: 18
+
+## Task 04: Create AttemptService for Attempt Management
+
+**Status:** ✅ Complete
+
+**Files Changed:**
+- src/storage/attempt_json_storage.py (created new storage class for WorkflowRunAttempt persistence)
+- src/services/attempt_service.py (created new service class for attempt CRUD operations)
+- src/storage/__init__.py (added AttemptJsonStorage import and export)
+- src/services/__init__.py (added AttemptService import and export)
+- tests/test_attempt_json_storage.py (created new test file with 24 test cases)
+- tests/test_attempt_service.py (created new test file with 33 test cases)
+- artifacts/class_diagram.puml (added AttemptJsonStorage and AttemptService classes)
+- artifacts/component_diagram.puml (added storage and service components for attempts)
+
+**Test Result:** ✅ 133/133 tests passed (57 new tests + 76 existing tests)
+
+**Key Implementation Details:**
+- **AttemptJsonStorage:** Mirrors WorkflowJsonStorage pattern, persists attempts to artifacts/workflow_run_attempts.json
+  - Methods: __init__(filepath), save(attempts), load()
+  - Handles datetime serialization/deserialization with timezone preservation
+  - Creates parent directories automatically
+  - Returns empty list if file missing (defensive)
+- **AttemptService:** Manages WorkflowRunAttempt CRUD with business logic validation
+  - Methods: __init__(storage), add_attempt(), list_attempts(), get_attempt_by_id(), filter_by_run(), filter_by_status(), _persist()
+  - Enforces (run_id, attempt_number) uniqueness with ValueError
+  - Returns defensive copies of lists to prevent external mutation
+  - filter_by_run() returns attempts sorted by attempt_number (bonus requirement)
+- **Architecture:** Separate storage layer for attempts (not nested in runs)
+  - Scalable: supports many attempts per run without run object bloat
+  - Independent: attempt storage can be queried/persisted separately
+  - Non-invasive: no changes to existing WorkflowRun or WorkflowJsonStorage
+
+**Acceptance Criteria Met:**
+- ✅ AttemptService supports creating an attempt (add_attempt method)
+- ✅ Service supports retrieving all attempts for a given run_id (filter_by_run method)
+- ✅ Service integrates with existing storage mechanism (uses JSON via AttemptJsonStorage)
+- ✅ Duplicate attempt numbers per run prevented ((run_id, attempt_number) uniqueness in add_attempt)
+- ✅ Attempts can be returned sorted by attempt_number (filter_by_run returns sorted list)
+- ✅ No caching layer added (pure service + storage pattern)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
