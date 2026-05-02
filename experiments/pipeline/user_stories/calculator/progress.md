@@ -25,4 +25,4 @@
 - ✅ Uses only standard library (time.perf_counter())
 - ✅ Existing code continues to work without changes (backward compatible)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 272.5s | Cost: $0.421845 USD | Turns: 15
