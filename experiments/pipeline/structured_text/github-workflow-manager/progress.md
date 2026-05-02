@@ -49,4 +49,4 @@ All tests pass. Coverage includes:
 **Won't Have (Not Applicable):**
 - External time measurement tools — out of scope
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 340.0s | Cost: $0.569500 USD | Turns: 18
