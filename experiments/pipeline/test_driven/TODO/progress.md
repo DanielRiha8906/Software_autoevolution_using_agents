@@ -208,4 +208,4 @@ Successfully implemented `CommentsService` that manages the full lifecycle of ta
 - Ordering deterministic via sorted(key=lambda c: c.created_at)
 - Cascade delete implemented without validating task existence (design choice)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 329.4s | Cost: $0.597775 USD | Turns: 14
