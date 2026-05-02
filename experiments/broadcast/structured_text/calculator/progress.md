@@ -152,4 +152,4 @@ Used the broadcast architecture with 3 independent implementer agents working in
 
 - **No new dependencies**: Uses only stdlib (dataclasses, datetime, typing, uuid)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 332.7s | Cost: $0.940807 USD | Turns: 36
