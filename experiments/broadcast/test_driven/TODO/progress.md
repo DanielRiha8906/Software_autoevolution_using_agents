@@ -55,4 +55,4 @@ All 3 implementer candidates successfully completed the task:
 - ✓ ISO 8601 deserialization in from_dict()
 - ✓ No external dependencies
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 168.6s | Cost: $0.434074 USD | Turns: 32
