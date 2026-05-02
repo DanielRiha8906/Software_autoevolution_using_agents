@@ -248,4 +248,4 @@ The MemoryService is a clean, focused in-memory service for managing MemoryEntry
 
 **Test Results:** 110/117 tests pass. All 26 new MemoryService tests pass, plus all existing core tests (Calculator, CalculatorService, JsonStorage, MemoryEntry). The 7 failures are pre-existing CLI test issues unrelated to this task.
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 317.1s | Cost: $0.711461 USD | Turns: 48
