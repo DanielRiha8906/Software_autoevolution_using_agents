@@ -73,4 +73,4 @@ Duration: 367.9s | Cost: $0.723867 USD | Turns: 18
 - No breaking changes: existing to_dict(), from_dict(), is_overdue() unchanged
 - Backward compatible with all existing code
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 186.7s | Cost: $0.359579 USD | Turns: 19
