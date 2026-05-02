@@ -14,6 +14,8 @@ rectangle "TODO Manager" {
     usecase "Change task status" as I_STATUS
     usecase "Update task" as I_UPDATE
     usecase "Delete task" as I_DELETE
+    usecase "Set task due date" as I_DUEDATE
+    usecase "View task due date" as I_VIEWDUE
     usecase "Quit application" as I_QUIT
   }
 
@@ -27,6 +29,7 @@ rectangle "TODO Manager" {
     usecase "Reopen task" as C_REOPEN
     usecase "Update task" as C_UPDATE
     usecase "Delete task" as C_DELETE
+    usecase "Set task due date" as C_DUEDATE
   }
 }
 
@@ -39,7 +42,13 @@ UI ..> I_SHOW   : <<exclude>>
 UI ..> I_STATUS : <<exclude>>
 UI ..> I_UPDATE : <<exclude>>
 UI ..> I_DELETE : <<exclude>>
+UI ..> I_DUEDATE : <<exclude>>
+UI ..> I_VIEWDUE : <<exclude>>
 UI ..> I_QUIT   : <<exclude>>
+
+I_ADD ..> I_DUEDATE : <<include>>
+I_UPDATE ..> I_DUEDATE : <<include>>
+I_SHOW ..> I_VIEWDUE : <<include>>
 
 CLI ..> C_ADD    : <<exclude>>
 CLI ..> C_LIST   : <<exclude>>
@@ -49,5 +58,9 @@ CLI ..> C_DONE   : <<exclude>>
 CLI ..> C_REOPEN : <<exclude>>
 CLI ..> C_UPDATE : <<exclude>>
 CLI ..> C_DELETE : <<exclude>>
+CLI ..> C_DUEDATE : <<exclude>>
+
+C_ADD ..> C_DUEDATE : <<include>>
+C_UPDATE ..> C_DUEDATE : <<include>>
 
 @enduml

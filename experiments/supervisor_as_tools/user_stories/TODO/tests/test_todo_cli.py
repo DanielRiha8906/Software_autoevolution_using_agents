@@ -96,3 +96,53 @@ def test_update_title(cli, capsys):
 def test_no_subcommand_prints_help(cli, capsys):
     rc = cli.run([])
     assert rc == 0
+
+
+def test_add_with_due_date_flag(cli, capsys):
+    rc = cli.run(["add", "Task", "--due-date", "2025-12-31"])
+    assert rc == 0
+    assert "Task" in capsys.readouterr().out
+
+
+def test_add_with_invalid_due_date_exits_1(cli):
+    rc = cli.run(["add", "Task", "--due-date", "invalid-date"])
+    assert rc == 1
+
+
+def test_show_displays_due_date(cli, capsys):
+    cli.run(["add", "Task", "--due-date", "2025-12-31"])
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+    cli.run(["show", task_id])
+    out = capsys.readouterr().out
+    assert "Due:" in out
+    assert "2025-12-31" in out
+
+
+def test_show_displays_empty_due_date(cli, capsys):
+    cli.run(["add", "Task"])
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+    cli.run(["show", task_id])
+    out = capsys.readouterr().out
+    assert "Due:" in out
+    assert "—" in out
+
+
+def test_update_with_due_date_flag(cli, capsys):
+    cli.run(["add", "Task"])
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+    rc = cli.run(["update", task_id, "--due-date", "2025-12-31"])
+    assert rc == 0
+    cli.run(["show", task_id])
+    out = capsys.readouterr().out
+    assert "2025-12-31" in out
+
+
+def test_update_with_invalid_due_date_exits_1(cli, capsys):
+    cli.run(["add", "Task"])
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+    rc = cli.run(["update", task_id, "--due-date", "bad-date"])
+    assert rc == 1

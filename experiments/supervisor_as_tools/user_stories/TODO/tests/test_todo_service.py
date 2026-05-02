@@ -1,4 +1,6 @@
 import pytest
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from src.models.task_status import TaskStatus
 from src.services.task_manager import TaskNotFoundError
 from src.services.todo_service import TodoService
@@ -75,3 +77,28 @@ def test_delete_task(service):
     service.delete_task(task.id)
     with pytest.raises(TaskNotFoundError):
         service.get_task(task.id)
+
+
+def test_add_task_with_due_date(service):
+    task = service.add_task("Task", due_date="2025-12-31")
+    assert task.due_date is not None
+    assert task.due_date.year == 2025
+
+
+def test_add_task_with_due_date_datetime(service):
+    cest = ZoneInfo("Europe/Paris")
+    due_dt = datetime(2025, 12, 31, 23, 59, tzinfo=cest)
+    task = service.add_task("Task", due_date=due_dt)
+    assert task.due_date == due_dt
+
+
+def test_add_task_with_invalid_due_date_raises(service):
+    with pytest.raises(ValueError):
+        service.add_task("Task", due_date="invalid")
+
+
+def test_update_task_due_date(service):
+    task = service.add_task("Task")
+    updated = service.update_task(task.id, due_date="2025-12-31")
+    assert updated.due_date is not None
+    assert updated.due_date.year == 2025

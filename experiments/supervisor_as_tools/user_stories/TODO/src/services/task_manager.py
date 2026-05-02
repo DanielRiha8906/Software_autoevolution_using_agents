@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Union
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
+from ..utils.datetime_utils import parse_datetime_or_iso_string
 
 
 class TaskNotFoundError(Exception):
@@ -23,8 +24,16 @@ class TaskManager:
     def _persist(self) -> None:
         self._storage.save([t.to_dict() for t in self._tasks.values()])
 
-    def add(self, title: str, description: Optional[str] = None) -> Task:
-        task = Task(title=title, description=description)
+    def _validate_due_date(self, due_date: Optional[Union[datetime, str]]) -> Optional[datetime]:
+        """Validate and convert due_date to CEST datetime or None."""
+        try:
+            return parse_datetime_or_iso_string(due_date)
+        except (ValueError, TypeError) as e:
+            raise ValueError(f"Invalid due_date: {e}")
+
+    def add(self, title: str, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None) -> Task:
+        validated_due_date = self._validate_due_date(due_date)
+        task = Task(title=title, description=description, due_date=validated_due_date)
         self._tasks[task.id] = task
         self._persist()
         return task
@@ -46,12 +55,14 @@ class TaskManager:
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
 
-    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
+    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None) -> Task:
         task = self.get(task_id)
         if title is not None:
             task.title = title
         if description is not None:
             task.description = description
+        if due_date is not None:
+            task.due_date = self._validate_due_date(due_date)
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task
