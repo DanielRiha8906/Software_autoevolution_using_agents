@@ -5,5 +5,5 @@ src/storage/: JsonStorage (JSON persistence)
 src/cli/: TodoCLI (commands), InteractiveMenu
 tests/: pytest
 
-Edit only src/ and tests/. Tests: pytest tests/ -q
+Edit only src/ and tests/. Tests: write to tests/ and run pytest tests/ -q — never python -c
 Diagrams: ./generate_diagrams.sh → artifacts/*.puml
