@@ -69,4 +69,4 @@ Duration: 264.7s | Cost: $0.405321 USD | Turns: 15
 - ✓ No existing operations duplicated or renamed
 - ✓ All operations accessible via CLI menu with proper display symbols
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 372.4s | Cost: $0.674887 USD | Turns: 16
