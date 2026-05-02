@@ -7,14 +7,19 @@ left to right direction
 actor User
 
 rectangle "Calculator Application" {
-    usecase "Perform calculation" as UC_Calc
+    usecase "Perform basic arithmetic" as UC_Arithmetic
+    usecase "Perform advanced math" as UC_Advanced
     usecase "View calculation history" as UC_History
     usecase "Exit application" as UC_Exit
 
 }
 
-User --> UC_Calc
+User --> UC_Arithmetic
+User --> UC_Advanced
 User --> UC_History
 User --> UC_Exit
+
+UC_Arithmetic : Add, Subtract, Multiply, Divide
+UC_Advanced : Square, Square Root, Power, Modulo
 
 @enduml

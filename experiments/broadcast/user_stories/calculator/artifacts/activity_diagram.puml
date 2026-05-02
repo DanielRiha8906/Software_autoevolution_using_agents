@@ -43,7 +43,7 @@ else (no)
         :Load calculation history;
         :Show history;
 
-      case (Operation)
+      case (Arithmetic Operation)
         :Read operands;
 
         if (Input valid?) then (yes)
