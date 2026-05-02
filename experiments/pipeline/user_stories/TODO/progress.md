@@ -34,3 +34,33 @@ Implemented optional due_date attribute for tasks with full support for creation
 - Interactive menu prompts for optional due_date and converts for display
 
 Duration: 372.3s | Cost: $0.624776 USD | Turns: 14
+
+## Task 02: Status Transition Methods
+
+### Summary
+Implemented explicit status transition methods on the Task class with validation, timestamp updates, and comprehensive predicates for cleaner state management.
+
+### Files Changed
+- src/models/task.py — Added 7 new methods (is_pending, is_in_progress, is_done, mark_in_progress, mark_done, reopen, _transition_to)
+- tests/test_task.py — Added 41 comprehensive test cases covering all transitions, errors, and edge cases
+- artifacts/state_diagram.puml — Updated transition labels to show method names (mark_in_progress, mark_done, reopen)
+- artifacts/class_diagram.puml — Added all 7 new methods to Task class structure
+
+### Test Result
+✓ All 45 tests passed (4 original + 41 new)
+
+### Acceptance Criteria Met
+- ✓ Task provides: mark_in_progress(), mark_done(), reopen(), is_completed(), is_overdue(), is_pending(), is_in_progress()
+- ✓ Each status-mutating method updates updated_at to current UTC time
+- ✓ Methods derive state strictly from existing Task attributes
+- ✓ Invalid transitions raise ValueError with descriptive error messages
+- ✓ Predicate methods available for all states (is_pending, is_in_progress, is_done)
+
+### Implementation Details
+- Transition validation: strict (raises ValueError on invalid transitions, not idempotent)
+- Valid transitions: PENDING → IN_PROGRESS → DONE, DONE/IN_PROGRESS → PENDING (via reopen)
+- Timestamp updates: Always uses datetime.now(timezone.utc) on successful transitions
+- Error messages match specification exactly
+- All 41 new tests verify valid transitions, invalid transitions, timestamp updates, and serialization
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
