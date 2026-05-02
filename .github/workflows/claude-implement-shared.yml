@@ -55,7 +55,7 @@ jobs:
           wget -O plantuml.jar https://github.com/plantuml/plantuml/releases/download/v1.2024.6/plantuml.jar
 
           echo '#!/usr/bin/env bash' > plantuml
-          echo 'java -jar plantuml.jar "$@"' >> plantuml
+          echo 'java -jar /usr/local/bin/plantuml.jar "$@"' >> plantuml
           chmod +x plantuml
           sudo mv plantuml /usr/local/bin/plantuml
       - name: Prepare prompts
