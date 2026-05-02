@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
@@ -10,10 +11,12 @@ class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
 
-    def add_task(self, title: str, description: Optional[str] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description)
+        if due_date is not None and due_date.tzinfo is None:
+            raise ValueError("due_date must be timezone-aware")
+        return self._manager.add(title.strip(), description, due_date)
 
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
@@ -32,10 +35,17 @@ class TodoService:
     def reopen_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.PENDING)
 
-    def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
+    def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if title is not None and not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.update(task_id, title=title, description=description)
+        if due_date is not None and due_date.tzinfo is None:
+            raise ValueError("due_date must be timezone-aware")
+        return self._manager.update(task_id, title=title, description=description, due_date=due_date)
+
+    def set_due_date(self, task_id: str, due_date: Optional[datetime]) -> Task:
+        if due_date is not None and due_date.tzinfo is None:
+            raise ValueError("due_date must be timezone-aware")
+        return self._manager.set_due_date(task_id, due_date)
 
     def delete_task(self, task_id: str) -> None:
         self._manager.delete(task_id)

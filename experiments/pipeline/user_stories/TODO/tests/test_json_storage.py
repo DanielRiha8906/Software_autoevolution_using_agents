@@ -1,5 +1,6 @@
 import json
 import pytest
+from datetime import datetime, timezone
 from pathlib import Path
 from src.storage.json_storage import JsonStorage
 
@@ -30,3 +31,62 @@ def test_overwrite(tmp_path):
     storage.save([{"id": "1"}])
     storage.save([{"id": "2"}])
     assert storage.load() == [{"id": "2"}]
+
+
+# ─── Backward compatibility tests ───────────────────────────────────────────
+
+def test_load_legacy_task_without_due_date():
+    """Test loading legacy tasks that don't have due_date field"""
+    from src.models.task import Task
+
+    # Simulate legacy data without due_date key
+    legacy_data = {
+        "id": "legacy-id",
+        "title": "Old task",
+        "description": "Created before due_date feature",
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    # Should not raise, due_date should be None
+    task = Task.from_dict(legacy_data)
+    assert task.due_date is None
+    assert task.title == "Old task"
+
+
+def test_load_mixed_legacy_and_new_tasks(tmp_path):
+    """Test loading a file with mixed legacy and new tasks"""
+    from src.models.task import Task
+
+    path = tmp_path / "mixed_tasks.json"
+    storage = JsonStorage(str(path))
+
+    # Create mixed data: legacy without due_date, new with due_date
+    legacy = {
+        "id": "legacy-1",
+        "title": "Legacy",
+        "description": None,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    new = {
+        "id": "new-1",
+        "title": "New",
+        "description": None,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "due_date": "2026-05-15T14:30:00+00:00",
+    }
+
+    storage.save([legacy, new])
+    loaded = storage.load()
+
+    assert len(loaded) == 2
+    assert loaded[0]["id"] == "legacy-1"
+    assert "due_date" not in loaded[0]
+    assert loaded[1]["id"] == "new-1"
+    assert loaded[1]["due_date"] == "2026-05-15T14:30:00+00:00"
