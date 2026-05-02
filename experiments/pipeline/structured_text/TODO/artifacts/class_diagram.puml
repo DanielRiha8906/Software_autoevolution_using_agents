@@ -15,12 +15,20 @@ package "models" #DDEEFF {
         +title : String
         +description : String [0..1]
         +status : TaskStatus
+        +dueDate : DateTime [0..1]
         +createdAt : DateTime
         +updatedAt : DateTime
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
+        +isOverdue() : Boolean
     }
+    note right of Task
+        toDict() conditionally includes due_date
+        fromDict() safely parses due_date with backward compatibility
+        isOverdue() returns True if due_date is set,
+        task is not DONE, and current time is past due_date
+    end note
 }
 
 package "storage" #FFF3CC {
