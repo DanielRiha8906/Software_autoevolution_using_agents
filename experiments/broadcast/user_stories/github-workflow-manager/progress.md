@@ -156,4 +156,4 @@ Candidate A was selected as the winner (arbitrary choice since all implementatio
 **Diagrams Updated:**
 - artifacts/class_diagram.puml — Updated to show WorkflowRunAttempt class and its 1:* relationship with WorkflowRun
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 370.6s | Cost: $0.701894 USD | Turns: 39
