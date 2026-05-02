@@ -43,4 +43,4 @@ Duration: 272.1s | Cost: $0.494900 USD | Turns: 16
 - All methods are mutually exclusive as required: is_terminal() XOR is_running(), is_successful() XOR is_failed()
 - Comprehensive docstrings and test coverage for all state combinations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 299.8s | Cost: $0.540868 USD | Turns: 20
