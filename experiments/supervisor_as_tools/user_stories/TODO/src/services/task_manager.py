@@ -2,11 +2,16 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from ..models.task import Task
+from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 
 
 class TaskNotFoundError(Exception):
+    pass
+
+
+class CommentNotFoundError(Exception):
     pass
 
 
@@ -68,4 +73,27 @@ class TaskManager:
     def delete(self, task_id: str) -> None:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
+        self._persist()
+
+    def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
+        task = self.get(task_id)  # resolves prefix and validates
+        comment = TaskComment(task_id=task.id, content=content, author=author)
+        task.comments.append(comment)
+        self._persist()
+        return comment
+
+    def list_comments(self, task_id: str) -> list[TaskComment]:
+        task = self.get(task_id)  # validates task exists
+        return task.comments
+
+    def delete_comment(self, task_id: str, comment_id: str) -> None:
+        task = self.get(task_id)  # validates task exists
+        comment_to_delete = None
+        for comment in task.comments:
+            if comment.id == comment_id:
+                comment_to_delete = comment
+                break
+        if comment_to_delete is None:
+            raise CommentNotFoundError(f"Comment '{comment_id}' not found in task '{task.id}'")
+        task.comments.remove(comment_to_delete)
         self._persist()
