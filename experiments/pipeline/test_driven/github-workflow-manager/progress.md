@@ -148,3 +148,60 @@ Duration: 190.7s | Cost: $0.325816 USD | Turns: 19
 - Consistent with existing domain model patterns (WorkflowRun, enums)
 
 Duration: 297.1s | Cost: $0.559475 USD | Turns: 22
+
+## Task 04: Implement AttemptService
+
+**Status:** COMPLETED
+
+### Task Number
+04
+
+### Files Changed
+- src/services/attempt_service.py (NEW - AttemptService class with create() and get_by_run_id() methods)
+- src/services/__init__.py (added import and export of AttemptService)
+- tests/test_attempt_service.py (NEW - 11 comprehensive tests for AttemptService)
+- artifacts/class_diagram.puml (added AttemptService class with methods and relationships)
+- artifacts/component_diagram.puml (added AttemptService component in Service layer)
+
+### Test Results
+✓ All 39 tests passed
+- 28 existing tests (maintained)
+- 11 new AttemptService tests (all passing)
+  - test_attempt_service_exists
+  - test_create_attempt
+  - test_retrieve_attempts_by_run_id
+  - test_duplicate_attempt_number_raises
+  - test_attempts_sorted_by_attempt_number
+  - test_attempt_service_does_not_contain_file_io
+  - test_empty_service
+  - test_get_by_run_id_filters_correctly
+  - test_create_returns_same_object
+  - test_multiple_runs_isolation
+  - test_multiple_attempts_per_run
+
+### Implementation Details
+- **AttemptService** in-memory service class with private attribute `_attempts: List[WorkflowRunAttempt]`
+- **create(attempt: WorkflowRunAttempt) -> WorkflowRunAttempt**:
+  - Enforces composite key uniqueness on (run_id, attempt_number)
+  - Raises ValueError on duplicate with descriptive message
+  - Returns the same attempt object after storing
+- **get_by_run_id(run_id: str) -> List[WorkflowRunAttempt]**:
+  - Returns all attempts for a given run_id
+  - Results sorted ascending by attempt_number
+  - Returns empty list if run_id not found
+
+### Key Features
+- In-memory only (no persistence, no file I/O, no JSON operations)
+- Composite key enforcement on (run_id, attempt_number) pairs
+- Deterministic sorted retrieval by attempt_number
+- No modification to WorkflowRunAttempt model
+- Service layer pattern consistent with existing architecture
+- No circular dependencies or type annotation issues
+
+### Architecture Notes
+- Service does not perform storage operations (unlike WorkflowRunService)
+- Design pattern: stateful in-memory collection management
+- Differs from WorkflowRunService which delegates to WorkflowJsonStorage
+- Suitable for managing transient attempt tracking per session
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
