@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" contentScriptType="application/ecmascript" contentStyleType="text/css" height="695px" preserveAspectRatio="none" style="width:341px;height:695px;background:#000000;" version="1.1" viewBox="0 0 341 695" width="341px" zoomAndPan="magnify"><defs/><g><rect fill="#0A071A" height="1" style="stroke: #0A071A; stroke-width: 1.0;" width="1" x="0" y="0"/><rect fill="#33FF02" height="21.2969" style="stroke: #33FF02; stroke-width: 1.0;" width="334" x="5" y="5"/><text fill="#000000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="285" x="6" y="20">[From class_diagram.puml (line 39) ]</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="40.2969"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="194" x="5" y="56.5938">@startuml class_diagram</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="72.8906"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="277" x="5" y="89.1875">skinparam classAttributeIconSize 0</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="239" x="5" y="105.4844">skinparam classFontStyle bold</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="121.7813"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="232" x="5" y="138.0781">package "models" #DDEEFF {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="151" x="25" y="154.375">enum TaskStatus {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="68" x="45" y="170.6719">PENDING</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="105" x="45" y="186.9688">IN_PROGRESS</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="43" x="45" y="203.2656">DONE</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="25" y="219.5625">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="235.8594"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="97" x="25" y="252.1563">class Task {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="89" x="45" y="268.4531">+id : String</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="105" x="45" y="284.75">+title : String</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="211" x="45" y="301.0469">+description : String [0..1]</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="164" x="45" y="317.3438">+status : TaskStatus</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="180" x="45" y="333.6406">+createdAt : DateTime</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="184" x="45" y="349.9375">+updatedAt : DateTime</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="215" x="45" y="366.2344">+dueDate : DateTime [0..1]</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="12" x="45" y="382.5313">--</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="165" x="45" y="398.8281">+toDict() : Dictionary</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="268" x="45" y="415.125">+fromDict(data: Dictionary) : Task</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="184" x="45" y="431.4219">+isOverdue() : Boolean</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="25" y="447.7188">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="5" y="464.0156">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="480.3125"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="237" x="5" y="496.6094">package "storage" #FFF3CC {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="155" x="25" y="512.9063">class JsonStorage {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="104" x="45" y="529.2031">-path : String</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="12" x="45" y="545.5">--</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="259" x="45" y="561.7969">+JsonStorage(path: String [0..1])</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="204" x="45" y="578.0938">+load() : List&lt;Dictionary&gt;</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="294" x="45" y="594.3906">+save(tasks: List&lt;Dictionary&gt;) : void</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="25" y="610.6875">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="10" x="5" y="626.9844">}</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="0" x="10" y="643.2813"/><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="245" x="5" y="659.5781">package "services" #DDFFD4 {</text><text fill="#33FF02" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="236" x="25" y="675.875">exception TaskNotFoundError</text><text fill="#FF0000" font-family="sans-serif" font-size="14" font-weight="bold" lengthAdjust="spacingAndGlyphs" textLength="106" x="10" y="692.1719">Syntax Error?</text><!--MD5=[26588f6b1a262e4e3473a3caa72431c4]
+@startuml class_diagram
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+
+package "models" #DDEEFF {
+    enum TaskStatus {
+        PENDING
+        IN_PROGRESS
+        DONE
+    }
+
+    class Task {
+        +id : String
+        +title : String
+        +description : String [0..1]
+        +status : TaskStatus
+        +createdAt : DateTime
+        +updatedAt : DateTime
+        +dueDate : DateTime [0..1]
+        - -
+        +toDict() : Dictionary
+        +fromDict(data: Dictionary) : Task
+        +isOverdue() : Boolean
+    }
+}
+
+package "storage" #FFF3CC {
+    class JsonStorage {
+        -path : String
+        - -
+        +JsonStorage(path: String [0..1])
+        +load() : List<Dictionary>
+        +save(tasks: List<Dictionary>) : void
+    }
+}
+
+package "services" #DDFFD4 {
+    exception TaskNotFoundError
+
+    class TaskManager {
+        -storage : JsonStorage
+        -tasks : Dictionary<String, Task>
+        - -
+        +TaskManager(storage: JsonStorage [0..1])
+        +add(title: String, description: String [0..1]) : Task
+        +get(taskId: String) : Task
+        +listAll() : List<Task>
+        +listByStatus(status: TaskStatus) : List<Task>
+        +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
+        +setStatus(taskId: String, status: TaskStatus) : Task
+        +delete(taskId: String) : void
+        -load() : void
+        -persist() : void
+    }
+
+    class TodoService {
+        -manager : TaskManager
+        - -
+        +TodoService(storage: JsonStorage [0..1])
+        +addTask(title: String, description: String [0..1]) : Task
+        +getTask(taskId: String) : Task
+        +listTasks(status: TaskStatus [0..1]) : List<Task>
+        +startTask(taskId: String) : Task
+        +completeTask(taskId: String) : Task
+        +reopenTask(taskId: String) : Task
+        +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
+        +deleteTask(taskId: String) : void
+    }
+}
+
+package "cli" #FFE5E5 {
+    class TodoCLI {
+        -service : TodoService
+        - -
+        +TodoCLI(storagePath: String [0..1])
+        +run(argv: List<String> [0..1]) : Integer
+    }
+
+    class InteractiveMenu {
+        -service : TodoService
+        - -
+        +InteractiveMenu(storagePath: String [0..1])
+        +run() : void
+    }
+}
+
+Task - -> TaskStatus : status
+TaskManager - -> JsonStorage : storage
+TaskManager ..> TaskNotFoundError : raises
+TodoService - -> TaskManager : manager
+TodoCLI - -> TodoService : service
+InteractiveMenu - -> TodoService : service
+
+@enduml
+
+PlantUML version 1.2020.02(Sun Mar 01 10:22:07 UTC 2020)
+(GPL source distribution)
+Java Runtime: OpenJDK Runtime Environment
+JVM: OpenJDK 64-Bit Server VM
+Java Version: 17.0.18+8
+Operating System: Linux
+Default Encoding: UTF-8
+Language: en
+Country: null
+--></g></svg>
