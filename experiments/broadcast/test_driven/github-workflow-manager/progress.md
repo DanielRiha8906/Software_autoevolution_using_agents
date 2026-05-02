@@ -195,4 +195,4 @@ All required test cases validated:
 - ✓ Diagrams updated to reflect changes
 - ✓ Progress documented
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 225.9s | Cost: $0.552468 USD | Turns: 31
