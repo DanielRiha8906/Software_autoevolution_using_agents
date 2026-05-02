@@ -33,6 +33,19 @@ state COMPLETED {
 
 IN_PROGRESS --> COMPLETED : execution finished
 
+state ATTEMPT_LIFECYCLE {
+  [*] --> ATTEMPT_QUEUED
+  ATTEMPT_QUEUED --> ATTEMPT_IN_PROGRESS : runner acquired
+  ATTEMPT_IN_PROGRESS --> ATTEMPT_COMPLETED : execution finished
+  ATTEMPT_COMPLETED --> [*]
+
+  state ATTEMPT_COMPLETED {
+    [*] --> SUCCESS
+    [*] --> FAILURE
+    [*] --> CANCELLED
+  }
+}
+
 COMPLETED --> [*]
 
 @enduml
