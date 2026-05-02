@@ -45,4 +45,4 @@ Duration: 313.4s | Cost: $0.456656 USD | Turns: 16
 
 **Backward Compatibility:** ✓ 100% — only new methods added, no existing code modified
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 266.9s | Cost: $0.485983 USD | Turns: 15
