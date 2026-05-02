@@ -147,4 +147,4 @@ Duration: 190.7s | Cost: $0.325816 USD | Turns: 19
 - Full serialization support with type preservation
 - Consistent with existing domain model patterns (WorkflowRun, enums)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 297.1s | Cost: $0.559475 USD | Turns: 22
