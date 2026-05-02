@@ -54,3 +54,31 @@ class Task:
         cest = timezone(timedelta(hours=2))
         now = datetime.now(cest)
         return self.due_date < now
+
+    def mark_in_progress(self) -> None:
+        """Transition status to IN_PROGRESS and update timestamp to CEST."""
+        if self.status == TaskStatus.IN_PROGRESS:
+            return
+        self.status = TaskStatus.IN_PROGRESS
+        cest = timezone(timedelta(hours=2))
+        self.updated_at = datetime.now(cest)
+
+    def mark_done(self) -> None:
+        """Transition status to DONE and update timestamp to CEST."""
+        if self.status == TaskStatus.DONE:
+            return
+        self.status = TaskStatus.DONE
+        cest = timezone(timedelta(hours=2))
+        self.updated_at = datetime.now(cest)
+
+    def reopen(self) -> None:
+        """Transition status to PENDING and update timestamp to CEST."""
+        if self.status == TaskStatus.PENDING:
+            return
+        self.status = TaskStatus.PENDING
+        cest = timezone(timedelta(hours=2))
+        self.updated_at = datetime.now(cest)
+
+    def is_completed(self) -> bool:
+        """Return True if status is DONE, False otherwise."""
+        return self.status == TaskStatus.DONE
