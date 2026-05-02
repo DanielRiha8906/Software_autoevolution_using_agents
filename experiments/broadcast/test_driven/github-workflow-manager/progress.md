@@ -123,3 +123,76 @@ All required test cases validated:
 - ✓ Progress documented
 
 Duration: 231.0s | Cost: $0.369797 USD | Turns: 21
+
+---
+
+# Task 03: Create WorkflowRunAttempt domain model
+
+## Objective
+Introduce `WorkflowRunAttempt` as a first-class domain object associated with a `WorkflowRun` by `run_id`. Model individual retry attempts with `id`, `run_id`, `attempt_number`, `status`, `conclusion`, `created_at`, and optional `duration_seconds`, with full serialisation support.
+
+## Broadcast Architecture Results
+
+### Candidate Evaluation
+All 3 independent implementers (Candidate-A, Candidate-B, Candidate-C) converged on the identical solution:
+- **Candidate-A**: 8/8 tests passing ✓
+- **Candidate-B**: 8/8 tests passing ✓
+- **Candidate-C**: 8/8 tests passing ✓
+
+### Winner: Candidate-A
+Selected as the reference implementation (all candidates are identical in code and test results).
+
+## Implementation Details
+
+### Files Changed
+- `src/models/workflow_run_attempt.py` — New domain model for workflow run attempts
+- `src/models/__init__.py` — Added WorkflowRunAttempt export
+
+### Changes Made
+1. **New dataclass**: `WorkflowRunAttempt` with fields:
+   - `id: int` — unique identifier
+   - `run_id: int` — associated workflow run
+   - `attempt_number: int` — retry counter (must be ≥ 1)
+   - `status: str` — workflow status
+   - `conclusion: str` — workflow conclusion
+   - `created_at: datetime` — creation timestamp (CEST timezone-aware, UTC+2)
+   - `duration_seconds: Optional[float]` — execution duration (defaults to None)
+
+2. **Validations in `__post_init__()`**:
+   - `attempt_number` must be ≥ 1 (raises ValueError if not)
+   - `created_at` must be timezone-aware and use CEST (UTC+2), rejecting UTC or naive datetimes
+
+3. **Serialization support**:
+   - `to_dict()` — converts to dictionary with ISO format timestamps
+   - `from_dict()` — reconstructs instance from dictionary with timezone preservation
+
+### Test Results
+- **New tests**: 8/8 passing (test_workflow_run_attempt.py)
+- **Existing tests**: 37/37 passing (preserved backward compatibility)
+- **Total**: 45/45 passing ✓
+
+## Test Coverage
+
+All required test cases validated:
+- ✓ `test_attempt_can_be_created` — instantiation works
+- ✓ `test_attempt_number_must_be_positive` — validates attempt_number ≥ 1
+- ✓ `test_created_at_must_use_cest` — rejects non-CEST timezones
+- ✓ `test_created_at_round_trips_as_cest` — timezone preserved through serialization
+- ✓ `test_serializes_to_dict` — to_dict() includes all required fields
+- ✓ `test_round_trips_via_dict` — to_dict/from_dict cycle preserves data
+- ✓ `test_optional_duration_seconds` — accepts optional duration values
+- ✓ `test_duration_seconds_defaults_to_none_or_zero` — correct default handling
+
+## Diagrams Updated
+- `artifacts/class_diagram.puml` — Added WorkflowRunAttempt class with all fields and relationships
+
+## Definition of Done
+- ✓ All provided tests pass
+- ✓ Existing tests still pass
+- ✓ Code compiles without syntax or import errors
+- ✓ CEST timezone validation enforced
+- ✓ Serialisation consistent with other domain models
+- ✓ Diagrams updated to reflect changes
+- ✓ Progress documented
+
+Duration: 225.9s | Cost: $0.552468 USD | Turns: 31
