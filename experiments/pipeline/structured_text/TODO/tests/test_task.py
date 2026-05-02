@@ -100,3 +100,179 @@ def test_task_is_overdue_returns_true_when_past():
     past_date = datetime(2000, 1, 1, 0, 0, 0, tzinfo=timezone(timedelta(hours=2)))
     task = Task(title="Overdue task", due_date=past_date)
     assert task.is_overdue() is True
+
+
+# mark_in_progress() tests
+def test_mark_in_progress_from_pending():
+    """Test valid transition PENDING → IN_PROGRESS."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+
+
+def test_mark_in_progress_from_in_progress_raises_error():
+    """Test that marking already IN_PROGRESS task raises ValueError."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    with pytest.raises(ValueError) as exc_info:
+        task.mark_in_progress()
+    assert "Cannot transition from in_progress to in_progress" in str(exc_info.value)
+
+
+def test_mark_in_progress_from_done_raises_error():
+    """Test that marking already DONE task raises ValueError."""
+    task = Task(title="Test task", status=TaskStatus.DONE)
+    with pytest.raises(ValueError) as exc_info:
+        task.mark_in_progress()
+    assert "Cannot transition from done to in_progress" in str(exc_info.value)
+
+
+def test_mark_in_progress_updates_timestamp_to_cest():
+    """Test that mark_in_progress updates updated_at to CEST timezone."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    original_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.updated_at > original_updated_at
+    # Verify CEST timezone (UTC+2)
+    cest = timezone(timedelta(hours=2))
+    assert task.updated_at.tzinfo == cest
+
+
+# mark_done() tests
+def test_mark_done_from_in_progress():
+    """Test valid transition IN_PROGRESS → DONE."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+
+
+def test_mark_done_from_pending_raises_error():
+    """Test that marking PENDING task as DONE raises ValueError."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    with pytest.raises(ValueError) as exc_info:
+        task.mark_done()
+    assert "Cannot transition from pending to done" in str(exc_info.value)
+
+
+def test_mark_done_from_done_raises_error():
+    """Test that marking already DONE task raises ValueError."""
+    task = Task(title="Test task", status=TaskStatus.DONE)
+    with pytest.raises(ValueError) as exc_info:
+        task.mark_done()
+    assert "Cannot transition from done to done" in str(exc_info.value)
+
+
+def test_mark_done_updates_timestamp_to_cest():
+    """Test that mark_done updates updated_at to CEST timezone."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    original_updated_at = task.updated_at
+    task.mark_done()
+    assert task.updated_at > original_updated_at
+    # Verify CEST timezone (UTC+2)
+    cest = timezone(timedelta(hours=2))
+    assert task.updated_at.tzinfo == cest
+
+
+# reopen() tests
+def test_reopen_from_done():
+    """Test valid transition DONE → PENDING."""
+    task = Task(title="Test task", status=TaskStatus.DONE)
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+
+
+def test_reopen_from_pending_raises_error():
+    """Test that reopening PENDING task raises ValueError."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    with pytest.raises(ValueError) as exc_info:
+        task.reopen()
+    assert "Cannot transition from pending to pending" in str(exc_info.value)
+
+
+def test_reopen_from_in_progress_raises_error():
+    """Test that reopening IN_PROGRESS task raises ValueError."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    with pytest.raises(ValueError) as exc_info:
+        task.reopen()
+    assert "Cannot transition from in_progress to pending" in str(exc_info.value)
+
+
+def test_reopen_updates_timestamp_to_cest():
+    """Test that reopen updates updated_at to CEST timezone."""
+    task = Task(title="Test task", status=TaskStatus.DONE)
+    original_updated_at = task.updated_at
+    task.reopen()
+    assert task.updated_at > original_updated_at
+    # Verify CEST timezone (UTC+2)
+    cest = timezone(timedelta(hours=2))
+    assert task.updated_at.tzinfo == cest
+
+
+# is_completed() tests
+def test_is_completed_when_done():
+    """Test that is_completed returns True for DONE status."""
+    task = Task(title="Test task", status=TaskStatus.DONE)
+    assert task.is_completed() is True
+
+
+def test_is_completed_when_pending():
+    """Test that is_completed returns False for PENDING status."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    assert task.is_completed() is False
+
+
+def test_is_completed_when_in_progress():
+    """Test that is_completed returns False for IN_PROGRESS status."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    assert task.is_completed() is False
+
+
+# Integration tests
+def test_full_transition_cycle_pending_to_done():
+    """Test full transition cycle: PENDING → IN_PROGRESS → DONE."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    assert task.status == TaskStatus.PENDING
+
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.is_completed() is False
+
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+    assert task.is_completed() is True
+
+
+def test_full_transition_cycle_with_reopen():
+    """Test full cycle including reopen: PENDING → IN_PROGRESS → DONE → PENDING."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+    assert task.is_completed() is True
+
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+    assert task.is_completed() is False
+
+
+# Serialization tests
+def test_status_preserved_through_serialization_after_mark_in_progress():
+    """Test that status is preserved through serialization after mark_in_progress."""
+    task = Task(title="Test task", status=TaskStatus.PENDING)
+    task.mark_in_progress()
+    task_dict = task.to_dict()
+    restored = Task.from_dict(task_dict)
+    assert restored.status == TaskStatus.IN_PROGRESS
+
+
+def test_timestamp_preserved_through_serialization_after_mark_done():
+    """Test that timestamp is preserved through serialization after mark_done."""
+    task = Task(title="Test task", status=TaskStatus.IN_PROGRESS)
+    task.mark_done()
+    original_updated_at = task.updated_at
+    task_dict = task.to_dict()
+    restored = Task.from_dict(task_dict)
+    assert restored.updated_at == original_updated_at
+    assert restored.status == TaskStatus.DONE

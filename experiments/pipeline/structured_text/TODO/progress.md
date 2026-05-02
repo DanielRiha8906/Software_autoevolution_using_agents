@@ -39,3 +39,34 @@
 - ✓ Could: Add is_overdue() predicate
 
 Duration: 447.0s | Cost: $0.868444 USD | Turns: 30
+
+---
+
+## Task 02: Add status and due date methods to Task
+
+### Status: Complete
+
+### Files Changed
+- src/models/task.py (added mark_in_progress, mark_done, reopen, is_completed methods)
+- tests/test_task.py (added 19 new tests for status transitions)
+- artifacts/state_diagram.puml (corrected DONE→PENDING transition label for reopen)
+
+### Test Results
+✓ 31 tests passed (12 original + 19 new for status methods)
+
+### Implementation Summary
+- Added mark_in_progress() method: PENDING → IN_PROGRESS transition with CEST timestamp update
+- Added mark_done() method: IN_PROGRESS → DONE transition with CEST timestamp update
+- Added reopen() method: DONE → PENDING transition with CEST timestamp update
+- Added is_completed() method: returns True if status == DONE
+- All methods validate state transitions and raise ValueError for invalid transitions
+- CEST timezone (UTC+2) applied to updated_at on all mutations
+
+### Requirements Met
+- ✓ Must: Implement mark_in_progress(), mark_done(), reopen(), is_completed()
+- ✓ Must: Update updated_at to current CEST time on all mutations
+- ✓ Must: Methods derive state strictly from existing Task attributes
+- ✓ Should: Prevent invalid status transitions with ValueError
+- ✓ Should: Add unit tests covering all transitions
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

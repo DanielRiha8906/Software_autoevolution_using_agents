@@ -54,3 +54,66 @@ class Task:
         cest = timezone(timedelta(hours=2))
         now = datetime.now(cest)
         return self.due_date < now
+
+    def mark_in_progress(self) -> None:
+        """
+        Transition task status to IN_PROGRESS.
+
+        Valid transition: PENDING → IN_PROGRESS
+        Updates updated_at to current CEST time.
+
+        Raises:
+            ValueError: If current status is not PENDING
+        """
+        if self.status != TaskStatus.PENDING:
+            raise ValueError(
+                f"Cannot transition from {self.status.value} to {TaskStatus.IN_PROGRESS.value}"
+            )
+        self.status = TaskStatus.IN_PROGRESS
+        cest = timezone(timedelta(hours=2))
+        self.updated_at = datetime.now(cest)
+
+    def mark_done(self) -> None:
+        """
+        Transition task status to DONE.
+
+        Valid transition: IN_PROGRESS → DONE
+        Updates updated_at to current CEST time.
+
+        Raises:
+            ValueError: If current status is not IN_PROGRESS
+        """
+        if self.status != TaskStatus.IN_PROGRESS:
+            raise ValueError(
+                f"Cannot transition from {self.status.value} to {TaskStatus.DONE.value}"
+            )
+        self.status = TaskStatus.DONE
+        cest = timezone(timedelta(hours=2))
+        self.updated_at = datetime.now(cest)
+
+    def reopen(self) -> None:
+        """
+        Transition task status back to PENDING.
+
+        Valid transition: DONE → PENDING
+        Updates updated_at to current CEST time.
+
+        Raises:
+            ValueError: If current status is not DONE
+        """
+        if self.status != TaskStatus.DONE:
+            raise ValueError(
+                f"Cannot transition from {self.status.value} to {TaskStatus.PENDING.value}"
+            )
+        self.status = TaskStatus.PENDING
+        cest = timezone(timedelta(hours=2))
+        self.updated_at = datetime.now(cest)
+
+    def is_completed(self) -> bool:
+        """
+        Check if task is completed.
+
+        Returns:
+            True if status is DONE, False otherwise
+        """
+        return self.status == TaskStatus.DONE
