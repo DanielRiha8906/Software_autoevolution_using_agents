@@ -37,6 +37,21 @@ class WorkflowRun:
             "duration_seconds": self.duration_seconds,
         }
 
+    def is_running(self) -> bool:
+        return self.status == WorkflowStatus.IN_PROGRESS
+
+    def is_terminal(self) -> bool:
+        return self.status == WorkflowStatus.COMPLETED
+
+    def is_successful(self) -> bool:
+        return self.conclusion == WorkflowConclusion.SUCCESS
+
+    def is_failed(self) -> bool:
+        return self.conclusion == WorkflowConclusion.FAILURE
+
+    def is_cancelled(self) -> bool:
+        return self.conclusion == WorkflowConclusion.CANCELLED
+
     @classmethod
     def from_dict(cls, data: dict) -> "WorkflowRun":
         return cls(
