@@ -20,6 +20,7 @@ package "models" #DDEEFF {
         +operandB : float
         +result : float
         +timestamp : String
+        +execution_time_ms : float
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : CalculationResult
