@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from typing import Optional
 
 from .task_status import TaskStatus
+
+# CEST timezone (UTC+2)
+CEST = timezone(timedelta(hours=2))
 
 
 @dataclass
@@ -16,9 +19,21 @@ class Task:
     status: TaskStatus = TaskStatus.PENDING
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    due_date: Optional[datetime] = None
+
+    def __post_init__(self) -> None:
+        """Validate due_date if provided."""
+        if self.due_date is not None:
+            if not isinstance(self.due_date, datetime):
+                raise TypeError(f"due_date must be a datetime object, got {type(self.due_date)}")
+            if self.due_date.tzinfo is None:
+                raise ValueError("due_date must be timezone-aware")
+            # Check if timezone is CEST (UTC+2)
+            if self.due_date.tzinfo != CEST:
+                raise ValueError(f"due_date must use CEST timezone (UTC+2), got {self.due_date.tzinfo}")
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "id": self.id,
             "title": self.title,
             "description": self.description,
@@ -26,9 +41,15 @@ class Task:
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }
+        if self.due_date is not None:
+            result["due_date"] = self.due_date.isoformat()
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> Task:
+        due_date = None
+        if "due_date" in data and data["due_date"] is not None:
+            due_date = datetime.fromisoformat(data["due_date"])
         return cls(
             id=data["id"],
             title=data["title"],
@@ -36,4 +57,5 @@ class Task:
             status=TaskStatus(data["status"]),
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
+            due_date=due_date,
         )
