@@ -54,3 +54,33 @@ class Task:
         # Convert due_date to CEST for comparison
         due_date_cest = self.due_date.astimezone(cest) if self.due_date.tzinfo else self.due_date.replace(tzinfo=timezone.utc).astimezone(cest)
         return due_date_cest < now_cest
+
+    def mark_in_progress(self) -> None:
+        """Mark task as IN_PROGRESS, updating updated_at to current CEST time."""
+        if self.status != TaskStatus.IN_PROGRESS:
+            self.status = TaskStatus.IN_PROGRESS
+            self.updated_at = datetime.now(ZoneInfo("Europe/Paris"))
+
+    def mark_done(self) -> None:
+        """Mark task as DONE, updating updated_at to current CEST time."""
+        if self.status != TaskStatus.DONE:
+            self.status = TaskStatus.DONE
+            self.updated_at = datetime.now(ZoneInfo("Europe/Paris"))
+
+    def reopen(self) -> None:
+        """Mark task as PENDING, updating updated_at to current CEST time."""
+        if self.status != TaskStatus.PENDING:
+            self.status = TaskStatus.PENDING
+            self.updated_at = datetime.now(ZoneInfo("Europe/Paris"))
+
+    def is_completed(self) -> bool:
+        """Check if task is completed (status == DONE)."""
+        return self.status == TaskStatus.DONE
+
+    def is_pending(self) -> bool:
+        """Check if task is pending (status == PENDING)."""
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Check if task is in progress (status == IN_PROGRESS)."""
+        return self.status == TaskStatus.IN_PROGRESS

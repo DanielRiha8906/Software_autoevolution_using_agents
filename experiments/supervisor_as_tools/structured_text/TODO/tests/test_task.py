@@ -79,3 +79,129 @@ def test_task_is_overdue_true_when_past():
     past = datetime.now(timezone.utc) - timedelta(days=1)
     task = Task(title="Past task", due_date=past)
     assert task.is_overdue() is True
+
+
+# Status transition tests: mark_in_progress()
+def test_mark_in_progress_from_pending():
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    original_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.updated_at > original_updated_at
+
+
+def test_mark_in_progress_from_done():
+    task = Task(title="Test", status=TaskStatus.DONE)
+    original_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.updated_at > original_updated_at
+
+
+def test_mark_in_progress_noop_when_already_in_progress():
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    original_status = task.status
+    original_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.status == original_status
+    assert task.updated_at == original_updated_at
+
+
+# Status transition tests: mark_done()
+def test_mark_done_from_pending():
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    original_updated_at = task.updated_at
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+    assert task.updated_at > original_updated_at
+
+
+def test_mark_done_from_in_progress():
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    original_updated_at = task.updated_at
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+    assert task.updated_at > original_updated_at
+
+
+def test_mark_done_noop_when_already_done():
+    task = Task(title="Test", status=TaskStatus.DONE)
+    original_status = task.status
+    original_updated_at = task.updated_at
+    task.mark_done()
+    assert task.status == original_status
+    assert task.updated_at == original_updated_at
+
+
+# Status transition tests: reopen()
+def test_reopen_from_done():
+    task = Task(title="Test", status=TaskStatus.DONE)
+    original_updated_at = task.updated_at
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+    assert task.updated_at > original_updated_at
+
+
+def test_reopen_from_in_progress():
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    original_updated_at = task.updated_at
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+    assert task.updated_at > original_updated_at
+
+
+def test_reopen_noop_when_already_pending():
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    original_status = task.status
+    original_updated_at = task.updated_at
+    task.reopen()
+    assert task.status == original_status
+    assert task.updated_at == original_updated_at
+
+
+# Predicate tests: is_completed()
+def test_is_completed_true_when_done():
+    task = Task(title="Test", status=TaskStatus.DONE)
+    assert task.is_completed() is True
+
+
+def test_is_completed_false_when_pending():
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    assert task.is_completed() is False
+
+
+def test_is_completed_false_when_in_progress():
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    assert task.is_completed() is False
+
+
+# Predicate tests: is_pending()
+def test_is_pending_true_when_pending():
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    assert task.is_pending() is True
+
+
+def test_is_pending_false_when_done():
+    task = Task(title="Test", status=TaskStatus.DONE)
+    assert task.is_pending() is False
+
+
+def test_is_pending_false_when_in_progress():
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    assert task.is_pending() is False
+
+
+# Predicate tests: is_in_progress()
+def test_is_in_progress_true_when_in_progress():
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    assert task.is_in_progress() is True
+
+
+def test_is_in_progress_false_when_pending():
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    assert task.is_in_progress() is False
+
+
+def test_is_in_progress_false_when_done():
+    task = Task(title="Test", status=TaskStatus.DONE)
+    assert task.is_in_progress() is False
