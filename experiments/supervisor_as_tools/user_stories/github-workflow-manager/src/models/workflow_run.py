@@ -23,6 +23,26 @@ class WorkflowRun:
         if self.duration_seconds < 0:
             raise ValueError(f"duration_seconds must be non-negative, got {self.duration_seconds}")
 
+    def is_terminal(self) -> bool:
+        """Returns True if the workflow run is no longer active."""
+        return self.status == WorkflowStatus.COMPLETED
+
+    def is_running(self) -> bool:
+        """Returns True if the workflow run is currently executing."""
+        return self.status == WorkflowStatus.IN_PROGRESS
+
+    def is_successful(self) -> bool:
+        """Returns True if the workflow run concluded successfully."""
+        return self.conclusion == WorkflowConclusion.SUCCESS
+
+    def is_failed(self) -> bool:
+        """Returns True if the workflow run concluded with failure."""
+        return self.conclusion == WorkflowConclusion.FAILURE
+
+    def is_cancelled(self) -> bool:
+        """Returns True if the workflow run was cancelled."""
+        return self.conclusion == WorkflowConclusion.CANCELLED
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,

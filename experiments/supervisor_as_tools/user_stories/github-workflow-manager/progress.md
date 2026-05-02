@@ -29,3 +29,28 @@
 - ✓ Backward compatible with existing JSON (missing field defaults to 0.0)
 
 Duration: 281.6s | Cost: $0.482583 USD | Turns: 18
+
+## Task 02: Add state-checking methods to WorkflowRun
+
+**Status:** Completed
+
+**Description:** Add encapsulated methods for checking the state of a workflow run (terminal, running, successful, failed, cancelled).
+
+**Files Changed:**
+- src/models/workflow_run.py (added 5 new methods: is_terminal(), is_running(), is_successful(), is_failed(), is_cancelled())
+- tests/test_workflow_run_state_checks.py (created with 44 comprehensive tests)
+- artifacts/class_diagram.puml (updated WorkflowRun class with new method signatures)
+
+**Test Result:** ✓ All 59 tests passed
+- 44 new tests for state-checking methods
+- 15 existing tests continue to pass
+
+**Acceptance Criteria Met:**
+- ✓ WorkflowRun provides is_terminal(), is_successful(), is_failed(), is_running()
+- ✓ All methods derive state strictly from status and conclusion
+- ✓ is_terminal() and is_running() are mutually exclusive
+- ✓ is_successful() and is_failed() are mutually exclusive
+- ✓ is_cancelled() bonus method available
+- ✓ Existing enum definitions not modified
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
