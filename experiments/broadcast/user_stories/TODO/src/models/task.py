@@ -38,6 +38,41 @@ class Task:
             raise ValueError("due_date must be a datetime object or None")
         self.due_date = due_date
 
+    def mark_in_progress(self) -> None:
+        """Transition task status to IN_PROGRESS and update updated_at to current CEST time."""
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(CEST)
+
+    def mark_done(self) -> None:
+        """Transition task status to DONE and update updated_at to current CEST time."""
+        self.status = TaskStatus.DONE
+        self.updated_at = datetime.now(CEST)
+
+    def reopen(self) -> None:
+        """Transition task status back to PENDING if currently DONE, else no-op. Updates updated_at to current CEST time."""
+        if self.status == TaskStatus.DONE:
+            self.status = TaskStatus.PENDING
+            self.updated_at = datetime.now(CEST)
+
+    def is_pending(self) -> bool:
+        """Check if task is in PENDING status."""
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Check if task is in IN_PROGRESS status."""
+        return self.status == TaskStatus.IN_PROGRESS
+
+    def is_completed(self) -> bool:
+        """Check if task is in DONE status."""
+        return self.status == TaskStatus.DONE
+
+    def is_overdue(self) -> bool:
+        """Check if task is overdue (due_date is in the past and status is not DONE)."""
+        if self.due_date is None or self.is_completed():
+            return False
+        current_time = datetime.now(CEST)
+        return self.due_date < current_time
+
     @classmethod
     def from_dict(cls, data: dict) -> Task:
         due_date_str = data.get("due_date")

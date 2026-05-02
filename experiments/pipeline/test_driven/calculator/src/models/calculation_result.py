@@ -2,7 +2,16 @@ from dataclasses import dataclass, asdict, field
 from datetime import datetime
 
 
-_SYMBOLS = {"add": "+", "subtract": "-", "multiply": "×", "divide": "÷"}
+_SYMBOLS = {
+    "add": "+",
+    "subtract": "-",
+    "multiply": "×",
+    "divide": "÷",
+    "square": "²",
+    "sqrt": "√",
+    "power": "^",
+    "modulo": "%"
+}
 
 
 @dataclass

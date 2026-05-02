@@ -35,4 +35,13 @@ IN_PROGRESS --> COMPLETED : execution finished
 
 COMPLETED --> [*]
 
+note right of IN_PROGRESS
+  Query methods map to states:
+  is_running() → IN_PROGRESS
+  is_terminal() → COMPLETED
+  is_successful() → COMPLETED + SUCCESS
+  is_failed() → COMPLETED + FAILURE
+  is_cancelled() → COMPLETED + CANCELLED
+end note
+
 @enduml

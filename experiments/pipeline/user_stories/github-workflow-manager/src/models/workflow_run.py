@@ -51,3 +51,72 @@ class WorkflowRun:
             commit_sha=data.get("commit_sha"),
             duration_seconds=data.get("duration_seconds", 0.0),
         )
+
+    def is_terminal(self) -> bool:
+        """Check if the workflow run has reached a terminal state.
+
+        A run is terminal when its status is COMPLETED, regardless of the conclusion.
+
+        Returns:
+            bool: True if status is COMPLETED, False otherwise.
+        """
+        return self.status == WorkflowStatus.COMPLETED
+
+    def is_running(self) -> bool:
+        """Check if the workflow run is currently executing or queued.
+
+        A run is running when it is in one of the non-terminal states:
+        REQUESTED, PENDING, QUEUED, WAITING, or IN_PROGRESS.
+
+        Returns:
+            bool: True if status is in the running states, False otherwise.
+        """
+        return self.status in (
+            WorkflowStatus.REQUESTED,
+            WorkflowStatus.PENDING,
+            WorkflowStatus.QUEUED,
+            WorkflowStatus.WAITING,
+            WorkflowStatus.IN_PROGRESS,
+        )
+
+    def is_successful(self) -> bool:
+        """Check if the workflow run completed successfully.
+
+        A run is successful when it has reached a terminal state (COMPLETED)
+        and the conclusion is SUCCESS.
+
+        Returns:
+            bool: True if status is COMPLETED and conclusion is SUCCESS, False otherwise.
+        """
+        return (
+            self.status == WorkflowStatus.COMPLETED
+            and self.conclusion == WorkflowConclusion.SUCCESS
+        )
+
+    def is_failed(self) -> bool:
+        """Check if the workflow run failed.
+
+        A run has failed when it has reached a terminal state (COMPLETED)
+        and the conclusion is FAILURE or TIMED_OUT.
+
+        Returns:
+            bool: True if status is COMPLETED and conclusion is FAILURE or TIMED_OUT, False otherwise.
+        """
+        return (
+            self.status == WorkflowStatus.COMPLETED
+            and self.conclusion in (
+                WorkflowConclusion.FAILURE,
+                WorkflowConclusion.TIMED_OUT,
+            )
+        )
+
+    def is_cancelled(self) -> bool:
+        """Check if the workflow run was cancelled.
+
+        A run is cancelled when its conclusion is CANCELLED, regardless of status.
+        This check is independent of the workflow status.
+
+        Returns:
+            bool: True if conclusion is CANCELLED, False otherwise.
+        """
+        return self.conclusion == WorkflowConclusion.CANCELLED

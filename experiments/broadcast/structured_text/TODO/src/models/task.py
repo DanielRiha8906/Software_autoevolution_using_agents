@@ -61,3 +61,35 @@ class Task:
         # Convert due_date to CEST for comparison if needed
         due_date_cest = self.due_date.astimezone(CEST) if self.due_date.tzinfo else self.due_date.replace(tzinfo=CEST)
         return due_date_cest < now_cest
+
+    def mark_in_progress(self) -> None:
+        """Transition status to IN_PROGRESS and update updated_at to current CEST time."""
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(CEST)
+
+    def mark_done(self) -> None:
+        """Transition status to DONE and update updated_at to current CEST time."""
+        self.status = TaskStatus.DONE
+        self.updated_at = datetime.now(CEST)
+
+    def reopen(self) -> None:
+        """Transition status to PENDING and update updated_at to current CEST time.
+
+        Raises ValueError if task is already PENDING (invalid transition).
+        """
+        if self.status == TaskStatus.PENDING:
+            raise ValueError("Cannot reopen a task that is already PENDING")
+        self.status = TaskStatus.PENDING
+        self.updated_at = datetime.now(CEST)
+
+    def is_completed(self) -> bool:
+        """Return True when status is DONE."""
+        return self.status == TaskStatus.DONE
+
+    def is_pending(self) -> bool:
+        """Return True when status is PENDING."""
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Return True when status is IN_PROGRESS."""
+        return self.status == TaskStatus.IN_PROGRESS

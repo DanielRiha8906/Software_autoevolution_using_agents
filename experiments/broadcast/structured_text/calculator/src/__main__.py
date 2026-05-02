@@ -22,16 +22,17 @@ def _as_number(value: str) -> float:
 
 
 def main() -> None:
+    operation_choices = [op.value for op in Operation]
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide} A B]",
+        usage=f"python -m src [--operation {{{','.join(operation_choices)}}} A B]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide"],
-        help="Operation to perform (add | subtract | multiply | divide)",
+        choices=operation_choices,
+        help=f"Operation to perform ({' | '.join(operation_choices)})",
     )
     parser.add_argument(
         "operands",

@@ -32,3 +32,41 @@
 - ✓ Backward compatible with legacy data
 
 Duration: 264.7s | Cost: $0.405321 USD | Turns: 15
+
+## Task 02: Square, Square Root, Power, and Modulo Operations
+
+**Status:** COMPLETED
+
+**Objective:** Add square, square root, power, and modulo operations to the calculator
+
+**Files Changed:**
+- src/models/operation.py (added SQUARE, SQRT, POWER, MODULO enum members)
+- src/services/calculator.py (added square(), sqrt(), power(), modulo() methods + dispatch)
+- src/models/calculation_result.py (added symbols for new operations, updated __str__())
+- src/cli/calculator_cli.py (added 4 new menu entries)
+- tests/test_calculator.py (14 new tests for operation methods)
+- tests/test_calculator_service.py (8 new tests for service integration)
+- tests/test_cli.py (10 new tests for CLI, fixed 1 existing test)
+- artifacts/class_diagram.puml (updated to show all 8 operations and methods)
+
+**Test Results:** 74 passed (38 original + 36 new)
+
+**Key Implementation Details:**
+- All 4 new methods follow (a: float, b: float) → float signature for dispatch consistency
+- sqrt() validates a ≥ 0, raises ValueError for negative input
+- modulo() validates b ≠ 0, raises ValueError for zero divisor
+- power() uses native ** operator, supports negative and fractional exponents
+- square() returns a*a (ignores b parameter for consistency)
+- CalculationResult displays single-operand ops (square, sqrt) without operand_b
+- Error handling delegates to existing CalculatorService.perform() pattern (catch before save)
+
+**Acceptance Criteria Met:**
+- ✓ Operations available: square(x), sqrt(x), power(x, y), modulo(x, y)
+- ✓ Each operation follows same interface as existing operations
+- ✓ sqrt of negative number raises ValueError
+- ✓ modulo by zero raises ValueError
+- ✓ power with negative/fractional exponents works (native Python ** operator)
+- ✓ No existing operations duplicated or renamed
+- ✓ All operations accessible via CLI menu with proper display symbols
+
+Duration: 372.4s | Cost: $0.674887 USD | Turns: 16
