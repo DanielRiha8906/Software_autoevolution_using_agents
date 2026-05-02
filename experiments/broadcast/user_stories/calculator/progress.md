@@ -111,4 +111,4 @@ The implementation adds four new arithmetic operations to the calculator:
 
 **Test Results:** All 66 tests pass, including 28 original tests and 38 new tests, with no regressions.
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 435.1s | Cost: $1.077662 USD | Turns: 46
