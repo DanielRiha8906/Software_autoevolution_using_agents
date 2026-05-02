@@ -37,3 +37,39 @@ Implemented `duration_seconds: float` attribute on WorkflowRun class to record w
 - ✅ No external time measurement tools used
 
 Duration: 398.1s | Cost: $0.691823 USD | Turns: 15
+
+## Task 02: Add state-checking methods to WorkflowRun
+
+**Status:** ✅ COMPLETED
+
+### Summary
+Implemented 5 encapsulated state-checking methods on the WorkflowRun class to provide consistent, centralized logic for checking workflow run status. Methods derive state strictly from `status` and `conclusion` attributes with no external input required.
+
+### Files Changed
+- **src/models/workflow_run.py** — Added 5 new instance methods: is_terminal(), is_running(), is_successful(), is_failed(), is_cancelled()
+- **tests/test_workflow_run_state_methods.py** — Added 108 comprehensive test cases
+- **artifacts/class_diagram.puml** — Updated WorkflowRun class to show 5 new methods
+
+### Test Results
+- Total tests: 153 (108 new + 45 existing from Task 01)
+- Pass rate: 100% (153/153)
+- All acceptance criteria verified:
+  - ✅ is_terminal() returns True only when status == COMPLETED
+  - ✅ is_running() returns True for IN_PROGRESS, QUEUED, REQUESTED, PENDING, WAITING
+  - ✅ is_successful() returns True only when conclusion == SUCCESS
+  - ✅ is_failed() returns True only when conclusion == FAILURE
+  - ✅ is_cancelled() returns True only when conclusion == CANCELLED
+  - ✅ is_terminal() and is_running() are mutually exclusive
+  - ✅ is_successful() and is_failed() are mutually exclusive
+  - ✅ All methods derive state strictly from status and conclusion
+  - ✅ No external enum definitions modified
+
+### Acceptance Criteria Met
+- ✅ WorkflowRun provides is_terminal(), is_successful(), is_failed(), is_running()
+- ✅ All methods derive state strictly from status and conclusion
+- ✅ is_terminal() and is_running() are mutually exclusive
+- ✅ is_successful() and is_failed() are mutually exclusive
+- ✅ Bonus is_cancelled() method implemented
+- ✅ Existing enum definitions not modified
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
