@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
@@ -78,6 +79,8 @@ class InteractiveMenu:
             elif choice == "5":
                 self._do_update(tasks)
             elif choice == "6":
+                self._do_set_due_date(tasks)
+            elif choice == "7":
                 self._do_delete(tasks)
             else:
                 input("  Unknown option. Press Enter to continue...")
@@ -104,7 +107,8 @@ class InteractiveMenu:
         print("  3. Show task details")
         print("  4. Change status  (start / done / reopen)")
         print("  5. Update task    (title / description)")
-        print("  6. Delete task")
+        print("  6. Set due date")
+        print("  7. Delete task")
         print("  0. Quit")
         print()
 
@@ -142,8 +146,17 @@ class InteractiveMenu:
             input("  Title cannot be empty. Press Enter...")
             return
         description = _prompt("Description (optional)") or None
+        due_date_str = _prompt("Due date (optional, ISO 8601, e.g., 2026-05-02T15:30:00+02:00)") or None
+        due_date = None
+        if due_date_str:
+            try:
+                due_date = datetime.fromisoformat(due_date_str)
+            except ValueError:
+                print(f"\n  Error: Invalid date format. Use ISO 8601 format (e.g., 2026-05-02T15:30:00+02:00)")
+                input("  Press Enter to continue...")
+                return
         try:
-            task = self._service.add_task(title, description)
+            task = self._service.add_task(title, description, due_date)
             print(f"\n  Added: {_task_line(task)}")
         except ValueError as e:
             print(f"\n  Error: {e}")
@@ -166,6 +179,8 @@ class InteractiveMenu:
         print(f"  Status:      {task.status.value}")
         print(f"  Created:     {task.created_at.strftime('%Y-%m-%d %H:%M UTC')}")
         print(f"  Updated:     {task.updated_at.strftime('%Y-%m-%d %H:%M UTC')}")
+        due_date_str = task.due_date.isoformat() if task.due_date else "—"
+        print(f"  Due date:    {due_date_str}")
         print()
         input("  Press Enter to continue...")
 
@@ -210,10 +225,51 @@ class InteractiveMenu:
         new_title = _prompt("New title", default=task.title)
         new_desc = _prompt("New description", default=task.description or "")
         new_desc = new_desc if new_desc else None
+        due_date_default = task.due_date.isoformat() if task.due_date else ""
+        new_due_date_str = _prompt("New due date (ISO 8601)", default=due_date_default) or None
+        new_due_date = None
+        if new_due_date_str:
+            try:
+                new_due_date = datetime.fromisoformat(new_due_date_str)
+            except ValueError:
+                print(f"\n  Error: Invalid date format. Use ISO 8601 format (e.g., 2026-05-02T15:30:00+02:00)")
+                input("  Press Enter to continue...")
+                return
 
         try:
-            updated = self._service.update_task(task.id, title=new_title or None, description=new_desc)
+            updated = self._service.update_task(task.id, title=new_title or None, description=new_desc, due_date=new_due_date)
             print(f"\n  Updated: {_task_line(updated)}")
+        except (TaskNotFoundError, ValueError) as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_set_due_date(self, tasks: list[Task]) -> None:
+        _clear()
+        if not tasks:
+            input("  No tasks. Press Enter...")
+            return
+        print("  Set due date — pick a task:\n")
+        idx = _pick("Select", [_task_line(t) for t in tasks])
+        if idx is None:
+            return
+        task = tasks[idx]
+
+        _clear()
+        print(f"  Task: {task.title}  (current: {task.due_date.isoformat() if task.due_date else 'no due date'})\n")
+        due_date_str = _prompt("New due date (ISO 8601, or leave blank to clear)") or None
+        due_date = None
+        if due_date_str:
+            try:
+                due_date = datetime.fromisoformat(due_date_str)
+            except ValueError:
+                print(f"\n  Error: Invalid date format. Use ISO 8601 format (e.g., 2026-05-02T15:30:00+02:00)")
+                input("  Press Enter to continue...")
+                return
+
+        try:
+            updated = self._service.set_due_date(task.id, due_date)
+            due_date_display = updated.due_date.isoformat() if updated.due_date else "cleared"
+            print(f"\n  Updated: {_task_line(updated)} (due: {due_date_display})")
         except (TaskNotFoundError, ValueError) as e:
             print(f"\n  Error: {e}")
         input("  Press Enter to continue...")
