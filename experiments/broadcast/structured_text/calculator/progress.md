@@ -54,4 +54,4 @@ All existing tests pass without modification. The `execution_time_ms` attribute 
 - Follows existing naming convention (snake_case)
 - No external dependencies beyond Python standard library
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 328.1s | Cost: $0.587765 USD | Turns: 42
