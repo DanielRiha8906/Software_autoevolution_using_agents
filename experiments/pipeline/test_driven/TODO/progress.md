@@ -90,4 +90,4 @@ Successfully implemented 7 new methods on the Task model to move status transiti
 - is_overdue() uses strict > comparison (not >=)
 - Edge case handling: is_overdue() returns False for None due_date
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 216.7s | Cost: $0.348751 USD | Turns: 13
