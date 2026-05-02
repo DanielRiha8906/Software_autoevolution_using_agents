@@ -36,4 +36,4 @@ Implemented `duration_seconds: float` attribute on WorkflowRun class to record w
 - ✅ Defaults to 0.0 if not provided
 - ✅ No external time measurement tools used
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 398.1s | Cost: $0.691823 USD | Turns: 15
