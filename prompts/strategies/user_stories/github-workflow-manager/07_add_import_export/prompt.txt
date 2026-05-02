@@ -10,3 +10,5 @@ so that data can be preserved and moved between environments.
 - Invalid or duplicate entries during import are skipped individually, not treated as a full failure.
 - Only JSON format is supported; CSV and database formats are out of scope.
 - The GitHub adapter layer is the only component allowed to perform external API calls.
+- `export <path>` and `import <path>` CLI subcommands are added.
+- "Export data" and "Import data" options are added to the interactive menu (`python -m src`).

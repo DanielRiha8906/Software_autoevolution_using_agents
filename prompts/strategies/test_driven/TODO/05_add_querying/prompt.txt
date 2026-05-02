@@ -1,8 +1,8 @@
 ### Context
-`TodoService.list_tasks` currently supports filtering by `status`. You need to extend it with due date range and overdue filtering, combining cleanly with the existing status filter without breaking its behaviour.
+`TodoService.list_tasks` currently supports filtering by `status`. You need to extend it with due date range and overdue filtering, combining cleanly with the existing status filter without breaking its behaviour. The filters must also be exposed via CLI flags and the interactive menu (`python -m src`).
 
 ### Objective
-Extend `list_tasks` to support `due_before`, `due_after`, and `overdue` keyword arguments that can be combined with the existing `status` filter.
+Extend `list_tasks` to support `due_before`, `due_after`, and `overdue` keyword arguments that can be combined with the existing `status` filter, and expose these filters via `--overdue`, `--due-before`, and `--due-after` CLI flags.
 
 ### Test Suite
 ```python
@@ -12,6 +12,7 @@ from src.models.task import Task
 from src.models.task_status import TaskStatus
 from src.services.todo_service import TodoService
 from src.storage.json_storage import JsonStorage
+from src.cli.todo_cli import TodoCLI
 
 CEST = timezone(timedelta(hours=2))
 PAST = datetime(2020, 1, 1, tzinfo=CEST)
@@ -64,6 +65,44 @@ def test_due_date_filters_use_cest(svc):
 
 def test_results_are_task_objects(svc):
     assert all(isinstance(t, Task) for t in svc.list_tasks(overdue=True))
+
+
+def test_cli_list_overdue_flag(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    svc = TodoService(JsonStorage(storage_path))
+    svc.add_task("Overdue", due_date=PAST)
+    svc.add_task("Future", due_date=FUTURE)
+    svc.add_task("No due date")
+    cli = TodoCLI(storage_path)
+    cli.run(["list", "--overdue"])
+    out = capsys.readouterr().out
+    assert "Overdue" in out
+    assert "Future" not in out
+    assert "No due date" not in out
+
+
+def test_cli_list_due_before(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    svc = TodoService(JsonStorage(storage_path))
+    svc.add_task("Past task", due_date=PAST)
+    svc.add_task("Future task", due_date=FUTURE)
+    cli = TodoCLI(storage_path)
+    cli.run(["list", "--due-before", "2025-01-01T00:00:00+02:00"])
+    out = capsys.readouterr().out
+    assert "Past task" in out
+    assert "Future task" not in out
+
+
+def test_cli_list_due_after(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    svc = TodoService(JsonStorage(storage_path))
+    svc.add_task("Past task", due_date=PAST)
+    svc.add_task("Future task", due_date=FUTURE)
+    cli = TodoCLI(storage_path)
+    cli.run(["list", "--due-after", "2025-01-01T00:00:00+02:00"])
+    out = capsys.readouterr().out
+    assert "Future task" in out
+    assert "Past task" not in out
 ```
 
 ### Implementation Rules
@@ -72,7 +111,8 @@ def test_results_are_task_objects(svc):
 - Do not use a database query engine or external index.
 - Overdue detection must use the current CEST (UTC+2) time.
 - `due_before` and `due_after` inputs must be timezone-aware and use CEST (UTC+2).
-- Non-CEST or naive datetimes must be rejected
+- Non-CEST or naive datetimes must be rejected.
+- Add overdue and date-range filter options to the interactive menu's list/filter screen.
 
 ### Definition of Done
 - All provided tests pass.

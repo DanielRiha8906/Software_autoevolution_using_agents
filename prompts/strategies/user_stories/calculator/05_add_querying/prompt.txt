@@ -10,3 +10,5 @@ so that I can retrieve and reuse relevant past results efficiently.
 - Results are returned as a collection of `MemoryEntry` objects.
 - The structure of returned results is consistent across all queries.
 - No database or external indexing system is used.
+- The interactive menu (`python -m src`) has a "Query history" option that prompts for filters and displays matching entries.
+- The CLI one-shot mode supports `--query-operation` and `--query-success` flags to filter and print history from the command line.

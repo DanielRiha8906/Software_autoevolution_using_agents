@@ -10,3 +10,5 @@ so that I can retrieve relevant subsets of runs for analysis.
 - Multiple filters can be combined in a single query call.
 - Results are returned as a collection of `WorkflowRun` objects.
 - No database or external index is used.
+- The `list` CLI subcommand gains `--min-duration`, `--max-duration`, `--created-before`, `--created-after`, and `--has-attempts` flags.
+- The interactive menu (`python -m src`) provides a filter screen before listing runs, exposing the same filter options.

@@ -8,6 +8,8 @@
   - modulo(x, y)
 - Each operation must follow the existing operation interface
 - Results must be correct for valid numeric inputs
+- Expose the new operations as valid choices in the CLI one-shot mode (e.g. `python -m src --operation square 9`)
+- Add the new operations to the interactive menu so they are selectable when running `python -m src`
 
 ### Must
 - Handle edge cases:
@@ -16,9 +18,9 @@
   - power with negative or fractional exponents must produce correct results
 
 ### Could
-- Support operator aliases (e.g., ‘^’ for power)
+- Support operator aliases (e.g., '^' for power)
 - Reuse shared computation logic
 
-### Won’t
+### Won't
 - Introduce duplicate operations (e.g., a second add implementation)
 - Deviate from existing operation naming or interface conventions

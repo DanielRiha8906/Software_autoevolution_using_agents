@@ -1,8 +1,8 @@
 ### Context
-`MemoryService` can store and retrieve `MemoryEntry` objects. You need to extend it with filtering capabilities so callers can retrieve subsets of entries without manually filtering the full history.
+`MemoryService` can store and retrieve `MemoryEntry` objects. You need to extend it with filtering capabilities so callers can retrieve subsets of entries without manually filtering the full history. The query feature must also be accessible from the interactive menu and the CLI.
 
 ### Objective
-Add a `query` method to `MemoryService` that supports filtering by operation type, success state, or a combination of both.
+Add a `query` method to `MemoryService` that supports filtering by operation type, success state, or a combination of both. Expose it via a "Query history" option in the interactive menu and `--query-operation` / `--query-success` CLI flags.
 
 ### Test Suite
 ```python
@@ -57,6 +57,39 @@ def test_query_returns_list(populated_service):
 
 def test_query_no_match_returns_empty_list(populated_service):
     assert populated_service.query(operation="nonexistent") == []
+
+
+def test_cli_query_operation_flag(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    memory = MemoryService()
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")), memory)
+    cli = CalculatorCLI(svc)
+    cli.run(["--operation", "add", "1", "2"])
+    cli.run(["--operation", "multiply", "3", "4"])
+    capsys.readouterr()
+    rc = cli.run(["--query-operation", "add"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "add" in out.lower()
+    assert "multiply" not in out.lower()
+
+
+def test_cli_query_success_flag(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    memory = MemoryService()
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")), memory)
+    cli = CalculatorCLI(svc)
+    cli.run(["--operation", "add", "1", "2"])
+    capsys.readouterr()
+    rc = cli.run(["--query-success", "true"])
+    assert rc == 0
+    assert "add" in capsys.readouterr().out.lower()
 ```
 
 ### Implementation Rules
@@ -67,6 +100,8 @@ def test_query_no_match_returns_empty_list(populated_service):
 - Filters must be combined with AND logic.
 - Results must be returned as a list of `MemoryEntry` objects.
 - `query()` must not mutate stored history.
+- Add `--query-operation <op>` and `--query-success <true|false>` flags to the CLI (handled by `CalculatorCLI.run()`); print matching entries and return `0`.
+- Add a "Query history" numbered option to the interactive menu that prompts for operation and success filters and displays results.
 
 ### Definition of Done
 - All provided tests pass.

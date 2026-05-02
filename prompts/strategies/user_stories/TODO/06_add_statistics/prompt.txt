@@ -9,3 +9,5 @@ so that I can understand the state of my work at a glance.
 - Output format is deterministic regardless of task ordering.
 - Average days from creation to completion for done tasks is included as a bonus.
 - No charts or visualisation output are produced.
+- The CLI has a `stats` command that prints the statistics report in a human-readable format.
+- The interactive menu (`python -m src`) has a "View statistics" option that displays the report.

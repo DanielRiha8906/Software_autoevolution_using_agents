@@ -10,3 +10,6 @@ so that I can programmatically retrieve relevant subsets of tasks.
 - Results are returned in the same structured format as `list_tasks`.
 - Existing `list_tasks(status=...)` behaviour remains unchanged.
 - No database or external indexing system is used.
+- The CLI `list` command accepts a `--overdue` flag to show only overdue tasks.
+- The CLI `list` command accepts `--due-before <ISO8601>` and `--due-after <ISO8601>` flags.
+- The interactive menu's (`python -m src`) filter screen includes options for overdue and date-range filtering.

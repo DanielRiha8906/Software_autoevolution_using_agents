@@ -50,14 +50,14 @@ jobs:
 
       - name: Install PlantUML
         run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz default-jre
-          wget -O plantuml.jar https://github.com/plantuml/plantuml/releases/download/v1.2024.6/plantuml.jar
-
-          echo '#!/usr/bin/env bash' > plantuml
-          echo 'java -jar plantuml.jar "$@"' >> plantuml
-          chmod +x plantuml
-          sudo mv plantuml /usr/local/bin/plantuml
+          sudo DEBIAN_FRONTEND=noninteractive apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq graphviz default-jre-headless
+          curl -fsSL -o /tmp/plantuml.jar \
+            https://github.com/plantuml/plantuml/releases/download/v1.2024.6/plantuml-1.2024.6.jar
+          printf '#!/usr/bin/env bash\nexec java -jar /tmp/plantuml.jar "$@"\n' \
+            | sudo tee /usr/local/bin/plantuml > /dev/null
+          sudo chmod +x /usr/local/bin/plantuml
+          plantuml -version
       - name: Prepare prompts
         id: prompts
         shell: bash

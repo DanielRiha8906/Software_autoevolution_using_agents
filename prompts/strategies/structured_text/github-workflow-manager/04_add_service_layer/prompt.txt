@@ -9,6 +9,8 @@ Must Have:
   - Create attempt
   - Retrieve attempts by `run_id`
 - Integrate with existing storage mechanism
+- Add CLI subcommands `attempt add <run-id> <attempt-number>` and `attempt list <run-id>` so attempts can be managed from the command line
+- Add a "Manage attempts" option to the interactive menu (`python -m src`) that allows creating and listing attempts for a chosen run
 
 Should Have:
 - Ensure no duplicate attempt numbers per run
@@ -16,5 +18,5 @@ Should Have:
 Could Have:
 - Add sorting by attempt number
 
-Won’t Have:
+Won't Have:
 - Add a caching layer

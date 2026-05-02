@@ -13,3 +13,7 @@ so that I can organise and filter my workload by topic or goal.
 - Moving a task from one project to another is supported.
 - Deleting a project leaves its tasks unassigned (not deleted) as a bonus.
 - No drag-and-drop UI or per-project access control is introduced.
+- The CLI has `project create <name>` and `project list` commands.
+- The CLI `add` command accepts an optional `--project <id>` flag to assign a task to a project at creation.
+- The CLI `list` command accepts an optional `--project <id>` flag to filter tasks by project.
+- The interactive menu (`python -m src`) supports creating and listing projects, assigning a project when adding a task, and filtering tasks by project.

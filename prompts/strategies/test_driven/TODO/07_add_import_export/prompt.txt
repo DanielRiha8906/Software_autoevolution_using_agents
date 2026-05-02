@@ -1,8 +1,8 @@
 ### Context
-`Task` and `TaskComment` both support serialisation via `to_dict` / `from_dict`. You need an import/export service that bundles tasks with their associated comments into a single JSON file and restores them safely.
+`Task` and `TaskComment` both support serialisation via `to_dict` / `from_dict`. You need an import/export service that bundles tasks with their associated comments into a single JSON file and restores them safely. The feature must also be exposed via `export` and `import` CLI commands and the interactive menu (`python -m src`).
 
 ### Objective
-Implement `TaskImportExportService` that exports tasks and comments together and imports them back with structure validation, duplicate skipping, and no overwrite of existing data.
+Implement `TaskImportExportService` that exports tasks and comments together and imports them back with structure validation, duplicate skipping, and no overwrite of existing data. Expose via CLI and interactive menu.
 
 ### Test Suite
 ```python
@@ -13,6 +13,7 @@ from src.services.todo_service import TodoService
 from src.services.comments_service import CommentsService
 from src.services.import_export_service import TaskImportExportService
 from src.storage.json_storage import JsonStorage
+from src.cli.todo_cli import TodoCLI
 
 
 @pytest.fixture
@@ -79,6 +80,35 @@ def test_import_skips_duplicates(setup, tmp_path):
     svc.export(str(path))
     svc.import_from(str(path))
     assert len([t for t in todo.list_tasks() if t.id == task.id]) == 1
+
+
+def test_cli_export_command(tmp_path):
+    storage_path = str(tmp_path / "tasks.json")
+    TodoService(JsonStorage(storage_path)).add_task("Task 1")
+    export_path = str(tmp_path / "export.json")
+    rc = TodoCLI(storage_path).run(["export", export_path])
+    assert rc == 0
+    assert (tmp_path / "export.json").exists()
+
+
+def test_cli_export_file_contains_tasks(tmp_path):
+    storage_path = str(tmp_path / "tasks.json")
+    task = TodoService(JsonStorage(storage_path)).add_task("Task 1")
+    export_path = str(tmp_path / "export.json")
+    TodoCLI(storage_path).run(["export", export_path])
+    data = json.loads((tmp_path / "export.json").read_text())
+    assert any(t["id"] == task.id for t in data["tasks"])
+
+
+def test_cli_import_command(tmp_path):
+    storage_path = str(tmp_path / "tasks.json")
+    task = TodoService(JsonStorage(storage_path)).add_task("Original task")
+    export_path = str(tmp_path / "export.json")
+    TodoCLI(storage_path).run(["export", export_path])
+    storage_path2 = str(tmp_path / "tasks2.json")
+    rc = TodoCLI(storage_path2).run(["import", export_path])
+    assert rc == 0
+    assert any(t.id == task.id for t in TodoService(JsonStorage(storage_path2)).list_tasks())
 ```
 
 ### Implementation Rules
@@ -91,6 +121,7 @@ def test_import_skips_duplicates(setup, tmp_path):
 - Importing must preserve existing tasks and comments.
 - Importing must not overwrite existing records unless explicitly required.
 - Export must include both top-level keys: `tasks` and `comments`.
+- Add "Export data" and "Import data" options to the interactive menu.
 
 ### Definition of Done
 - All provided tests pass.

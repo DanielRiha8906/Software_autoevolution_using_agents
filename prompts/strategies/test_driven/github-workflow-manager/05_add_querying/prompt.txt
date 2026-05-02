@@ -1,8 +1,8 @@
 ### Context
-`WorkflowRunService` stores workflow runs, and `AttemptService` manages attempts associated with runs. You need to add querying capabilities to filter runs by duration, timestamps, and attempt presence.
+`WorkflowRunService` stores workflow runs, and `AttemptService` manages attempts associated with runs. You need to add querying capabilities to filter runs by duration, timestamps, and attempt presence. The query filters must also be accessible via CLI flags and an interactive menu filter screen.
 
 ### Objective
-Implement query functionality in `WorkflowRunService` that filters workflow runs by duration range, timestamp range, and whether they have associated attempts.
+Implement query functionality in `WorkflowRunService` that filters workflow runs by duration range, timestamp range, and whether they have associated attempts. Add `--min-duration`, `--max-duration`, `--created-before`, `--created-after`, and `--has-attempts` flags to the `list` CLI subcommand, and a filter screen to the interactive menu.
 
 ### Test Suite
 ```python
@@ -53,13 +53,9 @@ def svc(tmp_path):
     storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
     attempt_svc = AttemptService()
     service = WorkflowRunService(storage, attempt_svc)
-
     service.add_workflow_run(_run("r1", duration=5.0, created_at=EARLY))
     service.add_workflow_run(_run("r2", duration=50.0, created_at=LATE))
-
-    # only r2 has attempts
     attempt_svc.create(_attempt("r2", 1))
-
     return service
 
 
@@ -93,7 +89,6 @@ def test_filter_runs_without_attempts(svc):
 def test_combined_filters(svc):
     cutoff = datetime(2025, 1, 1, tzinfo=timezone.utc)
     results = svc.query(min_duration=1.0, created_before=cutoff, has_attempts=False)
-
     assert all(
         r.duration_seconds >= 1.0 and
         r.created_at < cutoff and
@@ -109,6 +104,36 @@ def test_query_returns_list(svc):
 def test_no_match_returns_empty_list(svc):
     results = svc.query(min_duration=9999)
     assert results == []
+
+
+def test_cli_list_with_min_duration(tmp_path, capsys):
+    from src.storage.workflow_json_storage import WorkflowJsonStorage
+    from src.services.workflow_run_service import WorkflowRunService
+    from src.services.attempt_service import AttemptService
+    from src.cli.workflow_cli import run_cli
+    storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+    svc = WorkflowRunService(storage, AttemptService())
+    run_cli(svc, ["add", "--name", "Fast", "--branch", "main", "--status", "completed", "--duration-seconds", "5"])
+    run_cli(svc, ["add", "--name", "Slow", "--branch", "main", "--status", "completed", "--duration-seconds", "100"])
+    capsys.readouterr()
+    run_cli(svc, ["list", "--min-duration", "50"])
+    out = capsys.readouterr().out
+    assert "Slow" in out
+    assert "Fast" not in out
+
+
+def test_cli_list_with_created_before(tmp_path, capsys):
+    from src.storage.workflow_json_storage import WorkflowJsonStorage
+    from src.services.workflow_run_service import WorkflowRunService
+    from src.services.attempt_service import AttemptService
+    from src.cli.workflow_cli import run_cli
+    storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+    svc = WorkflowRunService(storage, AttemptService())
+    run_cli(svc, ["add", "--name", "CI", "--branch", "main", "--status", "completed"])
+    capsys.readouterr()
+    run_cli(svc, ["list", "--created-before", "2099-01-01T00:00:00+00:00"])
+    out = capsys.readouterr().out
+    assert "CI" in out
 ```
 
 ### Implementation Rules
@@ -123,6 +148,8 @@ def test_no_match_returns_empty_list(svc):
 - The query method must not mutate stored workflow runs.
 - No database, indexing system, or external search tool may be used.
 - Filtering must be done in-memory.
+- Add `--min-duration`, `--max-duration`, `--created-before`, `--created-after`, and `--has-attempts` flags to the `list` CLI subcommand.
+- Add a filter screen to the interactive menu (`python -m src`) before listing runs, exposing the same filter options.
 
 ### Definition of Done
 - All provided tests pass.

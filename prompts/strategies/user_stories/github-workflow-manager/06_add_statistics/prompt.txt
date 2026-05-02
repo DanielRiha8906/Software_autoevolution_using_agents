@@ -8,3 +8,5 @@ so that I can understand overall success rates, durations, and retry behaviour.
 - The report is returned as a structured object (dataclass), not a plain dictionary.
 - Per-status breakdown of average duration is included as a bonus.
 - No visualisation layer is added.
+- A `stats` CLI subcommand is added that prints the statistics report.
+- A "View statistics" option is added to the interactive menu (`python -m src`).

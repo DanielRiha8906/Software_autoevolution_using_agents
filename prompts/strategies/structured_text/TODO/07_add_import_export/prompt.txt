@@ -6,6 +6,9 @@
 - Preserve task IDs, statuses, due dates, and comments on import
 - Validate imported data structure before applying it
 - Existing stored data must not be overwritten without explicit intent
+- Add an `export <path>` CLI command that writes all tasks and comments to the given JSON file
+- Add an `import <path>` CLI command that loads tasks and comments from the given JSON file
+- Add "Export data" and "Import data" options to the interactive menu (`python -m src`)
 
 ### Should
 - Schema must match the `Task.to_dict()` and `TaskComment.to_dict()` serialization formats

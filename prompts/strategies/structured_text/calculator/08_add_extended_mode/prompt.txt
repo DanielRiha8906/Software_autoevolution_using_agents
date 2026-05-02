@@ -4,6 +4,8 @@
 - Introduce a scientific mode that adds the following operations: sin, cos, tan, log (base 10), ln (natural log), exp
 - Mode must extend existing functionality without breaking it
 - Switching between standard and scientific mode must be explicit
+- Expose the scientific operations as valid choices in the CLI one-shot mode (e.g. `python -m src --operation sin 1.5708`)
+- Add a "Switch to scientific mode" option (or equivalent) to the interactive menu (`python -m src`) so scientific operations are accessible without any CLI flags
 
 ### Should
 - Maintain consistency with base calculator behavior (same operation interface, same result structure)
@@ -12,5 +14,5 @@
 ### Could
 - Add further trigonometric or hyperbolic functions (e.g., asin, sinh)
 
-### Won’t
+### Won't
 - Reimplement operations already available in standard mode

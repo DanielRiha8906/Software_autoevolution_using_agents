@@ -6,6 +6,9 @@
   - By overdue status (due_date is set and earlier than the current CEST time)
 - Return filtered collections consistent with the existing `list_tasks` return format
 - Overdue detection must use current CEST time (UTC+2)
+- Add `--overdue` flag to the CLI `list` command (shows only overdue tasks)
+- Add `--due-before <ISO8601>` and `--due-after <ISO8601>` flags to the CLI `list` command
+- Add overdue and date-range filter options to the interactive menu's list/filter screen (`python -m src`)
 
 ### Should
 - Support combining the new filters with the existing status filter in a single call

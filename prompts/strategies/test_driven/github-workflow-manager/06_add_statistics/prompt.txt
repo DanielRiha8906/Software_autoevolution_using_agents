@@ -1,8 +1,8 @@
 ### Context
-`WorkflowRunService` stores workflow runs, and `AttemptService` manages attempts. You need to compute aggregated statistics over stored runs, including success/failure distribution, duration metrics, and retry behaviour.
+`WorkflowRunService` stores workflow runs, and `AttemptService` manages attempts. You need to compute aggregated statistics over stored runs, including success/failure distribution, duration metrics, and retry behaviour. The statistics must also be accessible via a `stats` CLI subcommand and an interactive menu option.
 
 ### Objective
-Implement `WorkflowStatisticsService` that computes aggregated metrics over workflow runs and returns them as a structured dataclass report.
+Implement `WorkflowStatisticsService` that computes aggregated metrics over workflow runs and returns them as a structured dataclass report. Add a `stats` CLI subcommand and a "View statistics" interactive menu option.
 
 ### Test Suite
 ```python
@@ -53,15 +53,11 @@ def stats_svc(tmp_path):
     storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
     run_svc = WorkflowRunService(storage, AttemptService())
     attempt_svc = run_svc.attempt_service
-
     run_svc.add_workflow_run(_run("r1", WorkflowConclusion.SUCCESS, 10.0))
     run_svc.add_workflow_run(_run("r2", WorkflowConclusion.FAILURE, 30.0))
     run_svc.add_workflow_run(_run("r3", WorkflowConclusion.SUCCESS, 20.0))
-
-    # attempts for r2 only
     attempt_svc.create(_attempt("r2", 1))
     attempt_svc.create(_attempt("r2", 2))
-
     return WorkflowStatisticsService(run_svc)
 
 
@@ -100,11 +96,25 @@ def test_empty_data_returns_zeroed_report(tmp_path):
     storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
     run_svc = WorkflowRunService(storage, AttemptService())
     report = WorkflowStatisticsService(run_svc).compute()
-
     assert report.avg_duration_seconds == 0
     assert report.min_duration_seconds == 0
     assert report.max_duration_seconds == 0
     assert report.avg_attempts_per_run == 0
+
+
+def test_cli_stats_subcommand(tmp_path, capsys):
+    from src.storage.workflow_json_storage import WorkflowJsonStorage
+    from src.services.workflow_run_service import WorkflowRunService
+    from src.services.attempt_service import AttemptService
+    from src.cli.workflow_cli import run_cli
+    storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+    svc = WorkflowRunService(storage, AttemptService())
+    run_cli(svc, ["add", "--name", "CI", "--branch", "main", "--status", "completed", "--duration-seconds", "30"])
+    run_cli(svc, ["add", "--name", "CI", "--branch", "main", "--status", "completed", "--duration-seconds", "10"])
+    capsys.readouterr()
+    run_cli(svc, ["stats"])
+    out = capsys.readouterr().out
+    assert "20" in out or "duration" in out.lower() or "avg" in out.lower()
 ```
 
 ### Implementation Rules
@@ -116,6 +126,9 @@ def test_empty_data_returns_zeroed_report(tmp_path):
 - Empty datasets must return zeroed values (no exceptions).
 - No visualisation or external reporting tools may be used.
 - No external dependencies may be introduced.
+- `WorkflowRunService` must expose its `attempt_service` attribute so `WorkflowStatisticsService` can access it.
+- Add a `stats` subcommand to the CLI that prints the statistics report.
+- Add a "View statistics" option to the interactive menu (`python -m src`).
 
 ### Definition of Done
 - All provided tests pass.

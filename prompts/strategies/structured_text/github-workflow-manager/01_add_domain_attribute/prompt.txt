@@ -8,6 +8,10 @@ Must Have:
 - Ensure value is stored and persisted in storage layer
 - Value must represent total execution time in seconds
 - Update serialization/deserialization logic accordingly
+- Add `--duration-seconds` argument to the `add` CLI subcommand so callers can record duration when creating a run
+- Display `duration_seconds` in the output of the `list` and `detail` CLI subcommands
+- Prompt for duration when adding a run via the interactive menu (`python -m src`)
+- Show duration in the run detail view of the interactive menu
 
 Should Have:
 - Validate that duration is non-negative
@@ -16,5 +20,5 @@ Should Have:
 Could Have:
 - Support optional higher precision (milliseconds)
 
-Won’t Have:
+Won't Have:
 - Integrate external time measurement tools

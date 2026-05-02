@@ -6,6 +6,11 @@
 - Ensure `due_date` is stored and persisted through the storage layer
 - Update `to_dict` and `from_dict` accordingly
 - Use a CEST (UTC+2) timezone-aware datetime representation (ISO 8601) consistently across the application
+- Accept an optional `--due-date` argument in the CLI `add` command (ISO 8601 string, converted to CEST datetime)
+- Display `due_date` in the CLI `show` command output
+- Show a `[OVERDUE]` indicator in the CLI `list` output for tasks whose due date is in the past
+- Prompt for an optional due date in the interactive menu's add task screen (`python -m src`)
+- Display due date and overdue indicator in the interactive menu's task detail view and task list
 
 ### Should
 - Preserve backward compatibility with stored JSON data (tasks without a due_date field must load without error)

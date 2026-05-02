@@ -8,3 +8,5 @@ so that attempt management is centralised and decoupled from the domain model.
 - Duplicate attempt numbers per run are prevented.
 - Attempts can be returned sorted by attempt number as a bonus.
 - No caching layer is added.
+- CLI subcommands `attempt add <run-id> <attempt-number>` and `attempt list <run-id>` are added so attempts can be managed from the command line.
+- The interactive menu (`python -m src`) includes a "Manage attempts" option for creating and listing attempts.

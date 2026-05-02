@@ -9,6 +9,8 @@ Must Have:
   - Average `duration_seconds`
   - Average number of attempts per run
 - Return structured report object
+- Add a `stats` CLI subcommand that prints the statistics report
+- Add a "View statistics" option to the interactive menu (`python -m src`)
 
 Should Have:
 - Use a dataclass or named object (not a plain dict) for the report
@@ -17,5 +19,5 @@ Should Have:
 Could Have:
 - Per-status breakdown of average duration
 
-Won’t Have:
+Won't Have:
 - Add a visualization layer

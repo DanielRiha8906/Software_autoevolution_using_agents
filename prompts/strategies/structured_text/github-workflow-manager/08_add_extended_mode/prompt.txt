@@ -12,6 +12,8 @@ Must Have:
   2. `secrets/.env` file in the project root
   3. Prompt user to input PAT securely if neither is found
 - Do not persist a user-entered PAT unless explicitly configured
+- Add a `fetch --owner <owner> --repo <repo>` CLI subcommand that triggers a GitHub fetch and stores the results locally
+- Add a "Fetch from GitHub" option to the interactive menu (`python -m src`) that prompts for owner/repo and fetches runs
 
 Should Have:
 - Handle API errors gracefully (rate limits, invalid token, network issues)
@@ -20,5 +22,5 @@ Should Have:
 Could Have:
 - Incremental fetch (only runs newer than the latest stored run)
 
-Won’t Have:
+Won't Have:
 - Implement full authentication management (OAuth flows, token refresh)

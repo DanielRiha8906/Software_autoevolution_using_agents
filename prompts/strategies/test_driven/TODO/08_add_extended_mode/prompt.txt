@@ -1,8 +1,8 @@
 ### Context
-`Task` currently has no project concept. You need to introduce a `Project` domain class and extend `Task` with an optional `project_id` so tasks can be grouped and filtered by project. Existing stored tasks without `project_id` must remain loadable.
+`Task` currently has no project concept. You need to introduce a `Project` domain class and extend `Task` with an optional `project_id` so tasks can be grouped and filtered by project. Existing stored tasks without `project_id` must remain loadable. Projects must also be manageable via CLI commands and the interactive menu (`python -m src`).
 
 ### Objective
-Implement `Project` and `ProjectService`, add optional `project_id` to `Task`, and extend `list_tasks` to support filtering by project.
+Implement `Project` and `ProjectService`, add optional `project_id` to `Task`, extend `list_tasks` to support filtering by project, and expose project management and task-project assignment in the CLI and interactive menu.
 
 ### Test Suite
 ```python
@@ -12,6 +12,7 @@ from src.models.project import Project
 from src.services.todo_service import TodoService
 from src.services.project_service import ProjectService
 from src.storage.json_storage import JsonStorage
+from src.cli.todo_cli import TodoCLI
 
 
 @pytest.fixture
@@ -81,6 +82,46 @@ def test_move_task_between_projects(services):
     p2 = projects.create("Beta")
     task = todo.add_task("Movable", project_id=p1.id)
     assert todo.update_task(task.id, project_id=p2.id).project_id == p2.id
+
+
+def test_cli_project_create(tmp_path, capsys):
+    cli = TodoCLI(str(tmp_path / "tasks.json"))
+    rc = cli.run(["project", "create", "Work"])
+    assert rc == 0
+    assert "Work" in capsys.readouterr().out
+
+
+def test_cli_project_list(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    cli = TodoCLI(storage_path)
+    cli.run(["project", "create", "Work"])
+    capsys.readouterr()
+    cli.run(["project", "list"])
+    assert "Work" in capsys.readouterr().out
+
+
+def test_cli_add_task_with_project(tmp_path):
+    storage_path = str(tmp_path / "tasks.json")
+    todo = TodoService(JsonStorage(storage_path))
+    proj = ProjectService(todo).create("Work")
+    cli = TodoCLI(storage_path)
+    rc = cli.run(["add", "My task", "--project", proj.id])
+    assert rc == 0
+    tasks = TodoService(JsonStorage(storage_path)).list_tasks()
+    assert any(t.project_id == proj.id for t in tasks)
+
+
+def test_cli_list_filter_by_project(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    todo = TodoService(JsonStorage(storage_path))
+    proj = ProjectService(todo).create("Work")
+    todo.add_task("Work task", project_id=proj.id)
+    todo.add_task("Personal task")
+    cli = TodoCLI(storage_path)
+    cli.run(["list", "--project", proj.id])
+    out = capsys.readouterr().out
+    assert "Work task" in out
+    assert "Personal task" not in out
 ```
 
 ### Implementation Rules
@@ -92,6 +133,7 @@ def test_move_task_between_projects(services):
 - `project_id` must be optional on `Task` and default to `None`.
 - Project names must be stripped or validated so blank/whitespace-only names are rejected.
 - Project filtering must not change existing `list_tasks()` behavior when no `project_id` filter is provided.
+- Add project management to the interactive menu: create/list projects, assign a project when adding a task, filter the task list by project.
 
 ### Definition of Done
 - All provided tests pass.

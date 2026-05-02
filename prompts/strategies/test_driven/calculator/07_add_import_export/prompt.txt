@@ -1,8 +1,8 @@
 ### Context
-`MemoryEntry` supports serialisation via `to_dict` / `from_dict`. You need to add an import/export service that persists and restores the full history to/from a JSON file, with validation and safe merging on import.
+`MemoryEntry` supports serialisation via `to_dict` / `from_dict`. You need to add an import/export service that persists and restores the full history to/from a JSON file, with validation and safe merging on import. Export and import must also be accessible via `--export` / `--import` CLI flags and interactive menu options.
 
 ### Objective
-Implement `ImportExportService` that exports all `MemoryEntry` records to JSON and imports them back, validating the file structure and skipping duplicate entries rather than overwriting existing history.
+Implement `ImportExportService` that exports all `MemoryEntry` records to JSON and imports them back, validating the file structure and skipping duplicate entries rather than overwriting existing history. Expose via CLI flags and interactive menu.
 
 ### Test Suite
 ```python
@@ -68,6 +68,36 @@ def test_import_skips_duplicate_entries(tmp_path):
     path.write_text(json.dumps([entry.to_dict()]))
     ImportExportService(memory).import_from(str(path))
     assert len(memory.retrieve()) == 1
+
+
+def test_cli_export_flag_creates_file(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    memory = MemoryService()
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")), memory)
+    cli = CalculatorCLI(svc)
+    export_path = str(tmp_path / "export.json")
+    rc = cli.run(["--export", export_path])
+    assert rc == 0
+    assert (tmp_path / "export.json").exists()
+
+
+def test_cli_import_flag_loads_entries(tmp_path):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    entry = _entry()
+    import_path = tmp_path / "data.json"
+    import_path.write_text(json.dumps([entry.to_dict()]))
+    memory = MemoryService()
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")), memory)
+    cli = CalculatorCLI(svc)
+    rc = cli.run(["--import", str(import_path)])
+    assert rc == 0
+    assert any(e.id == entry.id for e in memory.retrieve())
 ```
 
 ### Implementation Rules
@@ -80,6 +110,8 @@ def test_import_skips_duplicate_entries(tmp_path):
 - Importing must preserve already stored entries.
 - Importing must not overwrite existing entries unless explicitly required by the tests.
 - Do not introduce external dependencies.
+- Add `--export <path>` and `--import <path>` flags to the CLI (handled by `CalculatorCLI.run()`); return `0` on success.
+- Add "Export history" and "Import history" numbered options to the interactive menu.
 
 ### Definition of Done
 - All provided tests pass.

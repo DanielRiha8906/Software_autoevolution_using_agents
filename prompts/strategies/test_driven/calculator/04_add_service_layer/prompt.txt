@@ -1,8 +1,8 @@
 ### Context
-`MemoryEntry` now exists as a domain class. You need a service layer to manage its lifecycle. Persistence details (file I/O, JSON serialisation) must remain in a separate storage layer, not inside the service.
+`MemoryEntry` now exists as a domain class. You need a service layer to manage its lifecycle. Persistence details (file I/O, JSON serialisation) must remain in a separate storage layer, not inside the service. Every calculation performed by the app must be automatically recorded via `MemoryService`, and the history must be viewable from the interactive menu.
 
 ### Objective
-Implement `MemoryService` with `store` and `retrieve` operations. The service must manage `MemoryEntry` lifecycle and keep all persistence details out of itself — those belong in a separate storage layer.
+Implement `MemoryService` with `store` and `retrieve` operations. Wire it into the calculation flow so every completed calculation is automatically stored. The interactive menu's "View history" option must display the stored entries.
 
 ### Test Suite
 ```python
@@ -47,6 +47,31 @@ def test_memory_service_does_not_contain_file_io():
     source = inspect.getsource(mod)
     assert "open(" not in source
     assert "json.dump" not in source
+
+
+def test_calculation_auto_stored_via_service(tmp_path):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    memory = MemoryService()
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")), memory)
+    svc.perform("add", 1, 2)
+    assert len(memory.retrieve()) == 1
+
+
+def test_cli_history_shows_performed_calculation(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    memory = MemoryService()
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")), memory)
+    cli = CalculatorCLI(svc)
+    cli.run(["--operation", "add", "3", "4"])
+    capsys.readouterr()
+    cli._show_history()
+    out = capsys.readouterr().out
+    assert "add" in out.lower() or "7" in out
 ```
 
 ### Implementation Rules
@@ -54,6 +79,10 @@ def test_memory_service_does_not_contain_file_io():
 - File I/O and serialisation belong in a storage class, not in `MemoryService`.
 - `MemoryService` responsibilities are limited to `MemoryEntry` lifecycle management.
 - Do not place business logic (calculations) inside `MemoryService`.
+- `CalculatorService` must accept an optional `MemoryService` argument and auto-store every completed calculation (success or failure) via it.
+- `CalculatorCLI.run(args) -> int` must exist (added in step 02); ensure it works with `--operation add 3 4`.
+- `CalculatorCLI._show_history()` must display entries from the wired `MemoryService`.
+- The interactive menu must include a "View history" option that invokes `_show_history()`.
 
 ### Definition of Done
 - All provided tests pass.

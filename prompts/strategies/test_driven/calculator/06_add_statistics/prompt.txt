@@ -1,8 +1,8 @@
 ### Context
-`MemoryService` holds a history of `MemoryEntry` records. You need a statistics component that computes aggregated metrics over that history and returns them as a structured object.
+`MemoryService` holds a history of `MemoryEntry` records. You need a statistics component that computes aggregated metrics over that history and returns them as a structured object. The statistics must also be accessible via a `--stats` CLI flag and a "View statistics" interactive menu option.
 
 ### Objective
-Implement `StatisticsService` that derives operation counts, error counts, error rate, and average execution time from stored `MemoryEntry` data, returning a dataclass report.
+Implement `StatisticsService` that derives operation counts, error counts, error rate, and average execution time from stored `MemoryEntry` data, returning a dataclass report. Expose via `--stats` CLI flag and interactive menu.
 
 ### Test Suite
 ```python
@@ -57,6 +57,34 @@ def test_report_structure_is_consistent(stats_svc):
     r2 = stats_svc.compute()
     assert r1.total_errors == r2.total_errors
     assert r1.avg_execution_time_ms == r2.avg_execution_time_ms
+
+
+def test_cli_stats_flag_exits_zero(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    memory = MemoryService()
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")), memory)
+    cli = CalculatorCLI(svc)
+    rc = cli.run(["--stats"])
+    assert rc == 0
+
+
+def test_cli_stats_output_shows_operation_counts(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    memory = MemoryService()
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")), memory)
+    cli = CalculatorCLI(svc)
+    cli.run(["--operation", "add", "1", "2"])
+    cli.run(["--operation", "add", "3", "4"])
+    capsys.readouterr()
+    cli.run(["--stats"])
+    out = capsys.readouterr().out
+    assert "add" in out.lower() or "2" in out
 ```
 
 ### Implementation Rules
@@ -66,6 +94,8 @@ def test_report_structure_is_consistent(stats_svc):
 - Do not add a visualisation layer.
 - Handle empty history safely.
 - Error rate must be expressed as a percentage from 0 to 100.
+- Add a `--stats` flag to the CLI (handled by `CalculatorCLI.run()`); print the report and return `0`.
+- Add a "View statistics" numbered option to the interactive menu.
 
 ### Definition of Done
 - All provided tests pass.

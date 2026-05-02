@@ -1,8 +1,8 @@
 ### Context
-You are modifying the existing github-workflow-manager application. `WorkflowRun` currently tracks status, conclusion, branch, and timestamps. You need to add `duration_seconds` to record how long each run took, with full serialisation support and backward compatibility.
+You are modifying the existing github-workflow-manager application. `WorkflowRun` currently tracks status, conclusion, branch, and timestamps. You need to add `duration_seconds` to record how long each run took, with full serialisation support and backward compatibility. The new field must also be exposed in the CLI and interactive menu.
 
 ### Objective
-Extend `WorkflowRun` with a `duration_seconds: float` attribute that defaults to `0.0`, rejects negative values, and round-trips through `to_dict` / `from_dict`.
+Extend `WorkflowRun` with a `duration_seconds: float` attribute that defaults to `0.0`, rejects negative values, and round-trips through `to_dict` / `from_dict`. Wire it into the `add` CLI subcommand and display it in `list` and `detail` output.
 
 ### Test Suite
 ```python
@@ -52,20 +52,44 @@ def test_duration_seconds_round_trips_via_dict():
     run = _run(duration_seconds=10.0)
     assert WorkflowRun.from_dict(run.to_dict()).duration_seconds == 10.0
 
+
 def test_old_dict_without_duration_seconds_loads_with_default():
     run = _run()
     data = run.to_dict()
     data.pop("duration_seconds", None)
-
     restored = WorkflowRun.from_dict(data)
-
     assert restored.duration_seconds == 0.0
+
 
 def test_existing_fields_unchanged():
     run = _run()
     assert run.workflow_name == "CI"
     assert run.branch == "main"
     assert run.status == WorkflowStatus.COMPLETED
+
+
+def test_cli_add_accepts_duration_seconds(tmp_path):
+    from src.storage.workflow_json_storage import WorkflowJsonStorage
+    from src.services.workflow_run_service import WorkflowRunService
+    from src.cli.workflow_cli import run_cli
+    storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+    svc = WorkflowRunService(storage)
+    run_cli(svc, ["add", "--name", "CI", "--branch", "main",
+                  "--status", "completed", "--duration-seconds", "42.5"])
+    assert svc.list_runs()[0].duration_seconds == 42.5
+
+
+def test_cli_list_shows_duration_seconds(tmp_path, capsys):
+    from src.storage.workflow_json_storage import WorkflowJsonStorage
+    from src.services.workflow_run_service import WorkflowRunService
+    from src.cli.workflow_cli import run_cli
+    storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+    svc = WorkflowRunService(storage)
+    run_cli(svc, ["add", "--name", "CI", "--branch", "main",
+                  "--status", "completed", "--duration-seconds", "99.0"])
+    capsys.readouterr()
+    run_cli(svc, ["list"])
+    assert "99" in capsys.readouterr().out
 ```
 
 ### Implementation Rules
@@ -75,6 +99,9 @@ def test_existing_fields_unchanged():
 - Negative values must be rejected at construction time.
 - Do not use external time measurement tools.
 - Preserve all existing `WorkflowRun` fields and serialisation behaviour.
+- Add `--duration-seconds` (type `float`, default `0.0`) to the `add` argparse subcommand.
+- Display `duration_seconds` in the `list` and `detail` command output.
+- Prompt for duration when adding a run via the interactive menu (`python -m src`) and show it in the run detail view.
 
 ### Definition of Done
 - All provided tests pass.

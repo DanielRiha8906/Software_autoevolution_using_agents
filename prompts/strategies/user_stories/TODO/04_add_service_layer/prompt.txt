@@ -9,3 +9,5 @@ so that comment logic is centralised and not duplicated across the codebase.
 - Persistence details stay in the storage layer, not inside the service.
 - Deleting a task cascades to its associated comments.
 - Editing a comment's content (with `updated_at` updated) is supported as a bonus.
+- The CLI supports `comment add <task-id> <content>`, `comment list <task-id>`, and `comment delete <comment-id>` subcommands.
+- The interactive menu (`python -m src`) has a "Manage comments" option that allows listing, adding, and deleting comments for a selected task.

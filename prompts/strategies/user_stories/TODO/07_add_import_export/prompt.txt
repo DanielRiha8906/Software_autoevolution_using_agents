@@ -12,3 +12,6 @@ so that my data is portable and not locked to a single environment.
 - Invalid or duplicate entries during import are skipped individually, not treated as a full failure.
 - Only JSON format is supported; CSV and XML are out of scope.
 - JSON format is described in documentation (readme.MD).
+- The CLI has an `export <path>` command that writes all tasks and comments to the given JSON file.
+- The CLI has an `import <path>` command that loads tasks and comments from the given JSON file.
+- The interactive menu (`python -m src`) has "Export data" and "Import data" options.

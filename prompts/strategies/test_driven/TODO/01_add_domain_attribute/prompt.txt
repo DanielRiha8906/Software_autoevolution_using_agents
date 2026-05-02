@@ -1,14 +1,17 @@
 ### Context
-You are modifying the existing TODO application. `Task` currently has `title`, `description`, `status`, `created_at`, and `updated_at`. You need to add an optional `due_date` field that persists through the storage layer and remains backward compatible with existing stored data.
+You are modifying the existing TODO application. `Task` currently has `title`, `description`, `status`, `created_at`, and `updated_at`. You need to add an optional `due_date` field that persists through the storage layer and remains backward compatible with existing stored data. The feature must also be exposed in both the CLI and the interactive menu (`python -m src`).
 
 ### Objective
-Extend `Task` with an optional `due_date: Optional[datetime]` attribute stored as a CEST (UTC+2) ISO 8601 string, defaulting to `None`, with full serialisation support and backward compatibility.
+Extend `Task` with an optional `due_date: Optional[datetime]` attribute stored as a CEST (UTC+2) ISO 8601 string, defaulting to `None`, with full serialisation support, backward compatibility, and exposure in both interfaces.
 
 ### Test Suite
 ```python
 import pytest
 from datetime import datetime, timezone, timedelta
 from src.models.task import Task
+from src.cli.todo_cli import TodoCLI
+from src.services.todo_service import TodoService
+from src.storage.json_storage import JsonStorage
 
 CEST = timezone(timedelta(hours=2))
 
@@ -53,6 +56,40 @@ def test_task_without_due_date_in_dict_loads_fine():
 def test_invalid_due_date_raises():
     with pytest.raises(Exception):
         Task(title="Buy milk", due_date="not-a-datetime")
+
+
+def test_cli_add_accepts_due_date(tmp_path):
+    cli = TodoCLI(str(tmp_path / "tasks.json"))
+    rc = cli.run(["add", "Buy milk", "--due-date", "2026-06-01T12:00:00+02:00"])
+    assert rc == 0
+
+
+def test_cli_add_with_due_date_persists(tmp_path):
+    storage_path = str(tmp_path / "tasks.json")
+    cli = TodoCLI(storage_path)
+    cli.run(["add", "Buy milk", "--due-date", "2026-06-01T12:00:00+02:00"])
+    tasks = TodoService(JsonStorage(storage_path)).list_tasks()
+    assert tasks[0].due_date is not None
+    assert tasks[0].due_date.year == 2026
+
+
+def test_cli_show_displays_due_date(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    svc = TodoService(JsonStorage(storage_path))
+    due = datetime(2026, 6, 1, 12, 0, tzinfo=CEST)
+    task = svc.add_task("Buy milk", due_date=due)
+    cli = TodoCLI(storage_path)
+    cli.run(["show", task.id])
+    assert "2026-06-01" in capsys.readouterr().out
+
+
+def test_cli_list_marks_overdue(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    svc = TodoService(JsonStorage(storage_path))
+    svc.add_task("Old task", due_date=datetime(2020, 1, 1, tzinfo=CEST))
+    cli = TodoCLI(storage_path)
+    cli.run(["list"])
+    assert "overdue" in capsys.readouterr().out.lower()
 ```
 
 ### Implementation Rules
@@ -60,9 +97,10 @@ def test_invalid_due_date_raises():
 - `due_date` must be `None` by default; tasks without a due date must load and behave correctly.
 - Stored JSON without a `due_date` field must load without error.
 - Do not integrate with an external calendar service.
-- `due_date` must be timezone-aware.
-- `due_date` must use CEST (UTC+2).
+- `due_date` must be timezone-aware and use CEST (UTC+2).
 - Naive datetimes and non-CEST datetimes must be rejected.
+- Update the interactive menu's add task screen to prompt for an optional due date.
+- Display due date and overdue indicator in the interactive menu's task list and task detail view.
 
 ### Definition of Done
 - All provided tests pass.

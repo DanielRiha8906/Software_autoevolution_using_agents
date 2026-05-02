@@ -5,6 +5,8 @@
 - Allow importing MemoryEntry records from a JSON file
 - Ensure data consistency after import (validate structure before applying)
 - Existing stored data must not be overwritten without explicit intent
+- Add `--export <path>` and `--import <path>` flags to the CLI
+- Add "Export history" and "Import history" options to the interactive menu (`python -m src`)
 
 ### Should
 - Schema must match the MemoryEntry serialization format from step 03
@@ -12,5 +14,5 @@
 ### Could
 - Skip invalid or duplicate entries on import rather than failing the entire operation
 
-### Won’t
+### Won't
 - Support additional file formats (CSV, XML)

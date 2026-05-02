@@ -5,6 +5,8 @@
 - Provide statistics on error frequency (total errors, error rate as a percentage)
 - Compute average `execution_time_ms` across all stored entries
 - Results must be derived from stored MemoryEntry data
+- Add a `--stats` flag to the CLI that prints the statistics report and exits
+- Add a "View statistics" option to the interactive menu (`python -m src`)
 
 ### Should
 - Return a dataclass or named object (not a plain dict) for the report
@@ -13,5 +15,5 @@
 - Include min/max `execution_time_ms`
 - Per-operation breakdown of error rate
 
-### Won’t
+### Won't
 - Add a visualization layer

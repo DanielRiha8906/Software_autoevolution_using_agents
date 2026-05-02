@@ -9,3 +9,5 @@ so that I can do more than basic arithmetic without switching to a different too
 - `modulo` by zero raises an error.
 - `power` with negative or fractional exponents returns correct results.
 - No existing operation is duplicated or renamed.
+- The new operations are valid choices in the CLI one-shot mode (e.g. `python -m src --operation square 9`).
+- The new operations appear as selectable items in the interactive menu (`python -m src`).

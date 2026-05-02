@@ -6,6 +6,11 @@
 - Support creating and listing projects
 - Support listing tasks filtered by project
 - Preserve existing behavior for tasks without a project assignment
+- Add `project create <name>` CLI command
+- Add `project list` CLI command
+- Add `--project <id>` flag to the CLI `add` command to assign a task to a project at creation
+- Add `--project <id>` flag to the CLI `list` command to filter tasks by project
+- Add project management to the interactive menu (`python -m src`): create/list projects, assign a project when adding a task, and filter the task list by project
 
 ### Should
 - Validate that project names are not empty

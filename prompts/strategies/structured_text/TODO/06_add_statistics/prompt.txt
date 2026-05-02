@@ -7,6 +7,8 @@
   - Count of overdue tasks
   - Count of tasks with a due date set
 - Return a dataclass (not a plain dict) as the structured report object
+- Add a `stats` CLI command that prints the statistics report in a human-readable format
+- Add a "View statistics" option to the interactive menu (`python -m src`)
 
 ### Should
 - Include completion rate as a percentage (done / total)

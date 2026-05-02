@@ -11,3 +11,5 @@ so that I can work with up-to-date run data without manual export steps.
 - The token is validated before making requests.
 - Incremental fetch (only runs newer than the latest stored run) is supported as a bonus.
 - Full authentication management (OAuth flows, token refresh) is out of scope.
+- A `fetch --owner <owner> --repo <repo>` CLI subcommand is added that fetches runs from GitHub and stores them locally.
+- A "Fetch from GitHub" option is added to the interactive menu (`python -m src`) that prompts for owner/repo and stores fetched runs.

@@ -9,3 +9,9 @@ so that I can track deadlines and know when work is expected to be completed.
 - Dates use a timezone-aware ISO 8601 representation in CEST (UTC+2).
 - Providing an invalid datetime value is rejected before the task is saved.
 - Existing stored tasks that lack a `due_date` field load without error.
+- The CLI `add` command accepts an optional `--due-date` flag (ISO 8601 string, CEST timezone).
+- The CLI `show` command displays the due date when set.
+- The CLI `list` command shows a `[OVERDUE]` indicator for tasks past their due date.
+- The interactive menu's add task screen (`python -m src`) prompts for an optional due date.
+- The interactive menu's task detail view displays the due date when set.
+- The interactive menu's task list shows an overdue indicator for overdue tasks.

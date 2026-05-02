@@ -2,7 +2,7 @@
 You are extending the existing `Calculator` class, which currently supports `add`, `subtract`, `multiply`, and `divide`. The existing operations follow a consistent method interface.
 
 ### Objective
-Add `square`, `sqrt`, `power`, and `modulo` operations to `Calculator`, following the same interface conventions as existing operations and handling relevant edge cases.
+Add `square`, `sqrt`, `power`, and `modulo` operations to `Calculator`, following the same interface conventions as existing operations and handling relevant edge cases. Wire the new operations into the CLI one-shot mode and interactive menu so they are accessible from both interfaces.
 
 ### Test Suite
 ```python
@@ -55,6 +55,42 @@ def test_existing_operations_unchanged():
     assert calc.subtract(5, 3) == 2
     assert calc.multiply(3, 4) == 12
     assert calc.divide(10, 2) == 5
+
+
+def test_cli_run_with_square(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")))
+    cli = CalculatorCLI(svc)
+    rc = cli.run(["--operation", "square", "9"])
+    assert rc == 0
+    assert "81" in capsys.readouterr().out
+
+
+def test_cli_run_with_sqrt(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")))
+    cli = CalculatorCLI(svc)
+    rc = cli.run(["--operation", "sqrt", "9"])
+    assert rc == 0
+    assert "3" in capsys.readouterr().out
+
+
+def test_cli_menu_includes_new_operations(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator import Calculator
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    svc = CalculatorService(Calculator(), JsonStorage(str(tmp_path / "calc.json")))
+    cli = CalculatorCLI(svc)
+    cli._print_menu()
+    out = capsys.readouterr().out.lower()
+    assert "square" in out or "sqrt" in out
 ```
 
 ### Implementation Rules
@@ -65,6 +101,10 @@ def test_existing_operations_unchanged():
 - Domain errors in this task must be represented by raised exceptions.
 - `sqrt(x)` must raise an exception for negative input.
 - `modulo(x, y)` must raise an exception when `y == 0`.
+- Add a `run(args) -> int` method to `CalculatorCLI` that parses a list of string arguments (same shape as `sys.argv[1:]`) and dispatches to `run_command`; return `0` on success, `1` on error.
+- The `--operation` argparse choices must include `square`, `sqrt`, `power`, and `modulo`.
+- For unary operations (`square`, `sqrt`) the CLI must accept a single operand.
+- The new operations must appear as numbered entries in the `_print_menu()` output.
 
 ### Definition of Done
 - All provided tests pass.

@@ -1,8 +1,8 @@
 ### Context
-`TaskComment` exists as a domain class. You need a `CommentsService` that manages its full lifecycle, validates that comments reference existing tasks, and integrates with the existing storage mechanism. Deleting a task must cascade to its comments.
+`TaskComment` exists as a domain class. You need a `CommentsService` that manages its full lifecycle, validates that comments reference existing tasks, and integrates with the existing storage mechanism. Deleting a task must cascade to its comments. The feature must also be exposed in both the CLI and the interactive menu (`python -m src`).
 
 ### Objective
-Implement `CommentsService` with operations to add, list (ordered by `created_at`), and delete comments, with task existence validation and cascade-delete support.
+Implement `CommentsService` with operations to add, list (ordered by `created_at`), and delete comments, with task existence validation and cascade-delete support, plus CLI and interactive menu exposure.
 
 ### Test Suite
 ```python
@@ -11,6 +11,7 @@ from src.models.task_comment import TaskComment
 from src.services.comments_service import CommentsService
 from src.services.todo_service import TodoService
 from src.storage.json_storage import JsonStorage
+from src.cli.todo_cli import TodoCLI
 
 
 @pytest.fixture
@@ -70,6 +71,34 @@ def test_delete_task_cascades_to_comments(services):
     # Simulate task deletion cascade
     svc.delete_comments_for_task(task.id)
     assert svc.list_comments(task.id) == []
+
+
+def test_cli_comment_add(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    task = TodoService(JsonStorage(storage_path)).add_task("Test task")
+    cli = TodoCLI(storage_path)
+    rc = cli.run(["comment", "add", task.id, "My comment"])
+    assert rc == 0
+
+
+def test_cli_comment_list(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    todo = TodoService(JsonStorage(storage_path))
+    task = todo.add_task("Test task")
+    CommentsService(todo).add_comment(task.id, "Hello")
+    cli = TodoCLI(storage_path)
+    cli.run(["comment", "list", task.id])
+    assert "Hello" in capsys.readouterr().out
+
+
+def test_cli_comment_delete(tmp_path):
+    storage_path = str(tmp_path / "tasks.json")
+    todo = TodoService(JsonStorage(storage_path))
+    task = todo.add_task("Test task")
+    comment = CommentsService(todo).add_comment(task.id, "To delete")
+    cli = TodoCLI(storage_path)
+    rc = cli.run(["comment", "delete", comment.id])
+    assert rc == 0
 ```
 
 ### Implementation Rules
@@ -81,6 +110,7 @@ def test_delete_task_cascades_to_comments(services):
 - `CommentsService` must not contain direct file I/O or JSON serialisation logic.
 - Comments must be returned in deterministic `created_at` order.
 - Deleting comments for a task must not delete the task itself.
+- Add a "Manage comments" option to the interactive menu that allows listing, adding, and deleting comments for a selected task.
 
 ### Definition of Done
 - All provided tests pass.

@@ -1,8 +1,8 @@
 ### Context
-`TodoService` holds all tasks. You need a statistics component that computes counts, completion rate, and overdue figures from the stored task data, returning a structured dataclass report.
+`TodoService` holds all tasks. You need a statistics component that computes counts, completion rate, and overdue figures from the stored task data, returning a structured dataclass report. The statistics must also be accessible via a `stats` CLI command and the interactive menu (`python -m src`).
 
 ### Objective
-Implement `TaskStatisticsService` that derives total count, per-status count, overdue count, tasks-with-due-date count, and completion rate from stored task data.
+Implement `TaskStatisticsService` that derives total count, per-status count, overdue count, tasks-with-due-date count, and completion rate from stored task data, and expose it via a `stats` CLI command and interactive menu option.
 
 ### Test Suite
 ```python
@@ -13,6 +13,7 @@ from src.models.task_status import TaskStatus
 from src.services.todo_service import TodoService
 from src.services.statistics_service import TaskStatisticsService
 from src.storage.json_storage import JsonStorage
+from src.cli.todo_cli import TodoCLI
 
 CEST = timezone(timedelta(hours=2))
 PAST = datetime(2020, 1, 1, tzinfo=CEST)
@@ -64,6 +65,37 @@ def test_empty_task_list_statistics(tmp_path):
 
 def test_output_is_deterministic(stats_svc):
     assert stats_svc.compute().total == stats_svc.compute().total
+
+
+def test_cli_stats_command(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    svc = TodoService(JsonStorage(storage_path))
+    svc.add_task("Task 1")
+    t2 = svc.add_task("Task 2")
+    svc.complete_task(t2.id)
+    cli = TodoCLI(storage_path)
+    rc = cli.run(["stats"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "2" in out
+
+
+def test_cli_stats_shows_status_breakdown(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    TodoService(JsonStorage(storage_path)).add_task("Task 1")
+    cli = TodoCLI(storage_path)
+    cli.run(["stats"])
+    out = capsys.readouterr().out
+    assert "pending" in out.lower() or "total" in out.lower()
+
+
+def test_cli_stats_shows_overdue(tmp_path, capsys):
+    storage_path = str(tmp_path / "tasks.json")
+    TodoService(JsonStorage(storage_path)).add_task("Old", due_date=PAST)
+    cli = TodoCLI(storage_path)
+    cli.run(["stats"])
+    out = capsys.readouterr().out
+    assert "overdue" in out.lower()
 ```
 
 ### Implementation Rules
@@ -73,6 +105,7 @@ def test_output_is_deterministic(stats_svc):
 - Completion rate must be expressed as a percentage from 0 to 100.
 - Empty task lists must be handled safely.
 - Do not produce any charts or visualisation output.
+- Add a "View statistics" option to the interactive menu that displays the report.
 
 ### Definition of Done
 - All provided tests pass.

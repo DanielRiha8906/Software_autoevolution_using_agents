@@ -1,8 +1,8 @@
 ### Context
-The calculator currently supports basic arithmetic operations. You need to extend it with advanced mathematical functions commonly used in scientific calculations.
+The calculator currently supports basic arithmetic operations. You need to extend it with advanced mathematical functions commonly used in scientific calculations. Scientific operations must also be reachable from the CLI one-shot mode and the interactive menu.
 
 ### Objective
-Implement a `ScientificCalculator` class that extends the existing calculator functionality with trigonometric, logarithmic, and exponential operations.
+Implement a `ScientificCalculator` class that extends the existing calculator functionality with trigonometric, logarithmic, and exponential operations. Expose scientific operations as valid `--operation` choices in the CLI and add a "Scientific mode" entry to the interactive menu.
 
 ### Test Suite
 ```python
@@ -57,6 +57,39 @@ def test_standard_operations_still_work():
     calc = ScientificCalculator()
     assert calc.add(2, 3) == 5
     assert calc.divide(10, 2) == 5
+
+
+def test_cli_run_with_sin(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    svc = CalculatorService(ScientificCalculator(), JsonStorage(str(tmp_path / "calc.json")))
+    cli = CalculatorCLI(svc)
+    rc = cli.run(["--operation", "sin", "0"])
+    assert rc == 0
+    assert "0" in capsys.readouterr().out
+
+
+def test_cli_run_with_log(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    svc = CalculatorService(ScientificCalculator(), JsonStorage(str(tmp_path / "calc.json")))
+    cli = CalculatorCLI(svc)
+    rc = cli.run(["--operation", "log", "100"])
+    assert rc == 0
+    assert "2" in capsys.readouterr().out
+
+
+def test_cli_menu_includes_scientific_option(tmp_path, capsys):
+    from src.storage.json_storage import JsonStorage
+    from src.services.calculator_service import CalculatorService
+    from src.cli.calculator_cli import CalculatorCLI
+    svc = CalculatorService(ScientificCalculator(), JsonStorage(str(tmp_path / "calc.json")))
+    cli = CalculatorCLI(svc)
+    cli._print_menu()
+    out = capsys.readouterr().out.lower()
+    assert "scientific" in out or "sin" in out or "cos" in out
 ```
 
 ### Implementation Rules
@@ -68,6 +101,9 @@ def test_standard_operations_still_work():
 - `log(x)` must raise an exception for non-positive input.
 - Use only the Python standard library (`math` module).
 - Do not introduce mode-switching logic; scientific functionality is provided via the `ScientificCalculator` class.
+- The CLI `--operation` choices must include `sin`, `cos`, `tan`, `log`, `ln`, and `exp`.
+- Scientific operations are unary; the CLI must accept a single operand for them.
+- The interactive menu must include a "Scientific mode" option or list the scientific operations directly.
 
 ### Definition of Done
 - All provided tests pass.

@@ -8,6 +8,10 @@
   - Delete a comment by id
 - Validate that the referenced task exists before adding a comment
 - Integrate with the existing storage mechanism
+- Add `comment add <task-id> <content>` CLI subcommand
+- Add `comment list <task-id>` CLI subcommand
+- Add `comment delete <comment-id>` CLI subcommand
+- Add a "Manage comments" option to the interactive menu (`python -m src`) that allows listing, adding, and deleting comments for a selected task
 
 ### Should
 - Service responsibilities must be limited to `TaskComment` lifecycle management; storage implementation must stay separate

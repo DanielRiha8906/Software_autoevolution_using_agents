@@ -4,6 +4,8 @@
 - Enable querying MemoryEntry records
 - Support filtering by operation type
 - Support filtering by result or error state
+- Add a "Query history" option to the interactive menu (`python -m src`) that lets the user filter by operation and success state and displays matching entries
+- Expose query filtering in the CLI one-shot mode (e.g. via `--query-operation` and `--query-success` flags)
 
 ### Should
 - Queries should return consistent structured results
@@ -12,5 +14,5 @@
 ### Could
 - Partial string matching on operation name
 
-### Won’t
+### Won't
 - Use a database or external index

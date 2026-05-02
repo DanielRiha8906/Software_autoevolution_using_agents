@@ -8,6 +8,8 @@ Must Have:
   - Export runs to JSON
   - Import runs from JSON
 - Ensure schema consistency
+- Add `export <path>` and `import <path>` CLI subcommands
+- Add "Export data" and "Import data" options to the interactive menu (`python -m src`)
 
 Should Have:
 - Validate imported data structure
@@ -15,5 +17,5 @@ Should Have:
 Could Have:
 - Skip invalid or duplicate entries on import rather than failing the entire operation
 
-Won’t Have:
+Won't Have:
 - Support external formats (CSV, DB)

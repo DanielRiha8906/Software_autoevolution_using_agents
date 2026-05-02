@@ -3,7 +3,8 @@
 ### Must
 - Implement MemoryService to manage MemoryEntry objects
 - Provide basic operations (store, retrieve)
-- Ensure integration with calculation flow
+- Ensure integration with calculation flow: every completed calculation (success or failure) must be automatically stored via MemoryService
+- Add a "View history" option to the interactive menu (`python -m src`) that displays the stored MemoryEntry records
 
 ### Should
 - Service responsibilities should be limited to MemoryEntry lifecycle management; storage implementation must stay separate
@@ -11,5 +12,5 @@
 ### Could
 - Add filtering or querying capabilities (expanded in a later step)
 
-### Won’t
+### Won't
 - Place persistence implementation details (file I/O, serialization) inside the service class

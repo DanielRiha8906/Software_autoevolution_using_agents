@@ -1,8 +1,8 @@
 ### Context
-The system currently operates on locally stored workflow runs. You need to optionally fetch workflow run data directly from GitHub using the `gh` CLI and convert it into the existing domain model.
+The system currently operates on locally stored workflow runs. You need to optionally fetch workflow run data directly from GitHub using the `gh` CLI and convert it into the existing domain model. The fetch feature must be accessible via a `fetch` CLI subcommand and an interactive menu option.
 
 ### Objective
-Implement `GitHubFetchService` that retrieves workflow runs using the GitHub CLI (`gh`) and converts them into `WorkflowRun` domain objects.
+Implement `GitHubFetchService` that retrieves workflow runs using the GitHub CLI (`gh`) and converts them into `WorkflowRun` domain objects. Add a `fetch --owner <owner> --repo <repo>` CLI subcommand and a "Fetch from GitHub" interactive menu option.
 
 ### Test Suite
 ```python
@@ -23,10 +23,8 @@ def test_resolves_token_from_env(monkeypatch):
 
 def test_resolves_token_from_env_file(tmp_path, monkeypatch):
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
-
     env_file = tmp_path / ".env"
     env_file.write_text("GITHUB_TOKEN=file-token\n")
-
     svc = GitHubFetchService(secrets_path=str(env_file))
     assert svc.resolve_token() == "file-token"
 
@@ -34,7 +32,6 @@ def test_resolves_token_from_env_file(tmp_path, monkeypatch):
 def test_prompts_user_for_token(monkeypatch):
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.setattr("builtins.input", lambda _: "user-token")
-
     svc = GitHubFetchService()
     assert svc.resolve_token() == "user-token"
 
@@ -42,18 +39,15 @@ def test_prompts_user_for_token(monkeypatch):
 def test_user_token_not_persisted(tmp_path, monkeypatch):
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.setattr("builtins.input", lambda _: "user-token")
-
     env_file = tmp_path / ".env"
     svc = GitHubFetchService(secrets_path=str(env_file))
     svc.resolve_token()
-
     if env_file.exists():
         assert "user-token" not in env_file.read_text()
 
 
 def test_fetch_uses_gh_cli(monkeypatch):
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
-
     fake_output = """
     {
         "workflow_runs": [
@@ -71,31 +65,24 @@ def test_fetch_uses_gh_cli(monkeypatch):
         ]
     }
     """
-
     mock_completed = MagicMock()
     mock_completed.stdout = fake_output
     mock_completed.returncode = 0
-
     with patch("subprocess.run", return_value=mock_completed):
         from src.models.workflow_run import WorkflowRun
-
         svc = GitHubFetchService()
         runs = svc.fetch("owner", "repo")
-
         assert len(runs) == 1
         assert isinstance(runs[0], WorkflowRun)
 
 
 def test_gh_cli_failure_raises(monkeypatch):
     monkeypatch.setenv("GITHUB_TOKEN", "test-token")
-
     mock_completed = MagicMock()
     mock_completed.returncode = 1
     mock_completed.stderr = "error"
-
     with patch("subprocess.run", return_value=mock_completed):
         svc = GitHubFetchService()
-
         with pytest.raises(Exception):
             svc.fetch("owner", "repo")
 
@@ -104,8 +91,24 @@ def test_no_requests_usage():
     from src.services import github_fetch_service
     import inspect
     source = inspect.getsource(github_fetch_service)
-
     assert "requests" not in source
+
+
+def test_cli_fetch_subcommand(tmp_path, monkeypatch):
+    monkeypatch.setenv("GITHUB_TOKEN", "test-token")
+    fake_output = '{"workflow_runs": [{"id": 42, "name": "CI", "head_branch": "main", "status": "completed", "conclusion": "success", "created_at": "2026-01-01T00:00:00Z", "updated_at": null, "run_number": 1, "head_sha": "abc"}]}'
+    mock_completed = MagicMock()
+    mock_completed.stdout = fake_output
+    mock_completed.returncode = 0
+    from src.storage.workflow_json_storage import WorkflowJsonStorage
+    from src.services.workflow_run_service import WorkflowRunService
+    from src.services.attempt_service import AttemptService
+    from src.cli.workflow_cli import run_cli
+    with patch("subprocess.run", return_value=mock_completed):
+        storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+        svc = WorkflowRunService(storage, AttemptService())
+        run_cli(svc, ["fetch", "--owner", "myorg", "--repo", "myrepo"])
+        assert len(svc.list_runs()) == 1
 ```
 
 ### Implementation Rules
@@ -122,6 +125,8 @@ def test_no_requests_usage():
 - Returned data must be converted into `WorkflowRun` domain objects.
 - No attempt data is fetched or handled in this task.
 - Do not implement OAuth flows or token refresh logic.
+- Add a `fetch --owner <owner> --repo <repo>` subcommand to the CLI that fetches and stores runs.
+- Add a "Fetch from GitHub" option to the interactive menu (`python -m src`) that prompts for owner/repo and stores fetched runs.
 
 ### Definition of Done
 - All provided tests pass.

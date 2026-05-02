@@ -1,8 +1,8 @@
 ### Context
-`WorkflowRunService` stores workflow runs and `AttemptService` stores associated attempts. You need to add functionality to export all data to JSON and import it back safely, preserving relationships and validating structure.
+`WorkflowRunService` stores workflow runs and `AttemptService` stores associated attempts. You need to add functionality to export all data to JSON and import it back safely, preserving relationships and validating structure. Export and import must also be accessible via CLI subcommands and interactive menu options.
 
 ### Objective
-Implement `WorkflowImportExportService` that exports and imports workflow runs and their associated attempts using JSON, ensuring validation, deduplication, and safe merging.
+Implement `WorkflowImportExportService` that exports and imports workflow runs and their associated attempts using JSON, ensuring validation, deduplication, and safe merging. Add `export` and `import` CLI subcommands and interactive menu options.
 
 ### Test Suite
 ```python
@@ -53,12 +53,9 @@ def setup(tmp_path):
     storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
     attempt_svc = AttemptService()
     run_svc = WorkflowRunService(storage, attempt_svc)
-
     run = _run("r1")
     run_svc.add_workflow_run(run)
-
     attempt_svc.create(_attempt("r1", 1))
-
     svc = WorkflowImportExportService(run_svc)
     return svc, run_svc, attempt_svc, run, tmp_path
 
@@ -74,9 +71,7 @@ def test_export_contains_runs_and_attempts(setup):
     svc, _, _, run, tmp_path = setup
     path = tmp_path / "export.json"
     svc.export(str(path))
-
     data = json.loads(path.read_text())
-
     assert "runs" in data
     assert "attempts" in data
     assert any(r["id"] == run.id for r in data["runs"])
@@ -87,14 +82,11 @@ def test_import_restores_runs_and_attempts(setup, tmp_path):
     svc, run_svc, attempt_svc, run, tmp_path = setup
     path = tmp_path / "export.json"
     svc.export(str(path))
-
     new_storage = WorkflowJsonStorage(str(tmp_path / "runs2.json"))
     new_attempt_svc = AttemptService()
     new_run_svc = WorkflowRunService(new_storage, new_attempt_svc)
     new_svc = WorkflowImportExportService(new_run_svc)
-
     new_svc.import_from(str(path))
-
     assert new_run_svc.get_run_detail(run.id) is not None
     attempts = new_attempt_svc.get_by_run_id(run.id)
     assert len(attempts) == 1
@@ -103,11 +95,9 @@ def test_import_restores_runs_and_attempts(setup, tmp_path):
 def test_import_validates_structure(tmp_path):
     bad = tmp_path / "bad.json"
     bad.write_text(json.dumps({"garbage": True}))
-
     storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
     run_svc = WorkflowRunService(storage, AttemptService())
     svc = WorkflowImportExportService(run_svc)
-
     with pytest.raises(Exception):
         svc.import_from(str(bad))
 
@@ -116,9 +106,7 @@ def test_import_skips_duplicate_runs(setup, tmp_path):
     svc, run_svc, _, run, tmp_path = setup
     path = tmp_path / "export.json"
     svc.export(str(path))
-
     svc.import_from(str(path))
-
     runs = run_svc.list_runs()
     assert len([r for r in runs if r.id == run.id]) == 1
 
@@ -127,9 +115,7 @@ def test_import_skips_duplicate_attempts(setup, tmp_path):
     svc, _, attempt_svc, run, tmp_path = setup
     path = tmp_path / "export.json"
     svc.export(str(path))
-
     svc.import_from(str(path))
-
     attempts = attempt_svc.get_by_run_id(run.id)
     assert len(attempts) == 1
 
@@ -138,9 +124,41 @@ def test_no_external_calls_in_import_export():
     from src.services import import_export_service
     import inspect
     source = inspect.getsource(import_export_service)
-
     assert "requests" not in source
     assert "subprocess" not in source
+
+
+def test_cli_export_subcommand(tmp_path):
+    from src.storage.workflow_json_storage import WorkflowJsonStorage
+    from src.services.workflow_run_service import WorkflowRunService
+    from src.services.attempt_service import AttemptService
+    from src.cli.workflow_cli import run_cli
+    storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+    svc = WorkflowRunService(storage, AttemptService())
+    run_cli(svc, ["add", "--name", "CI", "--branch", "main", "--status", "completed"])
+    export_path = str(tmp_path / "export.json")
+    run_cli(svc, ["export", export_path])
+    assert (tmp_path / "export.json").exists()
+
+
+def test_cli_import_subcommand(tmp_path):
+    from src.storage.workflow_json_storage import WorkflowJsonStorage
+    from src.services.workflow_run_service import WorkflowRunService
+    from src.services.attempt_service import AttemptService
+    from src.services.import_export_service import WorkflowImportExportService
+    from src.cli.workflow_cli import run_cli
+    storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+    attempt_svc = AttemptService()
+    svc = WorkflowRunService(storage, attempt_svc)
+    run = _run("r1")
+    svc.add_workflow_run(run)
+    ie_svc = WorkflowImportExportService(svc)
+    export_path = str(tmp_path / "export.json")
+    ie_svc.export(export_path)
+    storage2 = WorkflowJsonStorage(str(tmp_path / "runs2.json"))
+    svc2 = WorkflowRunService(storage2, AttemptService())
+    run_cli(svc2, ["import", export_path])
+    assert svc2.get_run_detail(run.id) is not None
 ```
 
 ### Implementation Rules
@@ -153,6 +171,8 @@ def test_no_external_calls_in_import_export():
 - Relationships between runs and attempts must remain intact.
 - No external API calls or subprocess usage are allowed.
 - No formats other than JSON are supported.
+- Add `export <path>` and `import <path>` subcommands to the CLI.
+- Add "Export data" and "Import data" options to the interactive menu (`python -m src`).
 
 ### Definition of Done
 - All provided tests pass.

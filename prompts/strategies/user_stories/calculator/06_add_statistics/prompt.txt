@@ -13,3 +13,5 @@ so that I can programmatically access usage and error metrics.
 - The result is returned as a structured object (e.g., dataclass), not a plain dictionary.
 - The structure of the statistics output is consistent across calls.
 - No visualisation layer is introduced.
+- A `--stats` flag is added to the CLI so statistics can be printed without entering interactive mode.
+- A "View statistics" option is added to the interactive menu (`python -m src`).

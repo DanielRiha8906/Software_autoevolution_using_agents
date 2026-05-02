@@ -10,3 +10,5 @@ so that my records persist across sessions and can be moved between environments
 - The JSON schema matches the `MemoryEntry` serialisation format.
 - Invalid or duplicate entries during import are skipped individually, not treated as a full failure.
 - Only JSON format is supported; CSV and XML are out of scope.
+- `--export <path>` and `--import <path>` flags are added to the CLI.
+- "Export history" and "Import history" options are added to the interactive menu (`python -m src`).
