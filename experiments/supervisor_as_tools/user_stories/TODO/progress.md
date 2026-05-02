@@ -76,4 +76,4 @@ Duration: 278.1s | Cost: $0.497082 USD | Turns: 21
 - ✓ Comments are nested within Task, transparent to persistence layer
 - ✓ Backward compatibility maintained for old JSON without comments field
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 380.9s | Cost: $0.622439 USD | Turns: 26
