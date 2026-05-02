@@ -67,4 +67,4 @@ Extended the `Calculator` class with four new mathematical operations: `square`,
 - ✓ Edge cases handled with exceptions (sqrt of negative, modulo by zero)
 - ✓ UML diagrams updated to reflect current implementation
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 134.7s | Cost: $0.261275 USD | Turns: 31
