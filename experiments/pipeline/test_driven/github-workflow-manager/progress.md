@@ -91,3 +91,60 @@ Duration: 346.6s | Cost: $0.606393 USD | Turns: 21
 - Immutable state checks (read-only methods)
 
 Duration: 190.7s | Cost: $0.325816 USD | Turns: 19
+
+## Task 03: Create WorkflowRunAttempt Domain Object
+
+**Status:** COMPLETED
+
+### Task Number
+03
+
+### Files Changed
+- src/models/workflow_run_attempt.py (NEW - WorkflowRunAttempt dataclass with validation and serialization)
+- src/models/__init__.py (added import and export of WorkflowRunAttempt)
+- tests/test_workflow_run_attempt.py (NEW - 8 comprehensive tests)
+- artifacts/class_diagram.puml (added WorkflowRunAttempt class)
+- artifacts/component_diagram.puml (added WorkflowRunAttempt component and relationships)
+
+### Test Results
+✓ All 28 tests passed
+- 20 existing tests (maintained)
+- 8 new WorkflowRunAttempt tests (all passing)
+  - test_attempt_can_be_created
+  - test_attempt_number_must_be_positive
+  - test_created_at_must_use_cest
+  - test_created_at_round_trips_as_cest
+  - test_serializes_to_dict
+  - test_round_trips_via_dict
+  - test_optional_duration_seconds
+  - test_duration_seconds_defaults_to_none_or_zero
+
+### Implementation Details
+- **WorkflowRunAttempt** dataclass with 7 fields: id, run_id, attempt_number, status, conclusion, created_at, duration_seconds
+- **Field Types**:
+  - id: int
+  - run_id: int
+  - attempt_number: int (must be ≥ 1)
+  - status: WorkflowStatus enum
+  - conclusion: Optional[WorkflowConclusion] enum
+  - created_at: datetime (must be timezone-aware CEST, UTC+2)
+  - duration_seconds: Optional[float] (defaults to None)
+- **Validation Rules**:
+  - attempt_number >= 1 (raises ValueError if not)
+  - created_at must be CEST timezone (UTC+2 offset of 7200 seconds)
+  - Rejects naive datetimes and non-CEST timezones
+  - duration_seconds must be non-negative if present
+- **Serialization**:
+  - to_dict(): serializes enums to .value, datetime to .isoformat()
+  - from_dict(): deserializes enums and datetime, handles optional fields
+  - Full round-trip support with timezone preservation
+- **Enum Conversion**: Automatically converts string values to enums in __post_init__() for flexibility
+
+### Key Features
+- Domain model for individual workflow run attempts (retries)
+- Associates with WorkflowRun via run_id (unidirectional reference)
+- Strict CEST timezone requirement (new constraint not in WorkflowRun)
+- Full serialization support with type preservation
+- Consistent with existing domain model patterns (WorkflowRun, enums)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
