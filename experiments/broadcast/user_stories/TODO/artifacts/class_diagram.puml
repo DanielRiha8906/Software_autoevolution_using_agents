@@ -36,7 +36,7 @@ package "models" #DDEEFF {
         +taskId : String
         +content : String
         +author : String [0..1]
-        +createdAt : DateTime
+        +createdAt : DateTime (CEST)
         +updatedAt : DateTime [0..1]
         --
         +toDict() : Dictionary
