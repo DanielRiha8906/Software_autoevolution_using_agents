@@ -85,3 +85,89 @@ No new dependencies added. Implementation uses Python standard library:
 - `datetime` module
 
 Duration: 257.2s | Cost: $0.894447 USD | Turns: 35
+
+---
+
+# Task 02: Status Transition Methods
+
+## Task Overview
+
+**User Story:** As a developer working with the Task domain model, I want clear methods for transitioning task status and checking task state, so that status changes are consistent and all business rules are enforced in one place.
+
+**Acceptance Criteria:**
+- ✅ Task provides: `mark_in_progress()`, `mark_done()`, `reopen()`, `is_completed()`, `is_overdue()`
+- ✅ Each status-mutating method updates `updated_at` to the current CEST time
+- ✅ Methods derive state strictly from existing Task attributes — no external input required
+- ✅ Invalid transitions (e.g. `reopen()` on a PENDING task) are either a no-op or raise an error
+- ✅ `is_pending()` and `is_in_progress()` predicates are available for symmetry
+
+## Implementation Results
+
+### Candidate Evaluation
+
+| Candidate | Tests Passing | Lines of Test Code | Selection |
+|-----------|---------------|-------------------|-----------|
+| A (broadcast-candidate-a) | 50 | 120 | Converged |
+| B (broadcast-candidate-b) | 50 | 120 | Converged |
+| C (broadcast-candidate-c) | **68** | 289 | **SELECTED** ✓ |
+
+**Winner:** Candidate C (most comprehensive test coverage: 36% more tests than A/B)
+
+### Files Changed
+
+1. **`src/models/task.py`**
+   - Added `mark_in_progress()` method: Transitions PENDING → IN_PROGRESS, updates `updated_at` to CEST time
+   - Added `mark_done()` method: Transitions to DONE from any state, updates `updated_at` to CEST time
+   - Added `reopen()` method: Transitions DONE → PENDING, updates `updated_at` to CEST time
+   - Added `is_pending()` predicate: Returns True if status is PENDING
+   - Added `is_in_progress()` predicate: Returns True if status is IN_PROGRESS
+   - Added `is_completed()` predicate: Returns True if status is DONE
+   - Added `is_overdue()` predicate: Returns True if task has past due_date and is not completed
+   - All status-mutating methods handle invalid transitions as no-ops (silent guards)
+
+2. **`tests/test_task.py`**
+   - Added 18 comprehensive test cases (candidate C added more edge cases):
+     - Status transition coverage: PENDING → IN_PROGRESS → DONE → PENDING
+     - Idempotency tests for all transitions
+     - Invalid transition handling (e.g., DONE → IN_PROGRESS via mark_in_progress)
+     - State predicate verification for all statuses
+     - `is_overdue()` with due_date in past, future, None, and completed states
+     - CEST timezone verification for `updated_at` updates
+     - Integration tests combining multiple transitions
+
+### Test Results
+
+```
+....................................................................     [100%]
+68 passed in 0.14s
+```
+
+### Design Decisions
+
+1. **Status Transition State Machine:**
+   - PENDING ↔ IN_PROGRESS ↔ DONE
+   - `reopen()` explicitly transitions DONE → PENDING
+   - Invalid forward transitions (e.g., DONE → IN_PROGRESS) are no-ops (guards prevent state corruption)
+
+2. **Timestamp Updates:** All status-mutating methods call `datetime.now(CEST)` to ensure `updated_at` reflects the timezone requirement and business logic intent.
+
+3. **Overdue Logic:** Task is overdue only if:
+   - Has a `due_date`
+   - `due_date` is in the past (relative to CEST now)
+   - Task is NOT completed (is_completed() returns False)
+   
+   This prevents marking completed tasks as overdue, which is a common business rule.
+
+4. **Predicate Consistency:** Seven public query methods provide symmetry and clarity:
+   - State predicates: `is_pending()`, `is_in_progress()`, `is_completed()`
+   - Temporal predicate: `is_overdue()`
+   - State mutators: `mark_in_progress()`, `mark_done()`, `reopen()`
+
+### Candidate Convergence
+
+All three candidates implemented the same core logic correctly, but Candidate C distinguished itself through:
+- More edge case tests (e.g., is_overdue with various due_date states)
+- Multiple transition sequences tested together
+- Explicit CEST timezone verification in test assertions
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

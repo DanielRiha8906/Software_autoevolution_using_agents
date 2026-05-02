@@ -118,3 +118,172 @@ def test_task_due_date_with_cest_serialization():
     # ISO serialization preserves the offset but not the timezone name
     assert restored.due_date.tzinfo is not None
     assert restored.due_date.utcoffset() == due_date.utcoffset()
+
+
+# Status transition method tests
+
+def test_mark_in_progress_from_pending():
+    """Test marking a pending task as in progress."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    old_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.updated_at > old_updated_at
+
+
+def test_mark_in_progress_idempotent():
+    """Test that marking in progress twice is a no-op the second time."""
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    old_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.updated_at == old_updated_at
+
+
+def test_mark_in_progress_from_done():
+    """Test that marking a done task as in progress is a no-op."""
+    task = Task(title="Test", status=TaskStatus.DONE)
+    old_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.status == TaskStatus.DONE
+    assert task.updated_at == old_updated_at
+
+
+def test_mark_done_from_pending():
+    """Test marking a pending task as done."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    old_updated_at = task.updated_at
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+    assert task.updated_at > old_updated_at
+
+
+def test_mark_done_from_in_progress():
+    """Test marking an in-progress task as done."""
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    old_updated_at = task.updated_at
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+    assert task.updated_at > old_updated_at
+
+
+def test_mark_done_idempotent():
+    """Test that marking done twice is a no-op the second time."""
+    task = Task(title="Test", status=TaskStatus.DONE)
+    old_updated_at = task.updated_at
+    task.mark_done()
+    assert task.status == TaskStatus.DONE
+    assert task.updated_at == old_updated_at
+
+
+def test_reopen_from_done():
+    """Test reopening a done task."""
+    task = Task(title="Test", status=TaskStatus.DONE)
+    old_updated_at = task.updated_at
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+    assert task.updated_at > old_updated_at
+
+
+def test_reopen_from_pending_is_noop():
+    """Test that reopening a pending task is a no-op."""
+    task = Task(title="Test", status=TaskStatus.PENDING)
+    old_updated_at = task.updated_at
+    task.reopen()
+    assert task.status == TaskStatus.PENDING
+    assert task.updated_at == old_updated_at
+
+
+def test_reopen_from_in_progress_is_noop():
+    """Test that reopening an in-progress task is a no-op."""
+    task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    old_updated_at = task.updated_at
+    task.reopen()
+    assert task.status == TaskStatus.IN_PROGRESS
+    assert task.updated_at == old_updated_at
+
+
+def test_is_pending():
+    """Test is_pending predicate."""
+    pending_task = Task(title="Test", status=TaskStatus.PENDING)
+    in_progress_task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    done_task = Task(title="Test", status=TaskStatus.DONE)
+
+    assert pending_task.is_pending() is True
+    assert in_progress_task.is_pending() is False
+    assert done_task.is_pending() is False
+
+
+def test_is_in_progress():
+    """Test is_in_progress predicate."""
+    pending_task = Task(title="Test", status=TaskStatus.PENDING)
+    in_progress_task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    done_task = Task(title="Test", status=TaskStatus.DONE)
+
+    assert pending_task.is_in_progress() is False
+    assert in_progress_task.is_in_progress() is True
+    assert done_task.is_in_progress() is False
+
+
+def test_is_completed():
+    """Test is_completed predicate."""
+    pending_task = Task(title="Test", status=TaskStatus.PENDING)
+    in_progress_task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+    done_task = Task(title="Test", status=TaskStatus.DONE)
+
+    assert pending_task.is_completed() is False
+    assert in_progress_task.is_completed() is False
+    assert done_task.is_completed() is True
+
+
+def test_is_overdue_no_due_date():
+    """Test that a task without due_date is not overdue."""
+    task = Task(title="Test")
+    assert task.is_overdue() is False
+
+
+def test_is_overdue_future_due_date():
+    """Test that a task with future due_date is not overdue."""
+    future_date = datetime(2030, 12, 25, 15, 0, 0, tzinfo=CEST)
+    task = Task(title="Test", due_date=future_date)
+    assert task.is_overdue() is False
+
+
+def test_is_overdue_past_due_date():
+    """Test that a task with past due_date is overdue."""
+    past_date = datetime(2020, 1, 1, 10, 0, 0, tzinfo=CEST)
+    task = Task(title="Test", due_date=past_date)
+    assert task.is_overdue() is True
+
+
+def test_is_overdue_completed_task():
+    """Test that a completed task is never overdue."""
+    past_date = datetime(2020, 1, 1, 10, 0, 0, tzinfo=CEST)
+    task = Task(title="Test", status=TaskStatus.DONE, due_date=past_date)
+    assert task.is_overdue() is False
+
+
+def test_updated_at_in_cest():
+    """Test that updated_at is set in CEST timezone."""
+    task = Task(title="Test")
+    original_updated_at = task.updated_at
+    task.mark_in_progress()
+    assert task.updated_at.tzinfo == CEST
+
+
+def test_status_transition_sequence():
+    """Test a typical sequence of status transitions."""
+    task = Task(title="Buy groceries")
+    assert task.is_pending()
+
+    task.mark_in_progress()
+    assert task.is_in_progress()
+    assert not task.is_pending()
+
+    task.mark_done()
+    assert task.is_completed()
+    assert not task.is_in_progress()
+
+    task.reopen()
+    assert task.is_pending()
+    assert not task.is_completed()
