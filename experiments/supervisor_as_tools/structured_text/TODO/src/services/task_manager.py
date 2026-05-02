@@ -67,3 +67,18 @@ class TaskManager:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
         self._persist()
+
+    def _validate_due_date(self, dt: Optional[datetime]) -> None:
+        """Validate that due_date is not in the past."""
+        if dt is None:
+            return
+        if dt < datetime.now(timezone.utc):
+            raise ValueError("Due date cannot be in the past")
+
+    def set_due_date(self, task_id: str, due_date: Optional[datetime]) -> Task:
+        task = self.get(task_id)
+        self._validate_due_date(due_date)
+        task.due_date = due_date
+        task.updated_at = datetime.now(timezone.utc)
+        self._persist()
+        return task

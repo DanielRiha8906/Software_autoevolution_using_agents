@@ -17,9 +17,11 @@ package "models" #DDEEFF {
         +status : TaskStatus
         +createdAt : DateTime
         +updatedAt : DateTime
+        +due_date : DateTime [0..1]
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
+        +is_overdue() : Boolean
     }
 }
 
@@ -48,8 +50,10 @@ package "services" #DDFFD4 {
         +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
         +delete(taskId: String) : void
+        +set_due_date(taskId: String, dueDate: DateTime [0..1]) : Task
         -load() : void
         -persist() : void
+        -validate_due_date(dt: DateTime [0..1]) : void
     }
 
     class TodoService {
@@ -64,6 +68,7 @@ package "services" #DDFFD4 {
         +reopenTask(taskId: String) : Task
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +deleteTask(taskId: String) : void
+        +set_due_date(taskId: String, dueDate: DateTime [0..1]) : Task
     }
 }
 

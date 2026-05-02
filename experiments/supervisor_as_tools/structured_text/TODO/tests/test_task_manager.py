@@ -1,4 +1,6 @@
 import pytest
+from datetime import datetime, timezone, timedelta
+
 from src.models.task_status import TaskStatus
 from src.services.task_manager import TaskManager, TaskNotFoundError
 from src.storage.json_storage import JsonStorage
@@ -79,3 +81,68 @@ def test_persistence(tmp_path):
     task = m1.add("Persisted")
     m2 = TaskManager(JsonStorage(path))
     assert m2.get(task.id).title == "Persisted"
+
+
+def test_set_due_date(manager):
+    task = manager.add("Task with due date")
+    future = datetime.now(timezone.utc) + timedelta(days=1)
+    updated = manager.set_due_date(task.id, future)
+    assert updated.due_date == future
+
+
+def test_set_due_date_none(manager):
+    future = datetime.now(timezone.utc) + timedelta(days=1)
+    task = manager.add("Task", description=None)
+    manager.set_due_date(task.id, future)
+    # Clear due date
+    updated = manager.set_due_date(task.id, None)
+    assert updated.due_date is None
+
+
+def test_set_due_date_in_past_raises(manager):
+    task = manager.add("Task with past due date")
+    past = datetime.now(timezone.utc) - timedelta(days=1)
+    with pytest.raises(ValueError, match="Due date cannot be in the past"):
+        manager.set_due_date(task.id, past)
+
+
+def test_set_due_date_updates_updated_at(manager):
+    task = manager.add("Task")
+    original_updated_at = task.updated_at
+    future = datetime.now(timezone.utc) + timedelta(days=1)
+    updated = manager.set_due_date(task.id, future)
+    assert updated.updated_at > original_updated_at
+
+
+def test_set_due_date_persists(tmp_path):
+    path = str(tmp_path / "tasks.json")
+    m1 = TaskManager(JsonStorage(path))
+    task = m1.add("Task with due date")
+    future = datetime.now(timezone.utc) + timedelta(days=1)
+    m1.set_due_date(task.id, future)
+    # Load from disk
+    m2 = TaskManager(JsonStorage(path))
+    loaded = m2.get(task.id)
+    assert loaded.due_date == future
+
+
+def test_backward_compatibility_load_old_tasks(tmp_path):
+    """Test that old task files without due_date field still load."""
+    import json
+    path = str(tmp_path / "tasks.json")
+    # Create a task file in old format (no due_date field)
+    old_task = {
+        "id": "old-task-id",
+        "title": "Old task",
+        "description": "Old description",
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    with open(path, "w") as f:
+        json.dump([old_task], f)
+    # Load it with new TaskManager
+    manager = TaskManager(JsonStorage(path))
+    task = manager.get("old-task-id")
+    assert task.title == "Old task"
+    assert task.due_date is None

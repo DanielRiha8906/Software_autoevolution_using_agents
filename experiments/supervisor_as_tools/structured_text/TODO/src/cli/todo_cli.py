@@ -1,6 +1,8 @@
 import argparse
 import sys
+from datetime import datetime, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
@@ -88,6 +90,13 @@ class TodoCLI:
         p_update.add_argument("-d", "--description", help="New description")
         p_update.set_defaults(func=self._cmd_update)
 
+        # due-date
+        p_due = sub.add_parser("due-date", help="Set or clear task due date")
+        p_due.add_argument("id", help="Task ID")
+        p_due.add_argument("--clear", action="store_true", help="Clear the due date")
+        p_due.add_argument("--date", help="Due date in format YYYY-MM-DD HH:MM (CEST)")
+        p_due.set_defaults(func=self._cmd_due_date)
+
         # delete
         p_delete = sub.add_parser("delete", help="Delete a task")
         p_delete.add_argument("id", help="Task ID")
@@ -120,6 +129,13 @@ class TodoCLI:
         print(f"Status:      {task.status.value}")
         print(f"Created:     {task.created_at.isoformat()}")
         print(f"Updated:     {task.updated_at.isoformat()}")
+        if task.due_date:
+            cest = ZoneInfo("Europe/Paris")
+            due_cest = task.due_date.astimezone(cest)
+            overdue_marker = " [OVERDUE]" if task.is_overdue() else ""
+            print(f"Due:         {due_cest.strftime('%Y-%m-%d %H:%M CEST')}{overdue_marker}")
+        else:
+            print(f"Due:         (none)")
         return 0
 
     def _cmd_start(self, args: argparse.Namespace) -> int:
@@ -140,6 +156,22 @@ class TodoCLI:
     def _cmd_update(self, args: argparse.Namespace) -> int:
         task = self._service.update_task(args.id, title=args.title, description=args.description)
         print(f"Updated {task.id[:8]}  {task.title}")
+        return 0
+
+    def _cmd_due_date(self, args: argparse.Namespace) -> int:
+        if args.clear:
+            task = self._service.set_due_date(args.id, None)
+            print(f"Cleared due date for {task.id[:8]}  {task.title}")
+        elif args.date:
+            # Parse input in CEST and convert to UTC
+            cest = ZoneInfo("Europe/Paris")
+            due_cest = datetime.strptime(args.date, "%Y-%m-%d %H:%M").replace(tzinfo=cest)
+            due_utc = due_cest.astimezone(timezone.utc)
+            task = self._service.set_due_date(args.id, due_utc)
+            print(f"Set due date for {task.id[:8]}  {task.title}")
+        else:
+            print("Error: --date YYYY-MM-DD HH:MM or --clear required", file=sys.stderr)
+            return 1
         return 0
 
     def _cmd_delete(self, args: argparse.Namespace) -> int:

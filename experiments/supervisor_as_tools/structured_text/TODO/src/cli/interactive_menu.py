@@ -1,5 +1,7 @@
 import os
+from datetime import datetime, timezone
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
@@ -78,6 +80,8 @@ class InteractiveMenu:
             elif choice == "5":
                 self._do_update(tasks)
             elif choice == "6":
+                self._do_set_due_date(tasks)
+            elif choice == "7":
                 self._do_delete(tasks)
             else:
                 input("  Unknown option. Press Enter to continue...")
@@ -104,7 +108,8 @@ class InteractiveMenu:
         print("  3. Show task details")
         print("  4. Change status  (start / done / reopen)")
         print("  5. Update task    (title / description)")
-        print("  6. Delete task")
+        print("  6. Set due date")
+        print("  7. Delete task")
         print("  0. Quit")
         print()
 
@@ -166,6 +171,13 @@ class InteractiveMenu:
         print(f"  Status:      {task.status.value}")
         print(f"  Created:     {task.created_at.strftime('%Y-%m-%d %H:%M UTC')}")
         print(f"  Updated:     {task.updated_at.strftime('%Y-%m-%d %H:%M UTC')}")
+        if task.due_date:
+            cest = ZoneInfo("Europe/Paris")
+            due_cest = task.due_date.astimezone(cest)
+            overdue_marker = " [OVERDUE]" if task.is_overdue() else ""
+            print(f"  Due:         {due_cest.strftime('%Y-%m-%d %H:%M CEST')}{overdue_marker}")
+        else:
+            print(f"  Due:         (none)")
         print()
         input("  Press Enter to continue...")
 
@@ -216,6 +228,44 @@ class InteractiveMenu:
             print(f"\n  Updated: {_task_line(updated)}")
         except (TaskNotFoundError, ValueError) as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_set_due_date(self, tasks: list[Task]) -> None:
+        _clear()
+        if not tasks:
+            input("  No tasks. Press Enter...")
+            return
+        print("  Set due date — pick a task:\n")
+        idx = _pick("Select", [_task_line(t) for t in tasks])
+        if idx is None:
+            return
+        task = tasks[idx]
+
+        _clear()
+        print(f"  Task: {task.title}\n")
+        print("  Enter due date in format: YYYY-MM-DD HH:MM (in CEST)")
+        print("  Leave blank to clear due date\n")
+        due_str = _prompt("Due date")
+
+        if not due_str:
+            # Clear due date
+            try:
+                updated = self._service.set_due_date(task.id, None)
+                print(f"\n  Cleared due date for: {_task_line(updated)}")
+            except (TaskNotFoundError, ValueError) as e:
+                print(f"\n  Error: {e}")
+        else:
+            try:
+                # Parse input in CEST and convert to UTC
+                cest = ZoneInfo("Europe/Paris")
+                due_cest = datetime.strptime(due_str, "%Y-%m-%d %H:%M").replace(tzinfo=cest)
+                due_utc = due_cest.astimezone(timezone.utc)
+                updated = self._service.set_due_date(task.id, due_utc)
+                print(f"\n  Set due date for: {_task_line(updated)}")
+            except ValueError as e:
+                print(f"\n  Error: Invalid date format or date is in the past. {e}")
+            except TaskNotFoundError as e:
+                print(f"\n  Error: {e}")
         input("  Press Enter to continue...")
 
     def _do_delete(self, tasks: list[Task]) -> None:
