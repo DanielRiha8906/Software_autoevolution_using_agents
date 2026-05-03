@@ -1101,6 +1101,6 @@ No new dependencies added. Implementation uses Python standard library:
 - `datetime` and `timezone` for created_at timestamps
 - Existing `dataclasses` and serialization patterns
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 508.8s | Cost: $3.203791 USD | Turns: 46
 
 Duration: 577.4s | Cost: $1.435432 USD | Turns: 40
