@@ -10,6 +10,8 @@ rectangle "TODO Manager" {
     usecase "Use interactive menu" as UI
     usecase "Add task" as I_ADD
     usecase "List / filter tasks" as I_LIST
+    usecase "Filter by due date range" as I_DUE_RANGE
+    usecase "View overdue tasks" as I_OVERDUE
     usecase "Show task details" as I_SHOW
     usecase "Change task status" as I_STATUS
     usecase "Update task" as I_UPDATE
@@ -25,6 +27,8 @@ rectangle "TODO Manager" {
     usecase "Use one-shot CLI command" as CLI
     usecase "Add task" as C_ADD
     usecase "List / filter tasks" as C_LIST
+    usecase "Filter by due date range" as C_DUE_RANGE
+    usecase "View overdue tasks" as C_OVERDUE
     usecase "Show task details" as C_SHOW
     usecase "Start task" as C_START
     usecase "Complete task" as C_DONE
@@ -42,6 +46,8 @@ User --> CLI
 
 UI ..> I_ADD       : <<exclude>>
 UI ..> I_LIST      : <<exclude>>
+I_LIST ..> I_DUE_RANGE : <<include>>
+I_LIST ..> I_OVERDUE : <<include>>
 UI ..> I_SHOW      : <<exclude>>
 UI ..> I_STATUS    : <<exclude>>
 UI ..> I_UPDATE    : <<exclude>>
@@ -54,6 +60,8 @@ UI ..> I_QUIT      : <<exclude>>
 
 CLI ..> C_ADD            : <<exclude>>
 CLI ..> C_LIST           : <<exclude>>
+C_LIST ..> C_DUE_RANGE : <<include>>
+C_LIST ..> C_OVERDUE : <<include>>
 CLI ..> C_SHOW           : <<exclude>>
 CLI ..> C_START          : <<exclude>>
 CLI ..> C_DONE           : <<exclude>>

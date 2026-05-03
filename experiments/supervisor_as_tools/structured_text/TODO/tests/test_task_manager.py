@@ -146,3 +146,190 @@ def test_backward_compatibility_load_old_tasks(tmp_path):
     task = manager.get("old-task-id")
     assert task.title == "Old task"
     assert task.due_date is None
+
+
+# Tests for list_by_due_date_range
+def test_list_by_due_date_range_empty(manager):
+    """Empty list when no tasks match."""
+    tasks = manager.list_by_due_date_range()
+    assert tasks == []
+
+
+def test_list_by_due_date_range_excludes_no_due_date(manager):
+    """Tasks without due_date are excluded."""
+    manager.add("No due date")
+    future = datetime.now(timezone.utc) + timedelta(days=1)
+    manager.add("With due date")
+    manager.set_due_date(manager.list_all()[1].id, future)
+
+    tasks = manager.list_by_due_date_range(future - timedelta(days=1), future + timedelta(days=1))
+    assert len(tasks) == 1
+    assert tasks[0].due_date is not None
+
+
+def test_list_by_due_date_range_inclusive_bounds(manager):
+    """Date range is inclusive on both ends."""
+    now = datetime.now(timezone.utc)
+    t1 = manager.add("Task 1")
+    t2 = manager.add("Task 2")
+    t3 = manager.add("Task 3")
+
+    due1 = now + timedelta(days=1)
+    due2 = now + timedelta(days=2)
+    due3 = now + timedelta(days=3)
+
+    manager.set_due_date(t1.id, due1)
+    manager.set_due_date(t2.id, due2)
+    manager.set_due_date(t3.id, due3)
+
+    tasks = manager.list_by_due_date_range(due1, due3)
+    assert len(tasks) == 3
+
+    tasks = manager.list_by_due_date_range(due2, due2)
+    assert len(tasks) == 1
+    assert tasks[0].id == t2.id
+
+
+def test_list_by_due_date_range_start_only(manager):
+    """Filter with only start bound."""
+    now = datetime.now(timezone.utc)
+    t1 = manager.add("Task 1")
+    t2 = manager.add("Task 2")
+
+    due1 = now + timedelta(days=1)
+    due2 = now + timedelta(days=3)
+
+    manager.set_due_date(t1.id, due1)
+    manager.set_due_date(t2.id, due2)
+
+    tasks = manager.list_by_due_date_range(start=due1 + timedelta(days=1))
+    assert len(tasks) == 1
+    assert tasks[0].id == t2.id
+
+
+def test_list_by_due_date_range_end_only(manager):
+    """Filter with only end bound."""
+    now = datetime.now(timezone.utc)
+    t1 = manager.add("Task 1")
+    t2 = manager.add("Task 2")
+
+    due1 = now + timedelta(days=1)
+    due2 = now + timedelta(days=3)
+
+    manager.set_due_date(t1.id, due1)
+    manager.set_due_date(t2.id, due2)
+
+    tasks = manager.list_by_due_date_range(end=due1 + timedelta(days=1))
+    assert len(tasks) == 1
+    assert tasks[0].id == t1.id
+
+
+def test_list_by_due_date_range_start_greater_than_end(manager):
+    """Return empty list if start > end."""
+    now = datetime.now(timezone.utc)
+    t1 = manager.add("Task 1")
+    manager.set_due_date(t1.id, now + timedelta(days=1))
+
+    tasks = manager.list_by_due_date_range(
+        start=now + timedelta(days=3),
+        end=now + timedelta(days=1)
+    )
+    assert tasks == []
+
+
+def test_list_by_due_date_range_with_status_filter(manager):
+    """Filter by both date range and status."""
+    now = datetime.now(timezone.utc)
+    t1 = manager.add("Task 1")
+    t2 = manager.add("Task 2")
+    t3 = manager.add("Task 3")
+
+    due1 = now + timedelta(days=1)
+    due2 = now + timedelta(days=2)
+    due3 = now + timedelta(days=3)
+
+    manager.set_due_date(t1.id, due1)
+    manager.set_due_date(t2.id, due2)
+    manager.set_due_date(t3.id, due3)
+
+    manager.set_status(t2.id, TaskStatus.DONE)
+
+    tasks = manager.list_by_due_date_range(due1, due3, status=TaskStatus.PENDING)
+    assert len(tasks) == 2
+    assert all(t.status == TaskStatus.PENDING for t in tasks)
+
+
+def test_list_by_due_date_range_no_bounds(manager):
+    """With no bounds, return all tasks with due_date."""
+    now = datetime.now(timezone.utc)
+    t1 = manager.add("Task 1")
+    t2 = manager.add("Task 2")
+    t3 = manager.add("Task 3")
+
+    manager.set_due_date(t1.id, now + timedelta(days=1))
+    manager.set_due_date(t2.id, now + timedelta(days=2))
+
+    tasks = manager.list_by_due_date_range()
+    assert len(tasks) == 2
+
+
+# Tests for list_overdue
+def test_list_overdue_empty(manager):
+    """No overdue tasks."""
+    tasks = manager.list_overdue()
+    assert tasks == []
+
+
+def test_list_overdue_excludes_future(manager):
+    """Future due dates are not overdue."""
+    now = datetime.now(timezone.utc)
+    t1 = manager.add("Future task")
+    manager.set_due_date(t1.id, now + timedelta(days=1))
+
+    tasks = manager.list_overdue()
+    assert tasks == []
+
+
+def test_list_overdue_includes_past(manager):
+    """Past due dates are overdue (use mocking or real time)."""
+    # This test uses real time, so we mock tasks with past due_dates
+    t1 = manager.add("Overdue task")
+    # Create a task with a past due date by directly setting it
+    t1.due_date = datetime.now(timezone.utc) - timedelta(days=1)
+    manager._persist()
+
+    tasks = manager.list_overdue()
+    assert len(tasks) == 1
+    assert tasks[0].id == t1.id
+
+
+def test_list_overdue_with_status_filter(manager):
+    """Filter overdue by status."""
+    t1 = manager.add("Overdue pending")
+    t2 = manager.add("Overdue done")
+
+    past = datetime.now(timezone.utc) - timedelta(days=1)
+    t1.due_date = past
+    t2.due_date = past
+    manager.set_status(t2.id, TaskStatus.DONE)
+    manager._persist()
+
+    tasks = manager.list_overdue(status=TaskStatus.PENDING)
+    assert len(tasks) == 1
+    assert tasks[0].status == TaskStatus.PENDING
+
+
+def test_list_overdue_mixed_tasks(manager):
+    """Only return overdue tasks, not future or no due_date."""
+    now = datetime.now(timezone.utc)
+    t1 = manager.add("Overdue")
+    t2 = manager.add("Future")
+    t3 = manager.add("No due date")
+
+    t1.due_date = now - timedelta(days=1)
+    manager.set_due_date(t2.id, now + timedelta(days=1))
+    manager._persist()
+
+    tasks = manager.list_overdue()
+    assert len(tasks) == 1
+    assert tasks[0].id == t1.id

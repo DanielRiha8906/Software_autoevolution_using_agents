@@ -9,7 +9,20 @@ repeat
 
   switch (choice)
     case (1 — List/filter)
-      :Run list/filter flow;
+      :Show filter options;
+      switch (filter type)
+        case (By status)
+          :Apply status filter;
+        case (By due date range)
+          :Parse and apply date range filter;
+        case (Overdue only)
+          :Apply overdue filter;
+        case (Combined filters)
+          :Apply status + date + overdue filters;
+        case (All tasks)
+          :Show all tasks;
+      endswitch
+      :Display filtered results;
     case (2 — Add task)
       :Run add task flow;
     case (3 — Show details)
@@ -18,10 +31,12 @@ repeat
       :Run change status flow;
     case (5 — Update task)
       :Run update task flow;
-    case (6 — Delete task)
-      :Run delete task flow;
+    case (6 — Set due date)
+      :Run set due date flow;
     case (7 — Manage comments)
       :Run comment management flow;
+    case (8 — Delete task)
+      :Run delete task flow;
     case (0/q — Quit)
       :Clear screen;
       stop

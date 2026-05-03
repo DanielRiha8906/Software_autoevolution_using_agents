@@ -25,10 +25,32 @@ class TodoService:
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
 
-    def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
-        if status is not None:
+    def list_tasks(
+        self,
+        status: Optional[TaskStatus] = None,
+        due_before: Optional[datetime] = None,
+        due_after: Optional[datetime] = None,
+        overdue: bool = False,
+    ) -> list[Task]:
+        """List tasks with optional filtering.
+
+        Args:
+            status: Optional status filter.
+            due_before: Optional upper bound for due_date (inclusive).
+            due_after: Optional lower bound for due_date (inclusive).
+            overdue: If True, return only overdue tasks, ignoring due_before/due_after.
+
+        Returns:
+            Filtered list of tasks.
+        """
+        if overdue:
+            return self._manager.list_overdue(status)
+        elif due_before is not None or due_after is not None:
+            return self._manager.list_by_due_date_range(due_after, due_before, status)
+        elif status is not None:
             return self._manager.list_by_status(status)
-        return self._manager.list_all()
+        else:
+            return self._manager.list_all()
 
     def start_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)

@@ -17,6 +17,23 @@ _STATUS_SYMBOLS = {
 }
 
 
+def _parse_cest_datetime(date_str: str) -> Optional[datetime]:
+    """Parse CEST datetime string in format 'YYYY-MM-DD HH:MM' to UTC datetime.
+
+    Args:
+        date_str: Datetime string in format "YYYY-MM-DD HH:MM", assumed to be CEST.
+
+    Returns:
+        datetime object in UTC, or None if parsing fails.
+    """
+    try:
+        cest = ZoneInfo("Europe/Paris")
+        dt_cest = datetime.strptime(date_str, "%Y-%m-%d %H:%M").replace(tzinfo=cest)
+        return dt_cest.astimezone(timezone.utc)
+    except ValueError:
+        return None
+
+
 class TodoCLI:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
@@ -61,6 +78,19 @@ class TodoCLI:
             "--status",
             choices=["pending", "in_progress", "done"],
             help="Filter by status",
+        )
+        p_list.add_argument(
+            "--due-before",
+            help="Filter tasks with due date on or before this date (format: YYYY-MM-DD HH:MM, CEST)",
+        )
+        p_list.add_argument(
+            "--due-after",
+            help="Filter tasks with due date on or after this date (format: YYYY-MM-DD HH:MM, CEST)",
+        )
+        p_list.add_argument(
+            "--overdue",
+            action="store_true",
+            help="Show only overdue tasks",
         )
         p_list.set_defaults(func=self._cmd_list)
 
@@ -128,7 +158,30 @@ class TodoCLI:
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
         status = TaskStatus(args.status) if args.status else None
-        tasks = self._service.list_tasks(status)
+        overdue = getattr(args, "overdue", False)
+
+        # Parse due_before and due_after
+        due_before = None
+        due_after = None
+
+        if getattr(args, "due_before", None):
+            due_before = _parse_cest_datetime(args.due_before)
+            if due_before is None:
+                print(f"Error: Invalid date format for --due-before: {args.due_before}", file=sys.stderr)
+                return 1
+
+        if getattr(args, "due_after", None):
+            due_after = _parse_cest_datetime(args.due_after)
+            if due_after is None:
+                print(f"Error: Invalid date format for --due-after: {args.due_after}", file=sys.stderr)
+                return 1
+
+        tasks = self._service.list_tasks(
+            status=status,
+            due_before=due_before,
+            due_after=due_after,
+            overdue=overdue,
+        )
         if not tasks:
             print("No tasks found.")
             return 0
