@@ -3,7 +3,7 @@ import sys
 from typing import Optional
 
 from ..models.task_status import TaskStatus
-from ..services.comment_manager import CommentNotFoundError
+from ..services.comments_service import CommentNotFoundError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage

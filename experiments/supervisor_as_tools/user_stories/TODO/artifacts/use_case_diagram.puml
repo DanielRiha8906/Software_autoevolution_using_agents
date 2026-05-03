@@ -23,6 +23,7 @@ rectangle "TODO Manager" {
     usecase "Update task" as I_UPDATE
     usecase "Delete task" as I_DELETE
     usecase "Check task status" as I_CHECK
+    usecase "Manage comments" as I_MANAGE_COMMENTS
     usecase "Set task due date" as I_DUEDATE
     usecase "View task due date" as I_VIEWDUE
     usecase "Quit application" as I_QUIT
@@ -69,6 +70,7 @@ UI ..> I_STATUS : <<exclude>>
 UI ..> I_UPDATE : <<exclude>>
 UI ..> I_DELETE : <<exclude>>
 UI ..> I_CHECK  : <<exclude>>
+UI ..> I_MANAGE_COMMENTS : <<exclude>>
 UI ..> I_DUEDATE : <<exclude>>
 UI ..> I_VIEWDUE : <<exclude>>
 UI ..> I_QUIT   : <<exclude>>

@@ -81,24 +81,26 @@ package "services" #DDFFD4 {
         -validateDueDate(due_date: DateTime [0..1]) : DateTime [0..1]
     }
 
-    class CommentManager {
+    class CommentsService {
         -storage : JsonStorage
         -comments : Dictionary<String, TaskComment>
         -task_manager : TaskManager
         --
-        +CommentManager(task_manager: TaskManager, storage: JsonStorage [0..1])
+        +CommentsService(task_manager: TaskManager, storage: JsonStorage [0..1])
         +add(task_id: String, content: String) : TaskComment
         +get(comment_id: String) : TaskComment
         +list_by_task(task_id: String) : List<TaskComment>
         +update(comment_id: String, content: String) : TaskComment
         +delete(comment_id: String) : void
+        +delete_by_task(task_id: String) : void
+        +validate_task_exists(task_id: String) : void
         -load() : void
         -persist() : void
     }
 
     class TodoService {
         -manager : TaskManager
-        -comment_manager : CommentManager
+        -comments_service : CommentsService
         --
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
@@ -145,11 +147,11 @@ TaskComment --> Task : references
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TaskManager --> DateTimeUtils : validates with
-CommentManager --> JsonStorage : storage
-CommentManager --> TaskManager : validates with
-CommentManager ..> CommentNotFoundError : raises
+CommentsService --> JsonStorage : storage
+CommentsService --> TaskManager : validates with
+CommentsService ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
-TodoService --> CommentManager : comment_manager
+TodoService --> CommentsService : comments_service
 TodoService --> DateTimeUtils : validates with
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service

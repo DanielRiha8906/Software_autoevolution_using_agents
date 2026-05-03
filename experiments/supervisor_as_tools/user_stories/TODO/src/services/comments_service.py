@@ -10,7 +10,7 @@ class CommentNotFoundError(Exception):
     pass
 
 
-class CommentManager:
+class CommentsService:
     def __init__(self, task_manager: TaskManager, storage: Optional[JsonStorage] = None) -> None:
         self._task_manager = task_manager
         self._storage = storage or JsonStorage(str(__import__("pathlib").Path.home() / ".todo_comments.json"))
@@ -24,9 +24,13 @@ class CommentManager:
     def _persist(self) -> None:
         self._storage.save([c.to_dict() for c in self._comments.values()])
 
+    def validate_task_exists(self, task_id: str) -> None:
+        """Validate that a task exists. Raises TaskNotFoundError if not found."""
+        self._task_manager.get(task_id)
+
     def add(self, task_id: str, content: str) -> TaskComment:
         # Validate task exists
-        self._task_manager.get(task_id)
+        self.validate_task_exists(task_id)
 
         # Validate content is non-empty
         if not content or not content.strip():
@@ -64,3 +68,11 @@ class CommentManager:
         comment = self.get(comment_id)  # resolves prefix; raises if missing
         del self._comments[comment.id]
         self._persist()
+
+    def delete_by_task(self, task_id: str) -> None:
+        """Delete all comments associated with a task. Used for cascade delete."""
+        comments_to_delete = [c.id for c in self._comments.values() if c.task_id == task_id]
+        for comment_id in comments_to_delete:
+            del self._comments[comment_id]
+        if comments_to_delete:
+            self._persist()
