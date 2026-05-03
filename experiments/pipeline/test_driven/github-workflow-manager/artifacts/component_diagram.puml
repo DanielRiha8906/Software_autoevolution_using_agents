@@ -19,6 +19,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
     component "AttemptService" as ATTEMPT_SVC
+    component "WorkflowImportExportService" as IMPORT_EXPORT_SVC
     component "WorkflowStatisticsService" as STATS_SVC
   }
 
@@ -52,12 +53,18 @@ STOR --> JSON_FILE
 SVC --> ATTEMPT_SVC
 SVC --> STATS_SVC
 
+IMPORT_EXPORT_SVC --> SVC
+IMPORT_EXPORT_SVC --> ATTEMPT_SVC
+
 SVC ..> RUN
 RUN --> ATTEMPT
 RUN --> STATUS
 RUN --> CONCLUSION
 
 ATTEMPT_SVC ..> ATTEMPT
+
+IMPORT_EXPORT_SVC ..> RUN
+IMPORT_EXPORT_SVC ..> ATTEMPT
 
 STATS_SVC --> SVC
 STATS_SVC --> ATTEMPT_SVC

@@ -296,3 +296,80 @@ Implemented `WorkflowStatisticsService` to compute aggregated metrics over workf
 5. UML Designer — Updated class and component diagrams to reflect new classes and relationships
 
 Duration: 475.1s | Cost: $0.834558 USD | Turns: 15
+
+---
+
+## Task 07: Implement WorkflowImportExportService
+
+**Status:** ✅ COMPLETE
+
+**Summary:**
+Implemented `WorkflowImportExportService` to provide bidirectional JSON export/import functionality for workflow runs and their associated attempts. The service includes comprehensive schema validation, deduplication, timezone handling, and safe merging of imported data with existing service state.
+
+**Files Changed:**
+- `src/services/workflow_import_export_service.py` — Created new service class with export() and import_from() methods, plus SchemaValidationError exception
+- `src/services/attempt_service.py` — Added get_all_attempts() method to retrieve all stored attempts
+- `src/services/__init__.py` — Added imports and exports for WorkflowImportExportService and SchemaValidationError
+- `artifacts/class_diagram.puml` — Added WorkflowImportExportService, SchemaValidationError, and relationships
+- `artifacts/component_diagram.puml` — Added IMPORT_EXPORT_SVC component to service layer with dependencies
+
+**Test Results:**
+- All 83 tests: ✅ PASS (77 existing + 6 new import/export tests)
+- No failures, no errors
+- Full suite: tests/, test_workflow_run_service_query.py, test_attempt_service.py, and all others
+
+**Implementation Details:**
+
+1. **WorkflowImportExportService Class**:
+   - Constructor: `__init__(workflow_run_service: WorkflowRunService, attempt_service: AttemptService)`
+   - Method: `export() -> str` — Returns JSON string with {"runs": [...], "attempts": [...]} structure
+   - Method: `import_from(filepath: str) -> None` — Imports JSON from file, validates and populates services
+   - Private methods: `_validate_and_import_run()`, `_validate_and_import_attempt()` for validation logic
+
+2. **Schema Validation** (on import):
+   - Top-level structure: Validates "runs" and "attempts" keys exist and are lists
+   - Required fields: Validates all required fields present in each run/attempt
+   - Enum validation: Converts status/conclusion strings to proper enums, rejects invalid values
+   - Datetime validation: Enforces ISO 8601 format, timezone-aware for runs
+   - CEST timezone enforcement: Attempts must have created_at in CEST (UTC+2) only
+   - Field constraints: attempt_number > 0, duration_seconds ≥ 0.0
+   - Deduplication: Skips runs with existing id, skips attempts with existing (run_id, attempt_number) composite key
+
+3. **SchemaValidationError Exception**:
+   - Custom exception class extending Exception
+   - Raised on schema validation failures during import
+   - Clear error messages indicating which field/validation failed
+
+4. **Data Flow**:
+   - Export: Calls list_runs() and get_all_attempts(), serializes via model.to_dict(), returns JSON string
+   - Import: Parses JSON, validates schema and data types, checks deduplication, creates objects via model.from_dict(), adds to services
+
+5. **Edge Cases Handled**:
+   - Empty datasets (export returns valid JSON, import handles gracefully)
+   - Null/optional fields (preserved during export/import)
+   - Non-numeric run IDs (handled safely in filtering logic)
+   - Timezone preservation (ISO 8601 format preserves timezone info through round-trip)
+   - Orphaned attempts (no referential integrity enforcement; allows attempts with non-existent run_id)
+
+6. **AttemptService Enhancement**:
+   - Added `get_all_attempts() -> List[WorkflowRunAttempt]` method
+   - Returns copy of all attempts in insertion order
+   - Used by export to serialize complete attempt list
+
+**Key Features:**
+- Bidirectional JSON export/import with lossless round-trip capability
+- Comprehensive validation prevents corrupted data from being imported
+- Deduplication prevents duplicate runs and attempts from merging
+- All relationships (run-to-attempt via run_id) preserved through JSON serialization
+- No external API calls or subprocess usage
+- Pure JSON format (no compression, encryption, or alternative formats)
+- Thread-safe in-memory operations (no concurrent access concerns)
+
+**Pipeline Execution:**
+1. Data Analyst — Analyzed existing models, services, and storage patterns; documented type mismatches and validation requirements
+2. System Architect — Designed complete import/export architecture with validation logic, deduplication strategy, and file handling
+3. Programmer — Implemented WorkflowImportExportService, SchemaValidationError, and get_all_attempts() method
+4. Pytest-Tester — Ran full test suite (83/83 pass); verified no regressions
+5. UML Designer — Updated class and component diagrams to reflect new service and exception classes
+
+Duration: 394.5s | Cost: $0.746006 USD | Turns: 15

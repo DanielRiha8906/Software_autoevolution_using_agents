@@ -50,3 +50,13 @@ class AttemptService:
         """
         matching = [a for a in self._attempts if a.run_id == run_id]
         return sorted(matching, key=lambda a: a.attempt_number)
+
+    def get_all_attempts(self) -> List[WorkflowRunAttempt]:
+        """
+        Retrieve all stored attempts.
+
+        Returns:
+            A list of all WorkflowRunAttempt objects in insertion order.
+            Returns an empty list if no attempts are stored.
+        """
+        return list(self._attempts)
