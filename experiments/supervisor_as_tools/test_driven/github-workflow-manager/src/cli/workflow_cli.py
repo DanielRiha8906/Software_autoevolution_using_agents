@@ -6,6 +6,7 @@ from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
 from ..services.workflow_run_service import WorkflowRunService
+from ..services.import_export_service import WorkflowImportExportService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 
 
@@ -72,10 +73,18 @@ def build_parser() -> argparse.ArgumentParser:
     detail_p = sub.add_parser("detail", help="Show details for a single run")
     detail_p.add_argument("run_id", help="Run ID")
 
+    # export
+    export_p = sub.add_parser("export", help="Export runs and attempts to JSON file")
+    export_p.add_argument("filepath", help="Path to export file")
+
+    # import
+    import_p = sub.add_parser("import", help="Import runs and attempts from JSON file")
+    import_p.add_argument("filepath", help="Path to import file")
+
     return parser
 
 
-def run_cli(service: WorkflowRunService, args=None) -> None:
+def run_cli(service: WorkflowRunService, import_export_service: WorkflowImportExportService = None, args=None) -> None:
     parser = build_parser()
     ns = parser.parse_args(args)
     tracker = WorkflowRunTracker(service)
@@ -113,3 +122,17 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_run(run))
+
+    elif ns.command == "export":
+        if import_export_service is None:
+            print("Export service not initialized.", file=sys.stderr)
+            sys.exit(1)
+        import_export_service.export(ns.filepath)
+        print(f"Exported runs and attempts to {ns.filepath}")
+
+    elif ns.command == "import":
+        if import_export_service is None:
+            print("Import service not initialized.", file=sys.stderr)
+            sys.exit(1)
+        import_export_service.import_from(ns.filepath)
+        print(f"Imported runs and attempts from {ns.filepath}")

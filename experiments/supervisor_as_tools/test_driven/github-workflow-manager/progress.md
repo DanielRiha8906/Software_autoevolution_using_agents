@@ -114,3 +114,28 @@ Duration: 219.6s | Cost: $0.440051 USD | Turns: 28
 - No regressions in existing tests
 
 Duration: 351.0s | Cost: $0.614922 USD | Turns: 19
+
+## Task 07: Implement WorkflowImportExportService for data serialization
+
+**Status:** ✅ Completed
+
+**Files Changed:**
+- `src/services/import_export_service.py` — Created new service class with `export(filepath: str)` method to serialize all workflow runs and attempts to JSON, and `import_from(filepath: str)` method to restore data with validation and deduplication
+- `src/services/__init__.py` — Added WorkflowImportExportService to imports and exports
+- `src/__main__.py` — Integrated AttemptService initialization, WorkflowImportExportService creation, and wired services to both CLI and interactive menu
+- `src/cli/workflow_cli.py` — Added "export" and "import" subcommands with filepath arguments, updated run_cli() to handle new commands
+- `src/cli/interactive_menu.py` — Added _export_runs() and _import_runs() handlers, integrated export/import menu options with service calls
+- `artifacts/class_diagram.puml` — Added WorkflowImportExportService class with dependencies and method signatures, updated relationships to reflect integration with WorkflowRunService
+
+**Test Results:**
+- All 94 tests pass (7 new import/export tests + 87 existing tests)
+- Export produces valid JSON with "runs" and "attempts" keys
+- Import validates schema and raises Exception for missing required keys
+- Deduplication prevents re-importing duplicate runs and attempts without overwriting
+- Existing stored data preserved during import
+- Relationships between runs and attempts remain intact after round-trip
+- No external API calls or subprocess usage in implementation
+- CLI integration verified: both `python -m src export filepath` and interactive menu options functional
+- Serialization and deserialization preserves all model data and datetime information
+
+Duration: 354.9s | Cost: $0.694199 USD | Turns: 23
