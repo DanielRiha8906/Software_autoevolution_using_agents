@@ -372,4 +372,4 @@ Implemented `WorkflowImportExportService` to provide bidirectional JSON export/i
 4. Pytest-Tester — Ran full test suite (83/83 pass); verified no regressions
 5. UML Designer — Updated class and component diagrams to reflect new service and exception classes
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 394.5s | Cost: $0.746006 USD | Turns: 15
