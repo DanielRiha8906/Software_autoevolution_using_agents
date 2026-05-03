@@ -22,6 +22,12 @@ repeat
       :Run delete task flow;
     case (7 — Filter by due date)
       :Run filter due date flow;
+    case (8 — View statistics)
+      :Run statistics flow;
+    case (9 — Export to file)
+      :Run export flow;
+    case (10 — Import from file)
+      :Run import flow;
     case (0/q — Quit)
       :Clear screen;
       stop

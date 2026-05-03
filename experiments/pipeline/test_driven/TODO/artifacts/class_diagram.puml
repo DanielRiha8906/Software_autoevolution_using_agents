@@ -116,11 +116,22 @@ package "services" #DDFFD4 {
         +TaskStatisticsService(todo_service: TodoService)
         +compute() : TaskStatistics
     }
+
+    class TaskImportExportService {
+        -_todo_service : TodoService
+        -_comments_service : CommentsService
+        --
+        +TaskImportExportService(todo_service: TodoService, comments_service: CommentsService)
+        +export(filepath: String) : void
+        +import_from(filepath: String) : Tuple<List<Task>, List<TaskComment>>
+    }
 }
 
 package "cli" #FFE5E5 {
     class TodoCLI {
         -service : TodoService
+        -comments_service : CommentsService
+        -import_export_service : TaskImportExportService
         --
         +TodoCLI(storagePath: String [0..1])
         +run(argv: List<String> [0..1]) : Integer
@@ -128,6 +139,8 @@ package "cli" #FFE5E5 {
 
     class InteractiveMenu {
         -service : TodoService
+        -comments_service : CommentsService
+        -import_export_service : TaskImportExportService
         --
         +InteractiveMenu(storagePath: String [0..1])
         +run() : void
@@ -144,7 +157,15 @@ CommentsService --> JsonStorage : storage
 CommentsService --> TaskComment : contains
 TaskStatisticsService --> TodoService : uses
 TaskStatisticsService --> TaskStatistics : returns
+TaskImportExportService --> TodoService : uses
+TaskImportExportService --> CommentsService : uses
+TaskImportExportService --> Task : works with
+TaskImportExportService --> TaskComment : works with
 TodoCLI --> TodoService : service
+TodoCLI --> CommentsService : comments_service
+TodoCLI --> TaskImportExportService : import_export_service
 InteractiveMenu --> TodoService : service
+InteractiveMenu --> CommentsService : comments_service
+InteractiveMenu --> TaskImportExportService : import_export_service
 
 @enduml

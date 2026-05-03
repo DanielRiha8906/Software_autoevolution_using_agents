@@ -7,6 +7,8 @@ from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.task_statistics_service import TaskStatisticsService
 from ..services.todo_service import TodoService
+from ..services.comments_service import CommentsService
+from ..services.task_import_export_service import TaskImportExportService
 from ..storage.json_storage import JsonStorage
 
 _STATUS_LABEL = {
@@ -55,6 +57,8 @@ class InteractiveMenu:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._comments_service = CommentsService(self._service, storage)
+        self._import_export_service = TaskImportExportService(self._service, self._comments_service)
 
     def run(self) -> None:
         while True:
@@ -85,6 +89,10 @@ class InteractiveMenu:
                 self._do_filter_due_date()
             elif choice == "8":
                 self._do_statistics()
+            elif choice == "9":
+                self._do_export()
+            elif choice == "10":
+                self._do_import()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -113,6 +121,8 @@ class InteractiveMenu:
         print("  6. Delete task")
         print("  7. Filter by due date")
         print("  8. View statistics")
+        print("  9. Export to file")
+        print("  10. Import from file")
         print("  0. Quit")
         print()
 
@@ -345,4 +355,36 @@ class InteractiveMenu:
         print(f"  Overdue:           {stats.overdue_count}")
         print(f"  Completion rate:   {stats.completion_rate:.1f}%")
         print()
+        input("  Press Enter to continue...")
+
+    def _do_export(self) -> None:
+        _clear()
+        print("  Export tasks and comments to JSON file\n")
+        filepath = _prompt("File path")
+        if not filepath:
+            input("  File path cannot be empty. Press Enter...")
+            return
+
+        try:
+            self._import_export_service.export(filepath)
+            print(f"\n  Exported to {filepath}")
+        except Exception as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_import(self) -> None:
+        _clear()
+        print("  Import tasks and comments from JSON file\n")
+        filepath = _prompt("File path")
+        if not filepath:
+            input("  File path cannot be empty. Press Enter...")
+            return
+
+        try:
+            imported_tasks, imported_comments = self._import_export_service.import_from(filepath)
+            print(f"\n  Imported {len(imported_tasks)} task(s) and {len(imported_comments)} comment(s)")
+        except FileNotFoundError:
+            print(f"\n  Error: File not found: {filepath}")
+        except ValueError as e:
+            print(f"\n  Error: {e}")
         input("  Press Enter to continue...")

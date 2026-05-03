@@ -134,3 +134,81 @@ All tests pass:
 ✅ Return type is deterministic dataclass
 
 Duration: 414.9s | Cost: $0.732374 USD | Turns: 15
+
+---
+
+# Task 07: Implement TaskImportExportService
+
+## Summary
+
+Implemented `TaskImportExportService` that exports tasks and comments together into a single JSON file and imports them back with structure validation, duplicate skipping, and no overwrite of existing data.
+
+## Files Changed
+
+- `src/services/task_import_export_service.py` — Created new service with TaskImportExportService class providing export() and import_from() methods
+- `src/cli/todo_cli.py` — Added export and import subparsers with command handlers (_cmd_export, _cmd_import)
+- `src/cli/interactive_menu.py` — Added menu options 9 and 10 for export/import with _do_export() and _do_import() handlers
+- `artifacts/class_diagram.puml` — Added TaskImportExportService class with dependencies
+- `artifacts/component_diagram.puml` — Added Import/Export Service component in Service Layer
+- `artifacts/activity_diagram.puml` — Updated interactive menu flow with export/import cases
+- `artifacts/use_case_diagram.puml` — Added export/import use cases for both CLI and interactive modes
+
+## Test Results
+
+All tests pass:
+- **6 required tests**: PASS (test_export_creates_json_file, test_export_contains_tasks_and_comments, test_import_restores_tasks, test_import_validates_structure, test_import_restores_comments, test_import_skips_duplicates)
+- **9 additional comprehensive tests**: PASS (empty exports, multiple tasks, round-trip integrity, malformed entries, orphaned comments)
+- **124 total tests**: ALL PASS
+- **109 existing tests**: PASS (no regressions)
+
+## Implementation Details
+
+### Core Features
+1. **TaskImportExportService class**: Coordinates TodoService and CommentsService
+   - `export(filepath: str)` — Exports all tasks and comments to JSON file with structure `{"tasks": [...], "comments": [...]}`
+   - `import_from(filepath: str) -> Tuple[List[Task], List[TaskComment]]` — Imports from JSON with validation and duplicate detection
+
+2. **Export Functionality**:
+   - Exports all tasks via Task.to_dict()
+   - Exports all comments via TaskComment.to_dict()
+   - JSON structure matches expected format
+   - Overwrites existing files completely
+
+3. **Import Functionality**:
+   - Validates JSON structure (must have "tasks" and "comments" arrays)
+   - Schema validation for each task and comment dict
+   - Duplicate detection by ID (skips if task/comment already exists)
+   - Orphaned comment handling (silently skips comments for non-existent tasks)
+   - Returns tuple of (imported_tasks, imported_comments) excluding duplicates
+   - Proper error handling for FileNotFoundError and ValueError
+
+4. **CLI Integration**:
+   - `python -m src export <filepath>` — Export tasks and comments to file
+   - `python -m src import <filepath>` — Import tasks and comments from file
+
+5. **Interactive Menu Integration**:
+   - Menu option 9: "Export to file"
+   - Menu option 10: "Import from file"
+
+### Edge Cases Handled
+- Empty exports (no tasks or comments)
+- Missing files (FileNotFoundError)
+- Invalid JSON syntax (ValueError)
+- Invalid schema structure (ValueError with descriptive message)
+- Malformed task/comment dicts (ValueError on from_dict failure)
+- Orphaned comments (silently skipped, not added)
+- Duplicate tasks by ID (skipped, not overwritten)
+- Duplicate comments by ID (skipped, not overwritten)
+
+## Constraints Met
+✅ All provided tests pass (6/6 required)
+✅ Existing tests still pass (109/109, no regressions)
+✅ Code compiles without syntax errors
+✅ JSON schema matches Task.to_dict() and TaskComment.to_dict() formats
+✅ Duplicates skipped by ID (no overwrite)
+✅ Importing preserves existing data
+✅ All functionality accessible via `python -m src` (CLI + interactive menu)
+✅ Structure validation with clear error messages
+✅ UML diagrams updated to reflect all changes
+
+Duration: 436.5s | Cost: $0.881558 USD | Turns: 17
