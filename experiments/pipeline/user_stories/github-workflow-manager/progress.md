@@ -165,4 +165,4 @@ Implemented bonus sorting feature for `WorkflowRunAttemptService`. The service, 
   - ✅ Interactive menu options 7 ("List all attempts") and 9 ("List attempts for run") with sorting choices
   - ✅ CLI commands: `attempt-list`, `attempt-list --run-id X`, `attempt-list --no-sort`, `attempt-list --run-id X --no-sort`
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 489.3s | Cost: $0.997787 USD | Turns: 16
