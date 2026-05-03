@@ -345,4 +345,4 @@ Successfully implemented aggregated insights and statistics reporting for workfl
 - count_by_conclusion handles both WorkflowConclusion enum values and None (converted to "none" string)
 - to_dict() method provides JSON-serializable representation for output formatting
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 474.9s | Cost: $1.086862 USD | Turns: 21
