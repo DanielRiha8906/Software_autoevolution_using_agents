@@ -144,4 +144,4 @@ Duration: 496.0s | Cost: $0.844545 USD | Turns: 25
 ✓ Optional `updated_at` attribute implemented
 ✓ Rich text, markdown, and nested comments explicitly out of scope (confirmed in design, not implemented)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 412.8s | Cost: $0.739845 USD | Turns: 13
