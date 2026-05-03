@@ -24,14 +24,24 @@ def _as_number(value: str) -> float:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
-        description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B]",
+        description="OOP Calculator — run interactively or pass flags for one-shot use",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory-history] [--history]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
         choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
         help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+    )
+    parser.add_argument(
+        "--memory-history",
+        action="store_true",
+        help="Display memory entry history (includes results and errors)",
+    )
+    parser.add_argument(
+        "--history",
+        action="store_true",
+        help="Display calculation history",
     )
     parser.add_argument(
         "operands",
@@ -53,6 +63,10 @@ def main() -> None:
         except argparse.ArgumentTypeError as exc:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)
+    elif args.memory_history:
+        cli.show_memory_history_command()
+    elif args.history:
+        cli.show_history_command()
     else:
         cli.run_interactive()
 

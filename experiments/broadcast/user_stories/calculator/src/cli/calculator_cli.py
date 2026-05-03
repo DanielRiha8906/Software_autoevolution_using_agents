@@ -1,6 +1,7 @@
 import sys
 
 from ..models.operation import Operation
+from ..models.memory_entry import ErrorEntry, ResultEntry
 from ..services.calculator_service import CalculatorService
 
 
@@ -29,12 +30,17 @@ class CalculatorCLI:
             self._print_menu()
             choice = input("Choose option: ").strip()
 
-            history_opt = len(self._MENU) + 1
-            exit_opt    = len(self._MENU) + 2
+            memory_history_opt = len(self._MENU) + 1
+            history_opt        = len(self._MENU) + 2
+            exit_opt           = len(self._MENU) + 3
 
             if choice == str(exit_opt):
                 print("Goodbye!")
                 break
+
+            if choice == str(memory_history_opt):
+                self._show_memory_history()
+                continue
 
             if choice == str(history_opt):
                 self._show_history()
@@ -67,6 +73,14 @@ class CalculatorCLI:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
 
+    def show_memory_history_command(self) -> None:
+        """Show memory history and exit (one-shot mode)."""
+        self._show_memory_history()
+
+    def show_history_command(self) -> None:
+        """Show calculation history and exit (one-shot mode)."""
+        self._show_history()
+
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
@@ -75,8 +89,9 @@ class CalculatorCLI:
         print("\nOperations:")
         for i, (_, label) in enumerate(self._MENU, 1):
             print(f"  {i}. {label}")
-        print(f"  {len(self._MENU) + 1}. View history")
-        print(f"  {len(self._MENU) + 2}. Exit")
+        print(f"  {len(self._MENU) + 1}. View memory history")
+        print(f"  {len(self._MENU) + 2}. View calculation history")
+        print(f"  {len(self._MENU) + 3}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -104,3 +119,28 @@ class CalculatorCLI:
         for i, entry in enumerate(history, 1):
             print(f"  {i}. {entry}  [{entry.timestamp}]")
         print()
+
+    def _show_memory_history(self) -> None:
+        """Display the memory entry history (both results and errors)."""
+        history = self.service.get_memory_history()
+        if not history:
+            print("\n  No operations recorded yet.\n")
+            return
+        print()
+        for entry in history:
+            self._print_memory_entry(entry)
+        print()
+
+    def _print_memory_entry(self, entry: ResultEntry | ErrorEntry) -> None:
+        """Format and print a single memory entry."""
+        operands_str = " ".join(str(op) for op in entry.operands)
+        if isinstance(entry, ResultEntry):
+            print(
+                f"  #{entry.entry_id}. {entry.operation}({operands_str}) = {entry.result} "
+                f"[{entry.timestamp}] ({entry.execution_time_ms:.2f}ms)"
+            )
+        elif isinstance(entry, ErrorEntry):
+            print(
+                f"  #{entry.entry_id}. {entry.operation}({operands_str}) -> ERROR: {entry.error_message} "
+                f"[{entry.timestamp}] ({entry.execution_time_ms:.2f}ms)"
+            )

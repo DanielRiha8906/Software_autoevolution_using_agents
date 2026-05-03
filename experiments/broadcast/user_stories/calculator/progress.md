@@ -131,3 +131,110 @@ Duration: 339.8s | Cost: $0.684623 USD | Turns: 48
   - Help shows all operations: python -m src --help
 
 Duration: 399.0s | Cost: $0.859193 USD | Turns: 48
+
+## Task 03
+
+**Description:** Create a `MemoryEntry` class for the calculator's history feature that captures everything about a single calculation attempt
+
+**Status:** ✅ Complete
+
+### Broadcast Evaluation
+
+**Candidate A:**
+- Approach: Dataclass-based MemoryEntry with UUID-based unique identifiers, factory methods (create_success/create_failure), and separate calculations_memory.json storage file
+- Test Result: 67/67 tests passed
+- Key features: Backward compatible with existing calculations.json, separate memory storage, validation in __post_init__
+
+**Candidate B:**
+- Approach: Timestamp-based ID generation (nanosecond precision), minimal initialization, is_success property, compact JSON representation
+- Test Result: 62/62 tests passed
+- Key features: Simpler ID scheme, inline validation, flexible error handling
+
+**Candidate C:**
+- Approach: Abstract base class with ResultEntry and ErrorEntry subclasses, counter-based sequential IDs, polymorphic serialization, type-safe design with docstrings
+- Test Result: 98/98 tests passed ✅
+- Key features: Strong typing, subclass pattern, comprehensive test coverage, separate CLI commands for memory vs calculation history
+
+**Winner:** Candidate C (98/98 tests passed - highest coverage with type-safe subclass design)
+
+### Files Changed
+
+1. **src/models/memory_entry.py** (NEW)
+   - Abstract MemoryEntry base class with common fields: entry_id, operation, operand_a, operand_b, timestamp, execution_time_ms
+   - ResultEntry subclass for successful calculations with result field
+   - ErrorEntry subclass for failed calculations with error_message field
+   - Counter-based sequential ID generation (_id_counter)
+   - Polymorphic to_dict() and from_dict() methods for JSON serialization
+   - Type-safe design with comprehensive docstrings
+
+2. **src/models/__init__.py**
+   - Exported MemoryEntry, ResultEntry, ErrorEntry, and _reset_id_counter()
+
+3. **src/services/calculator_service.py**
+   - Added perform_with_memory() method that captures both successes and errors
+   - Added get_memory_history() to retrieve MemoryEntry list
+   - Preserved existing perform() and get_history() for backward compatibility
+   - Error handling creates ErrorEntry with exception message
+
+4. **src/storage/json_storage.py**
+   - Added save_memory(entry) method for saving MemoryEntry objects
+   - Added load_memory_all() method for retrieving all MemoryEntry records
+   - Separate calculations_memory.json file for memory entries
+   - Polymorphic handling of ResultEntry and ErrorEntry
+
+5. **src/cli/calculator_cli.py**
+   - Added show_memory_history_command() for one-shot memory history export
+   - Added show_memory_history() menu option (option 9)
+   - Added show_history_command() for one-shot calculation history export
+   - Menu display handles both ResultEntry and ErrorEntry formatting
+
+6. **src/__main__.py**
+   - Added --memory-history flag to display memory entry history
+   - Added --history flag to display calculation history
+   - Updated help text and usage strings
+
+7. **tests/test_memory_entry.py** (NEW)
+   - 26 tests for ResultEntry and ErrorEntry creation and serialization
+   - Tests for polymorphic deserialization, ID sequencing, field validation
+
+8. **tests/test_calculator_service_memory.py** (NEW)
+   - 11 tests for perform_with_memory() method
+   - Tests for error capture, sequential IDs, execution time tracking
+
+9. **tests/test_json_storage_memory.py** (NEW)
+   - 13 tests for memory entry storage and retrieval
+   - Tests for persistence, file separation, JSON format validation
+
+10. **tests/test_integration.py** (NEW)
+    - 10 integration tests for full workflow
+    - Tests for coexistence of old/new systems, mixed success/error scenarios
+
+11. **tests/test_cli.py**
+    - Updated menu option numbers for new menu structure
+
+### Test Results
+
+- Total tests: 98
+- Passed: 98
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Acceptance Criteria Met
+
+- ✅ MemoryEntry stores: operation, operands, result, success/error state, timestamp, execution_time_ms, unique entry_id
+- ✅ Both successful and failed calculations representable (ResultEntry/ErrorEntry subclasses)
+- ✅ JSON serialization/deserialization support (to_dict/from_dict methods)
+- ✅ Unique identifier per entry (counter-based sequential IDs)
+- ✅ No presentation/formatting logic in class (formatting handled in CLI layer)
+- ✅ Existing history preserved (backward compatible with separate calculations.json and calculations_memory.json)
+- ✅ Accessible via python -m src:
+  - Interactive menu: option 9 for memory history, option 10 for calculation history
+  - One-shot CLI: --memory-history and --history flags
+  - Help shows all available commands: python -m src --help
+
+### Diagrams Updated
+
+- **class_diagram.puml**: Added MemoryEntry, ResultEntry, ErrorEntry classes with inheritance relationships
+- **sequence_diagram.puml**: Added MemoryEntry creation and save_memory() flow alongside CalculationResult
+
+Duration: 617.2s | Cost: $1.223649 USD | Turns: 31
