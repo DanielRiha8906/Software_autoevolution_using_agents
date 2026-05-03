@@ -1,6 +1,8 @@
 import argparse
 import sys
+from datetime import datetime
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from ..models.task_status import TaskStatus
 from ..services.comments_service import CommentNotFoundError
@@ -59,6 +61,19 @@ class TodoCLI:
             "--status",
             choices=["pending", "in_progress", "done"],
             help="Filter by status",
+        )
+        p_list.add_argument(
+            "--due-before",
+            help="Filter tasks with due date before this ISO datetime (e.g., 2026-12-31T23:59:59+01:00)",
+        )
+        p_list.add_argument(
+            "--due-after",
+            help="Filter tasks with due date after this ISO datetime (e.g., 2026-01-01T00:00:00+01:00)",
+        )
+        p_list.add_argument(
+            "--overdue",
+            action="store_true",
+            help="Filter to show only overdue tasks",
         )
         p_list.set_defaults(func=self._cmd_list)
 
@@ -146,14 +161,36 @@ class TodoCLI:
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
         status = TaskStatus(args.status) if args.status else None
-        tasks = self._service.list_tasks(status)
+        due_before = None
+        due_after = None
+        overdue = None
+
+        if args.due_before:
+            try:
+                due_before = datetime.fromisoformat(args.due_before)
+            except ValueError:
+                print(f"Error: Invalid ISO datetime format for --due-before: {args.due_before}", file=sys.stderr)
+                return 1
+
+        if args.due_after:
+            try:
+                due_after = datetime.fromisoformat(args.due_after)
+            except ValueError:
+                print(f"Error: Invalid ISO datetime format for --due-after: {args.due_after}", file=sys.stderr)
+                return 1
+
+        if args.overdue:
+            overdue = True
+
+        tasks = self._service.list_tasks(status=status, due_before=due_before, due_after=due_after, overdue=overdue)
         if not tasks:
             print("No tasks found.")
             return 0
         for task in tasks:
             sym = _STATUS_SYMBOLS[task.status]
             desc = f"  {task.description}" if task.description else ""
-            print(f"{sym} {task.id[:8]}  {task.title}{desc}")
+            due_str = f" (due: {task.due_date.isoformat()})" if task.due_date else ""
+            print(f"{sym} {task.id[:8]}  {task.title}{desc}{due_str}")
         return 0
 
     def _cmd_show(self, args: argparse.Namespace) -> int:
@@ -164,6 +201,9 @@ class TodoCLI:
         print(f"Status:      {task.status.value}")
         print(f"Created:     {task.created_at.isoformat()}")
         print(f"Updated:     {task.updated_at.isoformat()}")
+        if task.due_date:
+            print(f"Due:         {task.due_date.isoformat()}")
+            print(f"Overdue:     {'Yes' if task.is_overdue() else 'No'}")
         return 0
 
     def _cmd_start(self, args: argparse.Namespace) -> int:

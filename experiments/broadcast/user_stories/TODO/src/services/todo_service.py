@@ -1,8 +1,10 @@
+from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
+from ..models.filter_options import FilterOptions
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
 from .comments_service import CommentsService
@@ -21,10 +23,49 @@ class TodoService:
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
 
-    def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
-        if status is not None:
-            return self._manager.list_by_status(status)
-        return self._manager.list_all()
+    def list_tasks(
+        self,
+        status: Optional[TaskStatus] = None,
+        due_before: Optional[datetime] = None,
+        due_after: Optional[datetime] = None,
+        overdue: Optional[bool] = None,
+        before: Optional[datetime] = None,
+        after: Optional[datetime] = None,
+    ) -> list[Task]:
+        """
+        List tasks with optional filtering by status, due date range, and overdue status.
+
+        Args:
+            status: Filter by task status
+            due_before: Filter tasks with due date before this datetime (preferred name)
+            due_after: Filter tasks with due date after this datetime (preferred name)
+            before: Alias for due_before (deprecated, use due_before)
+            after: Alias for due_after (deprecated, use due_after)
+            overdue: If True, only return overdue tasks. If False, only return non-overdue tasks.
+
+        Returns:
+            Filtered list of tasks
+        """
+        # Support both naming conventions
+        _due_before = due_before or before
+        _due_after = due_after or after
+
+        # Build FilterOptions
+        options = FilterOptions(
+            status=status,
+            due_before=_due_before,
+            due_after=_due_after,
+            overdue_only=(overdue is True),
+        )
+
+        # Get filtered tasks
+        tasks = self._manager.apply_filters(options)
+
+        # If overdue is explicitly False, exclude overdue tasks
+        if overdue is False:
+            tasks = [t for t in tasks if not t.is_overdue()]
+
+        return tasks
 
     def start_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)

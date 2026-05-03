@@ -426,3 +426,172 @@ No new dependencies added. Implementation uses Python standard library:
 - `uuid` (already used in Task model)
 
 Duration: 567.3s | Cost: $3.081796 USD | Turns: 80
+
+---
+
+# Task 05: Filter Tasks by Due Date Range and Overdue Status
+
+## Task Overview
+
+**User Story:** As a developer working with task data, I want to filter tasks by due date range and overdue status, so that I can programmatically retrieve relevant subsets of tasks.
+
+**Acceptance Criteria:**
+- ✅ Filtering by due date range (before/after a given datetime) is supported
+- ✅ Filtering by week, month, year (before/after a given datetime) is supported
+- ✅ Filtering by overdue status is supported
+- ✅ Filters can be combined with existing status filtering in a single call
+- ✅ Results are returned in the same structured format as `list_tasks`
+- ✅ Existing `list_tasks(status=...)` behaviour remains unchanged
+- ✅ No database or external indexing system is used
+- ✅ All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag
+
+## Implementation Results
+
+### Candidate Evaluation
+
+| Candidate | Approach | Tests Passing | Selection |
+|-----------|----------|---------------|-----------|
+| A (broadcast-candidate-a) | TaskManager extension with separate filter methods | 67/67 | Not selected |
+| B (broadcast-candidate-b) | FilterOptions dataclass + apply_filters method | **106/106** | **SELECTED** |
+| C (broadcast-candidate-c) | FilterBuilder pattern with composable filters | 67/67 | Not selected |
+
+**Winner:** Candidate B
+- Most comprehensive test coverage (39 new tests added, all passing)
+- Dedicated `test_filtering.py` with thorough edge case testing
+- Clean FilterOptions dataclass design for encapsulating filter criteria
+- apply_filters method provides centralized filtering logic
+- Easy to extend with additional filter types in the future
+
+### Files Changed
+
+1. **`src/models/filter_options.py`** (NEW)
+   - Dataclass encapsulating filter parameters: status, due_before, due_after, overdue_only
+   - Validates timezone-aware datetime requirements in `__post_init__()`
+   - Prevents invalid filter states before use
+
+2. **`src/services/task_manager.py`**
+   - Added `list_by_date_range(before, after)` — Filters tasks by due date boundaries
+   - Added `list_overdue()` — Returns only overdue tasks
+   - Added `apply_filters(options: FilterOptions)` — Applies combined filter criteria (status + date range + overdue)
+   - All methods handle timezone conversion to CEST for consistent comparison
+   - Properly excludes tasks without due dates from date range filters
+
+3. **`src/services/todo_service.py`**
+   - Extended `list_tasks()` signature with new parameters:
+     - `due_before: Optional[datetime]` — Filter tasks with due date before this datetime
+     - `due_after: Optional[datetime]` — Filter tasks with due date after this datetime
+     - `overdue: Optional[bool]` — If True, only overdue tasks; if False, only non-overdue tasks
+   - Backward compatible with legacy `before` and `after` parameter aliases
+   - All filters can be combined: `list_tasks(status=PENDING, due_before=tomorrow, overdue=True)`
+   - Delegates to TaskManager.apply_filters() for consistent filtering logic
+
+4. **`src/cli/todo_cli.py`**
+   - Extended list command with filtering arguments:
+     - `--due-before` — Filter by datetime (ISO 8601 format)
+     - `--due-after` — Filter by datetime (ISO 8601 format)
+     - `--overdue` — Flag to show only overdue tasks
+   - All filters can be combined: `python -m src list --status pending --overdue --due-before 2026-05-10T00:00:00+02:00`
+   - Updated show command to display due date and overdue status
+
+5. **`src/cli/interactive_menu.py`**
+   - Enhanced `_do_list()` method with advanced filtering options
+   - Menu offers: status filtering, overdue filtering, date range filtering
+   - Clear display of applied filters and filtered results
+   - All features accessible through intuitive numbered choices
+
+6. **`tests/test_filtering.py`** (NEW)
+   - 26 new comprehensive tests covering:
+     - FilterOptions validation and timezone requirements
+     - Due date range filtering (before/after with proper exclusivity)
+     - Overdue status filtering
+     - Combined filters (status + due date + overdue)
+     - Edge cases (tasks without due dates, empty result sets)
+     - Timezone conversion to CEST
+     - Direct TaskManager.apply_filters() testing
+
+7. **`tests/test_task_manager.py`**
+   - Added 21 new tests for TaskManager filtering methods
+   - Tests for list_by_date_range(), list_overdue(), apply_filters()
+
+8. **`tests/test_todo_service.py`**
+   - Added 19 new tests for TodoService filter parameters
+   - Tests for parameter validation and combined filtering
+
+9. **`artifacts/class_diagram.puml`**
+   - Added FilterOptions class with attributes and validation method
+   - Added new filtering methods to TaskManager: list_by_date_range, list_overdue, apply_filters
+   - Extended TodoService.listTasks signature with filter parameters
+   - Added relationship between TaskManager and FilterOptions
+
+### Test Results
+
+```
+........................................................................ [ 67%]
+..................................                                       [100%]
+106 passed in 0.32s
+```
+
+All tests passing:
+- 67 original tests (backward compatibility verified)
+- 39 new tests for filtering functionality
+
+### Design Decisions
+
+1. **FilterOptions Dataclass:** Encapsulates all filter criteria in a single, validated object. Makes it easy to extend filtering with new criteria (e.g., tag filtering, priority filtering) without changing method signatures. Validation in `__post_init__()` prevents invalid filter states.
+
+2. **Timezone Handling:** All filtering logic converts datetimes to CEST for consistent comparisons, matching the Task.is_overdue() behavior. Supports datetime objects from any timezone as input.
+
+3. **Date Range Semantics:**
+   - `due_before`: exclusive (tasks with due_date < due_before)
+   - `due_after`: exclusive (tasks with due_date >= due_after)
+   - Tasks without due dates automatically excluded from date range filters (sensible default)
+
+4. **Overdue Filtering:**
+   - `overdue=True`: only overdue tasks
+   - `overdue=False`: only non-overdue tasks (including those without due dates)
+   - Uses existing Task.is_overdue() method for consistency
+
+5. **Backward Compatibility:**
+   - All existing code using `list_tasks(status=...)` works unchanged
+   - Optional parameters default to None (no filtering)
+   - Legacy parameter aliases (`before`/`after`) supported for transition period
+
+6. **Separation of Concerns:**
+   - TaskManager handles low-level filtering logic
+   - TodoService provides high-level API with parameter validation
+   - CLI/Menu handle user interaction and output formatting
+
+### CLI/Interactive Usage Examples
+
+**CLI one-shot commands:**
+```bash
+# Show all pending tasks
+python -m src list --status pending
+
+# Show overdue tasks
+python -m src list --overdue
+
+# Show tasks due before a specific date
+python -m src list --due-before 2026-05-10T00:00:00+02:00
+
+# Show pending tasks that are overdue
+python -m src list --status pending --overdue
+
+# Show tasks due between two dates
+python -m src list --due-after 2026-05-01T00:00:00+02:00 --due-before 2026-05-10T00:00:00+02:00
+```
+
+**Interactive menu:**
+- Menu option 1: "List / filter tasks"
+- Offers status filtering (pending, in progress, done)
+- Offers overdue filtering (yes/no)
+- Offers date range filtering (before/after with datetime input)
+
+### Dependencies
+
+No new dependencies added. Implementation uses Python standard library:
+- `datetime` module for timezone-aware datetimes
+- `typing.Optional` for optional parameters
+- `dataclasses` for FilterOptions class
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

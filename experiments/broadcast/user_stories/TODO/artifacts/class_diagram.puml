@@ -44,6 +44,15 @@ package "models" #DDEEFF {
         +from_dict(data: Dictionary) : TaskComment
     }
 
+    class FilterOptions {
+        +status : TaskStatus [0..1]
+        +due_before : DateTime [0..1]
+        +due_after : DateTime [0..1]
+        +overdue_only : Boolean
+        --
+        +__post_init__() : void
+    }
+
     Task "1" --> "*" TaskComment : has
 }
 
@@ -91,6 +100,9 @@ package "services" #DDFFD4 {
         +get(taskId: String) : Task
         +listAll() : List<Task>
         +listByStatus(status: TaskStatus) : List<Task>
+        +list_by_date_range(before: DateTime [0..1], after: DateTime [0..1]) : List<Task>
+        +list_overdue() : List<Task>
+        +apply_filters(options: FilterOptions) : List<Task>
         +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
         +delete(taskId: String) : void
@@ -109,7 +121,7 @@ package "services" #DDFFD4 {
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1]) : Task
         +getTask(taskId: String) : Task
-        +listTasks(status: TaskStatus [0..1]) : List<Task>
+        +listTasks(status: TaskStatus [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1], overdue: Boolean [0..1]) : List<Task>
         +startTask(taskId: String) : Task
         +completeTask(taskId: String) : Task
         +reopenTask(taskId: String) : Task
@@ -145,6 +157,7 @@ package "cli" #FFE5E5 {
 
 Task --> TaskStatus : status
 TaskManager --> JsonStorage : storage
+TaskManager --> FilterOptions : uses
 TaskManager ..> TaskNotFoundError : raises
 CommentsService --> TaskManager : task_manager
 CommentsService --> JsonStorage : storage
