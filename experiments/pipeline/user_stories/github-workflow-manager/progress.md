@@ -79,4 +79,4 @@ Implemented five encapsulated state-checking methods on the WorkflowRun class to
 - ✅ Existing enum definitions unchanged
 - ✅ All functionality accessible via `python -m src` (CLI flag and menu option)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 449.7s | Cost: $0.856924 USD | Turns: 15
