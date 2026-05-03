@@ -83,4 +83,4 @@ Successfully implemented workflow run state logic with 5 encapsulated domain met
 - Cancellation detection: 5 tests covering CANCELLED conclusion
 - Mutual exclusivity: 7 tests validating conflicting state pairs
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 305.9s | Cost: $0.508955 USD | Turns: 17
