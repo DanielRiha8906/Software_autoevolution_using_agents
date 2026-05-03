@@ -455,4 +455,4 @@ Use GITHUB_TOKEN from environment? (yes/no): yes
 Successfully imported 5 run(s)
 ```
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 586.0s | Cost: $1.177924 USD | Turns: 24
