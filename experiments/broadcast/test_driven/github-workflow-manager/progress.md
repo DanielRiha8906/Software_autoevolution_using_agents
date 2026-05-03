@@ -239,3 +239,53 @@ Candidate A was selected as the representative solution based on being the first
 ✅ All 58 tests passing (7 new statistics tests + 51 existing tests)
 
 Duration: 348.3s | Cost: $0.769229 USD | Turns: 57
+
+---
+
+# Task 07: Implement WorkflowImportExportService
+
+## Broadcast Results
+
+### Candidate A
+**Approach:** Implemented `WorkflowImportExportService` class with:
+- `export(file_path)` method that serializes all WorkflowRun objects and WorkflowRunAttempt objects to JSON with structure `{runs: [...], attempts: [...]}`
+- `import_from(file_path)` method that validates JSON structure contains required "runs" and "attempts" keys, deserializes objects, and skips duplicates using existence checks
+- Deduplication: runs checked via `get_run_detail()`, attempts checked by matching (run_id, attempt_number) tuple
+- Leverages existing `to_dict()` and `from_dict()` methods from models for serialization with proper timezone-aware datetime handling
+- No external API calls (requests, subprocess) - uses only json stdlib module
+
+**Test Score:** 7/7 passed
+
+### Candidate B
+**Approach:** Identical implementation to Candidate A. Same export/import logic, validation, deduplication strategy, and JSON structure.
+
+**Test Score:** 7/7 passed
+
+### Candidate C
+**Approach:** Identical implementation to Candidates A and B. All tests passing with 100% convergence.
+
+**Test Score:** 7/7 passed
+
+## Winner: Candidate A
+
+All three candidates achieved identical test scores (7/7) with complete convergence on implementation. All correctly implement:
+- JSON export with proper two-key structure (runs and attempts)
+- JSON import with schema validation (raises Exception for missing keys)
+- Deduplication of runs and attempts (skips without overwriting)
+- Preservation of run-attempt relationships via run_id field
+- Proper timezone-aware datetime handling using model serialization methods
+- No external API calls or subprocess usage
+- Deterministic and consistent behavior
+
+Candidate A was selected as the representative solution based on being the first successful implementation.
+
+## Files Changed
+- `src/services/import_export_service.py` — New file: `WorkflowImportExportService` class with `export()` and `import_from()` methods
+- `tests/services/test_import_export_service.py` — New file: Test suite for WorkflowImportExportService (7 tests)
+- `artifacts/class_diagram.puml` — Added `WorkflowImportExportService` class with dependencies on `WorkflowRunService`, `WorkflowRun`, and `WorkflowRunAttempt`
+- `artifacts/use_case_diagram.puml` — Added "Export data to JSON" and "Import data from JSON" use cases in both interactive and CLI modes
+
+## Test Result
+✅ All 65 tests passing (7 new import/export tests + 58 existing tests)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
