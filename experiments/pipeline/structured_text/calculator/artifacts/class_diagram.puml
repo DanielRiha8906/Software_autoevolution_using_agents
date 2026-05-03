@@ -19,16 +19,35 @@ package "models" #DDEEFF {
     }
 
     class CalculationResult {
-        +operation : Operation
-        +operandA : float
-        +operandB : float
+        +operation : String
+        +operand_a : float
+        +operand_b : float
         +result : float
         +timestamp : String
-        +executionTimeMs : float
+        +execution_time_ms : float
         --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : CalculationResult
-        +toString() : String
+        +__post_init__() : void
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : CalculationResult
+        +__str__() : String
+    }
+
+    class MemoryEntry {
+        +operation : String
+        +operand_a : float
+        +operand_b : float
+        +result : Optional[float]
+        +success : bool
+        +error_message : Optional[String]
+        +execution_timestamp : String
+        +execution_time_ms : float
+        +memory_entry_id : Optional[String]
+        --
+        +__post_init__() : void
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : MemoryEntry
+        +__str__() : String
+        +__repr__() : String
     }
 }
 
@@ -91,5 +110,11 @@ CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
+
+note right of MemoryEntry
+  Alternative to CalculationResult
+  with success/error tracking
+  and unique entry ID
+end note
 
 @enduml

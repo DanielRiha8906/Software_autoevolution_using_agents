@@ -125,3 +125,69 @@ Duration: 251.5s | Cost: $0.471421 USD | Turns: 15
 - ✅ No duplicate operations, no naming deviations
 
 Duration: 411.6s | Cost: $0.728537 USD | Turns: 19
+
+## Task 03
+
+**Description:** Introduce MemoryEntry domain class
+
+**Status:** ✅ Complete
+
+### Files Changed
+
+1. `src/models/memory_entry.py` (new file)
+   - Created MemoryEntry dataclass with 9 fields: operation, operand_a, operand_b, result, success, error_message, execution_timestamp, execution_time_ms, memory_entry_id
+   - Implemented __post_init__() for auto-generating execution_timestamp (ISO format) and memory_entry_id (UUID)
+   - Implemented to_dict() for JSON serialization of all fields
+   - Implemented from_dict(classmethod) with full backward compatibility for old CalculationResult JSON format
+   - Implemented __str__() for human-readable representation (distinguishes success/error cases)
+   - Implemented __repr__() for debugging (shows all fields)
+
+2. `src/models/__init__.py`
+   - Added MemoryEntry export to package public API
+   - Kept CalculationResult export for backward compatibility
+
+3. `tests/test_memory_entry.py` (new file)
+   - 22 new tests covering all MemoryEntry functionality
+
+4. `artifacts/class_diagram.puml`
+   - Updated CalculationResult to show actual field names (operand_a, operand_b, execution_time_ms)
+   - Added MemoryEntry class with all 9 fields and methods
+   - Added note on MemoryEntry vs CalculationResult distinction
+
+5. `artifacts/component_diagram.puml`
+   - Updated Domain Models component to include MemoryEntry
+
+### Test Results
+
+- Total tests: 179 (22 new + 157 existing)
+- Passed: 179
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Requirements Met
+
+**Must:**
+- ✅ Created MemoryEntry domain class representing stored calculation attempt
+- ✅ Stores operation name, input operands, result, success/error state, execution timestamp, execution_time_ms
+- ✅ Supports both successful and failed calculations (result can be None when success=False)
+- ✅ Provides JSON serialization (to_dict) and deserialization (from_dict)
+
+**Should:**
+- ✅ Preserved compatibility with existing calculation history (from_dict handles old JSON format with field mapping and defaults)
+- ✅ Clear field names supporting querying and reporting (operation, operand_a, operand_b, result, success, error_message, execution_timestamp, execution_time_ms, memory_entry_id)
+
+**Could:**
+- ✅ Added unique identifier per entry (memory_entry_id field with UUID auto-generation)
+
+**Won't:**
+- ✅ Display formatting kept out of domain class (only __str__/__repr__, no presentation logic)
+
+### Backward Compatibility
+
+- from_dict() handles old JSON format with "timestamp" field (maps to execution_timestamp)
+- from_dict() defaults missing execution_time_ms to 0.0
+- from_dict() infers success=True and error_message=None for old records
+- from_dict() filters unknown fields without raising errors
+- No breaking changes to existing code paths (CalculationResult unchanged)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
