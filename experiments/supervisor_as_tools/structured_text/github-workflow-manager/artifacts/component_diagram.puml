@@ -26,6 +26,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunService" as SVC
     component "AttemptService" as ATTEMPT_SVC
     component "StatisticsService" as STATS_SVC
+    component "GitHubFetchService" as GH_SVC
   }
 
   package "Data Portability" {
@@ -48,6 +49,9 @@ package "GitHub Workflow Manager" {
   }
 }
 
+component "GitHub API" as GH_API
+component "Exceptions" as EXC
+
 MAIN --> CLI
 MAIN --> IM
 
@@ -69,6 +73,12 @@ IM --> STATS_SVC
 
 CLI --> PORTABILITY
 IM --> PORTABILITY
+
+CLI --> GH_SVC
+IM --> GH_SVC
+GH_SVC --> GH_API
+GH_SVC --> EXC
+GH_SVC --> SVC
 
 TRACKER --> SVC
 SVC --> STOR

@@ -3,6 +3,7 @@
 left to right direction
 
 actor User
+actor "GitHub API" as GH_SYS
 
 rectangle "GitHub Workflow Manager" {
 
@@ -25,6 +26,8 @@ rectangle "GitHub Workflow Manager" {
     usecase "Add attempt"              as I_ADD_ATT
     usecase "List attempts"            as I_LIST_ATT
     usecase "Get attempt detail"       as I_DETAIL_ATT
+    usecase "Fetch runs from GitHub"   as I_GH_FETCH
+    usecase "Validate GitHub token"    as I_GH_VALIDATE
     usecase "Exit application"         as I_EXIT
   }
 
@@ -44,11 +47,15 @@ rectangle "GitHub Workflow Manager" {
     usecase "Add attempt"              as C_ADD_ATT
     usecase "List attempts"            as C_LIST_ATT
     usecase "Get attempt detail"       as C_DETAIL_ATT
+    usecase "Fetch runs from GitHub"   as C_GH_FETCH
+    usecase "Validate GitHub token"    as C_GH_VALIDATE
   }
 }
 
 User --> UI
 User --> CLI
+GH_SYS --> I_GH_FETCH
+GH_SYS --> C_GH_FETCH
 
 UI --> I_ADD
 UI --> I_LIST
@@ -56,10 +63,13 @@ UI --> I_DETAIL
 UI --> I_STATE
 UI --> I_FILTER
 UI --> I_ADV_FILTER
+UI --> I_GH_FETCH
 UI --> I_ADD_ATT
 UI --> I_LIST_ATT
 UI --> I_DETAIL_ATT
 UI --> I_EXIT
+
+I_GH_FETCH --> I_GH_VALIDATE : <<include>>
 
 I_FILTER --> I_FBRANCH  : <<extend>>
 I_FILTER --> I_FSTATUS  : <<extend>>
@@ -75,6 +85,7 @@ CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
 CLI --> C_STATE
+CLI --> C_GH_FETCH
 CLI --> C_ADD_ATT
 CLI --> C_LIST_ATT
 CLI --> C_DETAIL_ATT
@@ -86,5 +97,7 @@ C_LIST --> C_FDURATION  : <<extend>>
 C_LIST --> C_FCREATED   : <<extend>>
 C_LIST --> C_FUPDATED   : <<extend>>
 C_LIST --> C_FATTEMPTS  : <<extend>>
+
+C_GH_FETCH --> C_GH_VALIDATE : <<include>>
 
 @enduml

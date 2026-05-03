@@ -1,0 +1,76 @@
+@startuml sequence_diagram_github_fetch
+
+title GitHub Fetch Flow
+
+actor User
+participant "CLI / Interactive Menu" as CLIENT
+participant "GitHubFetchService" as GH_SERVICE
+participant "GitHub API" as GH_API
+participant "WorkflowRunService" as WF_SERVICE
+participant "WorkflowJsonStorage" as STORAGE
+
+User -> CLIENT: Call github-fetch or select "Fetch from GitHub"
+activate CLIENT
+
+Client -> CLIENT: Prompt for owner, repo, token
+Client -> CLIENT: Prompt for optional filters (workflow_id, status, conclusion, limit)
+
+User -> CLIENT: Provide credentials and filters
+activate GH_SERVICE
+Client -> GH_SERVICE: __init__(owner, repo, token)
+deactivate GH_SERVICE
+
+Client -> GH_SERVICE: fetch_workflow_runs(workflow_id, status, conclusion, limit)
+activate GH_SERVICE
+
+GH_SERVICE -> GH_SERVICE: _validate_params(status, conclusion, limit)
+activate GH_SERVICE
+GH_SERVICE -> GH_SERVICE: Check limits and valid enums
+deactivate GH_SERVICE
+
+GH_SERVICE -> GH_SERVICE: Build request endpoint and params
+GH_SERVICE -> GH_SERVICE: _make_request(endpoint, params)
+activate GH_SERVICE
+
+GH_SERVICE -> GH_API: gh api GET /repos/{owner}/{repo}/actions/runs
+activate GH_API
+GH_API -> GH_SERVICE: JSON response with workflow_runs array
+deactivate GH_API
+
+GH_SERVICE -> GH_SERVICE: Parse JSON response
+GH_SERVICE -> GH_SERVICE: For each workflow_run, _map_github_run_to_workflow_run()
+activate GH_SERVICE
+GH_SERVICE -> GH_SERVICE: Convert GitHub run dict to WorkflowRun model
+GH_SERVICE -> GH_SERVICE: Parse timestamps, map status/conclusion enums
+deactivate GH_SERVICE
+deactivate GH_SERVICE
+
+GH_SERVICE -> CLIENT: Return List[WorkflowRun]
+deactivate GH_SERVICE
+
+Client -> CLIENT: Show preview (first 5 runs)
+User -> CLIENT: Confirm import? (yes/no)
+
+alt Import Confirmed
+  Client -> CLIENT: Iterate through each WorkflowRun
+  loop For each run
+    Client -> WF_SERVICE: add_workflow_run(run)
+    activate WF_SERVICE
+    WF_SERVICE -> WF_SERVICE: Check for duplicate (run.id)
+    WF_SERVICE -> WF_SERVICE: Add to _runs list
+    WF_SERVICE -> STORAGE: _persist() to save
+    activate STORAGE
+    STORAGE -> STORAGE: Save to JSON file
+    deactivate STORAGE
+    WF_SERVICE -> CLIENT: Return WorkflowRun
+    deactivate WF_SERVICE
+  end
+  Client -> CLIENT: Print "Imported N runs from GitHub"
+  Client -> CLIENT: Print skipped count (if any duplicates)
+else Import Cancelled
+  Client -> CLIENT: Print "Import cancelled."
+end
+
+deactivate CLIENT
+
+@enduml

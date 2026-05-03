@@ -12,6 +12,8 @@ from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
 from ..services.statistics_service import StatisticsService
 from ..services.data_portability_service import DataPortabilityService
+from ..services.github_fetch_service import GitHubFetchService
+from ..exceptions import GitHubException
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -205,6 +207,31 @@ def build_parser() -> argparse.ArgumentParser:
         help="Fail on invalid data",
     )
 
+    # github-fetch
+    github_fetch_p = sub.add_parser("github-fetch", help="Fetch workflow runs from GitHub")
+    github_fetch_p.add_argument("--owner", required=True, help="Repository owner")
+    github_fetch_p.add_argument("--repo", required=True, help="Repository name")
+    github_fetch_p.add_argument("--token", default=None, help="GitHub API token (optional)")
+    github_fetch_p.add_argument("--workflow-id", default=None, help="Filter by workflow ID (optional)")
+    github_fetch_p.add_argument(
+        "--status",
+        default=None,
+        choices=[s.value for s in WorkflowStatus],
+        help="Filter by status (optional)",
+    )
+    github_fetch_p.add_argument(
+        "--conclusion",
+        default=None,
+        choices=[c.value for c in WorkflowConclusion],
+        help="Filter by conclusion (optional)",
+    )
+    github_fetch_p.add_argument(
+        "--limit",
+        type=int,
+        default=30,
+        help="Maximum number of runs to fetch (1-100, default 30)",
+    )
+
     return parser
 
 
@@ -213,6 +240,7 @@ def run_cli(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
     args=None,
 ) -> None:
     parser = build_parser()
@@ -433,4 +461,45 @@ def run_cli(
                     print(f"  - {err}")
         except (IOError, ValueError) as e:
             print(f"Import failed: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "github-fetch":
+        try:
+            # Create a new GitHubFetchService with provided credentials
+            gh_service = GitHubFetchService(
+                owner=ns.owner,
+                repo=ns.repo,
+                token=ns.token,
+            )
+
+            # Fetch runs from GitHub
+            runs = gh_service.fetch_workflow_runs(
+                workflow_id=ns.workflow_id,
+                status=ns.status,
+                conclusion=ns.conclusion,
+                limit=ns.limit,
+            )
+
+            imported_count = 0
+            skipped_count = 0
+
+            # Import each run
+            for run in runs:
+                try:
+                    service.add_workflow_run(run)
+                    imported_count += 1
+                except ValueError:
+                    # Duplicate run
+                    skipped_count += 1
+
+            print(f"Imported {imported_count} runs from GitHub")
+            if skipped_count > 0:
+                print(f"Skipped {skipped_count} duplicate(s)")
+            sys.exit(0)
+
+        except GitHubException as e:
+            print(f"GitHub error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except ValueError as e:
+            print(f"Validation error: {e}", file=sys.stderr)
             sys.exit(1)

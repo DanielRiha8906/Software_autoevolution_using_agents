@@ -154,7 +154,29 @@ repeat
         :Print "No attempt found with id '<id>'";
       endif
 
-    case (10 — Exit)
+    case (10 — Fetch from GitHub)
+      :Prompt repository owner;
+      :Prompt repository name;
+      :Prompt GitHub API token (optional);
+      :Prompt workflow ID to filter (optional);
+      :Prompt status to filter (optional);
+      :Prompt conclusion to filter (optional);
+      :Prompt maximum runs to fetch (default 30);
+      :GitHubFetchService.fetch_workflow_runs();
+      if (no runs?) then (yes)
+        :Print "No runs found.";
+      else (no)
+        :Show preview (first 5 runs);
+        :Prompt for confirmation to import;
+        if (confirmed?) then (yes)
+          :Import each run via WorkflowRunService.add_workflow_run();
+          :Print "Imported N runs from GitHub";
+        else (no)
+          :Print "Import cancelled.";
+        endif
+      endif
+
+    case (11 — Exit)
       :Print "Goodbye.";
       stop
 
