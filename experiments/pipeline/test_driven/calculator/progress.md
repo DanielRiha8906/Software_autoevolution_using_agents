@@ -243,4 +243,4 @@ Duration: 492.4s | Cost: $0.895554 USD | Turns: 18
 - All functionality exposed via `python -m src` (both one-shot --operation flag and interactive menu)
 - UML diagrams updated to reflect new class structure and operation types
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 391.3s | Cost: $0.758979 USD | Turns: 18
