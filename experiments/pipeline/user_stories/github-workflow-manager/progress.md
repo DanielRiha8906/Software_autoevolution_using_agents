@@ -123,4 +123,4 @@ Implemented `WorkflowRunAttempt` as a first-class data model to represent indivi
 - ✅ All functionality accessible via `python -m src attempt` (add/list/detail)
 - ✅ Interactive menu options available
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 549.7s | Cost: $1.008832 USD | Turns: 18
