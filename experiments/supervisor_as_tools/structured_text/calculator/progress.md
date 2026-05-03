@@ -355,4 +355,4 @@ Successfully implemented comprehensive statistics functionality for the calculat
 - Existing memory commands unchanged (list, detail, failures, summary, clear)
 - New stats functionality is additive (does not alter existing behavior)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 318.1s | Cost: $0.614727 USD | Turns: 25
