@@ -3,6 +3,7 @@ import sys
 from ..models.operation import Operation
 from ..models.memory_entry import ErrorEntry, ResultEntry
 from ..services.calculator_service import CalculatorService
+from ..services.memory_service import MemoryService
 
 
 class CalculatorCLI:
@@ -17,8 +18,9 @@ class CalculatorCLI:
         (Operation.MODULO,   "Modulo"),
     ]
 
-    def __init__(self, service: CalculatorService) -> None:
+    def __init__(self, service: CalculatorService, memory_service: MemoryService) -> None:
         self.service = service
+        self.memory_service = memory_service
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -80,6 +82,49 @@ class CalculatorCLI:
     def show_history_command(self) -> None:
         """Show calculation history and exit (one-shot mode)."""
         self._show_history()
+
+    def memory_retrieve_command(self) -> None:
+        """Retrieve and display all memory entries (one-shot mode)."""
+        entries = self.memory_service.retrieve()
+        if not entries:
+            print("No memory entries recorded yet.")
+            return
+        print(f"Retrieved {len(entries)} memory entries:")
+        for entry in entries:
+            self._print_memory_entry(entry)
+
+    def memory_store_command(self, operation_str: str, operands: list[float], result: float | None = None, error: str | None = None) -> None:
+        """Store a memory entry (one-shot mode).
+
+        Args:
+            operation_str: The operation name
+            operands: List of operands
+            result: Optional result value (for success)
+            error: Optional error message (for failure)
+        """
+        from ..models.memory_entry import ResultEntry, ErrorEntry
+
+        try:
+            if error is not None:
+                entry = ErrorEntry(
+                    operation=operation_str,
+                    operands=operands,
+                    error_message=error,
+                )
+            else:
+                if result is None:
+                    print("Error: result required for successful entry", file=sys.stderr)
+                    sys.exit(1)
+                entry = ResultEntry(
+                    operation=operation_str,
+                    operands=operands,
+                    result=result,
+                )
+            self.memory_service.store(entry)
+            print(f"Stored {entry}")
+        except Exception as exc:
+            print(f"Error storing entry: {exc}", file=sys.stderr)
+            sys.exit(1)
 
     # ------------------------------------------------------------------
     # Private helpers

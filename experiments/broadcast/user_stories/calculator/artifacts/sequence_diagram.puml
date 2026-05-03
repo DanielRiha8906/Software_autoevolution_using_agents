@@ -3,12 +3,12 @@
 actor User
 participant CalculatorCLI
 participant CalculatorService
+participant MemoryService
 participant Calculator
 participant JsonStorage
-participant CalculationResult
-participant MemoryEntry
 
-User -> CalculatorCLI: perform(operation, a, b)
+== Calculation Flow with Memory ==
+User -> CalculatorCLI: run_interactive() or run_command()
 activate CalculatorCLI
 
 CalculatorCLI -> CalculatorService: perform_with_memory(operation, a, b)
@@ -18,31 +18,12 @@ note over CalculatorService: start_time = perf_counter()
 
 CalculatorService -> Calculator: calculate(operation, a, b)
 activate Calculator
-
-Calculator -> Calculator: dispatch[operation](a, b)
-note over Calculator: arithmetic computation
-
 Calculator --> CalculatorService: result
 deactivate Calculator
 
-note over CalculatorService: end_time = perf_counter()\nexecution_time_ms = (end_time - start_time) * 1000
+note over CalculatorService: end_time = perf_counter()\ncreate ResultEntry with execution_time_ms
 
-CalculatorService -> CalculationResult: create(operation, operand_a, operand_b, result, execution_time_ms)
-activate CalculationResult
-CalculationResult --> CalculatorService: instance
-deactivate CalculationResult
-
-CalculatorService -> MemoryEntry: create(operation, operand_a, operand_b, result, execution_time_ms)
-activate MemoryEntry
-MemoryEntry --> CalculatorService: ResultEntry instance
-deactivate MemoryEntry
-
-CalculatorService -> JsonStorage: save(calc_result)
-activate JsonStorage
-JsonStorage --> CalculatorService: saved
-deactivate JsonStorage
-
-CalculatorService -> JsonStorage: save_memory(memory_entry)
+CalculatorService -> JsonStorage: save(memory_entry)
 activate JsonStorage
 JsonStorage --> CalculatorService: saved
 deactivate JsonStorage
@@ -50,7 +31,43 @@ deactivate JsonStorage
 CalculatorService --> CalculatorCLI: MemoryEntry
 deactivate CalculatorService
 
-CalculatorCLI -> User: show result with execution_time_ms
+CalculatorCLI -> User: show result
+deactivate CalculatorCLI
+
+== Memory Retrieve Flow ==
+User -> CalculatorCLI: --memory-retrieve flag
+activate CalculatorCLI
+
+CalculatorCLI -> MemoryService: retrieve()
+activate MemoryService
+
+MemoryService -> JsonStorage: load_memory_all()
+activate JsonStorage
+JsonStorage --> MemoryService: list[MemoryEntry]
+deactivate JsonStorage
+
+MemoryService --> CalculatorCLI: list[MemoryEntry]
+deactivate MemoryService
+
+CalculatorCLI -> User: display memory history
+deactivate CalculatorCLI
+
+== Memory Store Flow ==
+User -> CalculatorCLI: --memory-store OP [--result R | --error MSG]
+activate CalculatorCLI
+
+CalculatorCLI -> MemoryService: store(entry)
+activate MemoryService
+
+MemoryService -> JsonStorage: save(memory_entry)
+activate JsonStorage
+JsonStorage --> MemoryService: saved
+deactivate JsonStorage
+
+MemoryService --> CalculatorCLI: done
+deactivate MemoryService
+
+CalculatorCLI -> User: confirm stored
 deactivate CalculatorCLI
 
 @enduml

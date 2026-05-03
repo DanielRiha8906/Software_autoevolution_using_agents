@@ -85,6 +85,14 @@ package "services" #DDFFD4 {
         +getHistory() : List<CalculationResult>
         +get_memory_history() : List<MemoryEntry>
     }
+
+    class MemoryService {
+        -storage : JsonStorage
+        --
+        +MemoryService(storage: JsonStorage)
+        +store(entry: MemoryEntry) : void
+        +retrieve() : List<MemoryEntry>
+    }
 }
 
 package "storage" #FFF3CC {
@@ -105,20 +113,26 @@ package "cli" #FFE5E5 {
     class CalculatorCLI {
         -MENU : List<Tuple<Operation, String>>
         -service : CalculatorService
+        -memory_service : MemoryService
         --
-        +CalculatorCLI(service: CalculatorService)
+        +CalculatorCLI(service: CalculatorService, memory_service: MemoryService)
         +runInteractive() : void
         +runCommand(operation: String, a: float, b: float) : void
+        +memory_retrieve_command() : void
+        +memory_store_command(op: String, operands: List<float>) : void
         -printMenu() : void
         -resolveMenuChoice(choice: String) : Operation [0..1]
         -promptNumber(prompt: String) : float [0..1]
         -showHistory() : void
+        -showMemoryHistory() : void
     }
 }
 
 CalculatorCLI --> CalculatorService : service
+CalculatorCLI --> MemoryService : memory_service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
+MemoryService --> JsonStorage : storage
 
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> MemoryEntry : create
