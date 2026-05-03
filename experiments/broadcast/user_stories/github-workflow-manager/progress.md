@@ -264,4 +264,4 @@ pytest tests/ -q
 
 All 40 tests pass (31 new + 9 existing). No regressions in existing tests.
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 391.4s | Cost: $0.816080 USD | Turns: 58
