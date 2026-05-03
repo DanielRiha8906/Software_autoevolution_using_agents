@@ -306,4 +306,4 @@ The memory service is now fully accessible via:
 2. **One-shot CLI:** `python -m src --memory` displays all entries and exits
 3. **Help:** `python -m src --help` documents the --memory flag
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 656.7s | Cost: $1.174119 USD | Turns: 16
