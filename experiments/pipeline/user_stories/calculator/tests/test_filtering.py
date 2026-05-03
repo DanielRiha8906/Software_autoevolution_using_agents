@@ -40,10 +40,10 @@ def empty_storage(mock_storage):
 def sample_entries():
     """Create sample MemoryEntry objects for testing."""
     return [
-        MemoryEntry("add", 5, 3, 8, None, None, _TS1),
-        MemoryEntry("subtract", 5, 3, 2, None, None, _TS2),
-        MemoryEntry("divide", 10, 0, None, "Division by zero is not allowed", "ZeroDivisionError", _TS3),
-        MemoryEntry("multiply", 4, 5, 20, None, None, _TS4),
+        MemoryEntry("add", 5, 3, 8, None, None, timestamp=_TS1),
+        MemoryEntry("subtract", 5, 3, 2, None, None, timestamp=_TS2),
+        MemoryEntry("divide", 10, 0, None, "Division by zero is not allowed", "ZeroDivisionError", timestamp=_TS3),
+        MemoryEntry("multiply", 4, 5, 20, None, None, timestamp=_TS4),
     ]
 
 
@@ -74,9 +74,9 @@ class TestFilterByOperation:
     def test_filter_by_operation_multiple_matches(self, mock_storage, memory_service):
         """Filter returns all entries matching operation."""
         entries = [
-            MemoryEntry("add", 5, 3, 8, None, None, _TS1),
-            MemoryEntry("add", 10, 2, 12, None, None, _TS2),
-            MemoryEntry("subtract", 5, 3, 2, None, None, _TS3),
+            MemoryEntry("add", 5, 3, 8, None, None, timestamp=_TS1),
+            MemoryEntry("add", 10, 2, 12, None, None, timestamp=_TS2),
+            MemoryEntry("subtract", 5, 3, 2, None, None, timestamp=_TS3),
         ]
         mock_storage.load_all.return_value = entries
         memory_service.storage = mock_storage
@@ -105,9 +105,9 @@ class TestFilterByOperation:
     def test_filter_by_operation_preserves_order(self, mock_storage, memory_service):
         """Filter preserves chronological order."""
         entries = [
-            MemoryEntry("add", 1, 1, 2, None, None, _TS1),
-            MemoryEntry("add", 5, 5, 10, None, None, _TS2),
-            MemoryEntry("add", 10, 10, 20, None, None, _TS3),
+            MemoryEntry("add", 1, 1, 2, None, None, timestamp=_TS1),
+            MemoryEntry("add", 5, 5, 10, None, None, timestamp=_TS2),
+            MemoryEntry("add", 10, 10, 20, None, None, timestamp=_TS3),
         ]
         mock_storage.load_all.return_value = entries
         memory_service.storage = mock_storage
@@ -517,7 +517,7 @@ class TestCLIFilterHistoryIntegration:
         """Prompt for all operations returns None."""
         from src.cli.calculator_cli import CalculatorCLI
 
-        cli = CalculatorCLI(MagicMock())
+        cli = CalculatorCLI(MagicMock(), MagicMock())
         with patch("builtins.input", return_value="all"):
             result = cli._prompt_operation_selection()
 
@@ -527,7 +527,7 @@ class TestCLIFilterHistoryIntegration:
         """Prompt with empty input returns None."""
         from src.cli.calculator_cli import CalculatorCLI
 
-        cli = CalculatorCLI(MagicMock())
+        cli = CalculatorCLI(MagicMock(), MagicMock())
         with patch("builtins.input", return_value=""):
             result = cli._prompt_operation_selection()
 
@@ -537,7 +537,7 @@ class TestCLIFilterHistoryIntegration:
         """Prompt for single operation returns list with one operation."""
         from src.cli.calculator_cli import CalculatorCLI
 
-        cli = CalculatorCLI(MagicMock())
+        cli = CalculatorCLI(MagicMock(), MagicMock())
         with patch("builtins.input", return_value="1"):
             result = cli._prompt_operation_selection()
 
@@ -548,7 +548,7 @@ class TestCLIFilterHistoryIntegration:
         """Prompt for multiple operations returns list."""
         from src.cli.calculator_cli import CalculatorCLI
 
-        cli = CalculatorCLI(MagicMock())
+        cli = CalculatorCLI(MagicMock(), MagicMock())
         with patch("builtins.input", return_value="1,3,5"):
             result = cli._prompt_operation_selection()
 
@@ -561,7 +561,7 @@ class TestCLIFilterHistoryIntegration:
         """Prompt for success state returns 'success'."""
         from src.cli.calculator_cli import CalculatorCLI
 
-        cli = CalculatorCLI(MagicMock())
+        cli = CalculatorCLI(MagicMock(), MagicMock())
         with patch("builtins.input", return_value="1"):
             result = cli._prompt_state_selection()
 
@@ -571,7 +571,7 @@ class TestCLIFilterHistoryIntegration:
         """Prompt for error state returns 'error'."""
         from src.cli.calculator_cli import CalculatorCLI
 
-        cli = CalculatorCLI(MagicMock())
+        cli = CalculatorCLI(MagicMock(), MagicMock())
         with patch("builtins.input", return_value="2"):
             result = cli._prompt_state_selection()
 
@@ -581,7 +581,7 @@ class TestCLIFilterHistoryIntegration:
         """Prompt for both states returns 'both'."""
         from src.cli.calculator_cli import CalculatorCLI
 
-        cli = CalculatorCLI(MagicMock())
+        cli = CalculatorCLI(MagicMock(), MagicMock())
         with patch("builtins.input", return_value="3"):
             result = cli._prompt_state_selection()
 
@@ -591,7 +591,7 @@ class TestCLIFilterHistoryIntegration:
         """Show filtered history with no results."""
         from src.cli.calculator_cli import CalculatorCLI
 
-        cli = CalculatorCLI(MagicMock())
+        cli = CalculatorCLI(MagicMock(), MagicMock())
         cli.service.filter_history.return_value = []
 
         cli._show_filtered_history(["add"], "success")
@@ -603,10 +603,10 @@ class TestCLIFilterHistoryIntegration:
         """Show filtered history with results."""
         from src.cli.calculator_cli import CalculatorCLI
 
-        cli = CalculatorCLI(MagicMock())
+        cli = CalculatorCLI(MagicMock(), MagicMock())
         entries = [
-            MemoryEntry("add", 1, 1, 2, None, None, _TS1),
-            MemoryEntry("add", 5, 5, 10, None, None, _TS2),
+            MemoryEntry("add", 1, 1, 2, None, None, timestamp=_TS1),
+            MemoryEntry("add", 5, 5, 10, None, None, timestamp=_TS2),
         ]
         cli.service.filter_history.return_value = entries
 

@@ -10,6 +10,7 @@ rectangle "Calculator Application" {
     usecase "Perform calculation" as UC_Calc
     usecase "View calculation history" as UC_History
     usecase "Filter calculation history" as UC_Filter
+    usecase "View statistics" as UC_Stats
     usecase "Exit application" as UC_Exit
 
 }
@@ -17,6 +18,7 @@ rectangle "Calculator Application" {
 User --> UC_Calc
 User --> UC_History
 User --> UC_Filter
+User --> UC_Stats
 User --> UC_Exit
 
 @enduml

@@ -10,7 +10,8 @@ _UUID = "550e8400-e29b-41d4-a716-446655440000"
 
 def _make_cli():
     service = MagicMock()
-    return CalculatorCLI(service), service
+    stats_service = MagicMock()
+    return CalculatorCLI(service, stats_service), service
 
 
 class TestRunCommandWithMemoryEntry:
@@ -19,7 +20,7 @@ class TestRunCommandWithMemoryEntry:
     def test_prints_successful_result(self, capsys):
         """Successful result is printed."""
         cli, service = _make_cli()
-        entry = MemoryEntry("add", 3, 5, 8, None, None, _TS, _UUID)
+        entry = MemoryEntry("add", 3, 5, 8, None, None, timestamp=_TS, uuid=_UUID)
         service.perform.return_value = entry
         cli.run_command("add", 3, 5)
         assert "8" in capsys.readouterr().out
@@ -27,7 +28,7 @@ class TestRunCommandWithMemoryEntry:
     def test_successful_result_no_exit(self, capsys):
         """Successful result does not exit."""
         cli, service = _make_cli()
-        entry = MemoryEntry("add", 3, 5, 8, None, None, _TS, _UUID)
+        entry = MemoryEntry("add", 3, 5, 8, None, None, timestamp=_TS, uuid=_UUID)
         service.perform.return_value = entry
         cli.run_command("add", 3, 5)
         # No SystemExit should be raised
@@ -36,7 +37,7 @@ class TestRunCommandWithMemoryEntry:
         """Error result causes exit."""
         cli, service = _make_cli()
         entry = MemoryEntry(
-            "divide", 5, 0, None, "Division by zero is not allowed", "ValueError", _TS, _UUID
+            "divide", 5, 0, None, "Division by zero is not allowed", "ValueError", timestamp=_TS, uuid=_UUID
         )
         service.perform.return_value = entry
         with pytest.raises(SystemExit):
@@ -46,7 +47,7 @@ class TestRunCommandWithMemoryEntry:
         """Error message is printed to stderr."""
         cli, service = _make_cli()
         entry = MemoryEntry(
-            "divide", 5, 0, None, "Division by zero is not allowed", "ValueError", _TS, _UUID
+            "divide", 5, 0, None, "Division by zero is not allowed", "ValueError", timestamp=_TS, uuid=_UUID
         )
         service.perform.return_value = entry
         with pytest.raises(SystemExit):
@@ -103,14 +104,14 @@ class TestRunCommandWithMemoryEntry:
         cli, service = _make_cli()
 
         # Add
-        entry1 = MemoryEntry("add", 1, 2, 3, None, None, _TS, "uuid1")
+        entry1 = MemoryEntry("add", 1, 2, 3, None, None, timestamp=_TS, uuid="uuid1")
         service.perform.return_value = entry1
         cli.run_command("add", 1, 2)
         assert "3" in capsys.readouterr().out
 
         # Multiply
         capsys.readouterr()  # Clear output
-        entry2 = MemoryEntry("multiply", 3, 4, 12, None, None, _TS, "uuid2")
+        entry2 = MemoryEntry("multiply", 3, 4, 12, None, None, timestamp=_TS, uuid="uuid2")
         service.perform.return_value = entry2
         cli.run_command("multiply", 3, 4)
         assert "12" in capsys.readouterr().out
@@ -134,7 +135,7 @@ class TestRunCommandWithMemoryEntry:
     def test_all_operations_success(self, capsys, op, a, b, expected_result):
         """All operations print results correctly."""
         cli, service = _make_cli()
-        entry = MemoryEntry(op, a, b, float(expected_result), None, None, _TS, _UUID)
+        entry = MemoryEntry(op, a, b, float(expected_result), None, None, timestamp=_TS, uuid=_UUID)
         service.perform.return_value = entry
         cli.run_command(op, a, b)
         assert expected_result in capsys.readouterr().out
@@ -146,9 +147,9 @@ class TestRunInteractiveWithMemoryEntry:
     def test_successful_operation_displayed(self, capsys):
         """Successful operation result is displayed."""
         cli, service = _make_cli()
-        entry = MemoryEntry("add", 3, 5, 8, None, None, _TS, _UUID)
+        entry = MemoryEntry("add", 3, 5, 8, None, None, timestamp=_TS, uuid=_UUID)
         service.perform.return_value = entry
-        with patch("builtins.input", side_effect=["1", "3", "5", "11"]):
+        with patch("builtins.input", side_effect=["1", "3", "5", "12"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert "8" in output or "Result" in output
@@ -157,10 +158,10 @@ class TestRunInteractiveWithMemoryEntry:
         """Error operation displays error message."""
         cli, service = _make_cli()
         entry = MemoryEntry(
-            "divide", 5, 0, None, "Division by zero is not allowed", "ValueError", _TS, _UUID
+            "divide", 5, 0, None, "Division by zero is not allowed", "ValueError", timestamp=_TS, uuid=_UUID
         )
         service.perform.return_value = entry
-        with patch("builtins.input", side_effect=["2", "5", "0", "11"]):
+        with patch("builtins.input", side_effect=["2", "5", "0", "12"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert "Error" in output and "Division by zero" in output
@@ -176,7 +177,7 @@ class TestRunInteractiveWithMemoryEntry:
         success_entry = MemoryEntry("add", 1, 2, 3, None, None, _TS, "uuid2")
         service.perform.side_effect = [error_entry, success_entry]
 
-        with patch("builtins.input", side_effect=["2", "5", "0", "1", "1", "2", "11"]):
+        with patch("builtins.input", side_effect=["2", "5", "0", "1", "1", "2", "12"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -188,10 +189,10 @@ class TestRunInteractiveWithMemoryEntry:
         cli, service = _make_cli()
         entries = [
             MemoryEntry("add", 1, 2, 3, None, None, _TS, "uuid1"),
-            MemoryEntry("divide", 5, 0, None, "Division by zero", "ValueError", _TS, "uuid2"),
+            MemoryEntry("divide", 5, 0, None, "Division by zero", "ValueError", timestamp=_TS, uuid="uuid2"),
         ]
         service.get_history.return_value = entries
-        with patch("builtins.input", side_effect=["9", "11"]):
+        with patch("builtins.input", side_effect=["9", "12"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert "ERROR" in output and "Division by zero" in output
@@ -201,7 +202,7 @@ class TestRunInteractiveWithMemoryEntry:
         cli, service = _make_cli()
         entries = [MemoryEntry("add", 1, 2, 3, None, None, _TS, "uuid1")]
         service.get_history.return_value = entries
-        with patch("builtins.input", side_effect=["9", "11"]):
+        with patch("builtins.input", side_effect=["9", "12"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert "1 + 2 = 3" in output
@@ -209,9 +210,9 @@ class TestRunInteractiveWithMemoryEntry:
     def test_mixed_success_and_error_operations(self, capsys):
         """Multiple operations with mix of success and error."""
         cli, service = _make_cli()
-        success1 = MemoryEntry("add", 1, 1, 2, None, None, _TS, "uuid1")
-        error1 = MemoryEntry("sqrt", -1, 0, None, "Cannot take square root", "ValueError", _TS, "uuid2")
-        success2 = MemoryEntry("multiply", 3, 3, 9, None, None, _TS, "uuid3")
+        success1 = MemoryEntry("add", 1, 1, 2, None, None, timestamp=_TS, uuid="uuid1")
+        error1 = MemoryEntry("sqrt", -1, 0, None, "Cannot take square root", "ValueError", timestamp=_TS, uuid="uuid2")
+        success2 = MemoryEntry("multiply", 3, 3, 9, None, None, timestamp=_TS, uuid="uuid3")
 
         service.perform.side_effect = [success1, error1, success2]
 
@@ -219,7 +220,7 @@ class TestRunInteractiveWithMemoryEntry:
             "1", "1", "1",  # Add
             "6", "-1", "0",  # Sqrt (error)
             "3", "3", "3",  # Multiply
-            "11"  # Exit
+            "12"  # Exit
         ]):
             cli.run_interactive()
 
@@ -241,9 +242,9 @@ class TestRunInteractiveWithMemoryEntry:
     def test_all_interactive_operations(self, capsys, op_choice, op_name, a, b, result):
         """All operations work in interactive mode."""
         cli, service = _make_cli()
-        entry = MemoryEntry(op_name, a, b, float(result), None, None, _TS, _UUID)
+        entry = MemoryEntry(op_name, a, b, float(result), None, None, timestamp=_TS, uuid=_UUID)
         service.perform.return_value = entry
-        with patch("builtins.input", side_effect=[op_choice, str(a), str(b), "11"]):
+        with patch("builtins.input", side_effect=[op_choice, str(a), str(b), "12"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert str(result) in output
@@ -263,7 +264,7 @@ class TestShowHistoryWithMemoryEntry:
         """Display successful entries."""
         cli, service = _make_cli()
         entries = [
-            MemoryEntry("add", 1, 2, 3, None, None, "2026-05-03T14:30:00", "uuid1"),
+            MemoryEntry("add", 1, 2, 3, None, None, timestamp="2026-05-03T14:30:00", uuid="uuid1"),
         ]
         service.get_history.return_value = entries
         cli._show_history()
@@ -287,9 +288,9 @@ class TestShowHistoryWithMemoryEntry:
         """Display mixed success and error entries."""
         cli, service = _make_cli()
         entries = [
-            MemoryEntry("add", 1, 2, 3, None, None, _TS, "uuid1"),
-            MemoryEntry("divide", 5, 0, None, "Division by zero is not allowed", "ValueError", _TS, "uuid2"),
-            MemoryEntry("multiply", 3, 4, 12, None, None, _TS, "uuid3"),
+            MemoryEntry("add", 1, 2, 3, None, None, timestamp=_TS, uuid="uuid1"),
+            MemoryEntry("divide", 5, 0, None, "Division by zero is not allowed", "ValueError", timestamp=_TS, uuid="uuid2"),
+            MemoryEntry("multiply", 3, 4, 12, None, None, timestamp=_TS, uuid="uuid3"),
         ]
         service.get_history.return_value = entries
         cli._show_history()
@@ -315,7 +316,7 @@ class TestShowHistoryWithMemoryEntry:
         """Error entries show error info without timestamp."""
         cli, service = _make_cli()
         entries = [
-            MemoryEntry("sqrt", -5, 0, None, "Cannot take square root of negative number", "ValueError", _TS, "uuid1"),
+            MemoryEntry("sqrt", -5, 0, None, "Cannot take square root of negative number", "ValueError", timestamp=_TS, uuid="uuid1"),
         ]
         service.get_history.return_value = entries
         cli._show_history()
@@ -328,7 +329,7 @@ class TestShowHistoryWithMemoryEntry:
         """Success entries show timestamp."""
         cli, service = _make_cli()
         entries = [
-            MemoryEntry("add", 1, 2, 3, None, None, "2026-05-03T14:30:00", "uuid1"),
+            MemoryEntry("add", 1, 2, 3, None, None, timestamp="2026-05-03T14:30:00", uuid="uuid1"),
         ]
         service.get_history.return_value = entries
         cli._show_history()

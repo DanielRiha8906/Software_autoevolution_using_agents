@@ -6,15 +6,18 @@ from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
+from .services.statistics_service import StatisticsService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
 
-def _build_service() -> CalculatorService:
+def _build_services() -> tuple[CalculatorService, StatisticsService]:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
     storage = JsonStorage(storage_path)
     memory_service = MemoryService(storage)
-    return CalculatorService(Calculator(), memory_service)
+    calculator_service = CalculatorService(Calculator(), memory_service)
+    statistics_service = StatisticsService(memory_service)
+    return calculator_service, statistics_service
 
 
 def _as_number(value: str) -> float:
@@ -53,6 +56,11 @@ def main() -> None:
         help="Filter history by result state: success (no error), error (failed), or both",
     )
     parser.add_argument(
+        "--statistics",
+        action="store_true",
+        help="Display calculation statistics",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -60,8 +68,13 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    service = _build_service()
-    cli = CalculatorCLI(service)
+    calculator_service, statistics_service = _build_services()
+    cli = CalculatorCLI(calculator_service, statistics_service)
+
+    # Handle --statistics flag first
+    if args.statistics:
+        cli._show_statistics()
+        sys.exit(0)
 
     # Handle --show-history (with optional filters)
     if args.show_history or args.filter_operation or args.filter_state:

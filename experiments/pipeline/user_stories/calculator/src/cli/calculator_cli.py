@@ -3,6 +3,7 @@ import sys
 from ..models.operation import Operation
 from ..models.memory_entry import MemoryEntry
 from ..services.calculator_service import CalculatorService
+from ..services.statistics_service import StatisticsService
 
 
 class CalculatorCLI:
@@ -17,8 +18,9 @@ class CalculatorCLI:
         (Operation.MODULO,   "Modulo"),
     ]
 
-    def __init__(self, service: CalculatorService) -> None:
+    def __init__(self, service: CalculatorService, statistics_service: StatisticsService) -> None:
         self.service = service
+        self.statistics_service = statistics_service
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -32,7 +34,8 @@ class CalculatorCLI:
 
             history_opt = len(self._MENU) + 1
             filter_opt  = len(self._MENU) + 2
-            exit_opt    = len(self._MENU) + 3
+            statistics_opt = len(self._MENU) + 3
+            exit_opt    = len(self._MENU) + 4
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -44,6 +47,10 @@ class CalculatorCLI:
 
             if choice == str(filter_opt):
                 self._run_filter_menu()
+                continue
+
+            if choice == str(statistics_opt):
+                self._show_statistics()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -88,7 +95,8 @@ class CalculatorCLI:
             print(f"  {i}. {label}")
         print(f"  {len(self._MENU) + 1}. View history")
         print(f"  {len(self._MENU) + 2}. Filter history")
-        print(f"  {len(self._MENU) + 3}. Exit")
+        print(f"  {len(self._MENU) + 3}. Show statistics")
+        print(f"  {len(self._MENU) + 4}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -211,4 +219,22 @@ class CalculatorCLI:
                 print(f"  {i}. {entry.operation} ({entry.operand_a}, {entry.operand_b}) = ERROR: {entry.error}")
             else:
                 print(f"  {i}. {entry}  [{entry.timestamp}]")
+        print()
+
+    def _show_statistics(self) -> None:
+        """Display calculation statistics."""
+        stats = self.statistics_service.calculate_statistics()
+        print()
+        print("  === Calculation Statistics ===")
+        print(f"  Total Calculations: {stats.total_calculations}")
+        print(f"  Total Errors: {stats.total_errors}")
+        print(f"  Error Rate: {stats.error_rate_percent}%")
+        print(f"  Average Execution Time: {stats.average_execution_time_ms} ms")
+        print("  Operations Count:")
+        if stats.operations_count:
+            for op_name in sorted(stats.operations_count.keys()):
+                count = stats.operations_count[op_name]
+                print(f"    {op_name}: {count}")
+        else:
+            print("    (none)")
         print()
