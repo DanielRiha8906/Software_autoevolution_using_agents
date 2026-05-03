@@ -72,6 +72,13 @@ def build_parser() -> argparse.ArgumentParser:
     detail_p = sub.add_parser("detail", help="Show details for a single run")
     detail_p.add_argument("run_id", help="Run ID")
 
+    # query
+    query_p = sub.add_parser("query", help="Query runs with multiple optional filters")
+    query_p.add_argument("--min-duration", type=float, default=None, help="Minimum duration in seconds")
+    query_p.add_argument("--max-duration", type=float, default=None, help="Maximum duration in seconds")
+    query_p.add_argument("--created-before", default=None, help="Created before (ISO 8601 format, must be timezone-aware)")
+    query_p.add_argument("--created-after", default=None, help="Created after (ISO 8601 format, must be timezone-aware)")
+
     return parser
 
 
@@ -113,3 +120,34 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_run(run))
+
+    elif ns.command == "query":
+        try:
+            created_before = None
+            created_after = None
+            if ns.created_before:
+                created_before = datetime.fromisoformat(ns.created_before)
+                if created_before.tzinfo is None:
+                    print("Error: created-before must be timezone-aware (ISO 8601 format)", file=sys.stderr)
+                    sys.exit(1)
+            if ns.created_after:
+                created_after = datetime.fromisoformat(ns.created_after)
+                if created_after.tzinfo is None:
+                    print("Error: created-after must be timezone-aware (ISO 8601 format)", file=sys.stderr)
+                    sys.exit(1)
+
+            runs = service.query(
+                min_duration=ns.min_duration,
+                max_duration=ns.max_duration,
+                created_before=created_before,
+                created_after=created_after,
+            )
+
+            if not runs:
+                print("No matching runs.")
+                return
+            for run in runs:
+                print(_fmt_run(run))
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)

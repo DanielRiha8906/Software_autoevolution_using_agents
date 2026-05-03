@@ -1,5 +1,6 @@
 import sys
 from typing import Optional
+from datetime import datetime
 
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
@@ -107,11 +108,54 @@ def _filter_menu(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
+def _query_menu(service: WorkflowRunService) -> None:
+    print("\n--- Query Runs ---")
+    min_duration_raw = _prompt("Min duration in seconds (leave blank to skip)", "")
+    max_duration_raw = _prompt("Max duration in seconds (leave blank to skip)", "")
+    created_before_raw = _prompt("Created before (ISO 8601 format, leave blank to skip)", "")
+    created_after_raw = _prompt("Created after (ISO 8601 format, leave blank to skip)", "")
+
+    try:
+        min_duration = float(min_duration_raw) if min_duration_raw else None
+        max_duration = float(max_duration_raw) if max_duration_raw else None
+        created_before = None
+        created_after = None
+
+        if created_before_raw:
+            created_before = datetime.fromisoformat(created_before_raw)
+            if created_before.tzinfo is None:
+                print("Error: created-before must be timezone-aware (ISO 8601 format)")
+                return
+
+        if created_after_raw:
+            created_after = datetime.fromisoformat(created_after_raw)
+            if created_after.tzinfo is None:
+                print("Error: created-after must be timezone-aware (ISO 8601 format)")
+                return
+
+        runs = service.query(
+            min_duration=min_duration,
+            max_duration=max_duration,
+            created_before=created_before,
+            created_after=created_after,
+        )
+
+        if not runs:
+            print("\nNo matching runs.")
+            return
+        print(f"\n--- {len(runs)} matching run(s) ---")
+        for run in runs:
+            print(_fmt_run(run))
+    except ValueError as e:
+        print(f"Error: {e}")
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
     ("Get run detail", _detail_run),
     ("Filter runs", _filter_menu),
+    ("Query runs", _query_menu),
     ("Exit", None),
 ]
 

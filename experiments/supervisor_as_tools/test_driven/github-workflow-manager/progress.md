@@ -75,17 +75,21 @@ Duration: 112.8s | Cost: $0.254861 USD | Turns: 22
 **Status:** ✅ Completed
 
 **Files Changed:**
-- `src/services/workflow_run_service.py` — Updated `__init__()` constructor to accept optional `attempt_service` parameter, and implemented `query()` method supporting filters for duration range, timestamp range, and attempt presence. All filters use AND logic, with timezone validation and no type conversion for run_id lookups.
-- `tests/test_workflow_run_service.py` — Added 8 new comprehensive tests covering duration filtering, timestamp filtering (created_before/created_after), attempt presence filtering, combined filters with AND logic, and edge cases (empty results, list return type verification)
-- `artifacts/class_diagram.puml` — Updated WorkflowRunService class to show new `query()` method signature and optional dependency on AttemptService
+- `src/services/workflow_run_service.py` — Implemented `query()` method supporting filters for duration range, timestamp range, and attempt presence. All filters use AND logic, with timezone validation for datetime parameters.
+- `src/cli/workflow_cli.py` — Added "query" subcommand with flags for min_duration, max_duration, created_before, and created_after. Supports filtering runs via CLI with proper error handling for naive datetimes.
+- `src/cli/interactive_menu.py` — Added "Query runs" menu option prompting for optional duration and timestamp filters. Displays results in same format as other menu commands.
+- `tests/test_workflow_run_service.py` — Added 8 comprehensive tests covering duration filtering, timestamp filtering, attempt presence filtering, combined filters with AND logic, and edge cases.
+- `artifacts/use_case_diagram.puml` — Updated to show new "Query runs" usecase in both Interactive Mode and Command-line Mode packages with sub-usecases for query filters.
 
 **Test Results:**
-- All 14 tests pass (8 new query tests + 6 existing service tests)
+- All 87 tests pass (8 new query tests + 79 existing tests)
 - Duration range filtering verified with min/max bounds
-- Timezone-aware datetime filtering with proper validation
+- Timezone-aware datetime filtering with proper validation (rejects naive datetimes)
 - Attempt presence filtering correctly identifies runs with/without attempts via AttemptService
 - Combined filters with AND logic verified
-- Empty list returned when no matches (not None)
+- Empty list returned when no matches
+- CLI help text updated to show query command
+- Interactive menu includes new "Query runs" option
 - No regressions in existing tests
 
-Duration: 219.6s | Cost: $0.440051 USD | Turns: 28
+Duration: PENDING | Cost: PENDING | Turns: PENDING

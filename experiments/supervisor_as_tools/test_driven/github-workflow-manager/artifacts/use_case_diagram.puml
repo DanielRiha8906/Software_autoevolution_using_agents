@@ -15,6 +15,10 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by branch"         as I_FBRANCH
     usecase "Filter by status"         as I_FSTATUS
     usecase "Filter by conclusion"     as I_FCONCL
+    usecase "Query runs"               as I_QUERY
+    usecase "Query by duration"        as I_QDURATION
+    usecase "Query by timestamp"       as I_QTIMESTAMP
+    usecase "Query by attempts"        as I_QATTEMPTS
     usecase "Exit application"         as I_EXIT
   }
 
@@ -26,6 +30,10 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by status"         as C_FSTATUS
     usecase "Filter by conclusion"     as C_FCONCL
     usecase "Get run detail"           as C_DETAIL
+    usecase "Query runs"               as C_QUERY
+    usecase "Query by duration"        as C_QDURATION
+    usecase "Query by timestamp"       as C_QTIMESTAMP
+    usecase "Query by attempts"        as C_QATTEMPTS
   }
 }
 
@@ -36,18 +44,28 @@ UI --> I_ADD
 UI --> I_LIST
 UI --> I_DETAIL
 UI --> I_FILTER
+UI --> I_QUERY
 UI --> I_EXIT
 
 I_FILTER --> I_FBRANCH  : <<extend>>
 I_FILTER --> I_FSTATUS  : <<extend>>
 I_FILTER --> I_FCONCL   : <<extend>>
 
+I_QUERY --> I_QDURATION  : <<extend>>
+I_QUERY --> I_QTIMESTAMP : <<extend>>
+I_QUERY --> I_QATTEMPTS  : <<extend>>
+
 CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
+CLI --> C_QUERY
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>
 C_LIST --> C_FCONCL   : <<extend>>
+
+C_QUERY --> C_QDURATION  : <<extend>>
+C_QUERY --> C_QTIMESTAMP : <<extend>>
+C_QUERY --> C_QATTEMPTS  : <<extend>>
 
 @enduml
