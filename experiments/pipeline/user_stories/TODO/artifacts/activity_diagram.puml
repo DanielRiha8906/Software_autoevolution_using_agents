@@ -9,7 +9,40 @@ repeat
 
   switch (choice)
     case (1 — List/filter)
-      :Run list/filter flow;
+      :Display filter submenu;
+      repeat
+        :Show filter options:
+        - Status
+        - Due date range
+        - Week (YYYY-Www)
+        - Month (YYYY-MM)
+        - Year (YYYY)
+        - Overdue only;
+        :Wait for filter choice;
+        switch (filter)
+          case (status)
+            :Pick status filter;
+          case (due date range)
+            :Parse before/after dates;
+          case (week)
+            :Parse YYYY-Www format;
+            :Get week boundaries;
+            :List tasks in week;
+          case (month)
+            :Parse YYYY-MM format;
+            :Get month boundaries;
+            :List tasks in month;
+          case (year)
+            :Parse YYYY format;
+            :Get year boundaries;
+            :List tasks in year;
+          case (overdue)
+            :Toggle overdue filter;
+          case (view results)
+            :Apply all filters;
+            :Display filtered task list;
+        endswitch
+      repeat while (not back)
     case (2 — Add task)
       :Run add task flow;
     case (3 — Show details)

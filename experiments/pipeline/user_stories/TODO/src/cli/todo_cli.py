@@ -1,5 +1,6 @@
 import argparse
 import sys
+import re
 from datetime import datetime
 from typing import Optional
 
@@ -60,6 +61,31 @@ class TodoCLI:
             "--status",
             choices=["pending", "in_progress", "done"],
             help="Filter by status",
+        )
+        p_list.add_argument(
+            "--due-before",
+            help="Due date before or on (ISO 8601, e.g., 2026-05-15T23:59:59+00:00)",
+        )
+        p_list.add_argument(
+            "--due-after",
+            help="Due date on or after (ISO 8601, e.g., 2026-05-01T00:00:00+00:00)",
+        )
+        p_list.add_argument(
+            "--week",
+            help="Due in ISO 8601 week (e.g., 2026-W20)",
+        )
+        p_list.add_argument(
+            "--month",
+            help="Due in month (e.g., 2026-05)",
+        )
+        p_list.add_argument(
+            "--year",
+            help="Due in year (e.g., 2026)",
+        )
+        p_list.add_argument(
+            "--overdue",
+            action="store_true",
+            help="Show only overdue tasks",
         )
         p_list.set_defaults(func=self._cmd_list)
 
@@ -129,6 +155,77 @@ class TodoCLI:
 
         return parser
 
+    def _parse_and_list_by_week(self, week_str: str, status: Optional[TaskStatus]) -> list:
+        """Parse YYYY-Www format and return tasks for that week.
+
+        Args:
+            week_str: Week string (e.g., "2026-W20").
+            status: Optional status filter.
+
+        Returns:
+            list[Task]: Tasks due in the specified week.
+
+        Raises:
+            ValueError: If format is invalid.
+        """
+        match = re.match(r'^(\d{4})-W(\d{2})$', week_str)
+        if not match:
+            raise ValueError(
+                f"Invalid week format: {week_str}. Use YYYY-Www (e.g., 2026-W20)"
+            )
+        year = int(match.group(1))
+        week = int(match.group(2))
+        try:
+            return self._service.list_tasks_by_week(year, week, status)
+        except ValueError as e:
+            raise ValueError(f"Invalid week: {e}")
+
+    def _parse_and_list_by_month(self, month_str: str, status: Optional[TaskStatus]) -> list:
+        """Parse YYYY-MM format and return tasks for that month.
+
+        Args:
+            month_str: Month string (e.g., "2026-05").
+            status: Optional status filter.
+
+        Returns:
+            list[Task]: Tasks due in the specified month.
+
+        Raises:
+            ValueError: If format is invalid.
+        """
+        match = re.match(r'^(\d{4})-(\d{2})$', month_str)
+        if not match:
+            raise ValueError(
+                f"Invalid month format: {month_str}. Use YYYY-MM (e.g., 2026-05)"
+            )
+        year = int(match.group(1))
+        month = int(match.group(2))
+        try:
+            return self._service.list_tasks_by_month(year, month, status)
+        except ValueError as e:
+            raise ValueError(f"Invalid month: {e}")
+
+    def _parse_and_list_by_year(self, year_str: str, status: Optional[TaskStatus]) -> list:
+        """Parse YYYY format and return tasks for that year.
+
+        Args:
+            year_str: Year string (e.g., "2026").
+            status: Optional status filter.
+
+        Returns:
+            list[Task]: Tasks due in the specified year.
+
+        Raises:
+            ValueError: If format is invalid.
+        """
+        match = re.match(r'^(\d{4})$', year_str)
+        if not match:
+            raise ValueError(
+                f"Invalid year format: {year_str}. Use YYYY (e.g., 2026)"
+            )
+        year = int(match.group(1))
+        return self._service.list_tasks_by_year(year, status)
+
     def _cmd_add(self, args: argparse.Namespace) -> int:
         due_date = None
         if args.due_date:
@@ -142,14 +239,53 @@ class TodoCLI:
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
         status = TaskStatus(args.status) if args.status else None
-        tasks = self._service.list_tasks(status)
+        before = None
+        after = None
+        overdue_only = getattr(args, "overdue", False)
+
+        # Parse date range arguments
+        due_before = getattr(args, "due_before", None)
+        if due_before:
+            try:
+                before = datetime.fromisoformat(due_before)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid --due-before format: {due_before}. Use ISO 8601 (e.g., 2026-05-15T23:59:59+00:00)"
+                )
+
+        due_after = getattr(args, "due_after", None)
+        if due_after:
+            try:
+                after = datetime.fromisoformat(due_after)
+            except ValueError:
+                raise ValueError(
+                    f"Invalid --due-after format: {due_after}. Use ISO 8601 (e.g., 2026-05-01T00:00:00+00:00)"
+                )
+
+        # Handle period filters (week/month/year)
+        week = getattr(args, "week", None)
+        month = getattr(args, "month", None)
+        year_arg = getattr(args, "year", None)
+
+        if week:
+            tasks = self._parse_and_list_by_week(week, status)
+        elif month:
+            tasks = self._parse_and_list_by_month(month, status)
+        elif year_arg:
+            tasks = self._parse_and_list_by_year(year_arg, status)
+        else:
+            tasks = self._service.list_tasks(status=status, before=before, after=after, overdue_only=overdue_only)
+
         if not tasks:
             print("No tasks found.")
             return 0
         for task in tasks:
             sym = _STATUS_SYMBOLS[task.status]
             desc = f"  {task.description}" if task.description else ""
-            print(f"{sym} {task.id[:8]}  {task.title}{desc}")
+            due_str = ""
+            if task.due_date:
+                due_str = f"  (due: {task.due_date.isoformat()})"
+            print(f"{sym} {task.id[:8]}  {task.title}{desc}{due_str}")
         return 0
 
     def _cmd_show(self, args: argparse.Namespace) -> int:
