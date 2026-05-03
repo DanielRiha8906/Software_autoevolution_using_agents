@@ -210,3 +210,54 @@ Duration: 153.5s | Cost: $0.324552 USD | Turns: 17
 - Full backward compatibility with existing memory entries and calculation history
 
 Duration: 352.5s | Cost: $0.708198 USD | Turns: 26
+
+## Task 06: Create structured statistics component from stored calculations
+
+**Objective:** Implement a statistics component that derives usage and error metrics from stored MemoryEntry data, enabling programmatic access to calculation behavior analysis.
+
+**Acceptance Criteria:** ✅ All met
+- Statistics component/service is introduced
+- Report includes: count per operation type, total errors, error rate (%), average execution_time_ms
+- All statistics derived exclusively from stored MemoryEntry data
+- Result returned as structured object (dataclass), not plain dictionary
+- Output structure is consistent across all calls
+- No visualization layer introduced
+- All functionality accessible via `python -m src` (interactive menu + CLI flag)
+
+**Files Changed:**
+- `src/models/calculation_statistics.py` — Created CalculationStatistics frozen dataclass with fields: operation_counts (dict[str, int]), total_errors (int), error_rate (float), avg_execution_time_ms (float)
+- `src/services/statistics_service.py` — Created StatisticsService class with `generate()` method; computes counts for all 8 operations (initialize to 0 even if unused), error metrics, and average timing
+- `src/models/__init__.py` — Added CalculationStatistics export
+- `src/services/__init__.py` — Added StatisticsService export
+- `src/cli/calculator_cli.py` — Added statistics_service parameter; added menu option 11 "View statistics"; implemented _show_statistics() with formatted output
+- `src/__main__.py` — Updated _build_service() to instantiate and return StatisticsService; added --statistics argparse argument; added handler to display statistics and exit
+- `tests/test_statistics_service.py` — Created 12 tests covering: empty history, single/multiple operations, error rate calculation, average execution time, and full integration scenarios
+- `tests/test_cli.py` — Updated 10 tests to account for menu option shift (Exit moved from 11 to 12)
+- `tests/test_memory_cli_integration.py` — Updated 5 tests to account for menu option shift (Exit moved from 11 to 12)
+- `artifacts/class_diagram.puml` — Added CalculationStatistics and StatisticsService classes with relationships
+- `artifacts/component_diagram.puml` — Added StatisticsService component with MemoryService dependency
+- `artifacts/use_case_diagram.puml` — Added "View statistics" use case
+- `artifacts/activity_diagram.puml` — Added "View Statistics" activity with metrics computation
+- `artifacts/state_diagram_interactive.puml` — Added StatisticsDisplay state and transitions
+
+**Test Results:**
+- Total tests: 249
+- Passed: 249 ✅
+- Failed: 0
+- New tests written: 12 (test_statistics_service.py)
+- Existing tests updated: 15 (menu position shifts in test_cli.py and test_memory_cli_integration.py)
+- Execution time: 0.45s
+- Coverage: Statistics generation, operation counting, error metrics, timing calculations, menu integration, CLI flag usage, and structured output verified
+
+**Implementation Notes:**
+- CalculationStatistics is a frozen dataclass preventing accidental mutations
+- operation_counts dict initialized with all 8 operations (add, subtract, multiply, divide, square, sqrt, power, modulo) set to 0, ensuring consistent keys
+- error_rate calculated as (total_errors / total_entries * 100); returns 0.0 if no entries
+- avg_execution_time_ms calculated as sum(execution_time_ms) / count; returns 0.0 if no entries
+- StatisticsService depends only on MemoryService interface (get_all_entries())
+- Menu option 11 "View statistics" inserted before "Exit" (now option 12)
+- CLI flag `--statistics` provides one-shot access without interactive menu
+- All statistics derived from MemoryEntry fields only (operation_name, success, execution_time_ms)
+- No breaking changes to existing APIs; MemoryEntry and MemoryService unchanged
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
