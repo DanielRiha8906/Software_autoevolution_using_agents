@@ -79,3 +79,54 @@ Successfully implemented four new mathematical operations (square, sqrt, power, 
 - CLI tests: command mode, interactive mode, error handling, operand validation
 
 Duration: 347.1s | Cost: $0.700574 USD | Turns: 31
+
+---
+
+## Task 03: Introduce MemoryEntry domain class
+
+**Status**: Completed
+
+### Summary
+Successfully introduced MemoryEntry, a new domain class that represents both successful and failed calculation attempts. MemoryEntry extends the existing calculation tracking to capture error states, success flags, and detailed error messages—enabling full history tracking of both successful and failed operations.
+
+### Files Changed
+- `src/models/memory_entry.py` — New file; created MemoryEntry dataclass with fields: operation, operand_a, operand_b, result (optional), success, error_message (optional), timestamp, execution_time_ms, id
+- `src/models/__init__.py` — Added MemoryEntry import and export
+- `artifacts/class_diagram.puml` — Added MemoryEntry class to models package, positioned near CalculationResult
+
+### Test Results
+- Total tests: 80
+- Passed: 80
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Implementation Details
+
+**MemoryEntry Fields:**
+- `operation: str` — Operation name (e.g., "add", "sqrt")
+- `operand_a: float` — First operand
+- `operand_b: float` — Second operand
+- `result: float | None` — Computed result (None on failure)
+- `success: bool` — True if calculation succeeded, False if error occurred
+- `error_message: str | None` — Error text from exception (None on success)
+- `timestamp: str` — ISO format timestamp, auto-generated if not provided
+- `execution_time_ms: float` — Execution time in milliseconds
+- `id: str` — UUID4 identifier, auto-generated if not provided
+
+**Serialization:**
+- `to_dict()` — Converts all fields to JSON-compatible dictionary using dataclass asdict()
+- `from_dict(data: dict)` — Classmethod reconstructs MemoryEntry from dict with defaults (result=None, error_message=None, execution_time_ms=0.0)
+
+**Design Decisions:**
+- MemoryEntry coexists with CalculationResult for backward compatibility
+- Both success and failure states stored in same class structure (no conditional fields)
+- None values explicit in JSON serialization (no ambiguity)
+- Auto-generated id field supports tracing and debugging in supervisor experiments
+- No __str__() method—formatting belongs in presentation layer
+
+**Backward Compatibility:**
+- CalculationResult remains unchanged
+- Existing tests continue to pass without modification
+- No changes to services or storage layer in this task (foundation for future integration)
+
+Duration: 162.5s | Cost: $0.324856 USD | Turns: 26
