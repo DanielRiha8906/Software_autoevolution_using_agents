@@ -88,4 +88,4 @@ Duration: 112.8s | Cost: $0.254861 USD | Turns: 22
 - Empty list returned when no matches (not None)
 - No regressions in existing tests
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 219.6s | Cost: $0.440051 USD | Turns: 28
