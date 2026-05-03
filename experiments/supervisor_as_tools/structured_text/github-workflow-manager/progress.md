@@ -84,3 +84,46 @@ Successfully implemented workflow run state logic with 5 encapsulated domain met
 - Mutual exclusivity: 7 tests validating conflicting state pairs
 
 Duration: 305.9s | Cost: $0.508955 USD | Turns: 17
+
+## Task 03: Create WorkflowRunAttempt Class
+
+**Status:** Completed
+
+### Summary
+Successfully created the `WorkflowRunAttempt` dataclass to model individual workflow run attempts with comprehensive serialization, deserialization, and helper methods. All 97 tests pass (40 new tests + 57 existing).
+
+### Files Changed
+- `src/models/workflow_run_attempt.py` — Created new WorkflowRunAttempt dataclass with id, run_id, attempt_number, status, conclusion, created_at, duration_seconds
+- `src/models/__init__.py` — Added WorkflowRunAttempt to exports
+- `tests/test_workflow_run_attempt.py` — Created comprehensive test suite with 40 tests
+- `artifacts/class_diagram.puml` — Added WorkflowRunAttempt class and relationship to WorkflowRun
+
+### Test Results
+- **Total Tests:** 97 (40 new + 57 existing)
+- **Passed:** 97
+- **Failed:** 0
+- **Status:** ✅ All tests pass
+
+### Implementation Details
+- Must Have: ✅ Created WorkflowRunAttempt class with all required attributes (id, run_id, attempt_number, status, conclusion, created_at)
+- Must Have: ✅ Established relationship to WorkflowRun via run_id foreign key
+- Should Have: ✅ Implemented serialization/deserialization (to_dict/from_dict)
+- Could Have: ✅ Included optional duration_seconds attribute
+- Won't Have: ✅ No storage optimization or persistence changes
+
+### Key Features
+- **Validation**: __post_init__() enforces id > 0, run_id > 0, attempt_number >= 1, duration_seconds >= 0.0
+- **Serialization**: to_dict() converts created_at to ISO format, handles optional conclusion
+- **Deserialization**: from_dict() parses ISO datetime, defaults duration_seconds to 0.0
+- **Helper Methods**: is_successful(), is_failed(), is_running() for state checks
+- **Design Pattern**: Matches WorkflowRun dataclass pattern with consistent method signatures
+
+### Test Coverage
+- Validation tests: 10 tests covering all 4 validation rules
+- Serialization tests: 4 tests for to_dict() with various data patterns
+- Deserialization tests: 5 tests for from_dict() including missing fields
+- Roundtrip tests: 2 tests verifying data preservation
+- Helper method tests: 16 tests covering all status/conclusion combinations
+- Mutual exclusivity: 3 tests validating logical constraints
+
+Duration: 281.9s | Cost: $0.472725 USD | Turns: 22
