@@ -34,15 +34,17 @@ def test_start_task(service):
 
 def test_complete_task(service):
     task = service.add_task("Do it")
+    service.start_task(task.id)
     done = service.complete_task(task.id)
     assert done.status == TaskStatus.DONE
 
 
 def test_reopen_task(service):
     task = service.add_task("Redo")
+    service.start_task(task.id)
     service.complete_task(task.id)
     reopened = service.reopen_task(task.id)
-    assert reopened.status == TaskStatus.PENDING
+    assert reopened.status == TaskStatus.IN_PROGRESS
 
 
 def test_list_tasks_all(service):
@@ -54,6 +56,7 @@ def test_list_tasks_all(service):
 def test_list_tasks_filtered(service):
     t = service.add_task("A")
     service.add_task("B")
+    service.start_task(t.id)
     service.complete_task(t.id)
     assert len(service.list_tasks(TaskStatus.DONE)) == 1
     assert len(service.list_tasks(TaskStatus.PENDING)) == 1

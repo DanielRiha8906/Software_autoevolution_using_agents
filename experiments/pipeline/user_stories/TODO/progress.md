@@ -40,3 +40,49 @@
 ✓ Existing stored tasks without `due_date` field load without error
 
 Duration: 614.7s | Cost: $1.099172 USD | Turns: 14
+
+---
+
+## Task 02: Task Status Transition Methods
+
+**Status:** COMPLETE ✓
+
+### Changes Made
+- **Task Model:** Added 7 new methods for state management:
+  - Query methods: `is_pending()`, `is_in_progress()`, `is_completed()`, `is_overdue()`
+  - Mutation methods: `mark_in_progress()`, `mark_done()`, `reopen()`
+  - All mutations update `updated_at` to current UTC timestamp
+  - All mutations validate state transitions and raise ValueError on invalid transitions
+  - Mutation methods return self for method chaining
+- **TaskManager:** Refactored `set_status()` to call Task transition methods, enforcing state machine rules
+- **TodoService:** Updated `reopen_task()` to transition to IN_PROGRESS (not PENDING), aligning with spec
+- **Diagrams:** Updated class_diagram.puml to show all 7 new methods with proper signatures
+
+### Files Changed
+- src/models/task.py (7 new methods)
+- src/services/task_manager.py (refactored set_status())
+- src/services/todo_service.py (fixed reopen_task())
+- artifacts/class_diagram.puml (added method signatures)
+
+### Test Results
+**131 tests total: ALL PASSED**
+- 42 new tests for Task methods (valid transitions, invalid transitions, error messages)
+- 3 tests for mark_in_progress() (valid + 2 invalid states)
+- 3 tests for mark_done() (valid + 2 invalid states)
+- 3 tests for reopen() (valid + 2 invalid states, goes to IN_PROGRESS not PENDING)
+- 3 tests for updated_at timestamp verification on all mutations
+- 3 tests each for is_pending(), is_in_progress(), is_completed()
+- 6 tests for is_overdue() (None due_date, past/future dates, status override)
+- 5 tests for TaskManager.set_status() integration
+- 3 tests for TodoService integration (start, complete, reopen)
+- 4 tests for error handling and method chaining
+
+### Acceptance Criteria Verification
+✓ Task provides clear methods: `mark_in_progress()`, `mark_done()`, `reopen()`, `is_completed()`, `is_overdue()`
+✓ Additional symmetry methods: `is_pending()`, `is_in_progress()`
+✓ Each status-mutating method updates `updated_at` to current UTC time
+✓ Methods derive state strictly from existing Task attributes (no external input)
+✓ Invalid transitions raise ValueError with descriptive messages (fail-fast)
+✓ All functionality accessible via `python -m src` (interactive menu option 4 + CLI flags start/done/reopen)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

@@ -24,6 +24,102 @@ class Task:
             if self.due_date.tzinfo is None:
                 raise ValueError("due_date must be timezone-aware")
 
+    # Query Methods
+
+    def is_pending(self) -> bool:
+        """Check if task is in PENDING status.
+
+        Returns:
+            bool: True if status is PENDING, False otherwise.
+        """
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        """Check if task is in IN_PROGRESS status.
+
+        Returns:
+            bool: True if status is IN_PROGRESS, False otherwise.
+        """
+        return self.status == TaskStatus.IN_PROGRESS
+
+    def is_completed(self) -> bool:
+        """Check if task is in DONE status.
+
+        Returns:
+            bool: True if status is DONE, False otherwise.
+        """
+        return self.status == TaskStatus.DONE
+
+    def is_overdue(self) -> bool:
+        """Check if task is overdue.
+
+        A task is considered overdue if it has a due_date in the past and
+        has not been completed (status is not DONE). Tasks without a due_date
+        or completed tasks are never considered overdue.
+
+        Returns:
+            bool: True if task is overdue, False otherwise.
+        """
+        if self.due_date is None:
+            return False
+        if self.status == TaskStatus.DONE:
+            return False
+        return self.due_date < datetime.now(timezone.utc)
+
+    # Mutation Methods
+
+    def mark_in_progress(self) -> Task:
+        """Transition task from PENDING to IN_PROGRESS status.
+
+        Updates the task status to IN_PROGRESS and sets updated_at to current UTC time.
+
+        Returns:
+            Task: self for method chaining.
+
+        Raises:
+            ValueError: If task is not in PENDING status.
+        """
+        if self.status != TaskStatus.PENDING:
+            raise ValueError(f"Cannot mark in_progress: task is already in {self.status.value}")
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(timezone.utc)
+        return self
+
+    def mark_done(self) -> Task:
+        """Transition task from IN_PROGRESS to DONE status.
+
+        Updates the task status to DONE and sets updated_at to current UTC time.
+
+        Returns:
+            Task: self for method chaining.
+
+        Raises:
+            ValueError: If task is not in IN_PROGRESS status.
+        """
+        if self.status != TaskStatus.IN_PROGRESS:
+            raise ValueError(f"Cannot mark done: task is {self.status.value}")
+        self.status = TaskStatus.DONE
+        self.updated_at = datetime.now(timezone.utc)
+        return self
+
+    def reopen(self) -> Task:
+        """Transition task from DONE back to IN_PROGRESS status.
+
+        Updates the task status to IN_PROGRESS and sets updated_at to current UTC time.
+        This allows a completed task to be resumed.
+
+        Returns:
+            Task: self for method chaining.
+
+        Raises:
+            ValueError: If task is not in DONE status.
+        """
+        if self.status != TaskStatus.DONE:
+            raise ValueError(f"Cannot reopen: task is {self.status.value}")
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(timezone.utc)
+        return self
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,

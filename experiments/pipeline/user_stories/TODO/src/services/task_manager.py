@@ -60,8 +60,16 @@ class TaskManager:
 
     def set_status(self, task_id: str, status: TaskStatus) -> Task:
         task = self.get(task_id)
-        task.status = status
-        task.updated_at = datetime.now(timezone.utc)
+        if status == TaskStatus.IN_PROGRESS and task.status == TaskStatus.PENDING:
+            task.mark_in_progress()
+        elif status == TaskStatus.DONE and task.status == TaskStatus.IN_PROGRESS:
+            task.mark_done()
+        elif status == TaskStatus.IN_PROGRESS and task.status == TaskStatus.DONE:
+            task.reopen()
+        elif task.status == status:
+            raise ValueError(f"Task is already {status.value}")
+        else:
+            raise ValueError(f"Cannot transition from {task.status.value} to {status.value}")
         self._persist()
         return task
 

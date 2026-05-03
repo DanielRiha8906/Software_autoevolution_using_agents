@@ -33,7 +33,7 @@ class TodoService:
         return self._manager.set_status(task_id, TaskStatus.DONE)
 
     def reopen_task(self, task_id: str) -> Task:
-        return self._manager.set_status(task_id, TaskStatus.PENDING)
+        return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)
 
     def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if title is not None and not title.strip():
