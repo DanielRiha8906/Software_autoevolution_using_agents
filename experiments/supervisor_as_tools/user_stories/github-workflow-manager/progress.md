@@ -323,4 +323,4 @@ python -m src
 # Select "View workflow statistics" option
 ```
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 410.3s | Cost: $0.772971 USD | Turns: 15
