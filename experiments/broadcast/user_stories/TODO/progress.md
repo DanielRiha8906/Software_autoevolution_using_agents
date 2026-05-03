@@ -293,3 +293,136 @@ No new dependencies added. Implementation uses:
 - `typing.Optional` — standard library for optional types
 
 Duration: 218.8s | Cost: $0.474348 USD | Turns: 45
+
+---
+
+# Task 04: CommentsService for Task Comments
+
+## Task Overview
+
+**User Story:** As a developer building comment functionality, I want a `CommentsService` that manages the full lifecycle of `TaskComment` objects, so that comment logic is centralised and not duplicated across the codebase.
+
+**Acceptance Criteria:**
+- ✅ `CommentsService` supports: adding a comment to a task, listing all comments for a task (ordered by `created_at`), and deleting a comment by id.
+- ✅ Adding a comment validates that the referenced task exists.
+- ✅ The service integrates with the existing storage mechanism.
+- ✅ Persistence details stay in the storage layer, not inside the service.
+- ✅ Deleting a task cascades to its associated comments.
+- ✅ Editing a comment's content (with `updated_at` updated) is supported as a bonus.
+- ✅ All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
+
+## Implementation Results
+
+### Candidate Evaluation
+
+| Candidate | Approach | Tests Passing | Selection |
+|-----------|----------|---------------|-----------|
+| A (broadcast-candidate-a) | Service registration with TaskManager callback | 67/67 | Evaluated |
+| B (broadcast-candidate-b) | Simpler callback mechanism, better naming | 67/67 | **SELECTED** |
+| C (broadcast-candidate-c) | No implementation (empty worktree) | N/A | Not selected |
+
+**Winner:** Candidate B
+
+**Selection Rationale:**
+- All three candidates achieved 67 tests passing (no regressions)
+- Candidate-C had an issue with worktree initialization and made no changes
+- Candidate-B selected for:
+  - Better method naming: `list_comments_for_task()` is more explicit than `list_comments()`
+  - Simpler design without bidirectional service references
+  - Uses `timezone.utc` for timestamp updates (more portable than CEST)
+  - Cleaner code with less coupling between TaskManager and CommentsService
+
+### Files Changed
+
+1. **`src/models/task_comment.py`** (Pre-existing)
+   - TaskComment dataclass with full lifecycle support
+
+2. **`src/services/comments_service.py`** (NEW)
+   - `CommentsService` class managing full TaskComment lifecycle
+   - Methods: `add_comment()`, `list_comments_for_task()`, `get_comment()`, `delete_comment()`, `edit_comment()`
+   - Prefix lookup support for comment IDs
+   - Cascade delete integration via callback mechanism
+   - Proper validation of task existence and comment content
+
+3. **`src/services/task_manager.py`**
+   - Added `set_on_delete_callback()` method for cascade delete support
+   - Callback triggered when a task is deleted
+
+4. **`src/services/todo_service.py`**
+   - Integrated CommentsService
+   - Added wrapper methods: `add_comment()`, `list_comments()`, `get_comment()`, `delete_comment()`, `edit_comment()`
+   - Dependency injection of CommentsService in constructor
+
+5. **`src/storage/json_storage.py`**
+   - Added `load_comments()` method to load comments from storage
+   - Added `save_all()` method to save both tasks and comments atomically
+   - Added `save_comments()` helper method
+   - Support for unified storage format: `{"tasks": [...], "comments": [...]}`
+   - Backward compatible with legacy format (list of tasks)
+
+6. **`src/services/__init__.py`**
+   - Exported `CommentsService` and `CommentNotFoundError`
+
+7. **`src/cli/todo_cli.py`**
+   - Added subcommands: `add-comment`, `list-comments`, `delete-comment`, `edit-comment`
+   - Proper error handling for `CommentNotFoundError`
+   - All comment operations support prefix-based ID lookup
+
+8. **`src/cli/interactive_menu.py`**
+   - Added menu option 8: "Manage comments"
+   - Implemented `_do_manage_comments()` for task selection and comment management
+   - Sub-menus for add, list, edit, delete comments
+
+9. **Diagrams Updated:**
+   - `artifacts/class_diagram.puml` — Added CommentsService, CommentNotFoundError, updated relationships
+   - `artifacts/use_case_diagram.puml` — Added comment management use cases
+   - `artifacts/component_diagram.puml` — Added CommentsService component
+   - `artifacts/activity_diagram.puml` — Added manage comments menu option
+
+### Test Results
+
+```
+...................................................................      [100%]
+67 passed in 0.17s
+```
+
+All tests passing with no regressions. Baseline tests (50 from test_task.py + 17 comment tests) all pass.
+
+### Design Decisions
+
+1. **Cascade Delete Strategy:** Used callback mechanism where TaskManager notifies CommentsService when a task is deleted, allowing CommentsService to clean up associated comments. This maintains clean separation of concerns.
+
+2. **Storage Integration:** Unified JSON format storing both tasks and comments atomically via `save_all()` method. Legacy format support ensures backward compatibility with existing task-only files.
+
+3. **ID Prefix Lookup:** Comments support prefix matching (e.g., first 8 chars shown in list) for convenient CLI usage, matching the TaskManager pattern.
+
+4. **Validation:** Comment content validated at instantiation time (non-empty, non-whitespace). Task existence validated before adding comments.
+
+5. **Timezone Handling:** Uses `datetime.now(timezone.utc)` for `updated_at` timestamps, which is standard and portable across different environments.
+
+6. **Method Naming:** `list_comments_for_task()` clearly indicates the task context, improving code readability.
+
+### CLI Usage
+
+**Interactive Mode:**
+```
+python -m src
+# Select option 8 to manage comments
+```
+
+**One-shot CLI:**
+```
+python -m src add-comment <task_id> "Comment text" [-a Author]
+python -m src list-comments <task_id>
+python -m src edit-comment <comment_id> "Updated text"
+python -m src delete-comment <comment_id>
+```
+
+### Dependencies
+
+No new dependencies added. Implementation uses Python standard library:
+- `datetime` and `timezone`
+- `typing.Optional`
+- `uuid` (already used in Task model)
+
+Duration: 567.3s | Cost: $3.081796 USD | Turns: 80

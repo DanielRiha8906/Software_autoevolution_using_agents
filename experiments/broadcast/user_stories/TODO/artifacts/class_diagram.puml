@@ -50,19 +50,41 @@ package "models" #DDEEFF {
 package "storage" #FFF3CC {
     class JsonStorage {
         -path : String
+        -cached_comments : List<Dictionary>
         --
         +JsonStorage(path: String [0..1])
         +load() : List<Dictionary>
         +save(tasks: List<Dictionary>) : void
+        +load_comments() : List<Dictionary>
+        +save_all(tasks: List<Dictionary>, comments: List<Dictionary>) : void
+        +save_comments(comments: List<Dictionary>) : void
     }
 }
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
+    exception CommentNotFoundError
+
+    class CommentsService {
+        -task_manager : TaskManager
+        -storage : JsonStorage
+        -comments : Dictionary<String, TaskComment>
+        --
+        +CommentsService(task_manager: TaskManager, storage: JsonStorage [0..1])
+        +add_comment(task_id: String, content: String, author: String [0..1]) : TaskComment
+        +list_comments_for_task(task_id: String) : List<TaskComment>
+        +get_comment(comment_id: String) : TaskComment
+        +delete_comment(comment_id: String) : void
+        +edit_comment(comment_id: String, content: String) : TaskComment
+        -load() : void
+        -persist() : void
+        -delete_comments_for_task(task_id: String) : void
+    }
 
     class TaskManager {
         -storage : JsonStorage
         -tasks : Dictionary<String, Task>
+        -on_delete_callback : Callable [0..1]
         --
         +TaskManager(storage: JsonStorage [0..1])
         +add(title: String, description: String [0..1]) : Task
@@ -72,6 +94,7 @@ package "services" #DDFFD4 {
         +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
         +delete(taskId: String) : void
+        +set_on_delete_callback(callback: Callable) : void
         +markInProgress(taskId: String) : Task
         +markDone(taskId: String) : Task
         +reopen(taskId: String) : Task
@@ -81,6 +104,7 @@ package "services" #DDFFD4 {
 
     class TodoService {
         -manager : TaskManager
+        -comments_service : CommentsService
         --
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1]) : Task
@@ -95,6 +119,11 @@ package "services" #DDFFD4 {
         +isTaskInProgress(taskId: String) : Boolean
         +isTaskCompleted(taskId: String) : Boolean
         +isTaskOverdue(taskId: String) : Boolean
+        +add_comment(taskId: String, content: String, author: String [0..1]) : TaskComment
+        +list_comments(taskId: String) : List<TaskComment>
+        +get_comment(commentId: String) : TaskComment
+        +delete_comment(commentId: String) : void
+        +edit_comment(commentId: String, content: String) : TaskComment
     }
 }
 
@@ -117,7 +146,12 @@ package "cli" #FFE5E5 {
 Task --> TaskStatus : status
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
+CommentsService --> TaskManager : task_manager
+CommentsService --> JsonStorage : storage
+CommentsService ..> TaskNotFoundError : raises
+CommentsService ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
+TodoService --> CommentsService : comments_service
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 

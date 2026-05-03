@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Callable, Optional
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
@@ -14,7 +14,12 @@ class TaskManager:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._storage = storage or JsonStorage()
         self._tasks: dict[str, Task] = {}
+        self._on_delete_callback: Optional[Callable[[str], None]] = None
         self._load()
+
+    def set_on_delete_callback(self, callback: Callable[[str], None]) -> None:
+        """Register a callback to be called when a task is deleted."""
+        self._on_delete_callback = callback
 
     def _load(self) -> None:
         raw = self._storage.load()
@@ -67,6 +72,9 @@ class TaskManager:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
         self._persist()
+        # Call delete callback for cascade operations
+        if self._on_delete_callback:
+            self._on_delete_callback(task.id)
 
     def mark_in_progress(self, task_id: str) -> Task:
         task = self.get(task_id)
