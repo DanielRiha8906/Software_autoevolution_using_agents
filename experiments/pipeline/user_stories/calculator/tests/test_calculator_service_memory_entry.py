@@ -4,14 +4,17 @@ from src.models.operation import Operation
 from src.models.memory_entry import MemoryEntry
 from src.services.calculator import Calculator
 from src.services.calculator_service import CalculatorService
+from src.services.memory_service import MemoryService
+from src.storage.json_storage import JsonStorage
 
 
 class TestCalculatorServiceErrorHandling:
     """Test CalculatorService error handling with MemoryEntry."""
 
     def setup_method(self):
-        self.storage = MagicMock()
-        self.service = CalculatorService(Calculator(), self.storage)
+        self.storage_mock = MagicMock(spec=JsonStorage)
+        self.memory_service = MemoryService(self.storage_mock)
+        self.service = CalculatorService(Calculator(), self.memory_service)
 
     def test_perform_successful_calculation_returns_memory_entry(self):
         """Successful calculations return MemoryEntry with no error."""
@@ -33,8 +36,8 @@ class TestCalculatorServiceErrorHandling:
     def test_perform_successful_saves_to_storage(self):
         """Successful calculation saves to storage."""
         self.service.perform(Operation.ADD, 3, 5)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert isinstance(saved, MemoryEntry)
         assert saved.result == 8
 
@@ -52,8 +55,8 @@ class TestCalculatorServiceErrorHandling:
     def test_perform_divide_by_zero_saves_error(self):
         """Division by zero error is saved to storage."""
         result = self.service.perform(Operation.DIVIDE, 5, 0)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert saved.error is not None
         assert "Division by zero" in saved.error
 
@@ -70,8 +73,8 @@ class TestCalculatorServiceErrorHandling:
     def test_perform_sqrt_negative_saves_error(self):
         """Square root of negative error is saved to storage."""
         result = self.service.perform(Operation.SQRT, -1, 0)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert saved.error is not None
         assert "square root" in saved.error.lower()
 
@@ -89,8 +92,8 @@ class TestCalculatorServiceErrorHandling:
     def test_perform_modulo_by_zero_saves_error(self):
         """Modulo by zero error is saved to storage."""
         result = self.service.perform(Operation.MODULO, 10, 0)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert saved.error is not None
         assert "Modulo by zero" in saved.error
 
@@ -109,11 +112,11 @@ class TestCalculatorServiceErrorHandling:
     def test_perform_always_saves_regardless_of_success(self):
         """Both successful and error results are saved."""
         success_result = self.service.perform(Operation.ADD, 1, 1)
-        assert self.storage.save.call_count == 1
+        assert self.storage_mock.save.call_count == 1
 
-        self.storage.reset_mock()
+        self.storage_mock.reset_mock()
         error_result = self.service.perform(Operation.DIVIDE, 5, 0)
-        assert self.storage.save.call_count == 1
+        assert self.storage_mock.save.call_count == 1
 
     def test_get_history_returns_list_of_memory_entries(self):
         """get_history delegates to storage and returns MemoryEntry list."""
@@ -121,7 +124,7 @@ class TestCalculatorServiceErrorHandling:
             MemoryEntry("add", 1, 2, 3, None, None),
             MemoryEntry("divide", 5, 0, None, "error", "ValueError"),
         ]
-        self.storage.load_all.return_value = mock_entries
+        self.storage_mock.load_all.return_value = mock_entries
         history = self.service.get_history()
         assert len(history) == 2
         assert all(isinstance(e, MemoryEntry) for e in history)

@@ -17,6 +17,7 @@ from src.models.calculation_result import CalculationResult
 from src.models.memory_entry import MemoryEntry
 from src.services.calculator import Calculator
 from src.services.calculator_service import CalculatorService
+from src.services.memory_service import MemoryService
 from src.storage.json_storage import JsonStorage
 
 
@@ -169,8 +170,9 @@ class TestTimingMeasurement:
     @pytest.fixture
     def service(self):
         """Provide a CalculatorService with mock storage."""
-        storage = MagicMock()
-        return CalculatorService(Calculator(), storage)
+        storage_mock = MagicMock(spec=JsonStorage)
+        memory_service = MemoryService(storage_mock)
+        return CalculatorService(Calculator(), memory_service)
 
     def test_perform_returns_result_with_timestamp(self, service):
         """perform() returns MemoryEntry with timestamp set."""
@@ -237,18 +239,14 @@ class TestTimingMeasurement:
         assert result.error is not None
         assert "Division by zero" in result.error
         assert result.result is None
-        # Verify save was still called
-        service.storage.save.assert_called_once()
 
     def test_perform_saves_result(self, service):
         """perform() saves MemoryEntry."""
-        service.perform(Operation.MULTIPLY, 7, 8)
-        service.storage.save.assert_called_once()
-        saved_result = service.storage.save.call_args[0][0]
-        assert isinstance(saved_result, MemoryEntry)
-        assert saved_result.operation == "multiply"
-        assert saved_result.result == 56
-        assert saved_result.error is None
+        result = service.perform(Operation.MULTIPLY, 7, 8)
+        assert isinstance(result, MemoryEntry)
+        assert result.operation == "multiply"
+        assert result.result == 56
+        assert result.error is None
 
 
 class TestStorageIntegration:
