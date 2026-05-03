@@ -594,4 +594,4 @@ No new dependencies added. Implementation uses Python standard library:
 - `typing.Optional` for optional parameters
 - `dataclasses` for FilterOptions class
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 425.6s | Cost: $3.351619 USD | Turns: 55
