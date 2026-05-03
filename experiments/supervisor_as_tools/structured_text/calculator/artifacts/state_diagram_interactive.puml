@@ -12,6 +12,8 @@ Menu --> Feedback : history selected
 Menu --> MemoryView : memory selected [optional]
 Menu --> MemorySummary : summary selected [optional]
 Menu --> MemoryStatistics : statistics selected [optional]
+Menu --> ExportMemory : export selected [optional]
+Menu --> ImportMemory : import selected [optional]
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
@@ -28,5 +30,24 @@ Feedback --> Menu
 MemoryView --> Menu : done viewing
 MemorySummary --> Menu : done viewing
 MemoryStatistics --> Menu : done viewing
+
+ExportMemory --> FilePath : request path
+FilePath --> ValidationExport : path provided
+FilePath --> Menu : cancelled
+ValidationExport --> ExportSuccess : export complete
+ValidationExport --> ExportError : export failed
+ExportSuccess --> Menu
+ExportError --> Menu
+
+ImportMemory --> FilePath2 : request path
+FilePath2 --> ValidationImport : path provided
+FilePath2 --> Menu : cancelled
+ValidationImport --> ImportConfirm : entries loaded
+ValidationImport --> ImportError : read failed
+ImportConfirm --> ConfirmPrompt : show entries
+ConfirmPrompt --> ImportSuccess : user confirms
+ConfirmPrompt --> Menu : user cancels
+ImportSuccess --> Menu
+ImportError --> Menu
 
 @enduml

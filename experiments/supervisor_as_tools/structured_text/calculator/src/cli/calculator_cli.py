@@ -1,8 +1,10 @@
 import sys
+from pathlib import Path
 
 from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
 from ..services.memory_service import MemoryService
+from ..services.memory_import_export_service import MemoryImportExportService
 
 
 class CalculatorCLI:
@@ -24,6 +26,7 @@ class CalculatorCLI:
     ) -> None:
         self.service = service
         self.memory_service = memory_service
+        self.import_export_service = MemoryImportExportService()
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -44,7 +47,9 @@ class CalculatorCLI:
                 memory_opt = history_opt + 2
                 summary_opt = history_opt + 3
                 statistics_opt = history_opt + 4
-                exit_opt = history_opt + 5
+                export_opt = history_opt + 5
+                import_opt = history_opt + 6
+                exit_opt = history_opt + 7
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -66,6 +71,14 @@ class CalculatorCLI:
 
                 if choice == str(statistics_opt):
                     self.show_memory_statistics()
+                    continue
+
+                if choice == str(export_opt):
+                    self.export_memory_interactive()
+                    continue
+
+                if choice == str(import_opt):
+                    self.import_memory_interactive()
                     continue
 
             operation = self._resolve_menu_choice(choice)
@@ -118,7 +131,9 @@ class CalculatorCLI:
             print(f"  {len(self._MENU) + 2}. View memory")
             print(f"  {len(self._MENU) + 3}. Memory summary")
             print(f"  {len(self._MENU) + 4}. View statistics")
-            print(f"  {len(self._MENU) + 5}. Exit")
+            print(f"  {len(self._MENU) + 5}. Export memory")
+            print(f"  {len(self._MENU) + 6}. Import memory")
+            print(f"  {len(self._MENU) + 7}. Exit")
         else:
             print(f"  {len(self._MENU) + 2}. Exit")
 
@@ -333,3 +348,67 @@ class CalculatorCLI:
                 error_rate = stats.operation_error_rates.get(op, 0.0)
                 print(f"    {op}: {count} (error rate: {error_rate:.2f}%)")
         print()
+
+    def export_memory_interactive(self) -> None:
+        """Interactively export memory entries to a JSON file."""
+        if not self.memory_service:
+            print("\n  Memory service not available.\n")
+            return
+
+        filepath = input("Enter file path for export: ").strip()
+        if not filepath:
+            print("  Cancelled.\n")
+            return
+
+        try:
+            entries = self.memory_service.retrieve_all()
+            if not entries:
+                print("  No memory entries to export.\n")
+                return
+
+            count = self.import_export_service.export_memory(filepath, entries)
+            print(f"  Exported {count} entries to {filepath}\n")
+        except (IOError, OSError) as exc:
+            print(f"  Error exporting memory: {exc}\n")
+
+    def import_memory_interactive(self) -> None:
+        """Interactively import memory entries from a JSON file."""
+        if not self.memory_service:
+            print("\n  Memory service not available.\n")
+            return
+
+        filepath = input("Enter file path for import: ").strip()
+        if not filepath:
+            print("  Cancelled.\n")
+            return
+
+        try:
+            entries, skipped_count, duplicate_count = self.import_export_service.import_from_file(
+                filepath
+            )
+        except (FileNotFoundError, ValueError, IOError) as exc:
+            print(f"  Error importing memory: {exc}\n")
+            return
+
+        if not entries:
+            print("  No valid entries to import.\n")
+            return
+
+        # Show summary
+        print()
+        print(f"  Found {len(entries)} valid entries")
+        if skipped_count > 0:
+            print(f"  Skipped {skipped_count} invalid entries")
+        print()
+
+        # Prompt before importing
+        confirm = input("Import these entries? (yes/no): ").strip().lower()
+        if confirm != "yes":
+            print("  Cancelled.\n")
+            return
+
+        # Store all entries
+        for entry in entries:
+            self.memory_service.store(entry)
+
+        print(f"  Imported {len(entries)} entries successfully.\n")

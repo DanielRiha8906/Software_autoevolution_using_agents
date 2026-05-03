@@ -89,6 +89,17 @@ else (no)
             case (Statistics)
               :Compute statistics;
               :Display statistics (counts, timing, error rates);
+            case (Export)
+              :Prompt for file path;
+              :Retrieve all memory entries;
+              :Validate entries;
+              :Write entries to JSON file;
+            case (Import)
+              :Prompt for file path;
+              :Read and validate JSON file;
+              :Check for duplicates;
+              :Confirm import;
+              :Store entries to memory;
             case (Other)
               :Show failures or clear memory;
           endswitch
