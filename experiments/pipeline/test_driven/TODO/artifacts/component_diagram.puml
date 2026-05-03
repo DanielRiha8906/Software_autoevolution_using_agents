@@ -19,6 +19,7 @@ package "TODO Application" {
         component "Task Manager" as MGR
         component "Comments Service" as CSVC
         component "Task Statistics Service" as STATS
+        component "Import/Export Service" as IESVC
     }
 
     package "Domain Model" {
@@ -36,12 +37,16 @@ Main --> IM : interactive mode
 Main --> CLI : command mode
 
 IM --> SVC
+IM --> IESVC
 CLI --> SVC
+CLI --> IESVC
 
 SVC --> MGR
 CSVC --> SVC : validates tasks
 CSVC --> Storage : persistence
 STATS --> SVC : analyzes tasks
+IESVC --> SVC : uses
+IESVC --> CSVC : uses
 MGR --> Storage
 MGR ..> Model
 Storage ..> Model
