@@ -295,3 +295,69 @@ Duration: 723.5s | Cost: $1.516267 USD | Turns: 33
   - Both modes fully functional and tested
 
 Duration: 530.7s | Cost: $1.059689 USD | Turns: 17
+
+---
+
+## Task 06: Summary Report of Task Counts and Completion Rates
+
+**Status:** COMPLETE ✓
+
+### Changes Made
+- **TaskSummaryReport Dataclass:** Created new src/models/task_summary_report.py with frozen dataclass:
+  - Fields: `total_count`, `pending_count`, `in_progress_count`, `done_count`, `overdue_count`, `due_date_set_count`, `completion_rate` (float 0.0-1.0), `avg_days_to_completion` (Optional[float])
+  - Immutable design ensures deterministic output regardless of task ordering
+  - Includes all metrics required by acceptance criteria plus bonus metric
+- **TodoService:** Added `generate_report() -> TaskSummaryReport` method in src/services/todo_service.py:
+  - Iterates through all tasks via `list_tasks()`
+  - Counts tasks by status using status filters
+  - Counts overdue tasks using `task.is_overdue()`
+  - Counts tasks with `due_date is not None`
+  - Calculates `completion_rate = done_count / total_count` (0.0 if no tasks)
+  - Calculates `avg_days_to_completion` for done tasks using `(updated_at - created_at).days`
+- **TodoCLI:** Extended src/cli/todo_cli.py:
+  - Added `report` subcommand handler `_cmd_report()` in `_build_parser()`
+  - Displays formatted report with all metrics
+  - Completion rate shown as percentage with .1f decimal (50.0%)
+  - Average days shown with .1f decimal or "N/A" if None
+- **InteractiveMenu:** Extended src/cli/interactive_menu.py:
+  - Added menu option 9: "View summary report"
+  - Implemented `_do_report()` method with formatted display
+  - Shows all metrics in menu format with "Press Enter to continue..." prompt
+- **Models __init__.py:** Exported TaskSummaryReport from src/models/__init__.py
+- **Diagrams (artifacts/):**
+  - Updated class_diagram.puml: Added TaskSummaryReport dataclass, added generate_report() to TodoService, added CLI and menu methods
+  - Updated use_case_diagram.puml: Added "View summary report" and "Generate report" use cases
+  - Updated component_diagram.puml: Added Report Generation component
+
+### Files Changed
+- src/models/task_summary_report.py (NEW)
+- src/models/__init__.py (export TaskSummaryReport)
+- src/services/todo_service.py (generate_report method)
+- src/cli/todo_cli.py (report subcommand)
+- src/cli/interactive_menu.py (menu option 9, _do_report method)
+- artifacts/class_diagram.puml
+- artifacts/use_case_diagram.puml
+- artifacts/component_diagram.puml
+
+### Test Results
+**373 tests total: ALL PASSED**
+- 37 new tests for summary report functionality
+- 6 tests for TaskSummaryReport dataclass (frozen, fields, types, equality, repr)
+- 16 tests for generate_report() (empty, mixed statuses, rates, overdue, due dates, avg days, determinism, performance)
+- 7 tests for CLI report command (output, formatting, exit codes)
+- 8 tests for interactive menu report option (menu display, selection, formatting, prompts)
+- 336 existing tests all still passing (no regressions)
+
+### Acceptance Criteria Verification
+✓ Report includes: total task count, count per status (pending, in_progress, done), count of overdue tasks, count of tasks with due date set
+✓ Completion rate is included as a percentage (done / total)
+✓ Report is returned as structured object (dataclass), not plain dictionary
+✓ Output format is deterministic regardless of task ordering (frozen dataclass ensures this)
+✓ Average days from creation to completion for done tasks is included as bonus
+✓ No charts or visualization output are produced
+✓ All new functionality accessible via `python -m src`:
+  - Interactive menu: Option 9 ("View summary report")
+  - CLI: `python -m src report` subcommand
+  - Both modes fully functional and tested
+
+Duration: 503.9s | Cost: $1.046996 USD | Turns: 14

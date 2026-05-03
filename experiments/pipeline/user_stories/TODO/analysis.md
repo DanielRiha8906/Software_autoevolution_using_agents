@@ -1,343 +1,308 @@
-# TODO Application: Due Date Filtering Analysis
+# Task 06 Analysis: Summary Report of Task Counts and Completion Rates
 
-## Task Overview
+## Task Understanding
 
-Implement task filtering by due date and overdue status, enabling users to query tasks by:
-- Due date range (before/after datetime)
-- Time period filters (week, month, year)
-- Overdue status
-- Combined with existing status filtering
-- Access via CLI and interactive menu
+**Objective:** Implement a TODO application feature that generates a structured summary report of task statistics, including:
+- Total task count
+- Count breakdown by status (pending, in_progress, done)
+- Count of overdue tasks
+- Count of tasks with due date set
+- Completion rate as a percentage (done / total)
+- Bonus: Average days from creation to completion for done tasks
+- Output as a dataclass (not plain dict)
+- Output format deterministic regardless of task ordering
+- Accessible via both interactive menu and CLI flag (`python -m src report` or similar)
 
----
+## Current Architecture Overview
 
-## Current Task Data Structure
+### Codebase Structure
 
-### Task Model
-**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/models/task.py`
+**Models** (`src/models/`):
+- `Task` (dataclass): Contains `id`, `title`, `description`, `status` (TaskStatus enum), `created_at` (datetime), `updated_at` (datetime), `due_date` (Optional[datetime]), `comments` (list of TaskComment)
+- `TaskStatus` (enum): PENDING, IN_PROGRESS, DONE (with values "pending", "in_progress", "done")
+- `TaskComment` (dataclass): For comment management (not directly relevant to report)
 
-**Key attributes:**
-- `id: str` — UUID, supports prefix lookup
-- `title: str` — required
+**Services** (`src/services/`):
+- `TaskManager`: Core CRUD operations, persistence via JsonStorage
+  - `list_all()` returns all tasks
+  - `list_by_status(status)` filters by status
+  - Methods available: `add()`, `get()`, `list_all()`, `list_by_status()`, `list_by_due_date_range()`, `update()`, `set_status()`, `set_due_date()`, `delete()`
+- `TodoService`: High-level service layer wrapping TaskManager
+  - Delegates to TaskManager for most operations
+  - Also supports: `add_task()`, `list_tasks()`, `get_task()`, `complete_task()`, `start_task()`, `reopen_task()`, `update_task()`, etc.
+
+**Storage** (`src/storage/`):
+- `JsonStorage`: Reads/writes to JSON file (default: ~/.todo_data.json)
+- Provides `load()` and `save(tasks)` methods
+
+**CLI** (`src/cli/`):
+- `TodoCLI`: Argument parser with subcommands (add, list, show, start, done, reopen, update, delete, due-date, add-comment, list-comments, delete-comment, edit-comment)
+- `InteractiveMenu`: Full-screen terminal menu with options 1-8 (and 0 for quit)
+  - Current menu options: List/filter (1), Add (2), Show (3), Change status (4), Update (5), Set due date (6), Delete (7), Manage comments (8)
+
+**Entry Point** (`src/__main__.py`):
+- If `sys.argv` has length > 1: dispatches to `TodoCLI().run()`
+- Otherwise: launches `InteractiveMenu().run()`
+
+### Data Model Available Fields
+
+On **Task** object:
+- `id: str` (UUID)
+- `title: str`
 - `description: Optional[str]`
-- `status: TaskStatus` — enum (PENDING, IN_PROGRESS, DONE)
-- `created_at: datetime` — UTC timezone-aware, auto-set
-- `updated_at: datetime` — UTC timezone-aware, auto-set
-- `due_date: Optional[datetime]` — UTC timezone-aware, nullable
+- `status: TaskStatus` (with `.is_completed()`, `.is_pending()`, `.is_in_progress()`, `.is_overdue()` methods)
+- `created_at: datetime` (UTC timezone-aware)
+- `updated_at: datetime` (UTC timezone-aware)
+- `due_date: Optional[datetime]` (UTC timezone-aware or None)
 - `comments: list[TaskComment]`
+- Methods: `is_pending()`, `is_in_progress()`, `is_completed()`, `is_overdue()`
 
-**Existing query methods on Task:**
-- `is_pending() -> bool`
-- `is_in_progress() -> bool`
-- `is_completed() -> bool`
-- `is_overdue() -> bool` — **already implemented** (checks if `due_date < now` and not DONE)
+## Key Findings
 
-**Serialization:**
-- `to_dict()` — serializes as ISO 8601 strings
-- `from_dict(data)` — deserializes from dicts
+### 1. Data Availability for Report
 
-**Validation:**
-- Enforces timezone-aware datetimes on initialization (raises ValueError if `due_date.tzinfo is None`)
+All required fields for the report are already available:
+- **Total count**: `len(service.list_tasks())`
+- **Status counts**: Available via `service.list_tasks(status=TaskStatus.PENDING)` etc.
+- **Overdue count**: Can use `task.is_overdue()` on all tasks
+- **Due date set**: Can count tasks where `task.due_date is not None`
+- **Completion rate**: Done count / Total count (trivial math)
+- **Bonus metric (avg days creation to completion)**: 
+  - Available from tasks with `status == DONE` 
+  - Calculate: `(task.updated_at - task.created_at).days` (Note: `updated_at` is set when status changes to DONE)
+  - Assumption: `updated_at` is updated when task is marked done (confirmed in code via `task.mark_done()` sets `updated_at`)
 
----
+### 2. Output Format Requirement
 
-## Current Filtering Implementation
+**Must be a dataclass, not a plain dict.** This means:
+- Create a new dataclass `TaskSummaryReport` (or similar name) in `src/models/`
+- Fields: `total_count`, `pending_count`, `in_progress_count`, `done_count`, `overdue_count`, `due_date_set_count`, `completion_rate` (as float or percentage), and optionally `avg_days_to_completion` (float)
+- Must be deterministic: Order doesn't matter for counts (all are aggregations), so output is inherently deterministic
 
-### TodoService.list_tasks() [Main filtering entry point]
-**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/services/todo_service.py` (lines 25-28)
+### 3. Deterministic Output
 
+The requirement states "Output format is deterministic regardless of task ordering":
+- All counts are aggregations, so the order of tasks doesn't affect the result
+- Completion rate is a ratio, also deterministic
+- Average calculation is also deterministic (sum/count)
+- Dataclass with frozen=True could help ensure immutability, but not required
+
+### 4. CLI and Menu Integration
+
+**Current CLI pattern** (`src/cli/todo_cli.py`):
+- Uses `argparse` with subcommands
+- New subcommand needed: `report` with no arguments (or optional filters?)
+- Should return formatted output (JSON-compatible or human-readable)
+
+**Current Menu pattern** (`src/cli/interactive_menu.py`):
+- Main menu has options 1-8 (and 0 for quit)
+- New menu option needed: e.g., option "9" for "View summary report"
+- Should display report in human-readable format
+
+**Entry point** (`src/__main__.py`):
+- Already dispatches correctly: if args present, go to CLI; otherwise go to menu
+- No changes needed here
+
+## What New Functionality Is Needed
+
+### 1. New Dataclass: TaskSummaryReport
+
+**Location:** `src/models/task_summary_report.py` (new file)
+
+**Fields:**
 ```python
-def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
-    if status is not None:
-        return self._manager.list_by_status(status)
-    return self._manager.list_all()
+@dataclass
+class TaskSummaryReport:
+    total_count: int
+    pending_count: int
+    in_progress_count: int
+    done_count: int
+    overdue_count: int
+    due_date_set_count: int
+    completion_rate: float  # 0.0 to 1.0 (or percentage 0-100)
+    avg_days_to_completion: Optional[float] = None  # bonus
 ```
 
-**Current behavior:**
-- Accepts single optional `status` parameter (TaskStatus enum)
-- Returns all tasks if status is None
-- Delegates to TaskManager for actual filtering
-
-### TaskManager filtering methods
-**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/services/task_manager.py`
-
-- `list_all()` (line 44) — returns all tasks as list
-- `list_by_status(status: TaskStatus)` (lines 47-48) — filters by status via list comprehension
-
-**Pattern:** Simple list comprehensions on `self._tasks.values()`, no composition/chaining support
-
----
-
-## Where list_tasks() is Called
-
-### From CLI
-**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/cli/todo_cli.py`
-
-- `_cmd_list()` (lines 143-153) — parses `--status` flag, calls `list_tasks(status)`
-  - Currently supports: `--status [pending|in_progress|done]`
-  - Displays results with status symbols and descriptions
-
-### From Interactive Menu
-**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/cli/interactive_menu.py`
-
-- `run()` (line 62) — calls `list_tasks()` with no args to display all tasks in header
-- `_do_list()` (lines 120-142) — interactive status filter menu
-  - Prompts user to select status (pending/in_progress/done/all)
-  - Calls `list_tasks(status)`
-  - Displays with line format: `[status_symbol] [id_prefix] [title] [description]`
-
----
-
-## How Status Filtering Currently Works
-
-### In CLI (todo_cli.py)
-```python
-def _cmd_list(self, args: argparse.Namespace) -> int:
-    status = TaskStatus(args.status) if args.status else None  # Convert string to enum
-    tasks = self._service.list_tasks(status)  # Pass enum or None
-    # ... display logic
-```
-
-### In Interactive Menu (interactive_menu.py)
-```python
-status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
-status = status_map.get(raw)  # Lookup enum or None
-tasks = self._service.list_tasks(status)  # Pass enum or None
-```
-
-**Pattern:**
-1. User input (string or numeric choice) → enum conversion
-2. Pass enum or None to service
-3. Service delegates to manager's `list_by_status()`
-4. Manager uses list comprehension to filter
-
----
-
-## Required Changes for Due Date Filtering
-
-### 1. Service Layer (TodoService)
-
-**Extend `list_tasks()` signature:**
-
-Currently:
-```python
-def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]
-```
-
-Should become:
-```python
-def list_tasks(
-    self,
-    status: Optional[TaskStatus] = None,
-    before: Optional[datetime] = None,
-    after: Optional[datetime] = None,
-    overdue_only: bool = False
-) -> list[Task]
-```
-
-**Add helper methods for time period filtering:**
-- `list_tasks_by_week(year: int, week: int, status: Optional[TaskStatus] = None) -> list[Task]`
-- `list_tasks_by_month(year: int, month: int, status: Optional[TaskStatus] = None) -> list[Task]`
-- `list_tasks_by_year(year: int, status: Optional[TaskStatus] = None) -> list[Task]`
-
-**Or a more flexible approach:**
-```python
-def list_tasks_by_due_date_range(
-    self,
-    period_start: Optional[datetime] = None,
-    period_end: Optional[datetime] = None,
-    status: Optional[TaskStatus] = None,
-    overdue_only: bool = False
-) -> list[Task]
-```
-
-### 2. Manager Layer (TaskManager)
-
-**Add filtering methods:**
-
-```python
-def list_by_due_date_range(
-    self,
-    before: Optional[datetime] = None,
-    after: Optional[datetime] = None,
-    status: Optional[TaskStatus] = None,
-    overdue_only: bool = False
-) -> list[Task]:
-    """Filter tasks by due date range and optional status/overdue."""
-```
-
-**Filtering logic needed:**
-- If `before` is set: include only tasks where `due_date <= before` or `due_date is None` (decision needed)
-- If `after` is set: include only tasks where `due_date >= after`
-- If `overdue_only=True`: include only tasks where `task.is_overdue()`
-- If `status` is set: include only matching status
-- Combine all conditions with AND logic
-
-**Note:** The `is_overdue()` method already exists on Task, so can be leveraged
-
-### 3. CLI Layer (TodoCLI)
-
-**Extend `_cmd_list()` argument parser:**
-
-Current:
-```python
-p_list.add_argument("--status", choices=["pending", "in_progress", "done"], help="Filter by status")
-```
-
-Add:
-```python
-p_list.add_argument("--due-before", help="Due date before (ISO 8601, e.g., 2026-05-15T23:59:59+00:00)")
-p_list.add_argument("--due-after", help="Due date after (ISO 8601)")
-p_list.add_argument("--week", help="Due in week YYYY-Www (e.g., 2026-W20)")
-p_list.add_argument("--month", help="Due in month YYYY-MM (e.g., 2026-05)")
-p_list.add_argument("--year", help="Due in year YYYY (e.g., 2026)")
-p_list.add_argument("--overdue", action="store_true", help="Show only overdue tasks")
-```
-
-**Implement `_cmd_list()` logic:**
-1. Parse date arguments (ISO 8601 strings → datetime objects)
-2. Convert week/month/year to date ranges
-3. Call appropriate service method
-4. Display results (extend current display to show due date if present)
-
-### 4. Interactive Menu Layer (InteractiveMenu)
-
-**Extend `_do_list()` menu:**
-
-Current flow:
-1. Prompt for status filter (4 options: pending/in_progress/done/all)
-2. Display filtered tasks
-
-New flow:
-1. Show filter submenu:
-   - Filter by status
-   - Filter by due date range
-   - Filter by time period (week/month/year)
-   - Filter by overdue only
-   - Combine filters
-2. Collect filter parameters via prompts
-3. Call service with combined filters
-4. Display results with due date column
-
----
-
-## Key Implementation Details
-
-### Date Range Calculation
-
-For week/month/year filters, need to calculate boundaries:
-
-**Week (ISO 8601):** Week starts Monday
-- Input: "2026-W20" (week 20 of 2026)
-- Start: first day of that week (Monday)
-- End: last day of that week (Sunday at 23:59:59)
-
-**Month:**
-- Input: "2026-05"
-- Start: 2026-05-01 00:00:00
-- End: 2026-05-31 23:59:59
-
-**Year:**
-- Input: "2026"
-- Start: 2026-01-01 00:00:00
-- End: 2026-12-31 23:59:59
-
-Recommendation: Use `datetime.date.fromisocalendar()` for weeks, `calendar` module for month boundaries
-
-### Combining Filters
-
-All filters should be combinable (AND logic):
-- status + due_before
-- status + due_after + overdue
-- week + status
-- etc.
-
-Current implementation (`list_by_status`) is incompatible with combining filters. Need unified filtering strategy.
-
-### Display Considerations
-
-**Current output:** `[status_symbol] [id_prefix] [title] [description]`
-
-**Consider adding due date info:**
-- Show due date inline? `[status] [id] [title] (due: 2026-05-15)`
-- Show overdue warning? Flag overdue tasks with `*` or color
-- Show count in header? "Tasks: 12 (3 overdue)"
-
-### Timezone Handling
-
-- All `due_date` fields are UTC timezone-aware
-- User input (CLI/menu) should be parsed as ISO 8601, preserving timezone
-- Comparisons (`before`, `after`, `overdue`) all use UTC `datetime.now(timezone.utc)`
-- **Already handled correctly in existing code**
-
----
-
-## Files to Modify
-
-1. **src/services/todo_service.py** — extend `list_tasks()` signature and add time-period methods
-2. **src/services/task_manager.py** — add `list_by_due_date_range()` and helper methods
-3. **src/cli/todo_cli.py** — extend `list` subcommand args, implement `_cmd_list()` date parsing logic
-4. **src/cli/interactive_menu.py** — extend `_do_list()` with date filter menu options
-5. **src/__main__.py** — no changes needed (CLI/menu wiring already in place)
-
-No model, storage, or test infrastructure changes required initially (Task and JsonStorage already support due_date).
-
----
-
-## Ambiguities & Decisions
-
-1. **Null due_date handling in range filters:**
-   - Should tasks with `due_date=None` be included when filtering by date range?
-   - Assumption: No, exclude them. They are not "due" at all.
-   - Alternative: Add `include_no_due_date: bool` flag if needed later.
-
-2. **Filter combination order:**
-   - Should all filters be AND-ed? Yes.
-   - Example: `--status pending --overdue` → pending AND overdue
-   - Assumption: All filters are AND-ed together.
-
-3. **Week/month/year boundary precision:**
-   - Should period end at 00:00:00 or 23:59:59?
-   - Assumption: End at 23:59:59 to be inclusive of whole day/month/year.
-
-4. **CLI flag vs menu option naming:**
-   - CLI flags: `--due-before`, `--due-after`, `--week`, `--month`, `--year`, `--overdue`
-   - Menu: numbered or lettered options for filter type, then sub-prompts for values
-   - Assumption: Follow existing pattern (status filter is option 1 in menu).
-
-5. **Combined filter semantics in interactive menu:**
-   - Should user be able to stack multiple filters in one session?
-   - Assumption: Yes, show a "filter summary" before displaying results.
-
----
+**Exports:** Add to `src/models/__init__.py`
+
+### 2. Report Generation Method
+
+**Location:** `src/services/todo_service.py` (or new file `src/services/report_service.py`)
+
+**Method:** `generate_report()` that:
+1. Gets all tasks via `self.list_tasks()`
+2. Counts by status using existing `list_by_status()` or manual iteration
+3. Counts overdue using `task.is_overdue()`
+4. Counts due_date set using `task.due_date is not None`
+5. Calculates completion_rate: done_count / total_count (handle division by zero)
+6. Calculates avg_days_to_completion for bonus (only for DONE tasks)
+7. Returns `TaskSummaryReport` instance
+
+### 3. CLI Integration
+
+**Location:** `src/cli/todo_cli.py`
+
+**New subcommand:** `report` (no arguments required)
+- Add parser section:
+  ```python
+  p_report = sub.add_parser("report", help="Generate task summary report")
+  p_report.set_defaults(func=self._cmd_report)
+  ```
+- Add handler method:
+  ```python
+  def _cmd_report(self, args: argparse.Namespace) -> int:
+      report = self._service.generate_report()
+      print(f"Total tasks: {report.total_count}")
+      print(f"  Pending: {report.pending_count}")
+      print(f"  In progress: {report.in_progress_count}")
+      print(f"  Done: {report.done_count}")
+      # ... etc
+      return 0
+  ```
+
+### 4. Interactive Menu Integration
+
+**Location:** `src/cli/interactive_menu.py`
+
+**New menu option:** Add option 9 (after Manage comments, before Quit)
+- Update `_print_main_menu()` to include new option
+- Add new handler method `_do_report()` that:
+  1. Gets report via `self._service.generate_report()`
+  2. Displays in formatted human-readable way
+  3. Prompts to continue (or auto-returns)
+
+## What Existing Code Needs Modification
+
+### 1. `src/models/__init__.py`
+- Add import and export of `TaskSummaryReport`
+
+### 2. `src/services/todo_service.py`
+- Add new method `generate_report()` that creates and returns `TaskSummaryReport`
+
+### 3. `src/cli/todo_cli.py`
+- Add `report` subcommand to argparse parser
+- Add `_cmd_report()` handler method
+- Format and print report output
+
+### 4. `src/cli/interactive_menu.py`
+- Update `_print_main_menu()` to show new option (9)
+- Update main loop to handle choice "9"
+- Add `_do_report()` method to generate and display report
+
+### 5. `src/__main__.py` (no changes needed)
+- Already routes correctly
+
+## Data Model Summary
+
+### Task Fields Relevant to Report
+| Field | Type | Used For | Notes |
+|-------|------|----------|-------|
+| `status` | TaskStatus | Counting by status | PENDING, IN_PROGRESS, DONE |
+| `due_date` | Optional[datetime] | Overdue check, due_date_set count | None if not set |
+| `created_at` | datetime | Bonus: avg days to completion | UTC timezone-aware |
+| `updated_at` | datetime | Bonus: avg days to completion | Updated when status changes |
+
+### Task Methods Relevant to Report
+| Method | Returns | Use |
+|--------|---------|-----|
+| `is_overdue()` | bool | Determine if task is overdue |
+| `is_completed()` | bool | Filter done tasks (alternative to status check) |
 
 ## Integration Points
 
-### Test Coverage Implications
-- Current tests focus on status filtering (test_task_manager.py, test_todo_service.py)
-- New tests needed for:
-  - Due date range filtering
-  - Week/month/year parsing and boundary calculation
-  - Overdue detection in filter context
-  - Combined filters (status + due_date)
-  - CLI date parsing and validation
-  - Interactive menu date input
+### Service Layer Access
+- `TodoService.list_tasks()` — Get all tasks
+- `TodoService._manager.list_by_status(status)` — Get tasks by status (or iterate manually)
+- Individual task methods: `task.is_overdue()`, `task.is_completed()`
 
-### Backward Compatibility
-- Existing `list_tasks()` calls with `status=None` will still work (default behavior unchanged)
-- New parameters are optional with sensible defaults
-- CLI: existing `list` command without filters still works
+### CLI Integration
+- `src/cli/todo_cli.py`: Add `report` subcommand
+- `argparse` parser already setup with subcommands pattern
+- Error handling via existing `TaskNotFoundError`, `ValueError` patterns
 
----
+### Menu Integration
+- `src/cli/interactive_menu.py`: Add menu option 9
+- Menu already has pattern for task listing and formatting
+- Existing helper functions: `_clear()`, `_prompt()`, `_pick()`, etc.
 
-## Summary
+## Ambiguities and Assumptions
 
-The TODO application has a clean separation of concerns (models → services → CLI/menu). The Task model already includes `due_date` and `is_overdue()` logic. The filtering infrastructure in TodoService and TaskManager is currently single-purpose (status only) but follows a simple pattern that can be extended.
+### 1. Completion Rate Format
+**Assumption:** Return as float 0.0-1.0 (not percentage 0-100). This is more programmatic and can be formatted as needed by CLI/menu.
 
-**Primary work:**
-1. Extend service/manager filtering to accept date ranges and combine with status
-2. Add CLI arguments for date filtering and parse ISO 8601 input
-3. Add interactive menu options for date-based filtering
-4. Display results with due date information where relevant
+### 2. Division by Zero
+**Assumption:** If no tasks exist, completion_rate = 0.0 (or could be NaN, but 0.0 is safer for dataclass)
 
-**No structural changes needed** — just extend existing filtering patterns to include date-based predicates.
+### 3. Average Days Calculation
+**Assumption:** Use `(task.updated_at - task.created_at).days` for done tasks.
+- This assumes `updated_at` is set correctly when task is marked done (confirmed in code).
+- If no done tasks, average = None (optional field)
+
+### 4. Overdue Definition
+**Assumption:** Use `task.is_overdue()` which returns False if:
+- `due_date` is None
+- Status is DONE
+Otherwise checks if `due_date < now(UTC)`
+
+### 5. Menu Option Number
+**Assumption:** New option is "9" (adds before "0. Quit"). Could be other number, but 9 is next logical.
+
+### 6. Report Accessibility
+**Assumption:** 
+- CLI: `python -m src report` (no additional flags)
+- Menu: Option 9 on main menu
+- Both required per task statement
+
+## Scope Signals
+
+### In Scope
+- Generate aggregate counts (total, by status, overdue, with due_date)
+- Calculate completion rate (done / total)
+- Return as dataclass
+- Bonus: average days from creation to completion
+- Accessible via CLI flag and menu option
+- Deterministic output
+
+### Explicitly Out of Scope
+- Charts or visualization (stated: "No charts/visualization")
+- Filters by date range or other criteria (report is global)
+- Custom report templates
+- Export to CSV, PDF, etc.
+
+### Borderline/Clarification Needed
+- Is `completion_rate` a float (0.0-1.0) or percentage (0-100)? → Assuming float
+- Is it possible to customize which fields are included? → No, all required fields are fixed
+- Can report be exported? → Not required, output only
+
+## Suggested Implementation Priority
+
+1. **Create `TaskSummaryReport` dataclass** (src/models/task_summary_report.py)
+   - Define all required fields
+   - Simple dataclass, no methods needed
+   - Add to models/__init__.py
+
+2. **Implement report generation** (src/services/todo_service.py)
+   - Add `generate_report()` method
+   - Implement all count logic
+   - Test with various task scenarios (empty, all pending, mixed, overdue)
+
+3. **Add CLI integration** (src/cli/todo_cli.py)
+   - Add `report` subcommand to argparse
+   - Add `_cmd_report()` handler
+   - Format output for readability
+
+4. **Add menu integration** (src/cli/interactive_menu.py)
+   - Update main menu to include option 9
+   - Implement `_do_report()` method
+   - Format output for terminal display
+
+5. **Write comprehensive tests**
+   - Test report generation with various task scenarios
+   - Test CLI command
+   - Test menu option
+   - Edge cases: no tasks, all done, no due dates, etc.
+
+6. **Update diagrams** (artifacts/*.puml)
+   - class_diagram.puml: Add TaskSummaryReport class
+   - component_diagram.puml: Add Report component
+   - use_case_diagram.puml: Add "Generate report" use case

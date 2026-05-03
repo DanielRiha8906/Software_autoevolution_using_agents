@@ -19,6 +19,7 @@ rectangle "TODO Manager" {
     usecase "View comments" as I_COMMENT_VIEW
     usecase "Edit comment" as I_COMMENT_EDIT
     usecase "Delete comment" as I_COMMENT_DELETE
+    usecase "View summary report" as I_REPORT
     usecase "Quit application" as I_QUIT
   }
 
@@ -37,6 +38,7 @@ rectangle "TODO Manager" {
     usecase "View comments" as C_COMMENT_VIEW
     usecase "Edit comment" as C_COMMENT_EDIT
     usecase "Delete comment" as C_COMMENT_DELETE
+    usecase "Generate report" as C_REPORT
   }
 }
 
@@ -54,6 +56,7 @@ UI ..> I_COMMENT_ADD : <<exclude>>
 UI ..> I_COMMENT_VIEW : <<exclude>>
 UI ..> I_COMMENT_EDIT : <<exclude>>
 UI ..> I_COMMENT_DELETE : <<exclude>>
+UI ..> I_REPORT   : <<exclude>>
 UI ..> I_QUIT     : <<exclude>>
 
 CLI ..> C_ADD     : <<exclude>>
@@ -69,5 +72,6 @@ CLI ..> C_COMMENT_ADD : <<exclude>>
 CLI ..> C_COMMENT_VIEW : <<exclude>>
 CLI ..> C_COMMENT_EDIT : <<exclude>>
 CLI ..> C_COMMENT_DELETE : <<exclude>>
+CLI ..> C_REPORT  : <<exclude>>
 
 @enduml

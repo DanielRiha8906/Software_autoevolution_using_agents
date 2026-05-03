@@ -153,6 +153,10 @@ class TodoCLI:
         p_edit_comment.add_argument("content", help="New comment content")
         p_edit_comment.set_defaults(func=self._cmd_edit_comment)
 
+        # report
+        p_report = sub.add_parser("report", help="Generate task summary report")
+        p_report.set_defaults(func=self._cmd_report)
+
         return parser
 
     def _parse_and_list_by_week(self, week_str: str, status: Optional[TaskStatus]) -> list:
@@ -390,4 +394,24 @@ class TodoCLI:
             raise ValueError(f"Comment '{args.comment_id}' not found")
         updated = self._service.edit_comment(args.task_id, comment.id, args.content)
         print(f"Edited comment {updated.id[:8]}: {updated.content}")
+        return 0
+
+    def _cmd_report(self, args: argparse.Namespace) -> int:
+        report = self._service.generate_report()
+        print("Task Summary Report")
+        print()
+        print(f"Total tasks:       {report.total_count}")
+        print(f"  Pending:        {report.pending_count}")
+        print(f"  In progress:    {report.in_progress_count}")
+        print(f"  Done:           {report.done_count}")
+        print()
+        print(f"With due date:     {report.due_date_set_count}")
+        print(f"Overdue:           {report.overdue_count}")
+        print()
+        completion_pct = report.completion_rate * 100
+        print(f"Completion rate:   {completion_pct:.1f}%")
+        if report.avg_days_to_completion is not None:
+            print(f"Avg days to completion: {report.avg_days_to_completion:.1f}")
+        else:
+            print("Avg days to completion: N/A")
         return 0
