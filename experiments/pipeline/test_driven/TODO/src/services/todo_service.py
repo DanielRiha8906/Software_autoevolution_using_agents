@@ -1,6 +1,7 @@
 from typing import Optional
+from datetime import datetime
 
-from ..models.task import Task
+from ..models.task import Task, CEST
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
@@ -10,18 +11,51 @@ class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
 
-    def add_task(self, title: str, description: Optional[str] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description)
+        task = self._manager.add(title.strip(), description)
+        if due_date is not None:
+            task.due_date = due_date
+            self._manager._persist()
+        return task
 
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
 
-    def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
+    def list_tasks(
+        self,
+        status: Optional[TaskStatus] = None,
+        due_before: Optional[datetime] = None,
+        due_after: Optional[datetime] = None,
+        overdue: bool = False,
+    ) -> list[Task]:
+        # Validate timezone for date parameters
+        if due_before is not None and due_before.tzinfo != CEST:
+            raise ValueError("due_before must use CEST timezone")
+        if due_after is not None and due_after.tzinfo != CEST:
+            raise ValueError("due_after must use CEST timezone")
+
+        # Get all tasks
+        tasks = self._manager.list_all()
+
+        # Apply status filter if provided
         if status is not None:
-            return self._manager.list_by_status(status)
-        return self._manager.list_all()
+            tasks = [t for t in tasks if t.status == status]
+
+        # Apply due_before filter if provided
+        if due_before is not None:
+            tasks = [t for t in tasks if t.due_date is not None and t.due_date < due_before]
+
+        # Apply due_after filter if provided
+        if due_after is not None:
+            tasks = [t for t in tasks if t.due_date is not None and t.due_date > due_after]
+
+        # Apply overdue filter if True
+        if overdue:
+            tasks = [t for t in tasks if t.is_overdue()]
+
+        return tasks
 
     def start_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)
