@@ -5,6 +5,7 @@ from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
+from ..services.statistics_service import TaskStatisticsService
 from ..storage.json_storage import JsonStorage
 
 _STATUS_LABEL = {
@@ -79,6 +80,8 @@ class InteractiveMenu:
                 self._do_update(tasks)
             elif choice == "6":
                 self._do_delete(tasks)
+            elif choice == "7":
+                self._do_statistics()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -105,6 +108,7 @@ class InteractiveMenu:
         print("  4. Change status  (start / done / reopen)")
         print("  5. Update task    (title / description)")
         print("  6. Delete task")
+        print("  7. View statistics")
         print("  0. Quit")
         print()
 
@@ -266,4 +270,19 @@ class InteractiveMenu:
             print(f"  Deleted: {task.id[:8]}  {task.title}")
         except TaskNotFoundError as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_statistics(self) -> None:
+        _clear()
+        print("  Task Statistics\n")
+        stats_svc = TaskStatisticsService(self._service)
+        report = stats_svc.compute()
+        print(f"  Total tasks:           {report.total}")
+        print(f"  Pending:               {report.count_per_status[TaskStatus.PENDING]}")
+        print(f"  In Progress:           {report.count_per_status[TaskStatus.IN_PROGRESS]}")
+        print(f"  Done:                  {report.count_per_status[TaskStatus.DONE]}")
+        print(f"  Completion rate:       {report.completion_rate:.1f}%")
+        print(f"  Tasks with due date:   {report.with_due_date_count}")
+        print(f"  Overdue tasks:         {report.overdue_count}")
+        print()
         input("  Press Enter to continue...")
