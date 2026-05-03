@@ -38,3 +38,49 @@ Successfully added `duration_seconds: float` attribute to the WorkflowRun model 
 - ✅ Diagrams updated
 
 Duration: 277.2s | Cost: $0.492852 USD | Turns: 17
+
+## Task 02: Implement Workflow Run State Logic
+
+**Status:** Completed
+
+### Summary
+Successfully implemented workflow run state logic with 5 encapsulated domain methods that derive state strictly from status and conclusion fields. All methods are mutually exclusive by design. CLI and interactive menu integration provides both one-shot and interactive access.
+
+### Files Changed
+- `src/models/workflow_run.py` — Added 5 state logic methods (is_terminal, is_running, is_successful, is_failed, is_cancelled)
+- `tests/test_workflow_run_state.py` — Created new test file with 48 comprehensive tests
+- `src/cli/workflow_cli.py` — Added "check-state" subcommand for one-shot state queries
+- `src/cli/interactive_menu.py` — Added "Check run state" interactive menu option
+- `artifacts/class_diagram.puml` — Updated WorkflowRun class to show new methods
+
+### Test Results
+- **Total Tests:** 57
+- **Passed:** 57
+- **Failed:** 0
+- **Status:** ✅ All tests pass
+
+### Implementation Details
+- Must Have: ✅ Implemented is_terminal(), is_running(), is_failed(), is_successful()
+- Must Have: ✅ Methods derive state strictly from status and conclusion
+- Must Have: ✅ All functionality accessible via python -m src (CLI flag and interactive menu)
+- Should Have: ✅ Mutual exclusivity enforced by design (terminal/running, successful/failed pairs)
+- Should Have: ✅ Unit tests covering all state combinations (48 tests)
+- Could Have: ✅ Implemented is_cancelled() convenience method
+- Won't Have: ✅ No enum definitions modified
+
+### State Logic
+- `is_terminal()`: Returns True if status == WorkflowStatus.COMPLETED
+- `is_running()`: Returns True if not is_terminal() (inverse relationship)
+- `is_successful()`: Returns True if is_terminal() AND conclusion == WorkflowConclusion.SUCCESS
+- `is_failed()`: Returns True if is_terminal() AND conclusion == WorkflowConclusion.FAILURE
+- `is_cancelled()`: Returns True if is_terminal() AND conclusion == WorkflowConclusion.CANCELLED
+
+### Test Coverage
+- Terminal state detection: 8 tests covering COMPLETED and all non-terminal statuses
+- Running state validation: 8 tests with inverse relationship validation
+- Success detection: 10 tests covering SUCCESS and other conclusions
+- Failure detection: 10 tests covering FAILURE and other conclusions
+- Cancellation detection: 5 tests covering CANCELLED conclusion
+- Mutual exclusivity: 7 tests validating conflicting state pairs
+
+Duration: 305.9s | Cost: $0.508955 USD | Turns: 17
