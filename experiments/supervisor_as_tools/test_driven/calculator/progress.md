@@ -249,4 +249,4 @@ Implemented `StatisticsService` that computes aggregated metrics over stored cal
 - Robustness: Graceful handling of edge cases (empty memory, zero entries)
 - Testability: Pure computation logic with no external dependencies
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 336.5s | Cost: $0.609802 USD | Turns: 21
