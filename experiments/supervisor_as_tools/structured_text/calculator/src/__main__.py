@@ -29,6 +29,14 @@ def _as_number(value: str) -> float:
         raise argparse.ArgumentTypeError(f"'{value}' is not a valid number")
 
 
+def _parse_status(status_str: str | None) -> bool | None:
+    if status_str == "success":
+        return True
+    elif status_str == "failure":
+        return False
+    return None
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
@@ -39,13 +47,19 @@ def main() -> None:
         "--operation",
         metavar="OP",
         choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
-        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo) or filter memory by operation type (use with --memory list)",
     )
     parser.add_argument(
         "--memory",
         metavar="ACTION",
         choices=["list", "detail", "failures", "summary", "clear"],
         help="Memory action (list | detail | failures | summary | clear)",
+    )
+    parser.add_argument(
+        "--status",
+        metavar="STATUS",
+        choices=["success", "failure"],
+        help="Filter memory by execution status (use with --memory list)",
     )
     parser.add_argument(
         "operands",
@@ -61,7 +75,10 @@ def main() -> None:
     # Handle memory commands
     if args.memory:
         if args.memory == "list":
-            cli.show_memory_list()
+            cli.show_memory_filtered_list(
+                operation=args.operation,
+                status=_parse_status(args.status)
+            )
         elif args.memory == "detail":
             if not args.operands:
                 parser.error("Memory detail requires an entry ID")

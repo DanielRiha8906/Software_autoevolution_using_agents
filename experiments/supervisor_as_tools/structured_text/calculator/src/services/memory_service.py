@@ -49,3 +49,30 @@ class MemoryService:
         for entry in all_entries:
             counts[entry.operation] = counts.get(entry.operation, 0) + 1
         return counts
+
+    def retrieve_by_filter(
+        self,
+        operation: str | None = None,
+        success: bool | None = None
+    ) -> list[MemoryEntry]:
+        """
+        Retrieve memory entries with optional filtering.
+
+        Args:
+            operation: Filter by operation name (e.g., "add"). If None, no operation filter.
+            success: Filter by status. True = successes only, False = failures only, None = all.
+
+        Returns:
+            List of MemoryEntry objects matching all non-None filters (AND semantics).
+            Returns empty list if no matches or if memory is empty.
+        """
+        all_entries = self.storage.load_all()
+        results = all_entries
+
+        if operation is not None:
+            results = [e for e in results if e.operation == operation]
+
+        if success is not None:
+            results = [e for e in results if e.success == success]
+
+        return results

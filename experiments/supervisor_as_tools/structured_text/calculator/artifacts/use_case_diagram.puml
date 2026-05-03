@@ -15,6 +15,7 @@ rectangle "Calculator Application" {
     usecase "Raise to power" as UC_Power
     usecase "Perform modulo" as UC_Modulo
     usecase "View memory entries" as UC_Memory
+    usecase "Query memory with filters" as UC_FilteredMemory
     usecase "View memory summary" as UC_Summary
     usecase "View failed operations" as UC_Failures
     usecase "Clear memory" as UC_ClearMem
@@ -29,11 +30,13 @@ User --> UC_Sqrt
 User --> UC_Power
 User --> UC_Modulo
 User --> UC_Memory
+User --> UC_FilteredMemory
 User --> UC_Summary
 User --> UC_Failures
 User --> UC_ClearMem
 
 UC_Calc ..> UC_Memory : <<extends>> [if available]
 UC_Calc ..> UC_Failures : <<extends>> [if available]
+UC_FilteredMemory --|> UC_Memory : specializes
 
 @enduml

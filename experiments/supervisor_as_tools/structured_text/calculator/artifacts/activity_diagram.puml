@@ -74,7 +74,19 @@ else (no)
 
       case (Memory)
         if (Memory service available?) then (yes)
-          :Show memory operations (list/summary/clear);
+          :Show memory operations menu;
+          switch (Memory action?)
+            case (List all)
+              :Retrieve all memory entries;
+              :Show list;
+            case (List filtered)
+              :Apply operation filter (optional);
+              :Apply status filter (optional);
+              :Retrieve filtered entries;
+              :Show filtered list;
+            case (Summary/Other)
+              :Show memory summary, failures, or clear;
+          endswitch
         else (no)
           :Show memory unavailable message;
         endif

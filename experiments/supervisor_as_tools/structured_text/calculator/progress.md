@@ -210,3 +210,74 @@ Successfully implemented MemoryService to manage MemoryEntry objects. The servic
 - CalculationResult and JsonStorage remain unchanged
 
 Duration: 504.7s | Cost: $0.880169 USD | Turns: 19
+
+---
+
+## Task 05: Add querying over stored calculations
+
+**Status**: Completed
+
+### Summary
+Successfully implemented comprehensive querying functionality for MemoryEntry records. Added support for filtering by operation type and result/error state through both one-shot CLI flags and structured method APIs. All functionality is accessible via `python -m src` with combined filtering capabilities and consistent output formatting.
+
+### Files Changed
+- `src/services/memory_service.py` — Added `retrieve_by_filter(operation: str | None, success: bool | None)` method enabling flexible filtering with AND semantics
+- `src/__main__.py` — Added `--operation` and `--status` flags for filtering `--memory list` command; added `_parse_status()` helper function; updated memory command handler to use new `show_memory_filtered_list()` method
+- `src/cli/calculator_cli.py` — Added `show_memory_filtered_list(operation, status)` method with consistent formatting and no-results messaging
+- `tests/test_memory_service_filtering.py` — New file with 49 comprehensive tests covering service filtering, CLI output, argparse integration, backward compatibility, and edge cases
+- `artifacts/class_diagram.puml` — Added new methods to MemoryService and CalculatorCLI classes
+- `artifacts/use_case_diagram.puml` — Added "Query memory with filters" use case
+- `artifacts/activity_diagram.puml` — Enhanced memory branch to show filter application flow
+
+### Test Results
+- Total tests: 129 (80 existing + 49 new)
+- Passed: 129
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Implementation Details
+
+**Service Layer (MemoryService):**
+- `retrieve_by_filter(operation=None, success=None)` — Retrieves entries with optional operation and/or success filters using AND semantics
+- Accepts None values for "no filter on this dimension"
+- Returns empty list if no matches or memory is empty
+- Maintains separation of concerns: storage layer remains unchanged
+
+**CLI Layer (CalculatorCLI):**
+- `show_memory_filtered_list(operation=None, status=None)` — Displays filtered entries with consistent format
+- Status visual indicators: [✓] for success, [✗] for failure
+- Entry details: operation, operands, result/error, ID (first 8 chars), timestamp
+- No-results message clearly describes which filters were applied
+
+**Argument Parser (\_\_main\_\_.py):**
+- `--operation {add|subtract|multiply|divide|square|sqrt|power|modulo}` — Filter by operation type
+- `--status {success|failure}` — Filter by execution status (success=True, failure=False)
+- Both flags work with `--memory list`; other memory actions (detail, failures, summary, clear) ignore them
+- Helper function `_parse_status()` converts string status to boolean or None
+
+**Query Capabilities:**
+- Single operation filter: `python -m src --memory list --operation add`
+- Single status filter: `python -m src --memory list --status failure`
+- Combined filters: `python -m src --memory list --operation divide --status success`
+- Unfiltered list (backward compatible): `python -m src --memory list`
+
+**Test Coverage:**
+- Service layer: 4 tests for single-dimension filters, 4 tests for combined filters, 6 tests for edge cases (empty memory, nonexistent operations, return types, field integrity)
+- CLI layer: 9 tests for output formatting, filter descriptions, no-results handling, service availability
+- Backward compatibility: 5 tests verifying existing commands unchanged
+- Argparse integration: 6 tests for flag acceptance, invalid value rejection
+- Parametrized tests: 13 tests covering all operation/status combinations
+
+**Design Patterns:**
+- AND semantics: both filters must match if both provided (e.g., operation="divide" AND success=False)
+- Optional parameters: None means "no filter on this dimension"
+- Consistent output: all list-type queries use identical formatting
+- Backward compatible: existing `--memory list` works exactly as before (calls new method with all None arguments)
+
+**Backward Compatibility:**
+- All 80 existing tests pass without modification
+- Interactive menu unchanged (no new menu options)
+- All existing memory commands work identically (list, detail, failures, summary, clear)
+- `--operation` flag still works for calculation operations (unaffected by memory filtering flag)
+
+Duration: 361.4s | Cost: $0.646531 USD | Turns: 21
