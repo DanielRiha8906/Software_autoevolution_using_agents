@@ -1,9 +1,11 @@
 import sys
+from json import JSONDecodeError
 
 from ..models.operation import Operation
 from ..models.memory_entry import MemoryEntry
 from ..services.calculator_service import CalculatorService
 from ..services.statistics_service import StatisticsService
+from ..services.import_export_service import ImportExportService
 
 
 class CalculatorCLI:
@@ -18,9 +20,15 @@ class CalculatorCLI:
         (Operation.MODULO,   "Modulo"),
     ]
 
-    def __init__(self, service: CalculatorService, statistics_service: StatisticsService) -> None:
+    def __init__(
+        self,
+        service: CalculatorService,
+        statistics_service: StatisticsService,
+        import_export_service: ImportExportService | None = None,
+    ) -> None:
         self.service = service
         self.statistics_service = statistics_service
+        self.import_export_service = import_export_service
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -35,7 +43,9 @@ class CalculatorCLI:
             history_opt = len(self._MENU) + 1
             filter_opt  = len(self._MENU) + 2
             statistics_opt = len(self._MENU) + 3
-            exit_opt    = len(self._MENU) + 4
+            export_opt  = len(self._MENU) + 4
+            import_opt  = len(self._MENU) + 5
+            exit_opt    = len(self._MENU) + 6
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -51,6 +61,14 @@ class CalculatorCLI:
 
             if choice == str(statistics_opt):
                 self._show_statistics()
+                continue
+
+            if choice == str(export_opt):
+                self._export_history()
+                continue
+
+            if choice == str(import_opt):
+                self._import_history()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -96,7 +114,9 @@ class CalculatorCLI:
         print(f"  {len(self._MENU) + 1}. View history")
         print(f"  {len(self._MENU) + 2}. Filter history")
         print(f"  {len(self._MENU) + 3}. Show statistics")
-        print(f"  {len(self._MENU) + 4}. Exit")
+        print(f"  {len(self._MENU) + 4}. Export history")
+        print(f"  {len(self._MENU) + 5}. Import history")
+        print(f"  {len(self._MENU) + 6}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -237,4 +257,61 @@ class CalculatorCLI:
                 print(f"    {op_name}: {count}")
         else:
             print("    (none)")
+        print()
+
+    def _export_history(self) -> None:
+        """Interactive menu option: prompt for export filepath, call service."""
+        if self.import_export_service is None:
+            print("\n  Export service not available.\n")
+            return
+
+        filepath = input("Enter export file path (must end with .json): ").strip()
+        if not filepath:
+            print("  Export cancelled.\n")
+            return
+
+        try:
+            result = self.import_export_service.export_history(filepath)
+            print(f"\n  Successfully exported {result['exported_count']} entries to {result['file_path']}\n")
+        except (ValueError, OSError) as e:
+            print(f"\n  Export error: {e}\n")
+
+    def _import_history(self, filepath: str | None = None, mode: str = "merge") -> None:
+        """Interactive menu option: prompt for import filepath, call service, show results."""
+        if self.import_export_service is None:
+            print("\n  Import service not available.\n")
+            return
+
+        if filepath is None:
+            filepath = input("Enter import file path (must end with .json): ").strip()
+            if not filepath:
+                print("  Import cancelled.\n")
+                return
+
+            # Ask for mode
+            print("\nSelect import mode:")
+            print("  1. Merge (append to existing)")
+            print("  2. Replace (overwrite all)")
+            mode_choice = input("Enter selection (1-2): ").strip()
+
+            if mode_choice == "2":
+                mode = "replace"
+            elif mode_choice != "1" and mode_choice != "":
+                print("  Invalid selection — defaulting to merge.\n")
+                mode = "merge"
+
+        try:
+            result = self.import_export_service.import_history(filepath, mode=mode)
+            self._show_import_result(result)
+        except (ValueError, OSError, JSONDecodeError) as e:
+            print(f"\n  Import error: {e}\n")
+
+    def _show_import_result(self, result: dict) -> None:
+        """Display import operation results (counts, skipped entries, etc.)."""
+        print()
+        print(f"  Imported {result['imported_count']} entries")
+        if result['skipped_count'] > 0:
+            print(f"  Skipped {result['skipped_count']} entries:")
+            print(f"    - {result['duplicates_count']} duplicates")
+            print(f"    - {result['invalid_count']} invalid entries")
         print()

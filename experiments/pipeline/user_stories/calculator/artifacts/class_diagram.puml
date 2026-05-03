@@ -111,6 +111,18 @@ package "services" #DDFFD4 {
         ..
         note on right : Computes aggregated metrics\\nfrom stored calculation history
     }
+
+    class ImportExportService {
+        -memory_service : MemoryService
+        --
+        +ImportExportService(memory_service: MemoryService)
+        +export_history(filepath: Path|str, entries: list|None) : dict
+        +import_history(filepath: Path|str, mode: str) : dict
+        -_validate_entry(data: dict) : tuple[bool, str|None]
+        -_detect_duplicate(entry: MemoryEntry, existing: list) : bool
+        ..
+        note on right : Handles JSON export/import\\nwith validation and duplicate detection
+    }
 }
 
 package "storage" #FFF3CC {
@@ -130,8 +142,9 @@ package "cli" #FFE5E5 {
         -_MENU : list[tuple[Operation, str]]
         -service : CalculatorService
         -statistics_service : StatisticsService
+        -import_export_service : ImportExportService | None
         --
-        +CalculatorCLI(service: CalculatorService, statistics_service: StatisticsService)
+        +CalculatorCLI(service: CalculatorService, statistics_service: StatisticsService, import_export_service: ImportExportService | None)
         +run_interactive() : void
         +run_command(operation: str, a: float, b: float) : void
         -_print_menu() : void
@@ -143,14 +156,19 @@ package "cli" #FFE5E5 {
         -_prompt_state_selection() : str | None
         -_show_filtered_history(operations: list[str] | None, state: str | None) : void
         -_show_statistics() : void
+        -_export_history() : void
+        -_import_history(filepath: str | None, mode: str) : void
+        -_show_import_result(result: dict) : void
     }
 }
 
 CalculatorCLI --> CalculatorService : service
 CalculatorCLI --> StatisticsService : statistics_service
+CalculatorCLI --> ImportExportService : import_export_service
 CalculatorService --> Calculator : calculator
 CalculatorService --> MemoryService : memory_service
 StatisticsService --> MemoryService : memory_service
+ImportExportService --> MemoryService : memory_service
 MemoryService --> JsonStorage : storage
 
 CalculatorService ..> MemoryEntry : create, return
