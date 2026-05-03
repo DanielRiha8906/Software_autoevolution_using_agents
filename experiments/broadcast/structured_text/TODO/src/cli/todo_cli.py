@@ -5,6 +5,7 @@ from typing import Optional
 
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
+from ..services.comments_service import CommentNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
 
@@ -28,7 +29,7 @@ class TodoCLI:
             return 0
         try:
             return args.func(args)
-        except TaskNotFoundError as e:
+        except (TaskNotFoundError, CommentNotFoundError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
         except ValueError as e:
@@ -95,6 +96,29 @@ class TodoCLI:
         p_delete = sub.add_parser("delete", help="Delete a task")
         p_delete.add_argument("id", help="Task ID")
         p_delete.set_defaults(func=self._cmd_delete)
+
+        # comment add
+        p_comment_add = sub.add_parser("comment-add", help="Add a comment to a task")
+        p_comment_add.add_argument("task_id", help="Task ID")
+        p_comment_add.add_argument("content", help="Comment content")
+        p_comment_add.add_argument("-a", "--author", help="Optional author name")
+        p_comment_add.set_defaults(func=self._cmd_comment_add)
+
+        # comment list
+        p_comment_list = sub.add_parser("comment-list", help="List comments for a task")
+        p_comment_list.add_argument("task_id", help="Task ID")
+        p_comment_list.set_defaults(func=self._cmd_comment_list)
+
+        # comment delete
+        p_comment_delete = sub.add_parser("comment-delete", help="Delete a comment")
+        p_comment_delete.add_argument("comment_id", help="Comment ID")
+        p_comment_delete.set_defaults(func=self._cmd_comment_delete)
+
+        # comment update
+        p_comment_update = sub.add_parser("comment-update", help="Update a comment")
+        p_comment_update.add_argument("comment_id", help="Comment ID")
+        p_comment_update.add_argument("content", help="New comment content")
+        p_comment_update.set_defaults(func=self._cmd_comment_update)
 
         return parser
 
@@ -168,4 +192,32 @@ class TodoCLI:
         task = self._service.get_task(args.id)
         self._service.delete_task(args.id)
         print(f"Deleted {task.id[:8]}  {task.title}")
+        return 0
+
+    def _cmd_comment_add(self, args: argparse.Namespace) -> int:
+        comment = self._service.add_comment(args.task_id, args.content, args.author)
+        print(f"Added comment {comment.id[:8]} to task {comment.task_id[:8]}")
+        return 0
+
+    def _cmd_comment_list(self, args: argparse.Namespace) -> int:
+        comments = self._service.list_comments(args.task_id)
+        if not comments:
+            print(f"No comments for task {args.task_id[:8]}")
+            return 0
+        for comment in comments:
+            author_str = f" by {comment.author}" if comment.author else ""
+            created_str = comment.created_at.isoformat()
+            print(f"{comment.id[:8]}{author_str} at {created_str}")
+            print(f"  {comment.content}")
+        return 0
+
+    def _cmd_comment_delete(self, args: argparse.Namespace) -> int:
+        comment = self._service.get_comment(args.comment_id)
+        self._service.delete_comment(args.comment_id)
+        print(f"Deleted comment {comment.id[:8]}")
+        return 0
+
+    def _cmd_comment_update(self, args: argparse.Namespace) -> int:
+        updated = self._service.update_comment(args.comment_id, args.content)
+        print(f"Updated comment {updated.id[:8]}")
         return 0

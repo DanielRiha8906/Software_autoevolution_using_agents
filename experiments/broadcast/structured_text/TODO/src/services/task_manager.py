@@ -18,10 +18,21 @@ class TaskManager:
 
     def _load(self) -> None:
         raw = self._storage.load()
-        self._tasks = {d["id"]: Task.from_dict(d) for d in raw}
+        # Handle both formats: list (legacy) or dict (with tasks/comments)
+        if isinstance(raw, dict):
+            task_list = raw.get("tasks", [])
+        else:
+            task_list = raw if isinstance(raw, list) else []
+        self._tasks = {d["id"]: Task.from_dict(d) for d in task_list}
 
     def _persist(self) -> None:
-        self._storage.save([t.to_dict() for t in self._tasks.values()])
+        raw = self._storage.load()
+        # Preserve existing structure (with comments if present)
+        if isinstance(raw, dict):
+            raw["tasks"] = [t.to_dict() for t in self._tasks.values()]
+        else:
+            raw = [t.to_dict() for t in self._tasks.values()]
+        self._storage.save(raw)
 
     def add(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         task = Task(title=title, description=description, due_date=due_date)

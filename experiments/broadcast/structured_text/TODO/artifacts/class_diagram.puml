@@ -49,6 +49,7 @@ package "storage" #FFF3CC {
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
+    exception CommentNotFoundError
 
     class TaskManager {
         -storage : JsonStorage
@@ -66,8 +67,24 @@ package "services" #DDFFD4 {
         -persist() : void
     }
 
+    class CommentsService {
+        -storage : JsonStorage
+        -comments : Dictionary<String, TaskComment>
+        --
+        +CommentsService(storage: JsonStorage [0..1])
+        +addComment(taskId: String, content: String, author: String [0..1]) : TaskComment
+        +getComment(commentId: String) : TaskComment
+        +listCommentsByTask(taskId: String) : List<TaskComment>
+        +updateComment(commentId: String, content: String) : TaskComment
+        +deleteComment(commentId: String) : void
+        +deleteCommentsByTask(taskId: String) : void
+        -load() : void
+        -persist() : void
+    }
+
     class TodoService {
         -manager : TaskManager
+        -comments : CommentsService
         --
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1], dueDate: DateTime [0..1]) : Task
@@ -78,6 +95,11 @@ package "services" #DDFFD4 {
         +reopenTask(taskId: String) : Task
         +updateTask(taskId: String, title: String [0..1], description: String [0..1], dueDate: DateTime [0..1]) : Task
         +deleteTask(taskId: String) : void
+        +addComment(taskId: String, content: String, author: String [0..1]) : TaskComment
+        +getComment(commentId: String) : TaskComment
+        +listComments(taskId: String) : List<TaskComment>
+        +updateComment(commentId: String, content: String) : TaskComment
+        +deleteComment(commentId: String) : void
     }
 }
 
@@ -101,7 +123,10 @@ Task --> TaskStatus : status
 TaskComment --> Task : references (task_id)
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
+CommentsService --> JsonStorage : storage
+CommentsService ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
+TodoService --> CommentsService : comments
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 
