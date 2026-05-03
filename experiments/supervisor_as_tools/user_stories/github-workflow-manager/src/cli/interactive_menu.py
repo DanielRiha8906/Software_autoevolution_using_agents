@@ -101,6 +101,22 @@ def _detail_run(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
+def _check_run_status(service: WorkflowRunService) -> None:
+    run_id = _prompt("\nEnter run ID")
+    run = service.get_run_detail(run_id)
+    if run is None:
+        print(f"No run found with id '{run_id}'.")
+    else:
+        print(
+            f"\nRun Status Report for {run.id}:\n"
+            f"  is_terminal: {run.is_terminal()}\n"
+            f"  is_running: {run.is_running()}\n"
+            f"  is_successful: {run.is_successful()}\n"
+            f"  is_failed: {run.is_failed()}\n"
+            f"  is_cancelled: {run.is_cancelled()}\n"
+        )
+
+
 def _filter_menu(service: WorkflowRunService) -> None:
     filter_by = _choose("Filter by", ["branch", "status", "conclusion"])
     if filter_by == "branch":
@@ -125,6 +141,7 @@ MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
     ("Get run detail", _detail_run),
+    ("Check run status", _check_run_status),
     ("Filter runs", _filter_menu),
     ("Exit", None),
 ]
