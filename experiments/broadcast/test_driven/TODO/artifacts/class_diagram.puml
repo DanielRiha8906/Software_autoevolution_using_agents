@@ -61,7 +61,7 @@ package "services" #DDFFD4 {
         -tasks : Dictionary<String, Task>
         --
         +TaskManager(storage: JsonStorage [0..1])
-        +add(title: String, description: String [0..1]) : Task
+        +add(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
         +get(taskId: String) : Task
         +listAll() : List<Task>
         +listByStatus(status: TaskStatus) : List<Task>
@@ -76,7 +76,7 @@ package "services" #DDFFD4 {
         -manager : TaskManager
         --
         +TodoService(storage: JsonStorage [0..1])
-        +addTask(title: String, description: String [0..1]) : Task
+        +addTask(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
         +getTask(taskId: String) : Task
         +listTasks(status: TaskStatus [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1], overdue: Boolean) : List<Task>
         +startTask(taskId: String) : Task
@@ -84,6 +84,21 @@ package "services" #DDFFD4 {
         +reopenTask(taskId: String) : Task
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +deleteTask(taskId: String) : void
+    }
+
+    class TaskStatisticsReport {
+        +total : int
+        +count_per_status : Dictionary<TaskStatus, int>
+        +overdue_count : int
+        +with_due_date_count : int
+        +completion_rate : float
+    }
+
+    class TaskStatisticsService {
+        -todo_service : TodoService
+        --
+        +TaskStatisticsService(todo_service: TodoService)
+        +compute() : TaskStatisticsReport
     }
 }
 
@@ -107,6 +122,8 @@ Task --> TaskStatus : status
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
+TaskStatisticsService --> TodoService : todo_service
+TaskStatisticsService --> TaskStatisticsReport : returns
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 
