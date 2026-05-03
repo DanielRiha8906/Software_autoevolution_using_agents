@@ -52,6 +52,8 @@ package "storage" #FFF3CC {
         +JsonStorage(path: String [0..1])
         +load() : List<Dictionary>
         +save(tasks: List<Dictionary>) : void
+        +load_comments() : List<Dictionary>
+        +save_comments(comments: List<Dictionary>) : void
     }
 }
 
@@ -87,6 +89,18 @@ package "services" #DDFFD4 {
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +deleteTask(taskId: String) : void
     }
+
+    class CommentsService {
+        -todo_service : TodoService
+        -storage : JsonStorage
+        -comments : Dictionary<String, TaskComment>
+        --
+        +CommentsService(todo_service: TodoService, storage: JsonStorage [0..1])
+        +add_comment(task_id: String, content: String) : TaskComment
+        +list_comments(task_id: String) : List<TaskComment>
+        +delete_comment(comment_id: String) : void
+        +delete_comments_for_task(task_id: String) : void
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -110,6 +124,9 @@ TaskComment --> Task : task_id
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
+CommentsService --> TodoService : todo_service
+CommentsService --> JsonStorage : storage
+CommentsService --> TaskComment : contains
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 

@@ -246,3 +246,97 @@ All new tests pass successfully:
 - [x] progress.md updated with this summary
 
 Duration: 321.5s | Cost: $0.518330 USD | Turns: 17
+
+---
+
+## Task 04: Implement CommentsService with lifecycle management
+
+**Architecture:** pipeline | **Strategy:** test_driven | **Project:** TODO
+
+**Objective:** Implement `CommentsService` with operations to add, list (ordered by `created_at`), and delete comments, with task existence validation and cascade-delete support.
+
+### Summary
+
+Successfully implemented CommentsService with full comment lifecycle management, including task validation, ordered listing, and cascade delete operations. Extended JsonStorage to handle both task and comment persistence.
+
+### Files Changed
+
+1. **src/services/comments_service.py** (NEW)
+   - Created CommentsService class with in-memory comment storage
+   - Implemented `add_comment(task_id, content)` with task existence validation
+   - Implemented `list_comments(task_id)` returning comments sorted by created_at ascending
+   - Implemented `delete_comment(comment_id)` to remove individual comments
+   - Implemented `delete_comments_for_task(task_id)` for cascade deletion
+   - Private methods: `_load()` and `_persist()` for storage synchronization
+   - NO file I/O in service (all via JsonStorage)
+
+2. **src/storage/json_storage.py** (MODIFIED)
+   - Extended `load()` method to support both legacy list format and new dict format with "tasks" key
+   - Extended `save()` method to preserve comments when saving tasks
+   - Added `load_comments() -> list[dict]` to load comments from storage
+   - Added `save_comments(comments: list[dict])` to persist comments
+   - Maintains backward compatibility with existing test format
+
+3. **src/services/__init__.py** (MODIFIED)
+   - Added CommentsService import
+   - Added CommentsService to __all__ exports
+
+4. **artifacts/class_diagram.puml** (MODIFIED)
+   - Added CommentsService class with all public methods and private fields
+   - Added dependency arrows: CommentsService → TodoService and CommentsService → JsonStorage
+   - Updated JsonStorage to show new load_comments() and save_comments() methods
+
+5. **artifacts/component_diagram.puml** (MODIFIED)
+   - Added "Comments Service" component to Service Layer
+   - Added component dependencies to TodoService and JsonStorage
+
+6. **tests/test_comments_service.py** (NEW)
+   - Created 7 comprehensive test cases covering all CommentsService functionality
+
+### Test Results
+
+```
+80 tests passed (including 7 new CommentsService tests)
+- 73 existing tests (all pass)
+- 7 new tests for CommentsService functionality
+```
+
+All new tests pass successfully:
+- ✅ test_add_comment (creates comment with correct content and task_id)
+- ✅ test_add_empty_comment_raises (rejects empty content via ValueError)
+- ✅ test_comments_service_does_not_contain_file_io (no open() or json.dump in source)
+- ✅ test_list_comments_ordered_by_created_at (returns comments in creation order)
+- ✅ test_delete_comment (removes comment from service)
+- ✅ test_add_comment_to_nonexistent_task_raises (validates task existence)
+- ✅ test_delete_task_cascades_to_comments (cascade delete works correctly)
+
+### Implementation Details
+
+**Key features:**
+- In-memory storage: `_comments` dict mapping comment_id → TaskComment
+- Task validation: TodoService.get_task() called before add_comment and list_comments
+- Cascade delete: delete_comments_for_task() removes all comments without validation (safe for after task deletion)
+- Ordered results: Comments sorted by created_at ascending on list_comments()
+- Content validation: Delegated to TaskComment.__post_init__() (rejects empty strings)
+- Storage integration: Separate load_comments/save_comments methods in JsonStorage
+- No file I/O: CommentsService contains no imports of json, os, or file operations
+
+**Architecture decisions:**
+- Dependency injection: CommentsService receives TodoService and JsonStorage in constructor
+- Single JSON file: Both tasks and comments stored in same file (separate "tasks" and "comments" keys)
+- In-memory with sync: Comments loaded at initialization, persisted after each mutation
+- Error propagation: Exception types come from TaskComment and TodoService (no custom exceptions)
+
+### Definition of Done ✓
+
+- [x] All 7 provided test cases pass
+- [x] All 73 existing tests still pass (80 total)
+- [x] Code compiles without syntax/import errors
+- [x] CommentsService has NO file I/O (all via JsonStorage)
+- [x] Task validation implemented via TodoService.get_task()
+- [x] Comments returned in deterministic created_at order
+- [x] Cascade delete does not validate task existence
+- [x] UML diagrams updated (class_diagram.puml and component_diagram.puml)
+- [x] progress.md updated with this summary
+
+Duration: 342.3s | Cost: $0.603308 USD | Turns: 17
