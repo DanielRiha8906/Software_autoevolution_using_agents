@@ -304,4 +304,4 @@ Duration: 510.3s | Cost: $1.080297 USD | Turns: 19
 - **Error Handling:** FileNotFoundError and IOError raised on file issues; json.JSONDecodeError propagates for corrupted JSON; invalid entries skipped individually with warning log
 - **No Breaking Changes:** All existing APIs unchanged; backward compatible with previous MemoryEntry and JsonStorage behavior; menu renumbering affects existing tests only
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 454.1s | Cost: $0.940096 USD | Turns: 24
