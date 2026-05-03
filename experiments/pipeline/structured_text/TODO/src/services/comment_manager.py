@@ -1,4 +1,5 @@
 from typing import Optional
+from pathlib import Path
 
 from ..models.task_comment import TaskComment
 from ..storage.json_storage import JsonStorage
@@ -6,6 +7,21 @@ from ..storage.json_storage import JsonStorage
 
 class CommentNotFoundError(Exception):
     pass
+
+
+def _derive_comments_path(task_path: Path) -> Path:
+    """Derive the comments file path from the task storage path.
+
+    Takes the directory of the task path and replaces the filename with
+    .todo_comments.json.
+
+    Args:
+        task_path: Path to the task storage file
+
+    Returns:
+        Path to the comments storage file
+    """
+    return task_path.parent / ".todo_comments.json"
 
 
 class CommentManager:
@@ -22,9 +38,8 @@ class CommentManager:
             storage: JsonStorage instance. If None, uses default path ~/.todo_comments.json
         """
         self._storage = storage or JsonStorage(path=None)  # Will get default path from JsonStorage
-        # Override default path to use comments file
-        if self._storage.path == self._storage.path.parent / ".todo_data.json":
-            self._storage._path = self._storage.path.parent / ".todo_comments.json"
+        # Override to use comments file derived from task storage path
+        self._storage._path = _derive_comments_path(self._storage.path)
         self._comments: dict[str, TaskComment] = {}
         self._load()
 

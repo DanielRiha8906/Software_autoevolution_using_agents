@@ -1,4 +1,4 @@
-@startuml
+@startuml activity_diagram
 
 start
 :Launch application;
@@ -19,13 +19,28 @@ repeat
     case (5 — Update task)
       :Run update task flow;
     case (6 — Delete task)
-      :Run delete task flow;
+      :Cascade: delete comments then task;
     case (7 — Check if completed)
       :Run check completed flow;
     case (8 — Check if overdue)
       :Run check overdue flow;
     case (9 — Manage comments)
-      :Run manage comments flow;
+      :Select task;
+      repeat
+        :Display comment menu;
+        switch (comment choice)
+          case (1 — View comments)
+            :Display all comments;
+          case (2 — Add comment)
+            :Prompt for comment content;
+            :Create comment;
+          case (3 — Delete comment)
+            :Select comment;
+            :Delete comment;
+          case (0 — Back)
+            stop
+        endswitch
+      repeat while (manage comments)
     case (0/q — Quit)
       :Clear screen;
       stop
