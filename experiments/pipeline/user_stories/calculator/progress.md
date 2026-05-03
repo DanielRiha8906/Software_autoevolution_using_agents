@@ -129,4 +129,4 @@ Duration: 756.5s | Cost: $1.392113 USD | Turns: 24
 - ✅ MemoryService has no business logic, only MemoryEntry lifecycle management
 - ✅ All functionality accessible via `python -m src` (existing --show-history flag and interactive menu continue to work)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 439.1s | Cost: $0.925967 USD | Turns: 17
