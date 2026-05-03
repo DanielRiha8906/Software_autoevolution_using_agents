@@ -12,6 +12,7 @@ package "Calculator Application" {
     component "Memory Service\n(MemoryService)" as MemService
     component "Statistics Service\n(StatisticsService)" as StatSvc
     component "Filter Service\n(FilterService)" as FilterSvc
+    component "History Export Service\n(HistoryExportService)" as ExportSvc
     component "Calculation Engine\n(Calculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry, Statistics)" as Models
@@ -28,11 +29,13 @@ package "Calculator Application" {
     Service --> Store : uses
     MemService --> Store : delegates to
     MemService --> FilterSvc : uses for filtering
+    MemService --> ExportSvc : uses for export/import
     StatSvc --> MemService : uses
 
     Service ..> Models
     MemService ..> Models
     FilterSvc ..> Models
+    ExportSvc ..> Models
     StatSvc ..> Models
     Store ..> Models
 }

@@ -32,7 +32,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass flags for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory-history] [--history] [--memory-retrieve] [--memory-store OP OPERANDS... [--result R] | [--error MSG]] [--filter-op OP] [--filter-state STATE]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory-history] [--history] [--memory-retrieve] [--memory-store OP OPERANDS... [--result R] | [--error MSG]] [--filter-op OP] [--filter-state STATE] [--export-history FILE] [--import-history FILE]",
     )
     parser.add_argument(
         "--operation",
@@ -87,6 +87,21 @@ def main() -> None:
         help="Display statistics from stored calculations",
     )
     parser.add_argument(
+        "--export-history",
+        metavar="FILE",
+        help="Export history to a JSON file",
+    )
+    parser.add_argument(
+        "--import-history",
+        metavar="FILE",
+        help="Import history from a JSON file",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="When importing, overwrite existing entries with same ID (use with --import-history)",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -121,6 +136,10 @@ def main() -> None:
         cli.filter_command(operation=args.filter_op, state=args.filter_state)
     elif args.statistics:
         cli.statistics_command()
+    elif args.export_history:
+        cli.export_command(args.export_history)
+    elif args.import_history:
+        cli.import_command(args.import_history, overwrite=args.overwrite)
     elif args.memory_history:
         cli.show_memory_history_command()
     elif args.history:

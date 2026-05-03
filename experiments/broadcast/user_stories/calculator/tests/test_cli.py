@@ -42,33 +42,33 @@ class TestRunCommand:
 class TestRunInteractive:
     def test_exit_choice(self, capsys):
         cli, _, _ = _make_cli()
-        with patch("builtins.input", side_effect=["13"]):
+        with patch("builtins.input", side_effect=["15"]):
             cli.run_interactive()
         assert "Goodbye" in capsys.readouterr().out
 
     def test_add_operation(self, capsys):
         cli, service, _ = _make_cli()
         service.perform.return_value = CalculationResult("add", 3, 5, 8, _TS)
-        with patch("builtins.input", side_effect=["1", "3", "5", "13"]):
+        with patch("builtins.input", side_effect=["1", "3", "5", "15"]):
             cli.run_interactive()
         assert "8" in capsys.readouterr().out
 
     def test_invalid_choice_retries(self, capsys):
         cli, _, _ = _make_cli()
-        with patch("builtins.input", side_effect=["99", "13"]):
+        with patch("builtins.input", side_effect=["99", "15"]):
             cli.run_interactive()
         assert "Invalid choice" in capsys.readouterr().out
 
     def test_invalid_number_retries(self, capsys):
         cli, _, _ = _make_cli()
-        with patch("builtins.input", side_effect=["1", "abc", "13"]):
+        with patch("builtins.input", side_effect=["1", "abc", "15"]):
             cli.run_interactive()
         assert "Invalid number" in capsys.readouterr().out
 
     def test_history_empty(self, capsys):
         cli, service, _ = _make_cli()
         service.get_history.return_value = []
-        with patch("builtins.input", side_effect=["10", "13"]):
+        with patch("builtins.input", side_effect=["10", "15"]):
             cli.run_interactive()
         assert "No calculations" in capsys.readouterr().out
 
@@ -77,7 +77,7 @@ class TestRunInteractive:
         service.get_history.return_value = [
             CalculationResult("add", 1, 2, 3, _TS),
         ]
-        with patch("builtins.input", side_effect=["10", "13"]):
+        with patch("builtins.input", side_effect=["10", "15"]):
             cli.run_interactive()
         assert "1 + 2 = 3" in capsys.readouterr().out
 
