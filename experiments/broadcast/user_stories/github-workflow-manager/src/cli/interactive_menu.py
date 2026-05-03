@@ -9,6 +9,7 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.workflow_query import DurationRange, TimestampRange
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -185,12 +186,87 @@ def _list_attempts(attempt_service: AttemptService) -> None:
         print(f"\nError: {e}")
 
 
+def _query_runs(workflow_service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    print("\n--- Query Workflow Runs ---")
+    print("Enter filter criteria (leave blank to skip):")
+
+    min_duration_raw = _prompt("Minimum duration in seconds", "")
+    max_duration_raw = _prompt("Maximum duration in seconds", "")
+    created_after_raw = _prompt("Created after (ISO datetime)", "")
+    created_before_raw = _prompt("Created before (ISO datetime)", "")
+    has_attempts_raw = _prompt("Has attempts (true/false)", "")
+
+    min_duration = float(min_duration_raw) if min_duration_raw else None
+    max_duration = float(max_duration_raw) if max_duration_raw else None
+
+    created_after = None
+    if created_after_raw:
+        try:
+            created_after = datetime.fromisoformat(created_after_raw)
+        except ValueError:
+            print(f"\nError: Invalid datetime format for created_after: {created_after_raw}")
+            return
+
+    created_before = None
+    if created_before_raw:
+        try:
+            created_before = datetime.fromisoformat(created_before_raw)
+        except ValueError:
+            print(f"\nError: Invalid datetime format for created_before: {created_before_raw}")
+            return
+
+    has_attempts = None
+    if has_attempts_raw:
+        if has_attempts_raw.lower() == "true":
+            has_attempts = True
+        elif has_attempts_raw.lower() == "false":
+            has_attempts = False
+        else:
+            print("\nError: has_attempts must be 'true' or 'false'")
+            return
+
+    query = workflow_service.create_query(attempt_service)
+
+    duration_range = None
+    if min_duration is not None or max_duration is not None:
+        duration_range = DurationRange(
+            min_seconds=min_duration,
+            max_seconds=max_duration
+        )
+
+    timestamp_range = None
+    if created_after is not None or created_before is not None:
+        timestamp_range = TimestampRange(
+            before=created_before,
+            after=created_after
+        )
+
+    try:
+        result = query.query(
+            duration_range=duration_range,
+            timestamp_range=timestamp_range,
+            has_attempts=has_attempts
+        )
+    except ValueError as e:
+        print(f"\nError: {e}")
+        return
+
+    if not result:
+        print("\nNo runs match the query criteria.")
+        return
+
+    print(f"\n--- {len(result)} matching run(s) ---")
+    for run in result:
+        print(_fmt_run(run))
+
+
 MENU = [
     ("Add workflow run", lambda ws, as_: _add_run(ws)),
     ("List all runs", lambda ws, as_: _list_runs(ws)),
     ("Get run detail", lambda ws, as_: _detail_run(ws)),
     ("Filter runs", lambda ws, as_: _filter_menu(ws)),
     ("Check run state", lambda ws, as_: _check_state(ws)),
+    ("Query runs (advanced)", lambda ws, as_: _query_runs(ws, as_)),
     ("Create attempt", lambda ws, as_: _create_attempt(as_)),
     ("List attempts for run", lambda ws, as_: _list_attempts(as_)),
     ("Exit", None),

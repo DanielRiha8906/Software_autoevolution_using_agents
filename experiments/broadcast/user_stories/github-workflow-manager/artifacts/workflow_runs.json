@@ -1,0 +1,46 @@
+[
+  {
+    "id": "a9cf12f7-fb45-4b5b-b1cb-e03505aa336a",
+    "workflow_name": "test-workflow",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T17:45:30.259060+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null
+  },
+  {
+    "id": "d6d9289e-d0c4-46bb-90e4-77634791aa83",
+    "workflow_name": "Test CI",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T17:45:34.598886+00:00",
+    "updated_at": null,
+    "run_number": 1,
+    "commit_sha": "abc123"
+  },
+  {
+    "id": "test-duration-1",
+    "workflow_name": "Quick Test",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T17:45:37.207161+00:00",
+    "updated_at": "2026-05-03T17:46:07.207161+00:00",
+    "run_number": 1,
+    "commit_sha": "abc123"
+  },
+  {
+    "id": "test-duration-2",
+    "workflow_name": "Long Test",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T18:45:37.207161+00:00",
+    "updated_at": "2026-05-03T18:47:37.207161+00:00",
+    "run_number": 2,
+    "commit_sha": "def456"
+  }
+]
