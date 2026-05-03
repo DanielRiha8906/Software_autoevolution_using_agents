@@ -7,10 +7,12 @@ from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..models.statistics_report import StatisticsReport
+from ..models.import_result import ImportResult
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.statistics_service import StatisticsService
+from ..services.workflow_export_import_service import WorkflowRunExportImportService
 
 
 def _parse_datetime(date_str: str) -> datetime:
@@ -94,6 +96,23 @@ def _fmt_statistics_report(report: StatisticsReport) -> str:
         lines.append(f"  {status}: {duration:.2f} seconds")
 
     return "\n".join(lines) + "\n"
+
+
+def _print_import_result(result: ImportResult) -> None:
+    print(f"\n--- Import Result ---")
+    print(f"Filepath: {result.filepath}")
+    print(f"Total records: {result.total_records}")
+    print(f"Imported runs: {result.imported_runs}")
+    print(f"Skipped runs: {result.skipped_runs}")
+    print(f"Imported attempts: {result.imported_attempts}")
+    print(f"Skipped attempts: {result.skipped_attempts}")
+
+    if result.errors:
+        print(f"\nErrors ({len(result.errors)}):")
+        for i, error in enumerate(result.errors[:10], 1):
+            print(f"  {i}. {error}")
+        if len(result.errors) > 10:
+            print(f"  ... and {len(result.errors) - 10} more")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -198,6 +217,17 @@ def build_parser() -> argparse.ArgumentParser:
     stats_p.add_argument("--duration-max", type=float, default=None, help="Filter runs with duration <= this value (seconds)")
     stats_p.add_argument("--has-attempts", action="store_true", help="Include only runs with attempts")
     stats_p.add_argument("--no-attempts", action="store_true", help="Include only runs without attempts")
+
+    # export
+    export_p = sub.add_parser("export", help="Export workflow runs to JSON file")
+    export_p.add_argument("--filepath", required=True, help="Output file path")
+    export_p.add_argument("--include-attempts", action="store_true", help="Also export attempts to <filepath>_attempts.json")
+
+    # import
+    import_p = sub.add_parser("import", help="Import workflow runs from JSON file")
+    import_p.add_argument("--filepath", required=True, help="Input file path")
+    import_p.add_argument("--overwrite", action="store_true", help="Allow replacing runs with same id")
+    import_p.add_argument("--dry-run", action="store_true", help="Validate without persisting")
 
     return parser
 
@@ -401,3 +431,38 @@ def run_cli(
         stats_service = StatisticsService()
         report = stats_service.calculate_statistics(runs, attempt_service)
         print(_fmt_statistics_report(report))
+
+    elif ns.command == "export":
+        try:
+            export_service = WorkflowRunExportImportService()
+            export_service.export_to_file(
+                ns.filepath,
+                service,
+                attempt_service=attempt_service if ns.include_attempts else None,
+                include_attempts=ns.include_attempts,
+            )
+            runs_count = len(service.list_runs())
+            print(f"Exported {runs_count} run(s) to {ns.filepath}")
+        except IOError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "import":
+        try:
+            import_service = WorkflowRunExportImportService()
+            result = import_service.import_from_file(
+                ns.filepath,
+                service,
+                attempt_service=attempt_service,
+                overwrite=ns.overwrite,
+                dry_run=ns.dry_run,
+            )
+            _print_import_result(result)
+            if ns.dry_run:
+                print("\n(dry run: no changes persisted)")
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)

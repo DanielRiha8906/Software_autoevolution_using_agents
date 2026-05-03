@@ -10,6 +10,7 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.statistics_service import StatisticsService
+from ..services.workflow_export_import_service import WorkflowRunExportImportService
 
 
 def _parse_datetime(date_str: str) -> datetime:
@@ -347,6 +348,70 @@ def _advanced_filter_menu(service: WorkflowRunService, attempt_service: Workflow
         print(_fmt_run(run))
 
 
+def _export_runs(service: WorkflowRunService, attempt_service: WorkflowRunAttemptService) -> None:
+    """Export workflow runs to a JSON file."""
+    print("\n--- Export Workflow Runs ---")
+    filepath = _prompt("Output file path")
+    include_attempts_choice = _choose("Include attempts?", ["Yes", "No"])
+    include_attempts = include_attempts_choice == "Yes"
+
+    try:
+        export_service = WorkflowRunExportImportService()
+        export_service.export_to_file(
+            filepath,
+            service,
+            attempt_service=attempt_service if include_attempts else None,
+            include_attempts=include_attempts,
+        )
+        runs_count = len(service.list_runs())
+        print(f"\nExported {runs_count} run(s) to {filepath}")
+    except IOError as e:
+        print(f"Error: {e}")
+
+
+def _import_runs(service: WorkflowRunService, attempt_service: WorkflowRunAttemptService) -> None:
+    """Import workflow runs from a JSON file."""
+    print("\n--- Import Workflow Runs ---")
+    filepath = _prompt("Input file path")
+    overwrite_choice = _choose("Overwrite existing runs with same ID?", ["Yes", "No"])
+    overwrite = overwrite_choice == "Yes"
+    dry_run_choice = _choose("Dry run (validate without persisting)?", ["Yes", "No"])
+    dry_run = dry_run_choice == "Yes"
+
+    try:
+        import_service = WorkflowRunExportImportService()
+        result = import_service.import_from_file(
+            filepath,
+            service,
+            attempt_service=attempt_service,
+            overwrite=overwrite,
+            dry_run=dry_run,
+        )
+
+        print(f"\n--- Import Result ---")
+        print(f"Filepath: {result.filepath}")
+        print(f"Total records: {result.total_records}")
+        print(f"Imported runs: {result.imported_runs}")
+        print(f"Skipped runs: {result.skipped_runs}")
+        print(f"Imported attempts: {result.imported_attempts}")
+        print(f"Skipped attempts: {result.skipped_attempts}")
+
+        if result.errors:
+            print(f"\nErrors ({len(result.errors)}):")
+            for i, error in enumerate(result.errors[:10], 1):
+                print(f"  {i}. {error}")
+            if len(result.errors) > 10:
+                print(f"  ... and {len(result.errors) - 10} more")
+
+        if dry_run:
+            print("\n(dry run: no changes persisted)")
+
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+    except ValueError as e:
+        print(f"Error: {e}")
+
+
 def _get_statistics(service: WorkflowRunService, attempt_service: WorkflowRunAttemptService) -> None:
     """Get aggregated statistics over workflow runs with optional filtering."""
     print("\n--- Get Statistics ---")
@@ -472,6 +537,8 @@ MENU = [
     ("Filter runs", _filter_menu),
     ("Advanced filter runs", _advanced_filter_menu),
     ("Get statistics", _get_statistics),
+    ("Export runs to JSON", _export_runs),
+    ("Import runs from JSON", _import_runs),
     ("Add workflow run attempt", _add_attempt),
     ("List all attempts", _list_attempts),
     ("Get attempt detail", _detail_attempt),
@@ -499,7 +566,7 @@ def run_interactive(
             sys.exit(0)
         try:
             # Determine which service(s) to pass based on handler name
-            if handler.__name__ in ("_advanced_filter_menu", "_get_statistics"):
+            if handler.__name__ in ("_advanced_filter_menu", "_get_statistics", "_export_runs", "_import_runs"):
                 handler(service, attempt_service)
             elif handler.__name__.startswith("_add_attempt") or handler.__name__.startswith("_list_attempt") or handler.__name__.startswith("_detail_attempt"):
                 handler(attempt_service)

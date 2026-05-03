@@ -1,0 +1,38 @@
+[
+  {
+    "id": "88b8d878-6f68-4805-81b7-fc371a3719ca",
+    "workflow_name": "workflow1",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T20:36:34.883122+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 0.0
+  },
+  {
+    "id": "58b78f44-646b-4274-947b-5caf15f106eb",
+    "workflow_name": "workflow2",
+    "branch": "develop",
+    "status": "in_progress",
+    "conclusion": null,
+    "created_at": "2026-05-03T20:36:36.430371+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 0.0
+  },
+  {
+    "id": "cli-run-1",
+    "workflow_name": "CI",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2025-05-03T10:00:00+00:00",
+    "updated_at": null,
+    "run_number": 1,
+    "commit_sha": "abc123",
+    "duration_seconds": 30.0
+  }
+]

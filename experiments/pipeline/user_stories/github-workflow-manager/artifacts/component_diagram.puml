@@ -20,6 +20,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunService" as SVC
     component "WorkflowRunAttemptService" as ATTEMPT_SVC
     component "StatisticsService" as STATS_SVC
+    component "WorkflowRunExportImportService" as EXPORT_SVC
   }
 
   package "Persistence layer" {
@@ -34,6 +35,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowStatus" as STATUS
     component "WorkflowConclusion" as CONCLUSION
     component "StatisticsReport" as REPORT
+    component "ImportResult" as IMPORT_RESULT
   }
 }
 
@@ -52,6 +54,9 @@ IM --> ATTEMPT_SVC
 CLI --> STATS_SVC
 IM --> STATS_SVC
 
+CLI --> EXPORT_SVC
+IM --> EXPORT_SVC
+
 TRACKER --> SVC
 SVC --> STOR
 STOR --> JSON_FILE
@@ -59,9 +64,15 @@ STOR --> ATTEMPTS_FILE
 
 ATTEMPT_SVC --> STOR
 
+EXPORT_SVC --> SVC
+EXPORT_SVC --> ATTEMPT_SVC
+EXPORT_SVC --> JSON_FILE
+EXPORT_SVC --> ATTEMPTS_FILE
+
 SVC ..> RUN
 ATTEMPT_SVC ..> ATTEMPT
 STATS_SVC ..> REPORT
+EXPORT_SVC ..> IMPORT_RESULT
 RUN --> STATUS
 RUN --> CONCLUSION
 RUN "1" --> "N" ATTEMPT : relationship

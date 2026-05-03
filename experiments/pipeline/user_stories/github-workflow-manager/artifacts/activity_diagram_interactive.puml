@@ -102,7 +102,33 @@ repeat
       :Print min/max duration;
       :Print duration_by_status;
 
-    case (8 — Add workflow run attempt)
+    case (8 — Export runs to JSON)
+      :Prompt output file path;
+      :Prompt "Include attempts?";
+      :WorkflowRunExportImportService.export_to_file();
+      :Write runs to JSON file;
+      if (include-attempts?) then (yes)
+        :Write attempts to JSON file;
+      endif
+      :Print "Exported <count> run(s) to <filepath>";
+
+    case (9 — Import runs from JSON)
+      :Prompt input file path;
+      :Prompt "Overwrite existing runs?";
+      :Prompt "Dry run (validate without persisting)?";
+      :WorkflowRunExportImportService.import_from_file();
+      :Validate JSON and records;
+      if (dry-run?) then (yes)
+        :Skip persist (validation only);
+      else (no)
+        :Persist imported data;
+      endif
+      :Print ImportResult with summary;
+      if (had-errors?) then (yes)
+        :Print list of errors (first 10);
+      endif
+
+    case (10 — Add workflow run attempt)
       :Prompt attempt ID (integer);
       :Prompt parent run ID (integer);
       :Prompt attempt number (positive integer);
@@ -112,7 +138,7 @@ repeat
       :WorkflowRunAttemptService.add_attempt();
       :Print "Added attempt <id>";
 
-    case (9 — List all attempts)
+    case (11 — List all attempts)
       :Choose "Sort by attempt number?";
       :WorkflowRunAttemptService.list_attempts(sorted=choice);
       if (no attempts?) then (yes)
@@ -121,7 +147,7 @@ repeat
         :Print all attempts;
       endif
 
-    case (10 — Get attempt detail)
+    case (12 — Get attempt detail)
       :Prompt attempt ID;
       :WorkflowRunAttemptService.get_attempt(attempt_id);
       if (found?) then (yes)
@@ -130,7 +156,7 @@ repeat
         :Print "No attempt found with id <id>";
       endif
 
-    case (11 — List attempts for run)
+    case (13 — List attempts for run)
       :Prompt parent run ID;
       :Choose "Sort by attempt number?";
       :WorkflowRunAttemptService.get_attempts_for_run(run_id, sorted=choice);
@@ -140,7 +166,7 @@ repeat
         :Print attempts for run;
       endif
 
-    case (12 — Exit)
+    case (14 — Exit)
       :Print "Goodbye.";
       stop
 

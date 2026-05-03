@@ -255,3 +255,48 @@ Implemented aggregated statistics computation over stored workflow runs, providi
 - ✅ All functionality accessible via interactive menu option 7 "Get statistics" (interactive)
 
 Duration: 827.9s | Cost: $1.784042 USD | Turns: 22
+
+## Task 07: Export/Import Workflow Runs to JSON
+
+**Status:** Completed
+
+### Files Changed
+- `src/models/import_result.py` — NEW — ImportResult dataclass
+- `src/services/workflow_export_import_service.py` — NEW — Export/import service with validation
+- `src/models/__init__.py` — MODIFIED — Export ImportResult
+- `src/services/__init__.py` — MODIFIED — Export WorkflowRunExportImportService
+- `src/cli/workflow_cli.py` — MODIFIED — Add export/import subcommands
+- `src/cli/interactive_menu.py` — MODIFIED — Add export/import menu options
+- `artifacts/class_diagram.puml` — MODIFIED — Add new classes
+- `artifacts/component_diagram.puml` — MODIFIED — Add new service component
+- `artifacts/activity_diagram_main.puml` — MODIFIED — Add export/import flows
+- `artifacts/activity_diagram_interactive.puml` — MODIFIED — Add menu options
+- `tests/test_workflow_export_import_service.py` — NEW — 49 comprehensive tests
+- `tests/test_interactive_menu_check.py` — MODIFIED — Update menu order assertion
+
+### Test Results
+- **New tests:** 49 tests for export/import functionality
+- **All new tests:** ✓ PASSED
+- **Existing tests:** 419 tests passed (excluding 2 pre-existing tests with sys.argv issues)
+- **Total coverage:** Export, import, validation, CLI integration, edge cases
+
+### Implementation Summary
+- **Export functionality:** Serializes all workflow runs to JSON; optionally includes attempts in separate file
+- **Import functionality:** Validates and imports runs/attempts with per-record error handling
+- **Validation:** 10 validation rules for runs, 7 for attempts (enums, datetime format, numeric constraints)
+- **Conflict handling:** --overwrite flag for replacing duplicates; default is non-destructive
+- **CLI integration:** export and import subcommands with --filepath, --include-attempts, --overwrite, --dry-run flags
+- **Interactive menu:** "Export runs to JSON" and "Import runs from JSON" options with prompts
+- **Error handling:** Graceful failures with detailed error messages; individual invalid records skipped without failing entire import
+
+### Acceptance Criteria Met
+✓ All workflow runs can be exported to a JSON file
+✓ Workflow runs can be imported from a JSON file
+✓ Imported data is validated before being applied; invalid structure is rejected
+✓ Importing does not overwrite existing data unless explicitly intended
+✓ Invalid or duplicate entries during import are skipped individually, not treated as a full failure
+✓ Only JSON format is supported; CSV and database formats out of scope
+✓ The GitHub adapter layer is the only component allowed to perform external API calls
+✓ All new functionality is accessible via `python -m src` — both interactive menu and one-shot CLI flags
+
+Duration: 748.7s | Cost: $1.558351 USD | Turns: 23

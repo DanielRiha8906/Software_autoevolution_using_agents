@@ -89,6 +89,29 @@ if (CLI arguments provided?) then (yes)
       :StatisticsService.calculate_statistics();
       :Print statistics report\n(count_by_conclusion, average_duration,\naverage_attempts, min/max duration,\nduration_by_status);
 
+    case (export)
+      :Parse --filepath argument;
+      :Determine --include-attempts flag;
+      :WorkflowRunExportImportService.export_to_file();
+      :Write runs to filepath (JSON);
+      if (include-attempts?) then (yes)
+        :Write attempts to filepath_attempts.json;
+      endif
+      :Print "Exported <count> run(s) to <filepath>";
+
+    case (import)
+      :Parse --filepath, --overwrite, --dry-run args;
+      :WorkflowRunExportImportService.import_from_file();
+      :Validate JSON structure;
+      :For each record: validate_and_build_run();
+      :For each record: validate_and_build_attempt();
+      if (dry-run?) then (yes)
+        :Skip persist (validation only);
+      else (no)
+        :Persist imported runs and attempts;
+      endif
+      :Print ImportResult\n(total_records, imported_runs, skipped_runs,\nimported_attempts, skipped_attempts, errors);
+
   endswitch
   stop
 
