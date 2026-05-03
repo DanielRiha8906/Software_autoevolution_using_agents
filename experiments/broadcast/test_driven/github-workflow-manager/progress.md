@@ -134,4 +134,4 @@ All three candidates achieved identical test scores (43/43) with substantially i
 ## Test Result
 ✅ All 43 tests passing (7 new AttemptService tests + 36 existing tests)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 228.0s | Cost: $0.424625 USD | Turns: 28
