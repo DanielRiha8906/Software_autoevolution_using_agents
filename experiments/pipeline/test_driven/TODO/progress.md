@@ -133,4 +133,4 @@ All tests pass:
 ✅ All functionality accessible via `python -m src`
 ✅ Return type is deterministic dataclass
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 414.9s | Cost: $0.732374 USD | Turns: 15
