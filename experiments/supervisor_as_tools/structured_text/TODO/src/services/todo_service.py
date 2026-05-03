@@ -3,6 +3,7 @@ from typing import Optional
 
 from ..models.task import Task
 from ..models.task_comment import TaskComment
+from ..models.task_statistics import TaskStatistics
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .comments_service import CommentsService
@@ -80,3 +81,46 @@ class TodoService:
 
     def delete_comment(self, comment_id: str) -> None:
         self._comments_service.delete_comment(comment_id)
+
+    def get_statistics(self) -> TaskStatistics:
+        """Calculate and return statistics about all tasks.
+
+        Returns:
+            TaskStatistics with task counts, completion rate, and average days to completion.
+        """
+        all_tasks = self._manager.list_all()
+        total_count = len(all_tasks)
+
+        # Count tasks by status
+        pending_count = len([t for t in all_tasks if t.status == TaskStatus.PENDING])
+        in_progress_count = len([t for t in all_tasks if t.status == TaskStatus.IN_PROGRESS])
+        done_count = len([t for t in all_tasks if t.status == TaskStatus.DONE])
+
+        # Count overdue tasks
+        overdue_count = len([t for t in all_tasks if t.is_overdue()])
+
+        # Count tasks with due date
+        tasks_with_due_date = len([t for t in all_tasks if t.due_date is not None])
+
+        # Compute completion rate
+        completion_rate = (done_count / total_count * 100) if total_count > 0 else 0
+        completion_rate = round(completion_rate, 1)
+
+        # Compute average days to completion for done tasks
+        done_tasks = [t for t in all_tasks if t.status == TaskStatus.DONE]
+        if done_tasks:
+            total_days = sum((t.updated_at - t.created_at).days for t in done_tasks)
+            avg_days_to_completion = round(total_days / len(done_tasks), 1)
+        else:
+            avg_days_to_completion = None
+
+        return TaskStatistics(
+            total_count=total_count,
+            pending_count=pending_count,
+            in_progress_count=in_progress_count,
+            done_count=done_count,
+            overdue_count=overdue_count,
+            tasks_with_due_date=tasks_with_due_date,
+            completion_rate=completion_rate,
+            avg_days_to_completion=avg_days_to_completion,
+        )

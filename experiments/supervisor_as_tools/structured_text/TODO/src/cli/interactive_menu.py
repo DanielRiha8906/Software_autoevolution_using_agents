@@ -84,8 +84,10 @@ class InteractiveMenu:
             elif choice == "6":
                 self._do_set_due_date(tasks)
             elif choice == "7":
-                self._do_manage_comments()
+                self._do_stats()
             elif choice == "8":
+                self._do_manage_comments()
+            elif choice == "9":
                 self._do_delete(tasks)
             else:
                 input("  Unknown option. Press Enter to continue...")
@@ -113,8 +115,9 @@ class InteractiveMenu:
         print("  4. Change status  (start / done / reopen)")
         print("  5. Update task    (title / description)")
         print("  6. Set due date")
-        print("  7. Manage comments")
-        print("  8. Delete task")
+        print("  7. View statistics")
+        print("  8. Manage comments")
+        print("  9. Delete task")
         print("  0. Quit")
         print()
 
@@ -517,6 +520,23 @@ class InteractiveMenu:
             print(f"  Deleted comment: {comment.id[:8]}")
         except (TaskNotFoundError, CommentNotFoundError) as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_stats(self) -> None:
+        _clear()
+        stats = self._service.get_statistics()
+        avg_days_str = f"{stats.avg_days_to_completion:.1f}" if stats.avg_days_to_completion is not None else "—"
+        print("  Task Statistics")
+        print("  ===============================")
+        print(f"  Total tasks:            {stats.total_count}")
+        print(f"    Pending:              {stats.pending_count}")
+        print(f"    In Progress:          {stats.in_progress_count}")
+        print(f"    Done:                 {stats.done_count}")
+        print(f"  Completion Rate:        {stats.completion_rate:.1f}%")
+        print(f"  Overdue:                {stats.overdue_count}")
+        print(f"  With due date:          {stats.tasks_with_due_date}")
+        print(f"  Avg days to completion: {avg_days_str}")
+        print()
         input("  Press Enter to continue...")
 
     def _do_delete(self, tasks: list[Task]) -> None:

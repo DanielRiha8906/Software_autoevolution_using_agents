@@ -37,6 +37,17 @@ package "models" #DDEEFF {
         +to_dict() : Dictionary
         +from_dict(data: Dictionary) : TaskComment
     }
+
+    class TaskStatistics {
+        +total_count : int
+        +pending_count : int
+        +in_progress_count : int
+        +done_count : int
+        +overdue_count : int
+        +tasks_with_due_date : int
+        +completion_rate : float
+        +avg_days_to_completion : Optional[float]
+    }
 }
 
 package "storage" #FFF3CC {
@@ -107,6 +118,7 @@ package "services" #DDFFD4 {
         +add_comment(task_id: String, content: String) : TaskComment
         +list_comments(task_id: String) : List<TaskComment>
         +delete_comment(comment_id: String) : void
+        +get_statistics() : TaskStatistics
     }
 }
 
@@ -117,6 +129,7 @@ package "cli" #FFE5E5 {
         +TodoCLI(storagePath: String [0..1])
         +run(argv: List<String> [0..1]) : Integer
         -_parse_cest_datetime(date_str: String) : DateTime [0..1]
+        -_cmd_stats(args: Namespace) : Integer
     }
 
     class InteractiveMenu {
@@ -124,6 +137,7 @@ package "cli" #FFE5E5 {
         --
         +InteractiveMenu(storagePath: String [0..1])
         +run() : void
+        -_do_stats() : void
     }
 }
 
@@ -138,7 +152,10 @@ CommentsService --> TaskComment : manages
 CommentsService ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
 TodoService --> CommentsService : comments_service
+TodoService --> TaskStatistics : returns
 TodoCLI --> TodoService : service
+TodoCLI --> TaskStatistics : uses
 InteractiveMenu --> TodoService : service
+InteractiveMenu --> TaskStatistics : uses
 
 @enduml

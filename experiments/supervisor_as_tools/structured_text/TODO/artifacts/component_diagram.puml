@@ -23,6 +23,7 @@ package "TODO Application" {
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus)" as Model
         component "Comment Model\n(TaskComment)" as CommentModel
+        component "Statistics Model\n(TaskStatistics)" as StatsModel
     }
 
     package "Persistence Layer" {
@@ -40,6 +41,7 @@ CLI --> SVC
 
 SVC --> MGR
 SVC --> COM
+SVC ..> StatsModel : returns
 MGR --> Storage
 MGR ..> Model
 COM --> Storage

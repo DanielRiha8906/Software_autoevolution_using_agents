@@ -20,6 +20,7 @@ rectangle "TODO Manager" {
     usecase "View comments" as I_VIEW_COMMENTS
     usecase "Add comment" as I_ADD_COMMENT
     usecase "Delete comment" as I_DELETE_COMMENT
+    usecase "View statistics" as I_STATS
     usecase "Quit application" as I_QUIT
   }
 
@@ -38,6 +39,7 @@ rectangle "TODO Manager" {
     usecase "Add comment" as C_ADD_COMMENT
     usecase "List comments" as C_LIST_COMMENTS
     usecase "Delete comment" as C_DELETE_COMMENT
+    usecase "View statistics" as C_STATS
   }
 }
 
@@ -56,6 +58,7 @@ UI ..> I_COMMENTS  : <<exclude>>
 I_COMMENTS ..> I_VIEW_COMMENTS    : <<include>>
 I_COMMENTS ..> I_ADD_COMMENT      : <<include>>
 I_COMMENTS ..> I_DELETE_COMMENT   : <<include>>
+UI ..> I_STATS     : <<exclude>>
 UI ..> I_QUIT      : <<exclude>>
 
 CLI ..> C_ADD            : <<exclude>>
@@ -71,5 +74,6 @@ CLI ..> C_DELETE         : <<exclude>>
 CLI ..> C_ADD_COMMENT    : <<exclude>>
 CLI ..> C_LIST_COMMENTS  : <<exclude>>
 CLI ..> C_DELETE_COMMENT : <<exclude>>
+CLI ..> C_STATS          : <<exclude>>
 
 @enduml
