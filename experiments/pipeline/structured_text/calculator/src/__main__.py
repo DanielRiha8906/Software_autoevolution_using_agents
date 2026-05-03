@@ -32,7 +32,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory] [--memory-filter {operation,status} ...]",
     )
     parser.add_argument(
         "--operation",
@@ -46,6 +46,23 @@ def main() -> None:
         help="Display all stored calculation memory entries and exit",
     )
     parser.add_argument(
+        "--memory-filter",
+        metavar="TYPE",
+        choices=["operation", "status"],
+        help="Filter memory entries by operation name or success status",
+    )
+    parser.add_argument(
+        "--filter-operation",
+        metavar="OPERATION",
+        help="Operation name to filter by (use with --memory-filter operation)",
+    )
+    parser.add_argument(
+        "--filter-status",
+        metavar="STATUS",
+        choices=["success", "failed"],
+        help="Status to filter by: success or failed (use with --memory-filter status)",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -57,7 +74,31 @@ def main() -> None:
     memory_service = _build_memory_service()
     cli = CalculatorCLI(service, memory_service)
 
-    if args.memory:
+    if args.memory_filter:
+        if args.memory_filter == "operation":
+            if not args.filter_operation:
+                parser.error("--filter-operation is required when using --memory-filter operation")
+            entries = memory_service.filter_by_operation(args.filter_operation)
+            if not entries:
+                print(f"No entries match the filter criteria.")
+            else:
+                print()
+                for i, entry in enumerate(entries, 1):
+                    print(f"  {i}. {entry}")
+                print()
+        elif args.memory_filter == "status":
+            if not args.filter_status:
+                parser.error("--filter-status is required when using --memory-filter status")
+            success = args.filter_status == "success"
+            entries = memory_service.filter_by_success(success)
+            if not entries:
+                print(f"No entries match the filter criteria.")
+            else:
+                print()
+                for i, entry in enumerate(entries, 1):
+                    print(f"  {i}. {entry}")
+                print()
+    elif args.memory:
         cli.show_memory()
     elif args.operation:
         if len(args.operands) != 2:

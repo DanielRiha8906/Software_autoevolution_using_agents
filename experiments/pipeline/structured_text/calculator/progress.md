@@ -307,3 +307,100 @@ The memory service is now fully accessible via:
 3. **Help:** `python -m src --help` documents the --memory flag
 
 Duration: 656.7s | Cost: $1.174119 USD | Turns: 16
+
+## Task 05
+
+**Description:** Add querying over stored calculations
+
+**Status:** ✅ Complete
+
+### Files Changed
+
+1. `src/services/memory_service.py`
+   - Added `filter_by_operation(operation_name: str) -> list[MemoryEntry]` — filters entries by operation name (case-insensitive)
+   - Added `filter_by_success(success: bool) -> list[MemoryEntry]` — filters entries by success/failure state
+   - Added `filter_by_execution_time(min_ms: float, max_ms: float) -> list[MemoryEntry]` — filters entries by execution time range (inclusive bounds)
+
+2. `src/cli/calculator_cli.py`
+   - Updated `_print_menu()` to display menu options 1-13 (was 1-11)
+   - Updated `run_interactive()` to route options 11 and 12 to new filter methods
+   - Added `_filter_memory_by_operation() -> None` — interactive handler for operation filtering
+   - Added `_filter_memory_by_status() -> None` — interactive handler for success/failure filtering
+   - Moved exit option from 10 to 13 (menu structure: 1-8 operations, 9 history, 10 memory, 11-12 filters, 13 exit)
+
+3. `src/__main__.py`
+   - Added `--memory-filter {operation,status}` argument for specifying filter type
+   - Added `--filter-operation OPERATION` argument for operation name filtering
+   - Added `--filter-status {success,failed}` argument for status filtering
+   - Integrated filter handling in main() to execute before other CLI modes
+
+4. `tests/test_memory_service.py`
+   - Added TestMemoryServiceFilterByOperation class (7 tests): exact match, case-insensitive, no matches, empty storage, order preservation
+   - Added TestMemoryServiceFilterBySuccess class (6 tests): success=True/False, all successful, all failed, empty storage
+   - Added TestMemoryServiceFilterByExecutionTime class (10 tests): range filtering, inclusive bounds, defaults, edge cases
+
+5. `tests/test_cli.py`
+   - Updated 12 existing tests to use exit option "13" (was "11")
+   - Added TestMemoryInteractiveMenu class (10 new tests): options 10, 11, 12 functionality
+
+6. `tests/test_cli_flags.py` (new file)
+   - Added TestMemoryBackwardCompatibility class (2 tests)
+   - Added TestMemoryFilterOperationFlag class (4 tests)
+   - Added TestMemoryFilterStatusFlag class (4 tests)
+   - Added TestMemoryFilterEdgeCases class (1 test)
+
+7. `artifacts/class_diagram.puml`
+   - Updated MemoryService class to show three new filter methods
+   - Updated CalculatorCLI class to show two new filter methods
+
+8. `artifacts/sequence_diagram_memory.puml`
+   - Added "Filter Memory Entries" section showing interaction flow
+
+9. `artifacts/activity_diagram.puml`
+   - Added two new case branches for filtering operations
+
+10. `artifacts/state_diagram_interactive.puml`
+    - Added FilterOperation and FilterStatus states with transitions
+
+### Test Results
+
+- Total tests: 258
+- Passed: 258
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Requirements Met
+
+**Must:**
+- ✅ Enable querying MemoryEntry records
+- ✅ Support filtering by operation type (case-insensitive)
+- ✅ Support filtering by result or error state (success=True/False)
+- ✅ All new functionality accessible via `python -m src` (interactive menu options 11-12 + CLI flags)
+
+**Should:**
+- ✅ Queries return consistent structured results
+- ✅ Support combining multiple filters in a single call (filter_by_operation_and_success method)
+
+**Could:**
+- ⏭ Partial string matching on operation name (not implemented - straightforward but not Must)
+
+**Won't:**
+- ✅ No database or external index used
+
+### CLI Accessibility
+
+The memory filtering is now fully accessible via:
+1. **Interactive mode:** `python -m src` → options 11 (Filter by operation), 12 (Filter by status)
+2. **One-shot CLI:** `python -m src --memory-filter operation --filter-operation add` displays filtered entries
+3. **One-shot CLI:** `python -m src --memory-filter status --filter-status success` displays filtered entries
+4. **Backward compatibility:** `python -m src --memory` continues to show all entries
+
+### Key Implementation Details
+
+1. **Case-insensitive operation matching:** Operation names normalized to lowercase for user convenience
+2. **Three filter methods:** Separate methods for operation, success, and combined filtering
+3. **Empty result handling:** All filter methods return empty list (not None) for consistency
+4. **Order preservation:** Filtered results maintain insertion order from retrieve_all()
+5. **Menu structure update:** Exit moved from option 10 to 13 to accommodate new filter options
+
+Duration: 585.3s | Cost: $1.061077 USD | Turns: 14

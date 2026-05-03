@@ -654,6 +654,271 @@ class TestMemoryJsonStorageDirect:
         assert loaded[0].execution_timestamp == "2026-05-03T10:00:00"
 
 
+class TestMemoryServiceFilterByOperation:
+    """Test MemoryService.filter_by_operation() method."""
+
+    @pytest.fixture
+    def service_with_data(self, tmp_path):
+        """Fixture providing service with pre-populated diverse entries."""
+        storage = MemoryJsonStorage(tmp_path / "memory.json")
+        service = MemoryService(storage)
+
+        entries = [
+            MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"),
+            MemoryEntry("subtract", 10.0, 3.0, 7.0, True, None, "2026-05-03T10:01:00", 2.0, "id-2"),
+            MemoryEntry("add", 5.0, 5.0, 10.0, True, None, "2026-05-03T10:02:00", 1.5, "id-3"),
+            MemoryEntry("multiply", 4.0, 5.0, 20.0, True, None, "2026-05-03T10:03:00", 2.0, "id-4"),
+            MemoryEntry("divide", 20.0, 4.0, 5.0, True, None, "2026-05-03T10:04:00", 1.2, "id-5"),
+            MemoryEntry("add", 100.0, 50.0, 150.0, True, None, "2026-05-03T10:05:00", 0.8, "id-6"),
+        ]
+
+        for entry in entries:
+            service.store(entry)
+
+        return service
+
+    def test_filter_by_operation_exact_match_lowercase(self, service_with_data):
+        """Test 1: Filter by operation with exact lowercase match."""
+        result = service_with_data.filter_by_operation("add")
+        assert len(result) == 3
+        assert all(entry.operation == "add" for entry in result)
+        assert result[0].operand_a == 1.0
+        assert result[1].operand_a == 5.0
+        assert result[2].operand_a == 100.0
+
+    def test_filter_by_operation_case_insensitive_uppercase(self, service_with_data):
+        """Test 2: Filter by operation is case-insensitive (uppercase)."""
+        result = service_with_data.filter_by_operation("ADD")
+        assert len(result) == 3
+        assert all(entry.operation == "add" for entry in result)
+
+    def test_filter_by_operation_case_insensitive_mixed(self, service_with_data):
+        """Test 3: Filter by operation is case-insensitive (mixed case)."""
+        result = service_with_data.filter_by_operation("SuBtRaCt")
+        assert len(result) == 1
+        assert result[0].operation == "subtract"
+
+    def test_filter_by_operation_single_result(self, service_with_data):
+        """Test 4: Filter returning single result."""
+        result = service_with_data.filter_by_operation("multiply")
+        assert len(result) == 1
+        assert result[0].operation == "multiply"
+        assert result[0].result == 20.0
+
+    def test_filter_by_operation_no_matches(self, service_with_data):
+        """Test 5: Filter with no matching operations returns empty list."""
+        result = service_with_data.filter_by_operation("power")
+        assert result == []
+        assert isinstance(result, list)
+
+    def test_filter_by_operation_empty_storage(self, tmp_path):
+        """Test 6: Filter on empty storage returns empty list."""
+        storage = MemoryJsonStorage(tmp_path / "memory.json")
+        service = MemoryService(storage)
+
+        result = service.filter_by_operation("add")
+        assert result == []
+
+    def test_filter_by_operation_preserves_order(self, service_with_data):
+        """Test 7: Filter results preserve insertion order."""
+        result = service_with_data.filter_by_operation("add")
+        assert len(result) == 3
+        # Verify insertion order is maintained
+        assert result[0].operand_a == 1.0
+        assert result[1].operand_a == 5.0
+        assert result[2].operand_a == 100.0
+        assert result[0].execution_timestamp < result[1].execution_timestamp < result[2].execution_timestamp
+
+
+class TestMemoryServiceFilterBySuccess:
+    """Test MemoryService.filter_by_success() method."""
+
+    @pytest.fixture
+    def service_with_mixed_results(self, tmp_path):
+        """Fixture with both successful and failed entries."""
+        storage = MemoryJsonStorage(tmp_path / "memory.json")
+        service = MemoryService(storage)
+
+        entries = [
+            MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"),
+            MemoryEntry("divide", 10.0, 0.0, None, False, "Division by zero", "2026-05-03T10:01:00", 0.5, "id-2"),
+            MemoryEntry("subtract", 10.0, 3.0, 7.0, True, None, "2026-05-03T10:02:00", 2.0, "id-3"),
+            MemoryEntry("sqrt", -4.0, 0.0, None, False, "Cannot take sqrt of negative", "2026-05-03T10:03:00", 0.8, "id-4"),
+            MemoryEntry("multiply", 4.0, 5.0, 20.0, True, None, "2026-05-03T10:04:00", 1.2, "id-5"),
+        ]
+
+        for entry in entries:
+            service.store(entry)
+
+        return service
+
+    def test_filter_by_success_true(self, service_with_mixed_results):
+        """Test 1: Filter for successful operations only."""
+        result = service_with_mixed_results.filter_by_success(True)
+        assert len(result) == 3
+        assert all(entry.success is True for entry in result)
+        assert all(entry.error_message is None for entry in result)
+
+    def test_filter_by_success_false(self, service_with_mixed_results):
+        """Test 2: Filter for failed operations only."""
+        result = service_with_mixed_results.filter_by_success(False)
+        assert len(result) == 2
+        assert all(entry.success is False for entry in result)
+        assert all(entry.error_message is not None for entry in result)
+
+    def test_filter_by_success_all_successful(self, tmp_path):
+        """Test 3: Filter success=True when all entries are successful."""
+        storage = MemoryJsonStorage(tmp_path / "memory.json")
+        service = MemoryService(storage)
+
+        entries = [
+            MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"),
+            MemoryEntry("multiply", 4.0, 5.0, 20.0, True, None, "2026-05-03T10:01:00", 2.0, "id-2"),
+        ]
+
+        for entry in entries:
+            service.store(entry)
+
+        result = service.filter_by_success(True)
+        assert len(result) == 2
+        assert all(entry.success is True for entry in result)
+
+        result_false = service.filter_by_success(False)
+        assert result_false == []
+
+    def test_filter_by_success_all_failed(self, tmp_path):
+        """Test 4: Filter success=False when all entries are failed."""
+        storage = MemoryJsonStorage(tmp_path / "memory.json")
+        service = MemoryService(storage)
+
+        entries = [
+            MemoryEntry("divide", 10.0, 0.0, None, False, "Division by zero", "2026-05-03T10:00:00", 0.5, "id-1"),
+            MemoryEntry("sqrt", -4.0, 0.0, None, False, "Cannot take sqrt of negative", "2026-05-03T10:01:00", 0.8, "id-2"),
+        ]
+
+        for entry in entries:
+            service.store(entry)
+
+        result = service.filter_by_success(False)
+        assert len(result) == 2
+        assert all(entry.success is False for entry in result)
+
+        result_true = service.filter_by_success(True)
+        assert result_true == []
+
+    def test_filter_by_success_empty_storage(self, tmp_path):
+        """Test 5: Filter on empty storage returns empty list."""
+        storage = MemoryJsonStorage(tmp_path / "memory.json")
+        service = MemoryService(storage)
+
+        result_true = service.filter_by_success(True)
+        result_false = service.filter_by_success(False)
+
+        assert result_true == []
+        assert result_false == []
+
+    def test_filter_by_success_preserves_order(self, service_with_mixed_results):
+        """Test 6: Filter results preserve insertion order."""
+        result = service_with_mixed_results.filter_by_success(True)
+        assert len(result) == 3
+        # Verify timestamps are in ascending order
+        assert result[0].execution_timestamp < result[1].execution_timestamp < result[2].execution_timestamp
+
+
+class TestMemoryServiceFilterByExecutionTime:
+    """Test MemoryService.filter_by_execution_time() method."""
+
+    @pytest.fixture
+    def service_with_varied_times(self, tmp_path):
+        """Fixture with entries having varied execution times."""
+        storage = MemoryJsonStorage(tmp_path / "memory.json")
+        service = MemoryService(storage)
+
+        entries = [
+            MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 0.5, "id-1"),
+            MemoryEntry("subtract", 10.0, 3.0, 7.0, True, None, "2026-05-03T10:01:00", 1.5, "id-2"),
+            MemoryEntry("multiply", 4.0, 5.0, 20.0, True, None, "2026-05-03T10:02:00", 2.5, "id-3"),
+            MemoryEntry("divide", 20.0, 4.0, 5.0, True, None, "2026-05-03T10:03:00", 3.5, "id-4"),
+            MemoryEntry("power", 2.0, 10.0, 1024.0, True, None, "2026-05-03T10:04:00", 5.0, "id-5"),
+        ]
+
+        for entry in entries:
+            service.store(entry)
+
+        return service
+
+    def test_filter_by_execution_time_range_middle(self, service_with_varied_times):
+        """Test 1: Filter execution time in middle range."""
+        result = service_with_varied_times.filter_by_execution_time(min_ms=1.0, max_ms=3.0)
+        assert len(result) == 2
+        assert all(1.0 <= entry.execution_time_ms <= 3.0 for entry in result)
+
+    def test_filter_by_execution_time_inclusive_bounds(self, service_with_varied_times):
+        """Test 2: Filter with inclusive bounds (exact matches included)."""
+        result = service_with_varied_times.filter_by_execution_time(min_ms=1.5, max_ms=3.5)
+        assert len(result) == 3
+        # Should include entries with exactly 1.5 and 3.5
+        times = [entry.execution_time_ms for entry in result]
+        assert 1.5 in times
+        assert 3.5 in times
+
+    def test_filter_by_execution_time_single_result(self, service_with_varied_times):
+        """Test 3: Filter returning single result."""
+        result = service_with_varied_times.filter_by_execution_time(min_ms=5.0, max_ms=5.0)
+        assert len(result) == 1
+        assert result[0].execution_time_ms == 5.0
+
+    def test_filter_by_execution_time_no_matches(self, service_with_varied_times):
+        """Test 4: Filter with no matches returns empty list."""
+        result = service_with_varied_times.filter_by_execution_time(min_ms=10.0, max_ms=20.0)
+        assert result == []
+
+    def test_filter_by_execution_time_default_min(self, service_with_varied_times):
+        """Test 5: Filter with default min_ms=0.0."""
+        result = service_with_varied_times.filter_by_execution_time(max_ms=2.0)
+        assert len(result) == 2
+        assert all(entry.execution_time_ms <= 2.0 for entry in result)
+
+    def test_filter_by_execution_time_default_max(self, service_with_varied_times):
+        """Test 6: Filter with default max_ms=infinity."""
+        result = service_with_varied_times.filter_by_execution_time(min_ms=3.0)
+        assert len(result) == 2
+        assert all(entry.execution_time_ms >= 3.0 for entry in result)
+
+    def test_filter_by_execution_time_no_args_returns_all(self, service_with_varied_times):
+        """Test 7: Filter with no arguments returns all entries."""
+        result = service_with_varied_times.filter_by_execution_time()
+        assert len(result) == 5
+
+    def test_filter_by_execution_time_empty_storage(self, tmp_path):
+        """Test 8: Filter on empty storage returns empty list."""
+        storage = MemoryJsonStorage(tmp_path / "memory.json")
+        service = MemoryService(storage)
+
+        result = service.filter_by_execution_time(min_ms=1.0, max_ms=10.0)
+        assert result == []
+
+    def test_filter_by_execution_time_zero_duration(self, tmp_path):
+        """Test 9: Filter for zero-duration execution."""
+        storage = MemoryJsonStorage(tmp_path / "memory.json")
+        service = MemoryService(storage)
+
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 0.0, "id-1")
+        service.store(entry)
+
+        result = service.filter_by_execution_time(min_ms=0.0, max_ms=0.0)
+        assert len(result) == 1
+        assert result[0].execution_time_ms == 0.0
+
+    def test_filter_by_execution_time_preserves_order(self, service_with_varied_times):
+        """Test 10: Filter results preserve insertion order."""
+        result = service_with_varied_times.filter_by_execution_time(min_ms=0.5, max_ms=4.0)
+        assert len(result) == 4
+        # Verify execution times are in ascending order
+        times = [entry.execution_time_ms for entry in result]
+        assert times == sorted(times)
+
+
 class TestMemoryServiceIntegration:
     """Integration tests combining MemoryService and MemoryJsonStorage."""
 

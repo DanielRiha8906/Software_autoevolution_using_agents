@@ -79,6 +79,9 @@ package "services" #DDFFD4 {
         +MemoryService(storage: MemoryJsonStorage)
         +store(entry: MemoryEntry) : void
         +retrieve_all() : List<MemoryEntry>
+        +filter_by_operation(operation_name: str) : List<MemoryEntry>
+        +filter_by_success(success: bool) : List<MemoryEntry>
+        +filter_by_execution_time(min_ms: float, max_ms: float) : List<MemoryEntry>
     }
 }
 
@@ -119,6 +122,8 @@ package "cli" #FFE5E5 {
         -_prompt_number(prompt: String) : float [0..1]
         -_show_history() : void
         -_show_memory() : void
+        -_filter_memory_by_operation() : void
+        -_filter_memory_by_status() : void
     }
 }
 
