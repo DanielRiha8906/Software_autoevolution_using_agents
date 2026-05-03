@@ -304,4 +304,4 @@ All commands accessible via `python -m src <command>` and listed in `--help`.
 - `use_case_diagram.puml` — Added 5 new comment management use cases
 - `state_diagram.puml` — Added note about comment availability at any task state
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 399.5s | Cost: $0.794956 USD | Turns: 23
