@@ -139,4 +139,4 @@ Duration: 359.9s | Cost: $0.556227 USD | Turns: 21
 - Uses list comprehension for clean, idiomatic Python implementation
 - Full docstring with behavior specification and examples
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 250.5s | Cost: $0.469915 USD | Turns: 26
