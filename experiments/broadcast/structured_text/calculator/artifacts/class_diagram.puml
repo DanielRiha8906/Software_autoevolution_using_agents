@@ -56,6 +56,7 @@ package "services" {
   class CalculatorService {
     -calculator: Calculator
     -storage: JsonStorage
+    -memory_service: Optional[MemoryService]
     --
     +perform(op: Operation, a: float, b: float): CalculationResult
     +get_history(): list[CalculationResult]
@@ -66,6 +67,15 @@ package "services" {
     --
     +store(entry: MemoryEntry): None
     +retrieve(): list[MemoryEntry]
+  }
+
+  class QueryService {
+    -memory_service: MemoryService
+    --
+    +query(operation_type: Optional[str], result_state: Optional[str]): list[MemoryEntry]
+    +query_by_operation(operation_type: str): list[MemoryEntry]
+    +query_by_state(result_state: str): list[MemoryEntry]
+    +format_results(entries: list[MemoryEntry]): str
   }
 }
 
@@ -83,6 +93,7 @@ package "storage" {
 package "cli" {
   class CalculatorCLI {
     -service: CalculatorService
+    -query_service: Optional[QueryService]
     --
     +run_interactive(): None
     +run_command(op_str: str, a: float, b: float): None
@@ -90,6 +101,7 @@ package "cli" {
     -_resolve_menu_choice(choice: str): Operation
     -_prompt_number(prompt: str): float
     -_show_history(): None
+    -_query_interactive(): None
   }
 }
 
@@ -97,11 +109,16 @@ package "cli" {
 CalculatorService --> Calculator
 CalculatorService --> JsonStorage
 CalculatorService --> Operation
+CalculatorService --> MemoryService : optional
 
 MemoryService --> JsonStorage
 MemoryService --> MemoryEntry
 
+QueryService --> MemoryService
+QueryService --> MemoryEntry
+
 CalculatorCLI --> CalculatorService
+CalculatorCLI --> QueryService
 CalculatorCLI --> Operation
 
 JsonStorage --> CalculationResult
