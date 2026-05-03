@@ -479,3 +479,288 @@ class TestStatisticsFlag:
 
         output = capsys.readouterr().out
         assert "error rate" in output.lower()
+
+
+class TestScientificOperationFlags:
+    """Test --operation sin|cos|tan|log|ln|exp via one-shot CLI."""
+
+    def test_sin_flag_prints_result(self, tmp_path, monkeypatch, capsys):
+        """Test --operation sin with valid input."""
+        from unittest.mock import MagicMock
+        from src.models.calculation_result import CalculationResult
+
+        def mock_build_service():
+            service = MagicMock()
+            service.perform.return_value = CalculationResult("sin", 0, 0, 0.0, "2026-05-03T10:00:00")
+            return service
+
+        def mock_build_memory_service():
+            memory_path = tmp_path / "memory.json"
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+
+        sys.argv = ["src", "--operation", "sin", "0", "0"]
+        try:
+            __main__.main()
+        except SystemExit:
+            pass
+
+        output = capsys.readouterr().out
+        assert "0" in output
+
+    def test_cos_flag_prints_result(self, tmp_path, monkeypatch, capsys):
+        """Test --operation cos with valid input."""
+        from unittest.mock import MagicMock
+        from src.models.calculation_result import CalculationResult
+
+        def mock_build_service():
+            service = MagicMock()
+            service.perform.return_value = CalculationResult("cos", 0, 0, 1.0, "2026-05-03T10:00:00")
+            return service
+
+        def mock_build_memory_service():
+            memory_path = tmp_path / "memory.json"
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+
+        sys.argv = ["src", "--operation", "cos", "0", "0"]
+        try:
+            __main__.main()
+        except SystemExit:
+            pass
+
+        output = capsys.readouterr().out
+        assert "1" in output
+
+    def test_tan_flag_prints_result(self, tmp_path, monkeypatch, capsys):
+        """Test --operation tan with valid input."""
+        from unittest.mock import MagicMock
+        from src.models.calculation_result import CalculationResult
+
+        def mock_build_service():
+            service = MagicMock()
+            service.perform.return_value = CalculationResult("tan", 0, 0, 0.0, "2026-05-03T10:00:00")
+            return service
+
+        def mock_build_memory_service():
+            memory_path = tmp_path / "memory.json"
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+
+        sys.argv = ["src", "--operation", "tan", "0", "0"]
+        try:
+            __main__.main()
+        except SystemExit:
+            pass
+
+        output = capsys.readouterr().out
+        assert "0" in output
+
+    def test_log_flag_prints_result(self, tmp_path, monkeypatch, capsys):
+        """Test --operation log with valid input."""
+        from unittest.mock import MagicMock
+        from src.models.calculation_result import CalculationResult
+
+        def mock_build_service():
+            service = MagicMock()
+            service.perform.return_value = CalculationResult("log", 10, 0, 1.0, "2026-05-03T10:00:00")
+            return service
+
+        def mock_build_memory_service():
+            memory_path = tmp_path / "memory.json"
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+
+        sys.argv = ["src", "--operation", "log", "10", "0"]
+        try:
+            __main__.main()
+        except SystemExit:
+            pass
+
+        output = capsys.readouterr().out
+        assert "1" in output
+
+    def test_ln_flag_prints_result(self, tmp_path, monkeypatch, capsys):
+        """Test --operation ln with valid input."""
+        from unittest.mock import MagicMock
+        from src.models.calculation_result import CalculationResult
+
+        def mock_build_service():
+            service = MagicMock()
+            service.perform.return_value = CalculationResult("ln", 1, 0, 0.0, "2026-05-03T10:00:00")
+            return service
+
+        def mock_build_memory_service():
+            memory_path = tmp_path / "memory.json"
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+
+        sys.argv = ["src", "--operation", "ln", "1", "0"]
+        try:
+            __main__.main()
+        except SystemExit:
+            pass
+
+        output = capsys.readouterr().out
+        assert "0" in output
+
+    def test_exp_flag_prints_result(self, tmp_path, monkeypatch, capsys):
+        """Test --operation exp with valid input."""
+        from unittest.mock import MagicMock
+        from src.models.calculation_result import CalculationResult
+
+        def mock_build_service():
+            service = MagicMock()
+            service.perform.return_value = CalculationResult("exp", 0, 0, 1.0, "2026-05-03T10:00:00")
+            return service
+
+        def mock_build_memory_service():
+            memory_path = tmp_path / "memory.json"
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+
+        sys.argv = ["src", "--operation", "exp", "0", "0"]
+        try:
+            __main__.main()
+        except SystemExit:
+            pass
+
+        output = capsys.readouterr().out
+        assert "1" in output
+
+    def test_log_zero_error_exits(self, tmp_path, monkeypatch):
+        """Test --operation log with zero raises error."""
+        from unittest.mock import MagicMock
+
+        def mock_build_service():
+            service = MagicMock()
+            service.perform.side_effect = ValueError("Logarithm of non-positive numbers is not allowed")
+            return service
+
+        def mock_build_memory_service():
+            memory_path = tmp_path / "memory.json"
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+
+        sys.argv = ["src", "--operation", "log", "0", "0"]
+        with pytest.raises(SystemExit):
+            __main__.main()
+
+    def test_ln_negative_error_exits(self, tmp_path, monkeypatch):
+        """Test --operation ln with negative raises error."""
+        from unittest.mock import MagicMock
+
+        def mock_build_service():
+            service = MagicMock()
+            service.perform.side_effect = ValueError("Natural logarithm of non-positive numbers is not allowed")
+            return service
+
+        def mock_build_memory_service():
+            memory_path = tmp_path / "memory.json"
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+
+        sys.argv = ["src", "--operation", "ln", "-1", "0"]
+        with pytest.raises(SystemExit):
+            __main__.main()
+
+
+class TestScientificOperationFilterMemory:
+    """Test that new scientific operation names work with --memory-filter operation."""
+
+    def test_filter_by_sin_operation(self, tmp_path, monkeypatch, capsys):
+        """Test --memory-filter operation --filter-operation sin."""
+        memory_path = tmp_path / "memory.json"
+        memory_service = MemoryService(MemoryJsonStorage(memory_path))
+
+        memory_service.store(MemoryEntry("sin", 0.0, 0.0, 0.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"))
+        memory_service.store(MemoryEntry("cos", 0.0, 0.0, 1.0, True, None, "2026-05-03T10:01:00", 1.0, "id-2"))
+
+        def mock_build_memory_service():
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        def mock_build_service():
+            from unittest.mock import MagicMock
+            return MagicMock()
+
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+
+        sys.argv = ["src", "--memory-filter", "operation", "--filter-operation", "sin"]
+        try:
+            __main__.main()
+        except SystemExit:
+            pass
+
+        output = capsys.readouterr().out
+        assert "sin" in output.lower() or "0" in output
+
+    def test_filter_by_log_operation(self, tmp_path, monkeypatch, capsys):
+        """Test --memory-filter operation --filter-operation log."""
+        memory_path = tmp_path / "memory.json"
+        memory_service = MemoryService(MemoryJsonStorage(memory_path))
+
+        memory_service.store(MemoryEntry("log", 10.0, 0.0, 1.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"))
+        memory_service.store(MemoryEntry("ln", 1.0, 0.0, 0.0, True, None, "2026-05-03T10:01:00", 1.0, "id-2"))
+
+        def mock_build_memory_service():
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        def mock_build_service():
+            from unittest.mock import MagicMock
+            return MagicMock()
+
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+
+        sys.argv = ["src", "--memory-filter", "operation", "--filter-operation", "log"]
+        try:
+            __main__.main()
+        except SystemExit:
+            pass
+
+        output = capsys.readouterr().out
+        assert "log" in output.lower() or "1" in output
+
+    def test_filter_by_exp_operation(self, tmp_path, monkeypatch, capsys):
+        """Test --memory-filter operation --filter-operation exp."""
+        memory_path = tmp_path / "memory.json"
+        memory_service = MemoryService(MemoryJsonStorage(memory_path))
+
+        memory_service.store(MemoryEntry("exp", 1.0, 0.0, 2.718281828, True, None, "2026-05-03T10:00:00", 1.0, "id-1"))
+        memory_service.store(MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:01:00", 1.0, "id-2"))
+
+        def mock_build_memory_service():
+            return MemoryService(MemoryJsonStorage(memory_path))
+
+        def mock_build_service():
+            from unittest.mock import MagicMock
+            return MagicMock()
+
+        monkeypatch.setattr(__main__, "_build_memory_service", mock_build_memory_service)
+        monkeypatch.setattr(__main__, "_build_service", mock_build_service)
+
+        sys.argv = ["src", "--memory-filter", "operation", "--filter-operation", "exp"]
+        try:
+            __main__.main()
+        except SystemExit:
+            pass
+
+        output = capsys.readouterr().out
+        assert "exp" in output.lower() or "2.718" in output

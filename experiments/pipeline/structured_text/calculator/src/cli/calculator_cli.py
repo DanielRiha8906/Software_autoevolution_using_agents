@@ -15,6 +15,12 @@ class CalculatorCLI:
         (Operation.SQRT,     "Square Root"),
         (Operation.POWER,    "Power"),
         (Operation.MODULO,   "Modulo"),
+        (Operation.SIN,      "Sin"),
+        (Operation.COS,      "Cos"),
+        (Operation.TAN,      "Tan"),
+        (Operation.LOG,      "Log"),
+        (Operation.LN,       "Ln"),
+        (Operation.EXP,      "Exp"),
     ]
 
     def __init__(self, service: CalculatorService, memory_service: MemoryService | None = None) -> None:
@@ -238,7 +244,7 @@ class CalculatorCLI:
         if self.memory_service is None:
             print("\n  Memory service not available.\n")
             return
-        operation_name = input("\n  Enter operation name (add, subtract, multiply, divide, square, sqrt, power, modulo): ").strip()
+        operation_name = input("\n  Enter operation name (add, subtract, multiply, divide, square, sqrt, power, modulo, sin, cos, tan, log, ln, exp): ").strip()
         entries = self.memory_service.filter_by_operation(operation_name)
         if not entries:
             print(f"\n  No memory entries match operation '{operation_name}'.\n")

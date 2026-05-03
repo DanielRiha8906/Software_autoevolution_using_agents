@@ -207,3 +207,192 @@ class TestCalculator:
     def test_modulo_via_calculate(self):
         assert self.calc.calculate(Operation.MODULO, 17, 5) == 2
         assert self.calc.calculate(Operation.MODULO, 100, 7) == 2
+
+    # =====================================================================
+    # Tests for SIN operation
+    # =====================================================================
+
+    def test_sin_zero(self):
+        assert self.calc.sin(0, 0) == pytest.approx(0.0)
+
+    def test_sin_pi_over_two(self):
+        assert self.calc.sin(3.14159265359 / 2, 0) == pytest.approx(1.0, abs=1e-6)
+
+    def test_sin_pi(self):
+        assert self.calc.sin(3.14159265359, 0) == pytest.approx(0.0, abs=1e-6)
+
+    def test_sin_negative_angle(self):
+        assert self.calc.sin(-0.5, 0) == pytest.approx(-0.479425538)
+
+    def test_sin_positive_float(self):
+        assert self.calc.sin(1.0, 0) == pytest.approx(0.841470984)
+
+    def test_sin_ignores_second_operand(self):
+        """sin() ignores the b parameter"""
+        assert self.calc.sin(1.0, 100) == pytest.approx(0.841470984)
+        assert self.calc.sin(1.0, 0) == pytest.approx(0.841470984)
+        assert self.calc.sin(1.0, -50) == pytest.approx(0.841470984)
+
+    def test_sin_via_calculate(self):
+        assert self.calc.calculate(Operation.SIN, 0, 0) == pytest.approx(0.0)
+        assert self.calc.calculate(Operation.SIN, 1.57079632679, 999) == pytest.approx(1.0, abs=1e-6)
+
+    # =====================================================================
+    # Tests for COS operation
+    # =====================================================================
+
+    def test_cos_zero(self):
+        assert self.calc.cos(0, 0) == pytest.approx(1.0)
+
+    def test_cos_pi(self):
+        assert self.calc.cos(3.14159265359, 0) == pytest.approx(-1.0, abs=1e-6)
+
+    def test_cos_pi_over_two(self):
+        assert self.calc.cos(3.14159265359 / 2, 0) == pytest.approx(0.0, abs=1e-6)
+
+    def test_cos_negative_angle(self):
+        assert self.calc.cos(-0.5, 0) == pytest.approx(0.877582561)
+
+    def test_cos_positive_float(self):
+        assert self.calc.cos(1.0, 0) == pytest.approx(0.540302305)
+
+    def test_cos_ignores_second_operand(self):
+        """cos() ignores the b parameter"""
+        assert self.calc.cos(1.0, 100) == pytest.approx(0.540302305)
+        assert self.calc.cos(1.0, 0) == pytest.approx(0.540302305)
+        assert self.calc.cos(1.0, -50) == pytest.approx(0.540302305)
+
+    def test_cos_via_calculate(self):
+        assert self.calc.calculate(Operation.COS, 0, 0) == pytest.approx(1.0)
+        assert self.calc.calculate(Operation.COS, 3.14159265359, 999) == pytest.approx(-1.0, abs=1e-6)
+
+    # =====================================================================
+    # Tests for TAN operation
+    # =====================================================================
+
+    def test_tan_zero(self):
+        assert self.calc.tan(0, 0) == pytest.approx(0.0)
+
+    def test_tan_pi_over_four(self):
+        assert self.calc.tan(0.785398163, 0) == pytest.approx(1.0, abs=1e-6)
+
+    def test_tan_negative_angle(self):
+        assert self.calc.tan(-0.5, 0) == pytest.approx(-0.546302489)
+
+    def test_tan_positive_float(self):
+        assert self.calc.tan(1.0, 0) == pytest.approx(1.557407724)
+
+    def test_tan_ignores_second_operand(self):
+        """tan() ignores the b parameter"""
+        assert self.calc.tan(1.0, 100) == pytest.approx(1.557407724)
+        assert self.calc.tan(1.0, 0) == pytest.approx(1.557407724)
+        assert self.calc.tan(1.0, -50) == pytest.approx(1.557407724)
+
+    def test_tan_via_calculate(self):
+        assert self.calc.calculate(Operation.TAN, 0, 0) == pytest.approx(0.0)
+        assert self.calc.calculate(Operation.TAN, 0.785398163, 999) == pytest.approx(1.0, abs=1e-6)
+
+    # =====================================================================
+    # Tests for LOG (base 10) operation
+    # =====================================================================
+
+    def test_log_one(self):
+        assert self.calc.log(1.0, 0) == pytest.approx(0.0)
+
+    def test_log_ten(self):
+        assert self.calc.log(10.0, 0) == pytest.approx(1.0)
+
+    def test_log_hundred(self):
+        assert self.calc.log(100.0, 0) == pytest.approx(2.0)
+
+    def test_log_positive_float(self):
+        assert self.calc.log(2.5, 0) == pytest.approx(0.397940008)
+
+    def test_log_zero_raises_value_error(self):
+        with pytest.raises(ValueError, match="Logarithm of non-positive"):
+            self.calc.log(0, 0)
+
+    def test_log_negative_raises_value_error(self):
+        with pytest.raises(ValueError, match="Logarithm of non-positive"):
+            self.calc.log(-1.0, 0)
+
+    def test_log_small_negative_raises(self):
+        with pytest.raises(ValueError, match="Logarithm of non-positive"):
+            self.calc.log(-0.0001, 0)
+
+    def test_log_ignores_second_operand(self):
+        """log() ignores the b parameter"""
+        assert self.calc.log(10.0, 100) == pytest.approx(1.0)
+        assert self.calc.log(10.0, 0) == pytest.approx(1.0)
+        assert self.calc.log(10.0, -50) == pytest.approx(1.0)
+
+    def test_log_via_calculate(self):
+        assert self.calc.calculate(Operation.LOG, 1.0, 0) == pytest.approx(0.0)
+        assert self.calc.calculate(Operation.LOG, 10.0, 999) == pytest.approx(1.0)
+
+    # =====================================================================
+    # Tests for LN (natural log) operation
+    # =====================================================================
+
+    def test_ln_one(self):
+        assert self.calc.ln(1.0, 0) == pytest.approx(0.0)
+
+    def test_ln_e(self):
+        assert self.calc.ln(2.71828182845, 0) == pytest.approx(1.0, abs=1e-6)
+
+    def test_ln_e_squared(self):
+        assert self.calc.ln(7.38905609893, 0) == pytest.approx(2.0, abs=1e-6)
+
+    def test_ln_positive_float(self):
+        assert self.calc.ln(2.5, 0) == pytest.approx(0.916291731, abs=1e-6)
+
+    def test_ln_zero_raises_value_error(self):
+        with pytest.raises(ValueError, match="Natural logarithm of non-positive"):
+            self.calc.ln(0, 0)
+
+    def test_ln_negative_raises_value_error(self):
+        with pytest.raises(ValueError, match="Natural logarithm of non-positive"):
+            self.calc.ln(-1.0, 0)
+
+    def test_ln_small_negative_raises(self):
+        with pytest.raises(ValueError, match="Natural logarithm of non-positive"):
+            self.calc.ln(-0.0001, 0)
+
+    def test_ln_ignores_second_operand(self):
+        """ln() ignores the b parameter"""
+        assert self.calc.ln(2.71828182845, 100) == pytest.approx(1.0, abs=1e-6)
+        assert self.calc.ln(2.71828182845, 0) == pytest.approx(1.0, abs=1e-6)
+        assert self.calc.ln(2.71828182845, -50) == pytest.approx(1.0, abs=1e-6)
+
+    def test_ln_via_calculate(self):
+        assert self.calc.calculate(Operation.LN, 1.0, 0) == pytest.approx(0.0)
+        assert self.calc.calculate(Operation.LN, 2.71828182845, 999) == pytest.approx(1.0, abs=1e-6)
+
+    # =====================================================================
+    # Tests for EXP (e^x) operation
+    # =====================================================================
+
+    def test_exp_zero(self):
+        assert self.calc.exp(0, 0) == pytest.approx(1.0)
+
+    def test_exp_one(self):
+        assert self.calc.exp(1.0, 0) == pytest.approx(2.71828182845, abs=1e-6)
+
+    def test_exp_two(self):
+        assert self.calc.exp(2.0, 0) == pytest.approx(7.38905609893, abs=1e-6)
+
+    def test_exp_negative(self):
+        assert self.calc.exp(-1.0, 0) == pytest.approx(0.367879440, abs=1e-6)
+
+    def test_exp_positive_float(self):
+        assert self.calc.exp(0.5, 0) == pytest.approx(1.648721270, abs=1e-6)
+
+    def test_exp_ignores_second_operand(self):
+        """exp() ignores the b parameter"""
+        assert self.calc.exp(1.0, 100) == pytest.approx(2.71828182845, abs=1e-6)
+        assert self.calc.exp(1.0, 0) == pytest.approx(2.71828182845, abs=1e-6)
+        assert self.calc.exp(1.0, -50) == pytest.approx(2.71828182845, abs=1e-6)
+
+    def test_exp_via_calculate(self):
+        assert self.calc.calculate(Operation.EXP, 0, 0) == pytest.approx(1.0)
+        assert self.calc.calculate(Operation.EXP, 1.0, 999) == pytest.approx(2.71828182845, abs=1e-6)
