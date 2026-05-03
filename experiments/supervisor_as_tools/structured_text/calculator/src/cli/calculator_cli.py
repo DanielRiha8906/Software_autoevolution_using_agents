@@ -43,7 +43,8 @@ class CalculatorCLI:
             if self.memory_service is not None:
                 memory_opt = history_opt + 2
                 summary_opt = history_opt + 3
-                exit_opt = history_opt + 4
+                statistics_opt = history_opt + 4
+                exit_opt = history_opt + 5
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -61,6 +62,10 @@ class CalculatorCLI:
 
                 if choice == str(summary_opt):
                     self.show_memory_summary()
+                    continue
+
+                if choice == str(statistics_opt):
+                    self.show_memory_statistics()
                     continue
 
             operation = self._resolve_menu_choice(choice)
@@ -112,7 +117,8 @@ class CalculatorCLI:
         if self.memory_service is not None:
             print(f"  {len(self._MENU) + 2}. View memory")
             print(f"  {len(self._MENU) + 3}. Memory summary")
-            print(f"  {len(self._MENU) + 4}. Exit")
+            print(f"  {len(self._MENU) + 4}. View statistics")
+            print(f"  {len(self._MENU) + 5}. Exit")
         else:
             print(f"  {len(self._MENU) + 2}. Exit")
 
@@ -291,3 +297,39 @@ class CalculatorCLI:
             print("  Memory cleared.\n")
         else:
             print("  Cancelled.\n")
+
+    def show_memory_statistics(self, operation: str | None = None) -> None:
+        """
+        Display calculation statistics in human-readable format.
+
+        Args:
+            operation: Optional operation type to filter statistics by (e.g., "add").
+        """
+        if not self.memory_service:
+            print("\n  Memory service not available.\n")
+            return
+
+        stats = self.memory_service.compute_statistics(filter_operation=operation)
+
+        if stats.total_entries == 0:
+            print("\n  No memory entries recorded yet.\n")
+            return
+
+        print()
+        print("  === Calculation Statistics ===")
+        print(f"  Total entries: {stats.total_entries}")
+        print(f"  Total errors: {stats.total_errors}")
+        print(f"  Error rate: {stats.error_rate:.2f}%")
+        print(f"  Average execution time: {stats.avg_execution_time_ms:.2f} ms")
+
+        if stats.min_execution_time_ms is not None and stats.max_execution_time_ms is not None:
+            print(f"  Min execution time: {stats.min_execution_time_ms:.2f} ms")
+            print(f"  Max execution time: {stats.max_execution_time_ms:.2f} ms")
+
+        if stats.operation_counts:
+            print()
+            print("  By operation:")
+            for op, count in sorted(stats.operation_counts.items()):
+                error_rate = stats.operation_error_rates.get(op, 0.0)
+                print(f"    {op}: {count} (error rate: {error_rate:.2f}%)")
+        print()

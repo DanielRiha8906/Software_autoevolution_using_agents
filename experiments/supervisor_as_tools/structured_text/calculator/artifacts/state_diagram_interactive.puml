@@ -11,6 +11,7 @@ Menu --> FirstOperand : operation selected
 Menu --> Feedback : history selected
 Menu --> MemoryView : memory selected [optional]
 Menu --> MemorySummary : summary selected [optional]
+Menu --> MemoryStatistics : statistics selected [optional]
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
@@ -26,5 +27,6 @@ Feedback --> Menu
 
 MemoryView --> Menu : done viewing
 MemorySummary --> Menu : done viewing
+MemoryStatistics --> Menu : done viewing
 
 @enduml

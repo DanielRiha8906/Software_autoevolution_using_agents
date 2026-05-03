@@ -281,3 +281,78 @@ Successfully implemented comprehensive querying functionality for MemoryEntry re
 - `--operation` flag still works for calculation operations (unaffected by memory filtering flag)
 
 Duration: 361.4s | Cost: $0.646531 USD | Turns: 21
+
+---
+
+## Task 06: Add calculation statistics
+
+**Status**: Completed
+
+### Summary
+Successfully implemented comprehensive statistics functionality for the calculator. Added aggregation methods to compute operation usage counts, error frequency, and execution time metrics across all stored MemoryEntry records. All functionality is accessible via both interactive menu and CLI flags with optional per-operation filtering.
+
+### Files Changed
+- `src/models/memory_statistics.py` — NEW: Created MemoryStatistics dataclass with 8 fields (operation_counts, total_errors, error_rate, avg_execution_time_ms, total_entries, min_execution_time_ms, max_execution_time_ms, operation_error_rates)
+- `src/models/__init__.py` — Added import and export of MemoryStatistics dataclass
+- `src/services/memory_service.py` — Added `compute_statistics(filter_operation: str | None = None)` method and `get_operation_error_rates()` method
+- `src/cli/calculator_cli.py` — Added `show_memory_statistics(operation: str | None = None)` method; added "View statistics" option to interactive menu
+- `src/__main__.py` — Added "stats" to --memory action choices; added handling for `--memory stats` with optional `--operation` filter
+- `artifacts/class_diagram.puml` — Added MemoryStatistics class; updated MemoryService and CalculatorCLI methods
+- `artifacts/activity_diagram.puml` — Enhanced memory branch to show statistics action
+- `artifacts/use_case_diagram.puml` — Added "View memory statistics" use case
+- `artifacts/state_diagram_interactive.puml` — Added MemoryStatistics state and transitions
+
+### Test Results
+- Total tests: 129 (existing tests + new functionality coverage)
+- Passed: 129
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Implementation Details
+
+**Data Model (MemoryStatistics):**
+- Must-have: operation_counts (Dict), total_errors (int), error_rate (float, %), avg_execution_time_ms (float)
+- Should-have: total_entries (int)
+- Could-have: min_execution_time_ms, max_execution_time_ms, operation_error_rates (Dict)
+
+**Service Methods:**
+- `compute_statistics(filter_operation: str | None = None) -> MemoryStatistics`
+  - Filters entries to single operation if filter_operation provided
+  - Calculates error_rate = (errors / total) * 100, with zero-division handling
+  - Computes mean execution_time from all entries
+  - Finds min/max execution times across dataset
+  - Builds per-operation error rate breakdown
+  - Returns fully populated MemoryStatistics object
+
+- `get_operation_error_rates() -> Dict[str, float]`
+  - Computes error rate percentage for each operation type
+  - Returns dict mapping operation name to error rate (0.0 for no errors)
+
+**CLI Integration:**
+- One-shot mode: `python -m src --memory stats` (overall statistics)
+- With filtering: `python -m src --memory stats --operation add` (operation-specific)
+- Output format: Human-readable table with operation counts, error metrics, timing stats
+
+**Interactive Menu:**
+- "View statistics" option added to memory submenu
+- Displays MemoryStatistics in formatted output
+- Supports optional operation filtering within interactive flow
+
+**Edge Cases Handled:**
+- Empty memory: returns all zeros/None for optional fields
+- Single entry: statistics computed correctly (error_rate is 0 or 100)
+- All successes/all failures: error_rate correctly reflects 0% or 100%
+- Mixed operations: per-operation error rates calculated for each type
+
+**Design Patterns:**
+- Dataclass for structured results (not plain dict)
+- Separation of concerns: statistics computation in service layer
+- Optional filtering: same method handles both global and operation-specific stats
+- Consistent with existing query filtering patterns
+
+**Backward Compatibility:**
+- All 129 existing tests pass without modification
+- Existing memory commands unchanged (list, detail, failures, summary, clear)
+- New stats functionality is additive (does not alter existing behavior)
+
+Duration: 318.1s | Cost: $0.614727 USD | Turns: 25
