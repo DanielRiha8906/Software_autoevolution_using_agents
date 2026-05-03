@@ -441,4 +441,4 @@ Successfully implemented JSON export/import functionality for workflow runs and 
 - Error messages include item IDs and specific field names for debugging
 - WorkflowRun.id (str) and WorkflowRunAttempt.id/run_id (int) types are preserved through serialization
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 590.9s | Cost: $1.431707 USD | Turns: 41
