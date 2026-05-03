@@ -10,6 +10,18 @@ package "models" #DDEEFF {
         DONE
     }
 
+    class TaskComment {
+        +id : String
+        +task_id : String
+        +content : String
+        +created_at : DateTime
+        +author : String [0..1]
+        +updated_at : DateTime [0..1]
+        --
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : TaskComment
+    }
+
     class Task {
         +id : String
         +title : String

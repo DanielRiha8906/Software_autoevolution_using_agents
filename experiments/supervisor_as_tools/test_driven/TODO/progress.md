@@ -59,3 +59,45 @@ Successfully implemented 7 new methods on the Task model to handle status transi
 - No external dependencies; all methods use existing imports
 
 Duration: 248.1s | Cost: $0.459003 USD | Turns: 18
+
+## Task 03: Add TaskComment domain class
+
+### Summary
+Successfully created a new TaskComment domain class with complete serialization support, validation, and CEST timezone handling. The class stores comments attached to tasks with independent storage managed through the service layer.
+
+### Files Changed
+- `src/models/task_comment.py` - New TaskComment dataclass with id, task_id, content, created_at, author (optional), updated_at (optional)
+- `src/models/__init__.py` - Added TaskComment export
+- `tests/test_task_comment.py` - New test suite with 12 tests
+- `artifacts/class_diagram.puml` - Updated to reflect new TaskComment class in models package
+
+### Test Results
+- **All 80 tests passing** ✅ (12 new TaskComment tests + 68 existing tests)
+- New TaskComment tests:
+  - test_task_comment_can_be_created
+  - test_task_comment_has_unique_uuid_id
+  - test_task_comment_id_is_uuid_string
+  - test_task_comment_has_created_at
+  - test_task_comment_created_at_uses_cest
+  - test_empty_content_raises
+  - test_serializes_to_dict
+  - test_created_at_serializes_as_string
+  - test_round_trips_via_dict
+  - test_optional_author
+  - test_has_updated_at_attribute
+  - test_updated_at_uses_cest_when_present
+- Existing tests still passing (no regressions)
+
+### Implementation Details
+- Used @dataclass decorator, following Task model pattern
+- id: UUID string auto-generated on construction
+- task_id: String (stored as-is, relationship integrity enforced in service layer later)
+- content: Non-empty string (validated in __post_init__)
+- created_at: datetime with CEST (UTC+2) timezone, auto-set on construction
+- author: Optional string field (default None)
+- updated_at: Optional datetime with CEST timezone (default None)
+- to_dict() serializes datetime fields to ISO 8601 strings
+- from_dict() deserializes from dict, restoring datetime fields from ISO 8601 strings
+- No external dependencies beyond standard library
+
+Duration: 168.6s | Cost: $0.338451 USD | Turns: 26
