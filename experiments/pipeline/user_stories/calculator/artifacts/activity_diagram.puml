@@ -11,16 +11,15 @@ if (CLI operation provided?) then (yes)
   :Validate operation and operands;
 
   if (Input valid?) then (yes)
-    :Start timing;
     :Perform calculation;
-    :End timing (record execution_time_ms);
 
-    if (Calculation successful?) then (yes)
-      :Save result to history;
+    if (No error?) then (yes)
+      :Save MemoryEntry to history;
       :Show result;
       stop
     else (no)
-      :Show calculation error;
+      :Save error MemoryEntry to history;
+      :Show error message;
       stop
     endif
 
@@ -49,15 +48,14 @@ else (no)
         :Read operands;
 
         if (Input valid?) then (yes)
-          :Start timing;
           :Perform calculation;
-          :End timing (record execution_time_ms);
 
-          if (Calculation successful?) then (yes)
-            :Save result to history;
+          if (No error?) then (yes)
+            :Save MemoryEntry to history;
             :Show result;
           else (no)
-            :Show calculation error;
+            :Save error MemoryEntry to history;
+            :Show error message;
           endif
 
         else (no)

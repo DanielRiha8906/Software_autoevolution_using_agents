@@ -1,6 +1,7 @@
 import sys
 
 from ..models.operation import Operation
+from ..models.memory_entry import MemoryEntry
 from ..services.calculator_service import CalculatorService
 
 
@@ -52,20 +53,25 @@ class CalculatorCLI:
             if b is None:
                 continue
 
-            try:
-                result = self.service.perform(operation, a, b)
+            result = self.service.perform(operation, a, b)
+            if result.error:
+                print(f"\n  Error: {result.error}\n")
+            else:
                 print(f"\n  Result: {result}\n")
-            except ValueError as exc:
-                print(f"\n  Error: {exc}\n")
 
     def run_command(self, operation_str: str, a: float, b: float) -> None:
         try:
             operation = Operation.from_string(operation_str)
-            result = self.service.perform(operation, a, b)
-            print(result)
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
+
+        result = self.service.perform(operation, a, b)
+        if result.error:
+            print(f"Error: {result.error}", file=sys.stderr)
+            sys.exit(1)
+        else:
+            print(result)
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -102,5 +108,8 @@ class CalculatorCLI:
             return
         print()
         for i, entry in enumerate(history, 1):
-            print(f"  {i}. {entry}  [{entry.timestamp}]")
+            if entry.error:
+                print(f"  {i}. {entry.operation} ({entry.operand_a}, {entry.operand_b}) = ERROR: {entry.error}")
+            else:
+                print(f"  {i}. {entry}  [{entry.timestamp}]")
         print()

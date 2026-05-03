@@ -60,3 +60,38 @@ Duration: 272.5s | Cost: $0.421845 USD | Turns: 15
 - ✅ All new operations accessible via python -m src with interactive menu and CLI flags (--operation square/sqrt/power/modulo)
 
 Duration: 592.2s | Cost: $1.021847 USD | Turns: 19
+
+## Task 03: MemoryEntry Class for History
+
+**Status**: ✅ Complete
+
+**Description**: Create a dedicated MemoryEntry class that captures everything about a single calculation attempt (operation, operands, result, success/error state, execution timestamp, ID), enabling structured history data with clear separation from presentation logic.
+
+**Files Changed**:
+- `src/models/memory_entry.py` — NEW dataclass with fields: uuid, operation, operand_a, operand_b, result, error, error_type, timestamp; methods: __post_init__() (auto-generate uuid and timestamp), to_dict(), from_dict() (with backward compat), __str__() (format as "A SYMBOL B = RESULT" or "A SYMBOL B = ERROR: message")
+- `src/models/__init__.py` — Added MemoryEntry export
+- `src/services/calculator_service.py` — Changed perform() to catch ALL exceptions (not re-raise), return MemoryEntry with error state on failure; changed get_history() to return list[MemoryEntry]
+- `src/storage/json_storage.py` — Changed save() to accept MemoryEntry, changed load_all() to return list[MemoryEntry], backward compat for old CalculationResult format (auto-migrate missing uuid/error fields)
+- `src/cli/calculator_cli.py` — Updated run_interactive() and run_command() to check result.error state instead of catching exceptions; updated _show_history() to display error entries with "ERROR: message"
+- `src/__main__.py` — Added --show-history flag to argparse; added logic to display history and exit when flag is used
+- `artifacts/class_diagram.puml` — Added MemoryEntry class with all fields and methods; updated CalculatorService.perform() return type; updated JsonStorage methods
+- `artifacts/activity_diagram.puml` — Updated to show MemoryEntry as primary data model; removed timing logic; clarified error/no-error paths
+- `artifacts/component_diagram.puml` — Updated Domain Models component to show MemoryEntry
+
+**Test Results**:
+- Total tests: 326 (174 existing + 152 new)
+- Passed: 326 ✅
+- Failed: 0
+- New test files: test_memory_entry.py (44 tests), test_calculator_service_memory_entry.py (26 tests), test_json_storage_memory_entry.py (23 tests), test_cli_memory_entry.py (42 tests), test_main_show_history.py (19 tests)
+- Coverage: MemoryEntry construction/UUID/timestamp/serialization, error capture in service, JSON backward compatibility, CLI error display, --show-history flag, interactive error recovery
+
+**Acceptance Criteria Met**:
+- ✅ MemoryEntry stores: operation, operand_a, operand_b, result, success/error state (error, error_type), timestamp, uuid
+- ✅ Both successful and failed calculations represented (result set for success, error/error_type set for failures)
+- ✅ JSON serialization/deserialization via to_dict()/from_dict()
+- ✅ Unique identifier (UUID v4) auto-generated for each entry
+- ✅ Presentation/formatting logic in __str__() kept separate from data structure
+- ✅ Existing calculation history not broken (backward compatible - old JSON loads correctly)
+- ✅ All functionality accessible via python -m src (--show-history flag + interactive history view)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

@@ -25,13 +25,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--show-history]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
         choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
         help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+    )
+    parser.add_argument(
+        "--show-history",
+        action="store_true",
+        help="Display all calculation history",
     )
     parser.add_argument(
         "operands",
@@ -43,6 +48,10 @@ def main() -> None:
     args = parser.parse_args()
     service = _build_service()
     cli = CalculatorCLI(service)
+
+    if args.show_history:
+        cli._show_history()
+        sys.exit(0)
 
     if args.operation:
         if len(args.operands) != 2:
