@@ -22,6 +22,8 @@ repeat
       :Run set due date flow;
     case (7 — Delete task)
       :Run delete task flow;
+    case (8 — Manage comments)
+      :Run manage comments flow;
     case (0/q — Quit)
       :Clear screen;
       stop

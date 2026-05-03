@@ -96,3 +96,23 @@ class TodoService:
             ValueError: If comment is not found on the task.
         """
         self._manager.delete_comment(task_id, comment_id)
+
+    def edit_comment(self, task_id: str, comment_id: str, content: str) -> TaskComment:
+        """Edit a comment on a task.
+
+        Args:
+            task_id: The ID of the task.
+            comment_id: The ID of the comment to edit.
+            content: The new comment content (non-empty string).
+
+        Returns:
+            TaskComment: The updated comment.
+
+        Raises:
+            ValueError: If content is empty.
+            TaskNotFoundError: If task is not found.
+            ValueError: If comment is not found on the task.
+        """
+        if not content or not content.strip():
+            raise ValueError("Comment content cannot be empty")
+        return self._manager.edit_comment(task_id, comment_id, content.strip())

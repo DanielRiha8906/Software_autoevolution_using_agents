@@ -1,0 +1,82 @@
+@startuml sequence_diagram_comment_operations
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 20
+skinparam maxMessageSize 200
+
+participant "User/CLI" as User
+participant "TodoService" as Service
+participant "TaskManager" as Manager
+participant "Task" as Task
+participant "JsonStorage" as Storage
+
+group Add Comment
+  User -> Service: add_comment(task_id, content, author)
+  activate Service
+  Service -> Manager: add_comment(task_id, content, author)
+  activate Manager
+  Manager -> Manager: get(task_id)
+  Manager -> Task: comments.append(new TaskComment)
+  activate Task
+  deactivate Task
+  Manager -> Storage: persist()
+  activate Storage
+  deactivate Storage
+  Manager --> Service: TaskComment
+  deactivate Manager
+  Service --> User: TaskComment
+  deactivate Service
+end
+
+group Get Comments
+  User -> Service: get_comments(task_id)
+  activate Service
+  Service -> Manager: get_comments(task_id)
+  activate Manager
+  Manager -> Manager: get(task_id)
+  Manager -> Task: sorted(comments, by created_at)
+  activate Task
+  deactivate Task
+  Manager --> Service: List<TaskComment>
+  deactivate Manager
+  Service --> User: List<TaskComment>
+  deactivate Service
+end
+
+group Edit Comment
+  User -> Service: edit_comment(task_id, comment_id, content)
+  activate Service
+  Service -> Manager: edit_comment(task_id, comment_id, content)
+  activate Manager
+  Manager -> Manager: get(task_id)
+  Manager -> Task: find and update comment
+  activate Task
+  deactivate Task
+  Manager -> Storage: persist()
+  activate Storage
+  deactivate Storage
+  Manager --> Service: TaskComment
+  deactivate Manager
+  Service --> User: TaskComment
+  deactivate Service
+end
+
+group Delete Comment
+  User -> Service: delete_comment(task_id, comment_id)
+  activate Service
+  Service -> Manager: delete_comment(task_id, comment_id)
+  activate Manager
+  Manager -> Manager: get(task_id)
+  Manager -> Task: comments.remove(comment)
+  activate Task
+  deactivate Task
+  Manager -> Storage: persist()
+  activate Storage
+  deactivate Storage
+  Manager --> Service: void
+  deactivate Manager
+  Service --> User: void
+  deactivate Service
+end
+
+@enduml

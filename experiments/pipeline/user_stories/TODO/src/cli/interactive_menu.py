@@ -82,6 +82,8 @@ class InteractiveMenu:
                 self._do_set_due_date(tasks)
             elif choice == "7":
                 self._do_delete(tasks)
+            elif choice == "8":
+                self._do_manage_comments(tasks)
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -109,6 +111,7 @@ class InteractiveMenu:
         print("  5. Update task    (title / description)")
         print("  6. Set due date")
         print("  7. Delete task")
+        print("  8. Manage comments")
         print("  0. Quit")
         print()
 
@@ -297,5 +300,116 @@ class InteractiveMenu:
             self._service.delete_task(task.id)
             print(f"  Deleted: {task.id[:8]}  {task.title}")
         except TaskNotFoundError as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_manage_comments(self, tasks: list[Task]) -> None:
+        _clear()
+        if not tasks:
+            input("  No tasks. Press Enter...")
+            return
+        print("  Manage comments — pick a task:\n")
+        idx = _pick("Select", [_task_line(t) for t in tasks])
+        if idx is None:
+            return
+        task = tasks[idx]
+        self._do_manage_existing_comment(task)
+
+    def _do_manage_existing_comment(self, task: Task) -> None:
+        while True:
+            _clear()
+            print(f"  Manage comments for: {task.title}\n")
+            comments = self._service.get_comments(task.id)
+            if not comments:
+                print("  (no comments yet)")
+            else:
+                for comment in comments:
+                    author_str = f" — {comment.author}" if comment.author else ""
+                    print(f"  {comment.id[:8]}{author_str}: {comment.content[:50]}")
+            print()
+            print("  1. Add comment")
+            print("  2. View / edit / delete comment")
+            print("  0. Back")
+            print()
+            choice = input("  > ").strip().lower()
+
+            if choice in ("0", "q", "quit"):
+                return
+            elif choice == "1":
+                self._do_add_comment(task)
+            elif choice == "2":
+                if not comments:
+                    input("  No comments. Press Enter...")
+                    continue
+                self._do_pick_comment(task)
+
+    def _do_add_comment(self, task: Task) -> None:
+        _clear()
+        print(f"  Add comment to: {task.title}\n")
+        content = _prompt("Comment content")
+        if not content:
+            input("  Content cannot be empty. Press Enter...")
+            return
+        author = _prompt("Author (optional)") or None
+        try:
+            comment = self._service.add_comment(task.id, content, author)
+            print(f"\n  Added comment {comment.id[:8]}")
+        except ValueError as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_pick_comment(self, task: Task) -> None:
+        _clear()
+        print(f"  Pick a comment to view/edit/delete:\n")
+        comments = self._service.get_comments(task.id)
+        comment_options = [
+            f"{c.id[:8]} — {c.content[:40]}" for c in comments
+        ]
+        idx = _pick("Select", comment_options)
+        if idx is None:
+            return
+        comment = comments[idx]
+
+        _clear()
+        author_str = f"Author: {comment.author}" if comment.author else "Author: (none)"
+        print(f"  Comment: {comment.id}\n")
+        print(f"  {author_str}")
+        print(f"  Created: {comment.created_at.strftime('%Y-%m-%d %H:%M UTC')}")
+        if comment.updated_at:
+            print(f"  Updated: {comment.updated_at.strftime('%Y-%m-%d %H:%M UTC')}")
+        print(f"\n  Content:\n  {comment.content}\n")
+        print("  1. Edit comment")
+        print("  2. Delete comment")
+        print("  0. Back")
+        choice = input("  > ").strip().lower()
+
+        if choice == "1":
+            self._do_edit_comment_content(task, comment)
+        elif choice == "2":
+            _clear()
+            print(f"  Delete comment: {comment.id[:8]}")
+            confirm = input("  Are you sure? (y/N): ").strip().lower()
+            if confirm != "y":
+                print("  Cancelled.")
+                input("  Press Enter to continue...")
+                return
+            try:
+                self._service.delete_comment(task.id, comment.id)
+                print("  Deleted comment.")
+            except ValueError as e:
+                print(f"  Error: {e}")
+            input("  Press Enter to continue...")
+
+    def _do_edit_comment_content(self, task: Task, comment) -> None:
+        _clear()
+        print(f"  Edit comment: {comment.id[:8]}\n")
+        new_content = _prompt("New content", default=comment.content)
+        if not new_content:
+            input("  Content cannot be empty. Press Enter...")
+            return
+        try:
+            updated = self._service.edit_comment(task.id, comment.id, new_content)
+            print(f"\n  Updated comment")
+        except ValueError as e:
             print(f"\n  Error: {e}")
         input("  Press Enter to continue...")

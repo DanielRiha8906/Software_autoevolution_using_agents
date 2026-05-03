@@ -102,6 +102,31 @@ class TodoCLI:
         p_due_date.add_argument("--date", help="Due date (ISO 8601 format, e.g., 2026-05-02T15:30:00+02:00)")
         p_due_date.set_defaults(func=self._cmd_due_date)
 
+        # add-comment
+        p_add_comment = sub.add_parser("add-comment", help="Add a comment to a task")
+        p_add_comment.add_argument("id", help="Task ID")
+        p_add_comment.add_argument("content", help="Comment content")
+        p_add_comment.add_argument("-a", "--author", help="Optional author name")
+        p_add_comment.set_defaults(func=self._cmd_add_comment)
+
+        # list-comments
+        p_list_comments = sub.add_parser("list-comments", help="List comments for a task")
+        p_list_comments.add_argument("id", help="Task ID")
+        p_list_comments.set_defaults(func=self._cmd_list_comments)
+
+        # delete-comment
+        p_delete_comment = sub.add_parser("delete-comment", help="Delete a comment from a task")
+        p_delete_comment.add_argument("task_id", help="Task ID")
+        p_delete_comment.add_argument("comment_id", help="Comment ID")
+        p_delete_comment.set_defaults(func=self._cmd_delete_comment)
+
+        # edit-comment
+        p_edit_comment = sub.add_parser("edit-comment", help="Edit a comment on a task")
+        p_edit_comment.add_argument("task_id", help="Task ID")
+        p_edit_comment.add_argument("comment_id", help="Comment ID")
+        p_edit_comment.add_argument("content", help="New comment content")
+        p_edit_comment.set_defaults(func=self._cmd_edit_comment)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -180,4 +205,53 @@ class TodoCLI:
         task = self._service.set_due_date(args.id, due_date)
         due_date_str = task.due_date.isoformat() if task.due_date else "—"
         print(f"Set due date for {task.id[:8]}  {task.title}: {due_date_str}")
+        return 0
+
+    def _cmd_add_comment(self, args: argparse.Namespace) -> int:
+        comment = self._service.add_comment(args.id, args.content, args.author)
+        author_str = f" by {comment.author}" if comment.author else ""
+        print(f"Added comment {comment.id[:8]}{author_str}: {comment.content}")
+        return 0
+
+    def _cmd_list_comments(self, args: argparse.Namespace) -> int:
+        comments = self._service.get_comments(args.id)
+        task = self._service.get_task(args.id)
+        print(f"Comments for {task.id[:8]}  {task.title}\n")
+        if not comments:
+            print("  (no comments)")
+            return 0
+        for comment in comments:
+            author_str = f" — {comment.author}" if comment.author else " — (no author)"
+            print(f"  {comment.id[:8]}{author_str}")
+            print(f"    {comment.content}")
+            print(f"    Created: {comment.created_at.isoformat()}")
+            if comment.updated_at:
+                print(f"    Updated: {comment.updated_at.isoformat()}")
+            print()
+        return 0
+
+    def _cmd_delete_comment(self, args: argparse.Namespace) -> int:
+        comment = None
+        comments = self._service.get_comments(args.task_id)
+        for c in comments:
+            if c.id == args.comment_id or c.id.startswith(args.comment_id):
+                comment = c
+                break
+        if comment is None:
+            raise ValueError(f"Comment '{args.comment_id}' not found")
+        self._service.delete_comment(args.task_id, comment.id)
+        print(f"Deleted comment {comment.id[:8]}")
+        return 0
+
+    def _cmd_edit_comment(self, args: argparse.Namespace) -> int:
+        comment = None
+        comments = self._service.get_comments(args.task_id)
+        for c in comments:
+            if c.id == args.comment_id or c.id.startswith(args.comment_id):
+                comment = c
+                break
+        if comment is None:
+            raise ValueError(f"Comment '{args.comment_id}' not found")
+        updated = self._service.edit_comment(args.task_id, comment.id, args.content)
+        print(f"Edited comment {updated.id[:8]}: {updated.content}")
         return 0
