@@ -46,6 +46,13 @@ rectangle "GitHub Workflow Manager" {
     usecase "Format for display"       as TZFMT
   }
 
+  package "Data Portability" {
+    usecase "Export runs to JSON"      as EXP_RUNS
+    usecase "Import runs from JSON"    as IMP_RUNS
+    usecase "Export attempts to JSON"  as EXP_ATTEMPTS
+    usecase "Import attempts from JSON" as IMP_ATTEMPTS
+  }
+
   package "Command-line Mode" {
     usecase "Run one-shot CLI command" as CLI
     usecase "Add workflow run"         as C_ADD
@@ -100,5 +107,15 @@ C_LIST --> FTIMESTAMP : <<extend>>
 C_LIST --> FATTEMPTS : <<extend>>
 
 C_LIST --> TZPARSE : <<uses>>
+
+UI --> EXP_RUNS : <<extend>>
+UI --> IMP_RUNS : <<extend>>
+UI --> EXP_ATTEMPTS : <<extend>>
+UI --> IMP_ATTEMPTS : <<extend>>
+
+CLI --> EXP_RUNS : <<extend>>
+CLI --> IMP_RUNS : <<extend>>
+CLI --> EXP_ATTEMPTS : <<extend>>
+CLI --> IMP_ATTEMPTS : <<extend>>
 
 @enduml
