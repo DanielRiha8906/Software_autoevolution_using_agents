@@ -86,6 +86,12 @@ package "services" #DDFFD4 {
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
         +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        +filter_by_created_after(threshold_date: datetime) : List[WorkflowRun]
+        +filter_by_created_before(threshold_date: datetime) : List[WorkflowRun]
+        +filter_by_duration_min(min_seconds: float) : List[WorkflowRun]
+        +filter_by_duration_max(max_seconds: float) : List[WorkflowRun]
+        +filter_by_attempt_presence(attempt_service, has_attempts: bool) : List[WorkflowRun]
+        +query(created_after, created_before, duration_min,\nduration_max, attempt_service, has_attempts,\nbranch, status, conclusion) : List[WorkflowRun]
         -_persist() : None
     }
 
@@ -123,6 +129,7 @@ package "cli" #FFE5E5 {
         -_list_runs(service: WorkflowRunService) : None
         -_detail_run(service: WorkflowRunService) : None
         -_filter_menu(service: WorkflowRunService) : None
+        -_advanced_filter_menu(service, attempt_service) : None
         -_check_run_state(service: WorkflowRunService) : None
         -_add_attempt(attempt_service: WorkflowRunAttemptService) : None
         -_list_attempts(attempt_service: WorkflowRunAttemptService) : None

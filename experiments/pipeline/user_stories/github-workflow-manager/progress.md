@@ -166,3 +166,45 @@ Implemented bonus sorting feature for `WorkflowRunAttemptService`. The service, 
   - ✅ CLI commands: `attempt-list`, `attempt-list --run-id X`, `attempt-list --no-sort`, `attempt-list --run-id X --no-sort`
 
 Duration: 489.3s | Cost: $0.997787 USD | Turns: 16
+
+## Task 05: Query interface for filtering workflow runs
+
+**Status:** ✅ COMPLETED
+
+### Summary
+Implemented a comprehensive programmatic query interface for filtering workflow runs by duration, timestamp, and attempt presence. Added five new filter methods to WorkflowRunService, a unified composite query() method supporting AND logic, and extended both CLI and interactive menu with advanced filtering options. All 71 tests pass and diagrams updated.
+
+### Files Changed
+- **src/services/workflow_run_service.py** — Added 5 new filter methods (filter_by_created_after, filter_by_created_before, filter_by_duration_min, filter_by_duration_max, filter_by_attempt_presence) and composite query() method
+- **src/cli/workflow_cli.py** — Added _parse_datetime() helper; extended list command with 6 new flags (--created-after, --created-before, --duration-min, --duration-max, --has-attempts, --no-attempts); updated list handler to apply composite filters
+- **src/cli/interactive_menu.py** — Added _parse_datetime() helper; added _advanced_filter_menu() function; added new "Advanced filter runs" menu option; updated dispatcher to pass attempt_service
+- **tests/test_filtering_interface.py** — New comprehensive test file with 71 tests covering all filter methods, composite queries, datetime parsing, edge cases, and type mismatches
+- **artifacts/class_diagram.puml** — Updated WorkflowRunService to show all new filter methods and query() method
+- **artifacts/activity_diagram_main.puml** — Updated list command flow to show new datetime/duration flag parsing and composite query execution
+- **artifacts/activity_diagram_interactive.puml** — Added new menu option 6 (Advanced filter runs) with optional parameter collection flow
+
+### Test Results
+- Total tests: 71 new
+- Pass rate: 100% (71/71)
+- All acceptance criteria verified:
+  - ✅ Programmatic query interface over workflow runs
+  - ✅ Duration range filtering (min/max seconds)
+  - ✅ Timestamp filtering (before/after datetime)
+  - ✅ Attempt presence filtering (has/no attempts)
+  - ✅ Multiple filters combined with AND logic
+  - ✅ Results returned as List[WorkflowRun]
+  - ✅ No database/external index (in-memory filtering)
+  - ✅ Accessible via `python -m src list` with flags and interactive menu
+
+### Acceptance Criteria Met
+- ✅ Programmatic query interface available (query() method)
+- ✅ Duration range filtering supported (min/max)
+- ✅ Timestamp filtering supported (before/after)
+- ✅ Attempt presence filtering supported (has/no)
+- ✅ Multiple filters combined in single query call (AND logic)
+- ✅ Results returned as List[WorkflowRun]
+- ✅ No database or external index used
+- ✅ Accessible via `python -m src list --created-after/before --duration-min/max --has/no-attempts` (one-shot)
+- ✅ Accessible via interactive menu option 6 "Advanced filter runs" (interactive)
+
+Duration: 581.1s | Cost: $1.261054 USD | Turns: 20
