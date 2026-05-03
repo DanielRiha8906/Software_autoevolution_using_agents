@@ -7,6 +7,7 @@ from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
 from .services.statistics_service import StatisticsService
+from .services.import_export_service import ImportExportService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
@@ -26,8 +27,8 @@ def _as_number(value: str) -> float:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
-        description="OOP Calculator — run interactively or pass --operation or --statistics",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--statistics]",
+        description="OOP Calculator — run interactively or pass --operation, --statistics, --import, or --export",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--statistics] [--import FILE] [--export FILE]",
     )
     parser.add_argument(
         "--operation",
@@ -41,6 +42,17 @@ def main() -> None:
         help="Display statistics from memory entries",
     )
     parser.add_argument(
+        "--export",
+        metavar="FILE",
+        help="Export memory entries to a JSON file",
+    )
+    parser.add_argument(
+        "--import",
+        metavar="FILE",
+        dest="import_file",
+        help="Import memory entries from a JSON file",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -51,8 +63,26 @@ def main() -> None:
     service = _build_service()
     memory_service = MemoryService()
     cli = CalculatorCLI(service)
+    import_export = ImportExportService(memory_service)
 
-    if args.statistics:
+    if args.import_file:
+        try:
+            import_export.import_from(args.import_file)
+            print(f"Successfully imported entries from {args.import_file}")
+        except FileNotFoundError:
+            print(f"Error: File not found: {args.import_file}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+    elif args.export:
+        try:
+            import_export.export(args.export)
+            print(f"Successfully exported entries to {args.export}")
+        except Exception as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+    elif args.statistics:
         stats_service = StatisticsService(memory_service)
         report = stats_service.compute()
 

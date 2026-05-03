@@ -82,6 +82,14 @@ package "services" #DDFFD4 {
         +StatisticsService(memory_service: MemoryService)
         +compute() : StatisticsReport
     }
+
+    class ImportExportService {
+        -_memory_service : MemoryService
+        --
+        +ImportExportService(memory_service: MemoryService)
+        +export(filepath: String) : void
+        +import_from(filepath: String) : void
+    }
 }
 
 package "reports" #E5F3FF {
@@ -125,6 +133,7 @@ CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 MemoryService --> MemoryEntry : manages
 StatisticsService --> MemoryService : analyzes
+ImportExportService --> MemoryService : persists/retrieves
 StatisticsService ..> StatisticsReport : creates
 
 CalculatorService ..> CalculationResult : create
