@@ -68,7 +68,33 @@ repeat
         :Print "No run found with id '<id>'";
       endif
 
-    case (6 — Exit)
+    case (6 — Create attempt)
+      :Prompt run ID;
+      :Prompt attempt number;
+      :Choose status from list;
+      :Choose conclusion (optional);
+      :Prompt duration (optional);
+      :AttemptService.add_workflow_attempt();
+      :Print "Added attempt";
+
+    case (7 — List all attempts)
+      :AttemptService.list_attempts();
+      if (no attempts?) then (yes)
+        :Print "No attempts recorded.";
+      else (no)
+        :Print all attempts;
+      endif
+
+    case (8 — Get attempts by run)
+      :Prompt run ID;
+      :AttemptService.get_attempts_by_run_id(run_id);
+      if (no attempts?) then (yes)
+        :Print "No attempts for this run.";
+      else (no)
+        :Print attempts for run;
+      endif
+
+    case (9 — Exit)
       :Print "Goodbye.";
       stop
 
