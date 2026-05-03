@@ -53,3 +53,31 @@ Duration: 259.3s | Cost: $0.404111 USD | Turns: 16
 - Display symbols added for nice string output (4 new operations formatted with Unicode symbols)
 
 Duration: 420.3s | Cost: $0.684168 USD | Turns: 21
+
+## Task 03: MemoryEntry Domain Class
+
+**Status:** Completed
+
+**Files Changed:**
+- src/models/memory_entry.py — Created new MemoryEntry dataclass with 7 fields and serialization methods
+- src/models/__init__.py — Added MemoryEntry to imports and __all__ exports
+- tests/test_memory_entry.py — New test file with 9 test cases
+- artifacts/class_diagram.puml — Updated to include MemoryEntry class in models package
+- artifacts/component_diagram.puml — Updated Domain Models component to reference MemoryEntry
+
+**Test Results:**
+- 9/9 test_memory_entry.py tests: PASSED
+- 119/126 full test suite: PASSED (7 pre-existing CLI tests fail, unrelated to MemoryEntry)
+- All MemoryEntry tests passing
+
+**Implementation Summary:**
+- Created MemoryEntry domain class as @dataclass with fields: operation, operands, result, success, execution_time_ms, id, timestamp
+- Auto-generated id field using uuid4() unique per instance
+- Auto-generated timestamp field in ISO 8601 format via __post_init__()
+- Supports failed calculations with result=None and success=False
+- Implemented to_dict() for JSON serialization and from_dict() classmethod for deserialization
+- Round-trip serialization fully preserves all fields including id and timestamp
+- No print statements or formatting logic in module (per requirements)
+- Follows existing CalculationResult pattern for consistency
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
