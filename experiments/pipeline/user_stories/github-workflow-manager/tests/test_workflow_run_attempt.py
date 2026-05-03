@@ -823,3 +823,440 @@ class TestIntegration:
         result = service.get_attempt(attempt_id)
         assert result.run_id == run_id
         assert result.attempt_number == attempt_num
+
+
+# ============================================================================
+# Task 7: Sorting Feature (list_attempts and get_attempts_for_run)
+# ============================================================================
+
+class TestSortingFeature:
+    """Tests for sorting feature in list_attempts and get_attempts_for_run."""
+
+    def test_list_attempts_default_sorted(self, service):
+        """list_attempts() with default parameter returns sorted by attempt_number."""
+        # Add attempts in reverse order
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+        service.add_attempt(a2)
+
+        results = service.list_attempts()
+        assert len(results) == 3
+        assert results[0].attempt_number == 1
+        assert results[1].attempt_number == 2
+        assert results[2].attempt_number == 3
+
+    def test_list_attempts_sorted_true(self, service):
+        """list_attempts(sorted=True) explicitly returns sorted by attempt_number."""
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+
+        results = service.list_attempts(sorted=True)
+        assert len(results) == 3
+        assert results[0].attempt_number == 1
+        assert results[1].attempt_number == 2
+        assert results[2].attempt_number == 3
+
+    def test_list_attempts_sorted_false_preserves_insertion_order(self, service):
+        """list_attempts(sorted=False) returns attempts in insertion order."""
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+
+        results = service.list_attempts(sorted=False)
+        assert len(results) == 3
+        # Insertion order: 2, 3, 1
+        assert results[0].attempt_number == 2
+        assert results[1].attempt_number == 3
+        assert results[2].attempt_number == 1
+
+    def test_list_attempts_sorted_empty_list(self, service):
+        """list_attempts(sorted=True) returns empty list when no attempts."""
+        results = service.list_attempts(sorted=True)
+        assert results == []
+
+    def test_list_attempts_sorted_single_attempt(self, service):
+        """list_attempts(sorted=True) works with single attempt."""
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a1)
+        results = service.list_attempts(sorted=True)
+        assert len(results) == 1
+        assert results[0].attempt_number == 1
+
+    def test_list_attempts_sorted_false_single_attempt(self, service):
+        """list_attempts(sorted=False) works with single attempt."""
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a1)
+        results = service.list_attempts(sorted=False)
+        assert len(results) == 1
+        assert results[0].attempt_number == 1
+
+    def test_list_attempts_sorted_multiple_runs(self, service):
+        """list_attempts(sorted=True) sorts across all runs by attempt_number."""
+        a1_r1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        a3_r2 = _make_attempt(attempt_id=3, run_id=200, attempt_number=3)
+        a2_r1 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        service.add_attempt(a1_r1)
+        service.add_attempt(a3_r2)
+        service.add_attempt(a2_r1)
+
+        results = service.list_attempts(sorted=True)
+        assert len(results) == 3
+        # Sorted by attempt_number globally
+        assert results[0].attempt_number == 1
+        assert results[1].attempt_number == 2
+        assert results[2].attempt_number == 3
+
+    def test_get_attempts_for_run_default_sorted(self, service):
+        """get_attempts_for_run() default returns sorted by attempt_number."""
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+        service.add_attempt(a2)
+
+        results = service.get_attempts_for_run(100)
+        assert len(results) == 3
+        assert results[0].attempt_number == 1
+        assert results[1].attempt_number == 2
+        assert results[2].attempt_number == 3
+
+    def test_get_attempts_for_run_sorted_true(self, service):
+        """get_attempts_for_run(run_id, sorted=True) explicitly returns sorted."""
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+
+        results = service.get_attempts_for_run(100, sorted=True)
+        assert len(results) == 3
+        assert results[0].attempt_number == 1
+        assert results[1].attempt_number == 2
+        assert results[2].attempt_number == 3
+
+    def test_get_attempts_for_run_sorted_false_preserves_insertion_order(self, service):
+        """get_attempts_for_run(run_id, sorted=False) preserves insertion order."""
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+
+        results = service.get_attempts_for_run(100, sorted=False)
+        assert len(results) == 3
+        # Insertion order: 2, 3, 1
+        assert results[0].attempt_number == 2
+        assert results[1].attempt_number == 3
+        assert results[2].attempt_number == 1
+
+    def test_get_attempts_for_run_sorted_empty_list(self, service):
+        """get_attempts_for_run(run_id, sorted=True) returns empty list when no matches."""
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a1)
+        results = service.get_attempts_for_run(999, sorted=True)
+        assert results == []
+
+    def test_get_attempts_for_run_sorted_false_empty_list(self, service):
+        """get_attempts_for_run(run_id, sorted=False) returns empty list when no matches."""
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a1)
+        results = service.get_attempts_for_run(999, sorted=False)
+        assert results == []
+
+    def test_get_attempts_for_run_sorted_single_attempt(self, service):
+        """get_attempts_for_run(run_id, sorted=True) works with single attempt."""
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a1)
+        results = service.get_attempts_for_run(100, sorted=True)
+        assert len(results) == 1
+        assert results[0].attempt_number == 1
+
+    def test_get_attempts_for_run_sorted_false_single_attempt(self, service):
+        """get_attempts_for_run(run_id, sorted=False) works with single attempt."""
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a1)
+        results = service.get_attempts_for_run(100, sorted=False)
+        assert len(results) == 1
+        assert results[0].attempt_number == 1
+
+    def test_get_attempts_for_run_filters_and_sorts(self, service):
+        """get_attempts_for_run filters correctly and sorts independently from other runs."""
+        # Run 100
+        a2_r1 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        a1_r1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        # Run 200
+        a5_r2 = _make_attempt(attempt_id=5, run_id=200, attempt_number=5)
+        a3_r2 = _make_attempt(attempt_id=3, run_id=200, attempt_number=3)
+        service.add_attempt(a2_r1)
+        service.add_attempt(a5_r2)
+        service.add_attempt(a1_r1)
+        service.add_attempt(a3_r2)
+
+        # Get sorted attempts for run 100
+        results_100 = service.get_attempts_for_run(100, sorted=True)
+        assert len(results_100) == 2
+        assert results_100[0].attempt_number == 1
+        assert results_100[1].attempt_number == 2
+
+        # Get sorted attempts for run 200
+        results_200 = service.get_attempts_for_run(200, sorted=True)
+        assert len(results_200) == 2
+        assert results_200[0].attempt_number == 3
+        assert results_200[1].attempt_number == 5
+
+    def test_get_attempts_for_run_filters_and_preserves_order(self, service):
+        """get_attempts_for_run filters and preserves insertion order when sorted=False."""
+        # Run 100
+        a2_r1 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        a1_r1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        # Run 200
+        a5_r2 = _make_attempt(attempt_id=5, run_id=200, attempt_number=5)
+        a3_r2 = _make_attempt(attempt_id=3, run_id=200, attempt_number=3)
+        service.add_attempt(a2_r1)
+        service.add_attempt(a5_r2)
+        service.add_attempt(a1_r1)
+        service.add_attempt(a3_r2)
+
+        # Get unsorted attempts for run 100 - should preserve insertion order
+        results_100 = service.get_attempts_for_run(100, sorted=False)
+        assert len(results_100) == 2
+        # Insertion order for run 100: 2, 1
+        assert results_100[0].attempt_number == 2
+        assert results_100[1].attempt_number == 1
+
+        # Get unsorted attempts for run 200 - should preserve insertion order
+        results_200 = service.get_attempts_for_run(200, sorted=False)
+        assert len(results_200) == 2
+        # Insertion order for run 200: 5, 3
+        assert results_200[0].attempt_number == 5
+        assert results_200[1].attempt_number == 3
+
+    def test_list_attempts_sorted_complex_attempt_numbers(self, service):
+        """list_attempts sorts correctly with non-sequential attempt numbers."""
+        a10 = _make_attempt(attempt_id=4, run_id=100, attempt_number=10)
+        a5 = _make_attempt(attempt_id=2, run_id=100, attempt_number=5)
+        a15 = _make_attempt(attempt_id=5, run_id=100, attempt_number=15)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a10)
+        service.add_attempt(a5)
+        service.add_attempt(a15)
+        service.add_attempt(a1)
+
+        results = service.list_attempts(sorted=True)
+        assert len(results) == 4
+        assert results[0].attempt_number == 1
+        assert results[1].attempt_number == 5
+        assert results[2].attempt_number == 10
+        assert results[3].attempt_number == 15
+
+    def test_get_attempts_for_run_sorted_complex_numbers(self, service):
+        """get_attempts_for_run sorts with complex attempt numbers."""
+        a100 = _make_attempt(attempt_id=4, run_id=100, attempt_number=100)
+        a50 = _make_attempt(attempt_id=2, run_id=100, attempt_number=50)
+        a200 = _make_attempt(attempt_id=5, run_id=100, attempt_number=200)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a100)
+        service.add_attempt(a50)
+        service.add_attempt(a200)
+        service.add_attempt(a1)
+
+        results = service.get_attempts_for_run(100, sorted=True)
+        assert len(results) == 4
+        assert results[0].attempt_number == 1
+        assert results[1].attempt_number == 50
+        assert results[2].attempt_number == 100
+        assert results[3].attempt_number == 200
+
+    def test_sorted_parameter_does_not_persist(self, service):
+        """Sorting parameter does not affect stored attempts."""
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a2)
+        service.add_attempt(a1)
+
+        # Get sorted
+        sorted_results = service.list_attempts(sorted=True)
+        assert sorted_results[0].attempt_number == 1
+
+        # Get unsorted - internal storage should still be in insertion order
+        unsorted_results = service.list_attempts(sorted=False)
+        assert unsorted_results[0].attempt_number == 2
+
+        # Verify second call is also correct
+        sorted_again = service.list_attempts(sorted=True)
+        assert sorted_again[0].attempt_number == 1
+
+    def test_sorted_returns_copy_not_reference(self, service):
+        """Sorted results are a new list, not the internal storage reference."""
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a1)
+
+        result1 = service.list_attempts(sorted=True)
+        result2 = service.list_attempts(sorted=True)
+        assert result1 == result2
+        assert result1 is not result2  # Different list objects
+
+    def test_unsorted_returns_copy_not_reference(self, service):
+        """Unsorted results are a new list, not the internal storage reference."""
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        service.add_attempt(a1)
+
+        result1 = service.list_attempts(sorted=False)
+        result2 = service.list_attempts(sorted=False)
+        assert result1 == result2
+        assert result1 is not result2  # Different list objects
+
+
+# ============================================================================
+# CLI Tests for Sorting Feature
+# ============================================================================
+
+class TestCLISortingFeature:
+    """Tests for CLI sorting functionality."""
+
+    def test_attempt_list_default_sorts(self, service):
+        """attempt-list command defaults to sorted output."""
+        from src.cli.workflow_cli import run_cli
+        from io import StringIO
+        from unittest.mock import patch
+
+        # Add attempts in reverse order
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+        service.add_attempt(a2)
+
+        # Mock WorkflowRunService for the CLI
+        from unittest.mock import MagicMock
+        run_service = MagicMock()
+
+        # Capture output
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            run_cli(run_service, service, ["attempt-list"])
+            output = mock_stdout.getvalue()
+
+        # Output should contain attempts in sorted order (1, 2, 3)
+        lines = output.split("\n")
+        attempt_1_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 1" in l)
+        attempt_2_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 2" in l)
+        attempt_3_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 3" in l)
+        assert attempt_1_idx < attempt_2_idx < attempt_3_idx
+
+    def test_attempt_list_no_sort_flag(self, service):
+        """attempt-list --no-sort preserves insertion order."""
+        from src.cli.workflow_cli import run_cli
+        from io import StringIO
+        from unittest.mock import patch, MagicMock
+
+        # Add attempts in reverse order
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+        service.add_attempt(a2)
+
+        # Mock WorkflowRunService
+        run_service = MagicMock()
+
+        # Capture output
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            run_cli(run_service, service, ["attempt-list", "--no-sort"])
+            output = mock_stdout.getvalue()
+
+        # Output should contain attempts in insertion order (3, 1, 2)
+        lines = output.split("\n")
+        attempt_3_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 3" in l)
+        attempt_1_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 1" in l)
+        attempt_2_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 2" in l)
+        assert attempt_3_idx < attempt_1_idx < attempt_2_idx
+
+    def test_attempt_list_with_run_id_default_sorts(self, service):
+        """attempt-list --run-id X defaults to sorted output."""
+        from src.cli.workflow_cli import run_cli
+        from io import StringIO
+        from unittest.mock import patch, MagicMock
+
+        # Add attempts in reverse order for run 100
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+        service.add_attempt(a2)
+
+        # Mock WorkflowRunService
+        run_service = MagicMock()
+
+        # Capture output
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            run_cli(run_service, service, ["attempt-list", "--run-id", "100"])
+            output = mock_stdout.getvalue()
+
+        # Output should contain attempts in sorted order (1, 2, 3)
+        lines = output.split("\n")
+        attempt_1_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 1" in l)
+        attempt_2_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 2" in l)
+        attempt_3_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 3" in l)
+        assert attempt_1_idx < attempt_2_idx < attempt_3_idx
+
+    def test_attempt_list_with_run_id_and_no_sort_flag(self, service):
+        """attempt-list --run-id X --no-sort preserves insertion order."""
+        from src.cli.workflow_cli import run_cli
+        from io import StringIO
+        from unittest.mock import patch, MagicMock
+
+        # Add attempts in reverse order for run 100
+        a3 = _make_attempt(attempt_id=3, run_id=100, attempt_number=3)
+        a1 = _make_attempt(attempt_id=1, run_id=100, attempt_number=1)
+        a2 = _make_attempt(attempt_id=2, run_id=100, attempt_number=2)
+        service.add_attempt(a3)
+        service.add_attempt(a1)
+        service.add_attempt(a2)
+
+        # Mock WorkflowRunService
+        run_service = MagicMock()
+
+        # Capture output
+        with patch("sys.stdout", new_callable=StringIO) as mock_stdout:
+            run_cli(run_service, service, ["attempt-list", "--run-id", "100", "--no-sort"])
+            output = mock_stdout.getvalue()
+
+        # Output should contain attempts in insertion order (3, 1, 2)
+        lines = output.split("\n")
+        attempt_3_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 3" in l)
+        attempt_1_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 1" in l)
+        attempt_2_idx = next(i for i, l in enumerate(lines) if "attempt_number   : 2" in l)
+        assert attempt_3_idx < attempt_1_idx < attempt_2_idx
+
+    def test_attempt_list_no_sort_flag_exists_in_parser(self):
+        """attempt-list command parser has --no-sort flag."""
+        from src.cli.workflow_cli import build_parser
+
+        parser = build_parser()
+        # Parse attempt-list --no-sort to verify flag is recognized
+        args = parser.parse_args(["attempt-list", "--no-sort"])
+        assert args.no_sort is True
+
+    def test_attempt_list_no_sort_flag_default_false(self):
+        """--no-sort flag defaults to False."""
+        from src.cli.workflow_cli import build_parser
+
+        parser = build_parser()
+        args = parser.parse_args(["attempt-list"])
+        assert args.no_sort is False

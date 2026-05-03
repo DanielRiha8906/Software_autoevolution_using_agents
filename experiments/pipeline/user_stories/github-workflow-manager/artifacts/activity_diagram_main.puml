@@ -54,6 +54,33 @@ if (CLI arguments provided?) then (yes)
         :Exit code 1;
       endif
 
+    case (attempt-add)
+      :Read attempt ID, run ID, attempt number,\nstatus, conclusion, duration-seconds;
+      :WorkflowRunAttemptService.add_attempt();
+      :Print "Added attempt <id>";
+
+    case (attempt-list)
+      :Determine sorted_param\n(not --no-sort flag);
+      if (--run-id specified?) then (yes)
+        :WorkflowRunAttemptService.get_attempts_for_run(\nrun_id, sorted=sorted_param);
+      else (no)
+        :WorkflowRunAttemptService.list_attempts(\nsorted=sorted_param);
+      endif
+      if (no attempts?) then (yes)
+        :Print "No attempts found.";
+      else (no)
+        :Print formatted attempt list;
+      endif
+
+    case (attempt-detail)
+      :WorkflowRunAttemptService.get_attempt(attempt_id);
+      if (attempt found?) then (yes)
+        :Print attempt details;
+      else (no)
+        :Print error to stderr;
+        :Exit code 1;
+      endif
+
   endswitch
   stop
 
