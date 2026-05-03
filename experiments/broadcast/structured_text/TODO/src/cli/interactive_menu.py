@@ -6,6 +6,7 @@ from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.comments_service import CommentNotFoundError
 from ..services.todo_service import TodoService
+from ..services.statistics_service import StatisticsService
 from ..storage.json_storage import JsonStorage
 
 _STATUS_LABEL = {
@@ -54,6 +55,7 @@ class InteractiveMenu:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._stats_service = StatisticsService(storage)
 
     def run(self) -> None:
         while True:
@@ -82,6 +84,8 @@ class InteractiveMenu:
                 self._do_delete(tasks)
             elif choice == "7":
                 self._do_manage_comments(tasks)
+            elif choice == "8":
+                self._do_view_statistics()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -109,6 +113,7 @@ class InteractiveMenu:
         print("  5. Update task    (title / description)")
         print("  6. Delete task")
         print("  7. Manage comments")
+        print("  8. View statistics")
         print("  0. Quit")
         print()
 
@@ -378,4 +383,18 @@ class InteractiveMenu:
             print(f"  Deleted comment {comment.id[:8]}")
         except CommentNotFoundError as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_view_statistics(self) -> None:
+        _clear()
+        stats = self._stats_service.compute_statistics()
+        print("\n  Task Statistics\n")
+        print(f"  Total tasks:              {stats.total_task_count}")
+        print(f"  Pending:                  {stats.pending_count}")
+        print(f"  In progress:              {stats.in_progress_count}")
+        print(f"  Done:                     {stats.done_count}")
+        print(f"  Overdue:                  {stats.overdue_count}")
+        print(f"  With due date:            {stats.tasks_with_due_date_count}")
+        print(f"  Completion rate:          {stats.completion_rate:.1%}")
+        print()
         input("  Press Enter to continue...")
