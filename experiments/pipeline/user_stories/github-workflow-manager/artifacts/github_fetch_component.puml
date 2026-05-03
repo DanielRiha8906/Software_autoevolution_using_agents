@@ -1,0 +1,87 @@
+@startuml github_fetch_component
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+top to bottom direction
+
+package "GitHub Fetch Integration" {
+
+  package "User Interface" {
+    component "CLI (--fetch)" as CLI_FETCH_CMD
+    component "Interactive Menu" as IM_FETCH_CMD
+  }
+
+  package "Authentication" {
+    component "GitHubAuthManager" as AUTH_MGR
+    artifact "secrets/.env" as SECRETS_FILE
+    artifact "GITHUB_TOKEN env var" as ENV_VAR
+  }
+
+  package "Fetch Strategies" {
+    component "GitHubAPIFetcher" as API_FETCHER
+    component "GitHubCLIFetcher" as CLI_FETCHER
+    component "GitHubWorkflowRunFactory" as FACTORY
+  }
+
+  package "External Systems" {
+    artifact "GitHub REST API" as GH_API
+    artifact "GitHub CLI (gh)" as GH_CLI_TOOL
+  }
+
+  package "Data Model" {
+    component "WorkflowRun" as RUN_MODEL
+    component "WorkflowStatus" as STATUS_MODEL
+    component "WorkflowConclusion" as CONCLUSION_MODEL
+  }
+
+  package "Data Persistence" {
+    component "WorkflowRunService" as RUN_SVC
+    artifact "workflow_runs.json" as RUNS_FILE
+  }
+
+  package "Exception Handling" {
+    component "GitHubAuthError" as AUTH_ERR
+    component "GitHubAPIError" as API_ERR
+    component "GitHubNetworkError" as NET_ERR
+    component "GitHubRateLimitError" as RATE_ERR
+  }
+}
+
+CLI_FETCH_CMD --> AUTH_MGR
+IM_FETCH_CMD --> AUTH_MGR
+
+AUTH_MGR --> ENV_VAR
+AUTH_MGR --> SECRETS_FILE
+
+CLI_FETCH_CMD --> API_FETCHER
+CLI_FETCH_CMD --> CLI_FETCHER
+IM_FETCH_CMD --> API_FETCHER
+IM_FETCH_CMD --> CLI_FETCHER
+
+API_FETCHER --> FACTORY
+CLI_FETCHER --> FACTORY
+
+API_FETCHER --> GH_API
+CLI_FETCHER --> GH_CLI_TOOL
+
+FACTORY --> RUN_MODEL
+FACTORY --> STATUS_MODEL
+FACTORY --> CONCLUSION_MODEL
+
+API_FETCHER --> AUTH_ERR
+API_FETCHER --> API_ERR
+API_FETCHER --> NET_ERR
+API_FETCHER --> RATE_ERR
+
+CLI_FETCHER --> API_ERR
+CLI_FETCHER --> NET_ERR
+
+AUTH_MGR --> AUTH_ERR
+
+RUN_SVC --> RUNS_FILE
+API_FETCHER --> RUN_SVC
+CLI_FETCHER --> RUN_SVC
+
+RUN_SVC --> RUN_MODEL
+
+@enduml

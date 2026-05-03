@@ -3,6 +3,13 @@
 skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
 
+package "exceptions" #FFE5E5 {
+    class GitHubAuthError <<Exception>>
+    class GitHubAPIError <<Exception>>
+    class GitHubNetworkError <<Exception>>
+    class GitHubRateLimitError <<Exception>>
+}
+
 package "models" #DDEEFF {
     enum WorkflowStatus {
         QUEUED = "queued"
@@ -79,6 +86,14 @@ package "models" #DDEEFF {
         +errors                : List[str]
         +had_overwrite         : bool
     }
+
+    class GitHubWorkflowRunFactory {
+        +{static} from_github_api_response(data: dict) : WorkflowRun
+        -{static} _parse_status(status_str: str) : WorkflowStatus
+        -{static} _parse_conclusion(conclusion_str: Optional[str]) : Optional[WorkflowConclusion]
+        -{static} _parse_datetime(datetime_str: str) : datetime
+        -{static} _calculate_duration(created_at, updated_at) : float
+    }
 }
 
 package "storage" #FFF3CC {
@@ -94,7 +109,34 @@ package "storage" #FFF3CC {
     }
 }
 
+package "auth" #E5F5FF {
+    class GitHubAuthManager {
+        -SECRETS_FILE_PATH : str
+        -TOKEN_ENV_VAR : str
+        -TOKEN_PREFIX_PATTERN : str
+        --
+        +get_token(explicit_token: Optional[str]) : str
+        +validate_token(token: str) : bool
+        -_load_token_from_file() : Optional[str]
+        -_prompt_for_token() : Optional[str]
+    }
+}
+
 package "services" #DDFFD4 {
+    class GitHubAPIFetcher {
+        -_token : str
+        -_headers : dict
+        --
+        +__init__(token: str)
+        +fetch_runs(owner, repo, status, branch,\ncreated_after, per_page) : List[WorkflowRun]
+        -_fetch_page(owner, repo, status, branch,\ncreated_after, page, per_page) : requests.Response
+    }
+
+    class GitHubCLIFetcher {
+        +is_available() : bool
+        +fetch_runs(owner, repo, status, branch,\ncreated_after) : List[WorkflowRun]
+    }
+
     class WorkflowRunService {
         -_storage : WorkflowJsonStorage
         -_runs    : List[WorkflowRun]
@@ -170,6 +212,29 @@ package "cli" #FFE5E5 {
     }
 }
 
+GitHubAuthError              --|> Exception
+GitHubAPIError               --|> Exception
+GitHubNetworkError           --|> Exception
+GitHubRateLimitError         --|> Exception
+
+GitHubWorkflowRunFactory     ..>  WorkflowRun
+GitHubWorkflowRunFactory     ..>  WorkflowStatus
+GitHubWorkflowRunFactory     ..>  WorkflowConclusion
+
+GitHubAPIFetcher             ..>  WorkflowRun
+GitHubAPIFetcher             ..>  GitHubWorkflowRunFactory
+GitHubAPIFetcher             ..>  GitHubAuthError
+GitHubAPIFetcher             ..>  GitHubAPIError
+GitHubAPIFetcher             ..>  GitHubNetworkError
+GitHubAPIFetcher             ..>  GitHubRateLimitError
+
+GitHubCLIFetcher             ..>  WorkflowRun
+GitHubCLIFetcher             ..>  GitHubWorkflowRunFactory
+GitHubCLIFetcher             ..>  GitHubAPIError
+GitHubCLIFetcher             ..>  GitHubNetworkError
+
+GitHubAuthManager            ..>  GitHubAuthError
+
 WorkflowRun                   ..>  WorkflowStatus        : status
 WorkflowRun                   ..>  WorkflowConclusion    : conclusion
 WorkflowRun         "1" <--> "N" WorkflowRunAttempt     : run_id
@@ -195,10 +260,24 @@ WorkflowRunExportImportService   ..>  ImportResult
 "workflow_cli"               ..>  StatisticsService
 "workflow_cli"               ..>  WorkflowRunExportImportService
 "workflow_cli"               ..>  ImportResult
+"workflow_cli"               ..>  GitHubAPIFetcher
+"workflow_cli"               ..>  GitHubCLIFetcher
+"workflow_cli"               ..>  GitHubAuthManager
+"workflow_cli"               ..>  GitHubAuthError
+"workflow_cli"               ..>  GitHubAPIError
+"workflow_cli"               ..>  GitHubNetworkError
+"workflow_cli"               ..>  GitHubRateLimitError
 "interactive_menu"           ..>  WorkflowRunService
 "interactive_menu"           ..>  WorkflowRunAttemptService
 "interactive_menu"           ..>  WorkflowRunTracker
 "interactive_menu"           ..>  StatisticsService
 "interactive_menu"           ..>  WorkflowRunExportImportService
+"interactive_menu"           ..>  GitHubAPIFetcher
+"interactive_menu"           ..>  GitHubCLIFetcher
+"interactive_menu"           ..>  GitHubAuthManager
+"interactive_menu"           ..>  GitHubAuthError
+"interactive_menu"           ..>  GitHubAPIError
+"interactive_menu"           ..>  GitHubNetworkError
+"interactive_menu"           ..>  GitHubRateLimitError
 
 @enduml

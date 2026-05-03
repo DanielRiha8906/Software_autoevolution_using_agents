@@ -11,6 +11,15 @@ from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.statistics_service import StatisticsService
 from ..services.workflow_export_import_service import WorkflowRunExportImportService
+from ..services.github_api_fetcher import GitHubAPIFetcher
+from ..services.github_cli_fetcher import GitHubCLIFetcher
+from ..auth.github_auth import GitHubAuthManager
+from ..exceptions import (
+    GitHubAuthError,
+    GitHubAPIError,
+    GitHubNetworkError,
+    GitHubRateLimitError,
+)
 
 
 def _parse_datetime(date_str: str) -> datetime:
@@ -412,6 +421,109 @@ def _import_runs(service: WorkflowRunService, attempt_service: WorkflowRunAttemp
         print(f"Error: {e}")
 
 
+def _fetch_from_github(service: WorkflowRunService, attempt_service: WorkflowRunAttemptService) -> None:
+    """Fetch workflow runs from GitHub repository."""
+    print("\n--- Fetch from GitHub ---")
+
+    owner = _prompt("GitHub repository owner (username or organization)")
+    repo = _prompt("GitHub repository name")
+
+    mode_choice = _choose("Fetch mode", ["GitHub REST API", "GitHub CLI (gh)"])
+    mode = "api" if mode_choice == "GitHub REST API" else "cli"
+
+    # Optional filters
+    use_filters = _choose("Apply filters?", ["Yes", "No"]) == "Yes"
+    branch = None
+    status = None
+    created_after = None
+
+    if use_filters:
+        use_branch = _choose("Filter by branch?", ["Yes", "No"]) == "Yes"
+        if use_branch:
+            branch = _prompt("Branch name")
+
+        use_status = _choose("Filter by status?", ["Yes", "No"]) == "Yes"
+        if use_status:
+            status = _prompt("Status (e.g., completed, in_progress)")
+
+        use_created_after = _choose("Filter by created date?", ["Yes", "No"]) == "Yes"
+        if use_created_after:
+            date_str = _prompt("Date (YYYY-MM-DD or ISO format)")
+            try:
+                created_after = _parse_datetime(date_str)
+            except ValueError as e:
+                print(f"Error parsing date: {e}")
+                return
+
+    # Token handling
+    token_choice = _choose("Provide token?", ["Use env/secrets file", "Enter token"])
+    explicit_token = None
+    if token_choice == "Enter token":
+        explicit_token = input("GitHub Personal Access Token (hidden): ").strip()
+        if not explicit_token:
+            print("Token cannot be empty.")
+            return
+
+    try:
+        # Resolve token
+        auth_manager = GitHubAuthManager()
+        token = auth_manager.get_token(explicit_token=explicit_token)
+
+        # Validate token format
+        if not auth_manager.validate_token(token):
+            print(
+                "Error: Invalid GitHub token format. "
+                "Expected GitHub Personal Access Token (e.g., ghp_xxx)."
+            )
+            return
+
+        # Fetch runs
+        if mode == "api":
+            fetcher = GitHubAPIFetcher(token)
+            runs = fetcher.fetch_runs(
+                owner=owner,
+                repo=repo,
+                status=status,
+                branch=branch,
+                created_after=created_after,
+            )
+        else:  # mode == "cli"
+            fetcher = GitHubCLIFetcher()
+            runs = fetcher.fetch_runs(
+                owner=owner,
+                repo=repo,
+                status=status,
+                branch=branch,
+                created_after=created_after,
+            )
+
+        # Add fetched runs to service
+        added_count = 0
+        skipped_count = 0
+        for run in runs:
+            if service.get_run_detail(run.id) is None:
+                service.add_workflow_run(run)
+                added_count += 1
+            else:
+                skipped_count += 1
+
+        print(
+            f"\nFetched {len(runs)} run(s) from {owner}/{repo} "
+            f"({added_count} added, {skipped_count} already tracked)"
+        )
+
+    except GitHubAuthError as e:
+        print(f"Authentication error: {e}")
+    except GitHubRateLimitError as e:
+        print(f"Rate limit error: {e}")
+    except GitHubAPIError as e:
+        print(f"GitHub API error: {e}")
+    except GitHubNetworkError as e:
+        print(f"Network error: {e}")
+    except Exception as e:
+        print(f"Unexpected error during fetch: {e}")
+
+
 def _get_statistics(service: WorkflowRunService, attempt_service: WorkflowRunAttemptService) -> None:
     """Get aggregated statistics over workflow runs with optional filtering."""
     print("\n--- Get Statistics ---")
@@ -537,6 +649,7 @@ MENU = [
     ("Filter runs", _filter_menu),
     ("Advanced filter runs", _advanced_filter_menu),
     ("Get statistics", _get_statistics),
+    ("Fetch from GitHub", _fetch_from_github),
     ("Export runs to JSON", _export_runs),
     ("Import runs from JSON", _import_runs),
     ("Add workflow run attempt", _add_attempt),
@@ -566,7 +679,7 @@ def run_interactive(
             sys.exit(0)
         try:
             # Determine which service(s) to pass based on handler name
-            if handler.__name__ in ("_advanced_filter_menu", "_get_statistics", "_export_runs", "_import_runs"):
+            if handler.__name__ in ("_advanced_filter_menu", "_get_statistics", "_export_runs", "_import_runs", "_fetch_from_github"):
                 handler(service, attempt_service)
             elif handler.__name__.startswith("_add_attempt") or handler.__name__.startswith("_list_attempt") or handler.__name__.startswith("_detail_attempt"):
                 handler(attempt_service)

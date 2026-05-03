@@ -13,6 +13,15 @@ from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.statistics_service import StatisticsService
 from ..services.workflow_export_import_service import WorkflowRunExportImportService
+from ..services.github_api_fetcher import GitHubAPIFetcher
+from ..services.github_cli_fetcher import GitHubCLIFetcher
+from ..auth.github_auth import GitHubAuthManager
+from ..exceptions import (
+    GitHubAuthError,
+    GitHubAPIError,
+    GitHubNetworkError,
+    GitHubRateLimitError,
+)
 
 
 def _parse_datetime(date_str: str) -> datetime:
@@ -228,6 +237,21 @@ def build_parser() -> argparse.ArgumentParser:
     import_p.add_argument("--filepath", required=True, help="Input file path")
     import_p.add_argument("--overwrite", action="store_true", help="Allow replacing runs with same id")
     import_p.add_argument("--dry-run", action="store_true", help="Validate without persisting")
+
+    # fetch
+    fetch_p = sub.add_parser("fetch", help="Fetch workflow runs from GitHub")
+    fetch_p.add_argument("--owner", required=True, help="GitHub repository owner (username or organization)")
+    fetch_p.add_argument("--repo", required=True, help="GitHub repository name")
+    fetch_p.add_argument(
+        "--mode",
+        required=True,
+        choices=["api", "cli"],
+        help="Fetch mode: 'api' (GitHub REST API) or 'cli' (gh CLI tool)",
+    )
+    fetch_p.add_argument("--branch", default=None, help="Filter by branch name")
+    fetch_p.add_argument("--status", default=None, help="Filter by workflow status")
+    fetch_p.add_argument("--created-after", default=None, help="Fetch runs created on or after this date (YYYY-MM-DD or ISO format)")
+    fetch_p.add_argument("--token", default=None, help="GitHub Personal Access Token (if not set, uses env var or secrets file)")
 
     return parser
 
@@ -465,4 +489,79 @@ def run_cli(
             sys.exit(1)
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "fetch":
+        try:
+            # Resolve authentication token
+            auth_manager = GitHubAuthManager()
+            token = auth_manager.get_token(explicit_token=ns.token)
+
+            # Validate token format
+            if not auth_manager.validate_token(token):
+                print(
+                    "Error: Invalid GitHub token format. "
+                    "Expected GitHub Personal Access Token (e.g., ghp_xxx).",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+            # Parse optional created_after filter
+            created_after = None
+            if ns.created_after:
+                try:
+                    created_after = _parse_datetime(ns.created_after)
+                except ValueError as e:
+                    print(f"Error parsing --created-after: {e}", file=sys.stderr)
+                    sys.exit(1)
+
+            # Fetch runs based on mode
+            if ns.mode == "api":
+                fetcher = GitHubAPIFetcher(token)
+                runs = fetcher.fetch_runs(
+                    owner=ns.owner,
+                    repo=ns.repo,
+                    status=ns.status,
+                    branch=ns.branch,
+                    created_after=created_after,
+                )
+            else:  # mode == "cli"
+                fetcher = GitHubCLIFetcher()
+                runs = fetcher.fetch_runs(
+                    owner=ns.owner,
+                    repo=ns.repo,
+                    status=ns.status,
+                    branch=ns.branch,
+                    created_after=created_after,
+                )
+
+            # Add fetched runs to service
+            added_count = 0
+            skipped_count = 0
+            for run in runs:
+                if service.get_run_detail(run.id) is None:
+                    service.add_workflow_run(run)
+                    added_count += 1
+                else:
+                    skipped_count += 1
+
+            print(
+                f"Fetched {len(runs)} run(s) from {ns.owner}/{ns.repo} "
+                f"({added_count} added, {skipped_count} already tracked)"
+            )
+
+        except GitHubAuthError as e:
+            print(f"Authentication error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except GitHubRateLimitError as e:
+            print(f"Rate limit error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except GitHubAPIError as e:
+            print(f"GitHub API error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except GitHubNetworkError as e:
+            print(f"Network error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Unexpected error during fetch: {e}", file=sys.stderr)
             sys.exit(1)

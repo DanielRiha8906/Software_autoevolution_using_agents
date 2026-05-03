@@ -166,7 +166,28 @@ repeat
         :Print attempts for run;
       endif
 
-    case (14 — Exit)
+    case (14 — Fetch from GitHub)
+      :Prompt GitHub repo owner;
+      :Prompt GitHub repo name;
+      :Choose fetch mode (api / cli);
+      :Prompt GitHub token\n(or use env var / secrets file);
+      :GitHubAuthManager.get_token();
+      if (token valid?) then (yes)
+        if (mode == "api"?) then (yes)
+          :GitHubAPIFetcher.fetch_runs();
+        else (cli)
+          :GitHubCLIFetcher.fetch_runs();
+        endif
+        :Optional: filter by branch;
+        :Optional: filter by status;
+        :Optional: filter by created-after date;
+        :For each fetched run:\nif not already tracked, add to service;
+        :Print count of added and skipped runs;
+      else (no)
+        :Print "No valid token available";
+      endif
+
+    case (15 — Exit)
       :Print "Goodbye.";
       stop
 

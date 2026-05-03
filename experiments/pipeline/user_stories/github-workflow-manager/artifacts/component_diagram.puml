@@ -21,6 +21,20 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunAttemptService" as ATTEMPT_SVC
     component "StatisticsService" as STATS_SVC
     component "WorkflowRunExportImportService" as EXPORT_SVC
+    component "GitHubAPIFetcher" as API_FETCH
+    component "GitHubCLIFetcher" as CLI_FETCH
+  }
+
+  package "Authentication & GitHub Integration" {
+    component "GitHubAuthManager" as AUTH_MGR
+    component "GitHubWorkflowRunFactory" as GH_FACTORY
+  }
+
+  package "Exception layer" {
+    component "GitHubAuthError" as AUTH_ERR
+    component "GitHubAPIError" as API_ERR
+    component "GitHubNetworkError" as NET_ERR
+    component "GitHubRateLimitError" as RATE_ERR
   }
 
   package "Persistence layer" {
@@ -57,6 +71,28 @@ IM --> STATS_SVC
 CLI --> EXPORT_SVC
 IM --> EXPORT_SVC
 
+CLI --> API_FETCH
+IM --> API_FETCH
+CLI --> CLI_FETCH
+IM --> CLI_FETCH
+
+API_FETCH --> AUTH_MGR
+API_FETCH --> GH_FACTORY
+CLI_FETCH --> GH_FACTORY
+
+API_FETCH --> SVC
+CLI_FETCH --> SVC
+
+API_FETCH ..> AUTH_ERR
+API_FETCH ..> API_ERR
+API_FETCH ..> NET_ERR
+API_FETCH ..> RATE_ERR
+
+CLI_FETCH ..> API_ERR
+CLI_FETCH ..> NET_ERR
+
+AUTH_MGR ..> AUTH_ERR
+
 TRACKER --> SVC
 SVC --> STOR
 STOR --> JSON_FILE
@@ -73,6 +109,7 @@ SVC ..> RUN
 ATTEMPT_SVC ..> ATTEMPT
 STATS_SVC ..> REPORT
 EXPORT_SVC ..> IMPORT_RESULT
+GH_FACTORY ..> RUN
 RUN --> STATUS
 RUN --> CONCLUSION
 RUN "1" --> "N" ATTEMPT : relationship

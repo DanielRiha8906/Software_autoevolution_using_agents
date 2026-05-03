@@ -24,6 +24,42 @@
     "duration_seconds": 0.0
   },
   {
+    "id": "8328fd0e-d16f-41ad-9d5b-f45e9fb4eac9",
+    "workflow_name": "test-workflow",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T22:01:18.220377+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 15.5
+  },
+  {
+    "id": "test-run-1",
+    "workflow_name": "test-flow",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T10:00:00",
+    "updated_at": null,
+    "run_number": 1,
+    "commit_sha": "abc123",
+    "duration_seconds": 12.5
+  },
+  {
+    "id": "valid-run",
+    "workflow_name": "test-flow",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T10:00:00",
+    "updated_at": null,
+    "run_number": 1,
+    "commit_sha": "abc123",
+    "duration_seconds": 12.5
+  },
+  {
     "id": "cli-run-1",
     "workflow_name": "CI",
     "branch": "main",

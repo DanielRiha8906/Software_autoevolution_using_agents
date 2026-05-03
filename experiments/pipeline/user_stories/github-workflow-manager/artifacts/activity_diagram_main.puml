@@ -112,6 +112,23 @@ if (CLI arguments provided?) then (yes)
       endif
       :Print ImportResult\n(total_records, imported_runs, skipped_runs,\nimported_attempts, skipped_attempts, errors);
 
+    case (fetch)
+      :Parse --owner, --repo, --mode,\n--branch, --status, --created-after,\n--token args;
+      :GitHubAuthManager.get_token();
+      :Validate token format;
+      if (token valid?) then (yes)
+        if (--mode == "api"?) then (yes)
+          :GitHubAPIFetcher.fetch_runs();
+        else (cli)
+          :GitHubCLIFetcher.fetch_runs();
+        endif
+        :For each fetched run:\nif not already tracked, add to service;
+        :Print "Fetched <count> run(s) from <owner>/<repo>\n(<added> added, <skipped> already tracked)";
+      else (no)
+        :Print error: invalid token format;
+        :Exit code 1;
+      endif
+
   endswitch
   stop
 
