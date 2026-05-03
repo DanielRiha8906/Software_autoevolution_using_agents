@@ -62,4 +62,4 @@ All three candidates achieved identical test scores (28/28) with equivalent impl
 ## Test Result
 ✅ All 28 tests passing (8 existing + 11 new state-checking tests + 9 other tests)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 160.4s | Cost: $0.531371 USD | Turns: 51
