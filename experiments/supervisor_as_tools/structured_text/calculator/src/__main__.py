@@ -25,7 +25,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide} A B]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A [B]]",
     )
     parser.add_argument(
         "--operation",
