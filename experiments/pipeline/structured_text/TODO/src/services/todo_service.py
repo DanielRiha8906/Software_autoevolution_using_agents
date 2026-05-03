@@ -7,6 +7,7 @@ from ..models.task_status import TaskStatus
 from ..models.task_statistics import TaskStatistics
 from ..storage.json_storage import JsonStorage
 from .comment_manager import CommentManager
+from .import_export_service import ExportService, ImportService
 from .task_manager import TaskManager
 
 
@@ -147,3 +148,34 @@ class TodoService:
             overdue_count=overdue_count,
             with_due_date_count=with_due_date_count,
         )
+
+    def export_tasks_and_comments(self, filepath: str) -> tuple[int, int]:
+        """Export all tasks and comments to a JSON file.
+
+        Args:
+            filepath: Path to write the JSON file to
+
+        Returns:
+            Tuple of (tasks_exported, comments_exported)
+
+        Raises:
+            ImportExportError: If export fails
+        """
+        service = ExportService(self._manager, self._comment_manager)
+        return service.export_to_file(filepath)
+
+    def import_tasks_and_comments(self, filepath: str, mode: str = "fail") -> tuple[int, int, int]:
+        """Import tasks and comments from a JSON file.
+
+        Args:
+            filepath: Path to the JSON file to import from
+            mode: How to handle ID conflicts ('fail', 'skip', or 'replace')
+
+        Returns:
+            Tuple of (tasks_imported, comments_imported, conflicts_detected)
+
+        Raises:
+            ImportExportError: If import fails
+        """
+        service = ImportService(self._manager, self._comment_manager)
+        return service.import_from_file(filepath, mode)

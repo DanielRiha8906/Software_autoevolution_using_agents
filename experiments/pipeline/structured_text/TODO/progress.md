@@ -433,3 +433,108 @@ Successfully implemented task statistics functionality with comprehensive datacl
 - Component diagram: Added TaskStatistics Model component
 
 Duration: 545.4s | Cost: $1.058962 USD | Turns: 15
+
+## Task 07: Add import and export of tasks and comments
+
+### Summary
+
+Successfully implemented JSON import/export functionality for Task and TaskComment records with full validation, conflict resolution modes (fail/skip/replace), and comprehensive test coverage. Functionality is accessible via both CLI one-shot commands and interactive menu.
+
+### Files Changed
+
+**Source Code:**
+- `src/services/import_export_service.py` — NEW: ExportService and ImportService classes with full import/export logic
+- `src/services/todo_service.py` — Added export_tasks_and_comments() and import_tasks_and_comments() methods
+- `src/services/__init__.py` — Added ExportService, ImportService, ImportExportError exports
+- `src/cli/todo_cli.py` — Added `export` and `import` subcommands with handlers and --mode flag support
+- `src/cli/interactive_menu.py` — Added menu option 11 with import/export submenu and user prompts
+
+**Tests:**
+- `tests/test_import_export.py` — NEW: 57 comprehensive tests covering export/import happy paths, error cases, round-trip validation, CLI parsing, and menu integration
+
+**Documentation:**
+- `artifacts/class_diagram.puml` — Added ExportService, ImportService, ImportExportError classes with methods and dependencies
+- `artifacts/activity_diagram.puml` — Added export/import activity flows with mode-specific behavior partitions
+- `artifacts/use_case_diagram.puml` — Added "Export tasks and comments" and "Import tasks and comments" use cases for both CLI and interactive modes
+- `analysis.md` — Comprehensive analysis of requirements, data model relationships, and integration points
+- `design.md` — Detailed implementation design with class/method signatures, integration points, and test specifications
+
+### Test Results
+
+✅ All 404 tests passed
+- New tests: 57 (all passing)
+- Existing tests: 347 (all still passing)
+- No production bugs discovered
+
+### Features Implemented
+
+**Must (All Completed):**
+- ✅ Export all stored Task records (with associated TaskComment records) to JSON file
+- ✅ Import Task and TaskComment records from JSON file
+- ✅ Preserve task IDs, statuses, due dates, and comments on import
+- ✅ Validate imported data structure before applying it
+- ✅ Existing stored data not overwritten without explicit intent (mode flags provide control)
+- ✅ All functionality accessible via `python -m src` — interactive menu option 11 AND one-shot CLI flags
+
+**Should (All Completed):**
+- ✅ Schema matches Task.to_dict() and TaskComment.to_dict() serialization formats
+
+**Could (Completed):**
+- ✅ Skip invalid or duplicate entries on import with --mode skip flag (configurable conflict resolution)
+
+**Won't (Not Implemented):**
+- ❌ Support additional file formats (CSV, XML) — as specified
+
+### Implementation Details
+
+**ExportService:**
+- `export_to_file(filepath: str) -> tuple[int, int]` — Exports all tasks and comments to JSON
+- JSON structure: `{"tasks": [...], "comments": [...]}`
+- Uses Task.to_dict() and TaskComment.to_dict() for serialization
+- Returns (tasks_count, comments_count)
+- Error handling for invalid paths and permission issues
+
+**ImportService:**
+- `import_from_file(filepath: str, mode: str = 'fail') -> tuple[int, int, int]` — Imports tasks and comments from JSON
+- Three conflict resolution modes:
+  - `fail` (default): Raises error if any ID conflicts detected
+  - `skip`: Imports only non-conflicting records, preserves existing data
+  - `replace`: Overwrites existing records with imported data
+- Schema validation: Checks for required "tasks" and "comments" keys, validates field types
+- Orphaned comment handling: Skips comments referencing non-existent task IDs
+- Returns (tasks_imported, comments_imported, conflicts_detected)
+
+**TodoService Integration:**
+- `export_tasks_and_comments(filepath: str) -> tuple[int, int]` — Delegates to ExportService
+- `import_tasks_and_comments(filepath: str, mode: str = 'fail') -> tuple[int, int, int]` — Delegates to ImportService
+
+**CLI Exposure:**
+- `python -m src export <filepath>` — Export tasks and comments to JSON file
+- `python -m src import <filepath> [--mode {fail,skip,replace}]` — Import tasks and comments from JSON file
+- Exit codes: 0 on success, non-zero on error
+- Error messages explain what went wrong (missing file, invalid JSON, conflict detected, etc.)
+
+**Interactive Menu:**
+- Option 11: Import/Export submenu
+- Submenu: (1) Export to file, (2) Import from file, (0) Cancel
+- Prompts user for filepath and import mode
+- Displays success message with counts or error message
+
+**Storage:**
+- Uses existing JsonStorage layer for persistence
+- Manages both task and comment files as logical unit during export/import
+- No new persistence mechanisms required
+
+**Test Coverage:**
+- Export: zero/single/multiple tasks, file overwriting, JSON validity, error handling
+- Import: valid/invalid JSON, schema validation, field preservation, conflict modes, orphaned comments
+- Round-trip: export → import → verify data integrity (multiple cycles)
+- CLI: command parsing, argument handling, error messages, --help
+- Interactive Menu: option display, submenu prompts, mode selection, result feedback
+
+**Diagrams Updated:**
+- Class diagram: Added ExportService, ImportService, ImportExportError with full method signatures
+- Activity diagram: Added export and import flows with detailed partitions showing serialization, validation, and conflict handling
+- Use case diagram: Added two new use cases (Export/Import) for both CLI and interactive modes
+
+Duration: 791.5s | Cost: $1.760324 USD | Turns: 15

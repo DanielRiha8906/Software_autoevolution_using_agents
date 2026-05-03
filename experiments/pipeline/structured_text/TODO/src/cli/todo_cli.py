@@ -5,6 +5,7 @@ from typing import Optional
 
 from ..models.task_status import TaskStatus
 from ..services.comment_manager import CommentNotFoundError
+from ..services.import_export_service import ImportExportError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -29,7 +30,7 @@ class TodoCLI:
             return 0
         try:
             return args.func(args)
-        except (TaskNotFoundError, CommentNotFoundError) as e:
+        except (TaskNotFoundError, CommentNotFoundError, ImportExportError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
         except ValueError as e:
@@ -143,6 +144,22 @@ class TodoCLI:
         # stats
         p_stats = sub.add_parser("stats", help="Show task statistics")
         p_stats.set_defaults(func=self._cmd_stats)
+
+        # export
+        p_export = sub.add_parser("export", help="Export tasks and comments to JSON")
+        p_export.add_argument("filepath", help="Path to write the JSON export file")
+        p_export.set_defaults(func=self._cmd_export)
+
+        # import
+        p_import = sub.add_parser("import", help="Import tasks and comments from JSON")
+        p_import.add_argument("filepath", help="Path to the JSON import file")
+        p_import.add_argument(
+            "--mode",
+            choices=["fail", "skip", "replace"],
+            default="fail",
+            help="How to handle ID conflicts: fail (default), skip, or replace",
+        )
+        p_import.set_defaults(func=self._cmd_import)
 
         return parser
 
@@ -288,4 +305,23 @@ class TodoCLI:
         print(f"  Done:            {stats.done_count}")
         print(f"  Overdue:         {stats.overdue_count}")
         print(f"  With due date:   {stats.with_due_date_count}")
+        return 0
+
+    def _cmd_export(self, args: argparse.Namespace) -> int:
+        tasks_exported, comments_exported = self._service.export_tasks_and_comments(args.filepath)
+        print(f"Exported {tasks_exported} task(s) and {comments_exported} comment(s) to {args.filepath}")
+        return 0
+
+    def _cmd_import(self, args: argparse.Namespace) -> int:
+        tasks_imported, comments_imported, conflicts = self._service.import_tasks_and_comments(
+            args.filepath, mode=args.mode
+        )
+        print(f"Imported {tasks_imported} task(s) and {comments_imported} comment(s) from {args.filepath}")
+        if conflicts > 0:
+            if args.mode == "fail":
+                print(f"Warning: {conflicts} conflict(s) skipped (mode=fail)")
+            elif args.mode == "skip":
+                print(f"Skipped {conflicts} conflicting record(s) (mode=skip)")
+            elif args.mode == "replace":
+                print(f"Replaced {conflicts} existing record(s) (mode=replace)")
         return 0

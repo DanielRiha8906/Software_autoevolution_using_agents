@@ -59,6 +59,48 @@ repeat
         :Count tasks with due date;
       }
       :Display task statistics;
+    case (11 — Import/Export)
+      :Display import/export menu;
+      switch (import/export choice)
+        case (1 — Export)
+          :Prompt for export file path;
+          :Call TodoService.export_tasks_and_comments(filepath);
+          partition "ExportService.export_to_file()" {
+            :Gather all tasks from TaskManager;
+            :Gather all comments from CommentManager;
+            :Serialize to JSON structure;
+            :Write JSON file to path;
+          }
+          :Display export summary (count of tasks and comments);
+        case (2 — Import)
+          :Prompt for import file path;
+          :Prompt for conflict mode (fail/skip/replace);
+          :Call TodoService.import_tasks_and_comments(filepath, mode);
+          partition "ImportService.import_from_file()" {
+            :Read and parse JSON file;
+            :Validate JSON schema;
+            :Parse Task objects;
+            :Parse TaskComment objects;
+            :Check for ID conflicts;
+            switch (mode)
+              case (fail)
+                if (conflicts found?) then (yes)
+                  :Raise ImportExportError;
+                  stop
+                else (no)
+                  :Import all records;
+                endif
+              case (skip)
+                :Import only non-conflicting records;
+              case (replace)
+                :Import all records, overwriting existing;
+            endswitch
+            :Persist changes to storage;
+          }
+          :Display import summary (counts and conflicts);
+        case (0 — Back)
+          stop
+      endswitch
     case (0/q — Quit)
       :Clear screen;
       stop
