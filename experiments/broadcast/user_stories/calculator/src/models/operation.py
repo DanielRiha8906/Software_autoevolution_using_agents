@@ -6,6 +6,10 @@ class Operation(Enum):
     SUBTRACT = "subtract"
     MULTIPLY = "multiply"
     DIVIDE = "divide"
+    SQUARE = "square"
+    SQRT = "sqrt"
+    POWER = "power"
+    MODULO = "modulo"
 
     @classmethod
     def from_string(cls, value: str) -> "Operation":
