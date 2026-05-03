@@ -10,5 +10,29 @@
     "run_number": null,
     "commit_sha": null,
     "duration_seconds": 0.0
+  },
+  {
+    "id": "32d39044-30b7-4c5b-b916-1fec5d963520",
+    "workflow_name": "test-workflow",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T19:43:56.214385+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 100.5
+  },
+  {
+    "id": "ba7d7472-6fc0-496d-bf43-f4ced34db90e",
+    "workflow_name": "test-workflow-2",
+    "branch": "develop",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-05-03T19:43:57.652862+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 200.5
   }
 ]

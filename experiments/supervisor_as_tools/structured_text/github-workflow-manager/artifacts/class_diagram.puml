@@ -60,6 +60,17 @@ package "models" #DDEEFF {
         +is_failed() : bool
         +is_running() : bool
     }
+
+    class WorkflowStatistics {
+        +total_runs                  : int
+        +count_by_conclusion         : dict
+        +average_duration_seconds    : float
+        +min_duration_seconds        : Optional[float]
+        +max_duration_seconds        : Optional[float]
+        +average_attempts_per_run    : float
+        --
+        +to_dict() : dict
+    }
 }
 
 package "storage" #FFF3CC {
@@ -121,29 +132,40 @@ package "services" #DDFFD4 {
         +get_attempt_detail(attempt_id: int) : Optional[WorkflowRunAttempt]
         -_persist() : None
     }
+
+    class StatisticsService {
+        -_workflow_run_service : WorkflowRunService
+        -_attempt_service : AttemptService
+        --
+        +__init__(workflow_run_service: WorkflowRunService,\n  attempt_service: AttemptService)
+        +compute_statistics() : WorkflowStatistics
+    }
 }
 
 package "cli" #FFE5E5 {
     class "workflow_cli" <<module>> {
         +build_parser() : ArgumentParser
-        +run_cli(service: WorkflowRunService,\n  attempt_service: AttemptService, args) : None
+        +run_cli(service: WorkflowRunService,\n  attempt_service: AttemptService,\n  statistics_service: StatisticsService, args) : None
         -_fmt_run(run: WorkflowRun) : str
         -_fmt_attempt(attempt: WorkflowRunAttempt) : str
+        -_fmt_statistics(statistics: WorkflowStatistics) : str
     }
 
     class "interactive_menu" <<module>> {
-        +run_interactive(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
-        -_add_run(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
-        -_list_runs(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
-        -_detail_run(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
-        -_filter_menu(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
+        +run_interactive(service: WorkflowRunService,\n  attempt_service: AttemptService,\n  statistics_service: StatisticsService) : None
+        -_add_run(...) : None
+        -_list_runs(...) : None
+        -_detail_run(...) : None
+        -_filter_menu(...) : None
         -_filter_by_duration_interactive(...) : None
         -_filter_by_created_interactive(...) : None
         -_filter_by_updated_interactive(...) : None
         -_filter_by_attempts_interactive(...) : None
         -_filter_compound_interactive(...) : None
         -_advanced_filter_menu(...) : None
-        -_list_attempts_menu(attempt_service: AttemptService) : None
+        -_list_attempts_menu(...) : None
+        -_view_statistics(...) : None
+        -_fmt_statistics(statistics: WorkflowStatistics) : str
     }
 }
 
@@ -159,9 +181,16 @@ WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 AttemptService       "1" --> "1" AttemptJsonStorage  : -_storage
 AttemptService            ..>  WorkflowRunAttempt
+StatisticsService    "1" --> "1" WorkflowRunService  : -_workflow_run_service
+StatisticsService    "1" --> "1" AttemptService      : -_attempt_service
+StatisticsService         ..>  WorkflowStatistics    : returns
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  AttemptService
+"workflow_cli"             ..>  StatisticsService
+"workflow_cli"             ..>  WorkflowStatistics
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  AttemptService
+"interactive_menu"         ..>  StatisticsService
+"interactive_menu"         ..>  WorkflowStatistics
 
 @enduml

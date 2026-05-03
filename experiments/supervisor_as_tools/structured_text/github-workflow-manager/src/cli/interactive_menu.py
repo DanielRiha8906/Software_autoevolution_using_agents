@@ -1,3 +1,4 @@
+import json
 import sys
 from typing import Optional
 from datetime import datetime, timezone
@@ -9,6 +10,7 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
+from ..services.statistics_service import StatisticsService
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -78,7 +80,29 @@ def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
     )
 
 
-def _add_run(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _fmt_statistics(statistics) -> str:
+    """Format WorkflowStatistics for text output."""
+    lines = [
+        "Workflow Statistics:",
+        f"  total_runs                 : {statistics.total_runs}",
+        "  count_by_conclusion        :",
+    ]
+    for conclusion, count in sorted(statistics.count_by_conclusion.items()):
+        lines.append(f"    {conclusion}: {count}")
+    lines.extend([
+        f"  average_duration_seconds   : {statistics.average_duration_seconds:.2f}",
+        f"  min_duration_seconds       : {statistics.min_duration_seconds or '—'}",
+        f"  max_duration_seconds       : {statistics.max_duration_seconds or '—'}",
+        f"  average_attempts_per_run   : {statistics.average_attempts_per_run:.2f}",
+    ])
+    return "\n".join(lines)
+
+
+def _add_run(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     tracker = WorkflowRunTracker(service)
     print("\n--- Add Workflow Run ---")
     name = _prompt("Workflow name")
@@ -104,7 +128,11 @@ def _add_run(service: WorkflowRunService, attempt_service: AttemptService) -> No
     print(f"\nAdded run {run.id}")
 
 
-def _list_runs(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _list_runs(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     runs = service.list_runs()
     if not runs:
         print("\nNo runs recorded.")
@@ -114,7 +142,11 @@ def _list_runs(service: WorkflowRunService, attempt_service: AttemptService) -> 
         print(_fmt_run(run))
 
 
-def _detail_run(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _detail_run(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     run_id = _prompt("\nEnter run ID")
     run = service.get_run_detail(run_id)
     if run is None:
@@ -123,7 +155,11 @@ def _detail_run(service: WorkflowRunService, attempt_service: AttemptService) ->
         print(_fmt_run(run))
 
 
-def _check_run_state(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _check_run_state(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     run_id = _prompt("\nEnter run ID")
     run = service.get_run_detail(run_id)
     if run is None:
@@ -162,7 +198,11 @@ def _prompt_datetime(label: str, default: Optional[str] = None) -> Optional[date
             print("Invalid format. Use ISO 8601 format (e.g., 2026-05-03T12:00:00 or 2026-05-03).")
 
 
-def _filter_menu(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _filter_menu(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     filter_by = _choose("Filter by", ["branch", "status", "conclusion"])
     if filter_by == "branch":
         branch = _prompt("Branch name")
@@ -182,7 +222,11 @@ def _filter_menu(service: WorkflowRunService, attempt_service: AttemptService) -
         print(_fmt_run(run))
 
 
-def _filter_by_duration_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _filter_by_duration_interactive(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     """Interactive duration range filter."""
     print("\n--- Filter by Duration Range ---")
     min_duration = _prompt_float("Minimum duration (seconds)", 0.0)
@@ -212,7 +256,11 @@ def _filter_by_duration_interactive(service: WorkflowRunService, attempt_service
         print(_fmt_run(run))
 
 
-def _filter_by_created_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _filter_by_created_interactive(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     """Interactive created date range filter."""
     print("\n--- Filter by Created Date Range ---")
     created_after = _prompt_datetime("Created after (ISO 8601, leave blank to skip)")
@@ -235,7 +283,11 @@ def _filter_by_created_interactive(service: WorkflowRunService, attempt_service:
         print(_fmt_run(run))
 
 
-def _filter_by_updated_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _filter_by_updated_interactive(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     """Interactive updated date range filter."""
     print("\n--- Filter by Updated Date Range ---")
     updated_after = _prompt_datetime("Updated after (ISO 8601, leave blank to skip)")
@@ -258,7 +310,11 @@ def _filter_by_updated_interactive(service: WorkflowRunService, attempt_service:
         print(_fmt_run(run))
 
 
-def _filter_by_attempts_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _filter_by_attempts_interactive(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     """Interactive filter by attempt presence."""
     choice = _choose("Show runs with attempts?", ["Yes", "No"])
     has_attempts = choice == "Yes"
@@ -277,7 +333,11 @@ def _filter_by_attempts_interactive(service: WorkflowRunService, attempt_service
         print(_fmt_run(run))
 
 
-def _filter_compound_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _filter_compound_interactive(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     """Interactive compound filter builder."""
     print("\n--- Combine Filters ---")
     filters = {}
@@ -334,7 +394,11 @@ def _filter_compound_interactive(service: WorkflowRunService, attempt_service: A
         print(_fmt_run(run))
 
 
-def _advanced_filter_menu(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _advanced_filter_menu(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     """Advanced filter sub-menu."""
     while True:
         print("\n" + "=" * 44)
@@ -364,7 +428,11 @@ def _advanced_filter_menu(service: WorkflowRunService, attempt_service: AttemptS
             return
 
 
-def _add_attempt(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _add_attempt(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     print("\n--- Add Workflow Attempt ---")
     run_id = int(_prompt("Run ID"))
     attempt_number = int(_prompt("Attempt number"))
@@ -383,7 +451,11 @@ def _add_attempt(service: WorkflowRunService, attempt_service: AttemptService) -
     print(f"\nAdded attempt {attempt.id}")
 
 
-def _list_attempts_menu(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _list_attempts_menu(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     attempts = attempt_service.list_attempts()
     if not attempts:
         print("\nNo attempts recorded.")
@@ -393,13 +465,35 @@ def _list_attempts_menu(service: WorkflowRunService, attempt_service: AttemptSer
         print(_fmt_attempt(attempt))
 
 
-def _detail_attempt(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def _detail_attempt(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     attempt_id = int(_prompt("\nEnter attempt ID"))
     attempt = attempt_service.get_attempt_detail(attempt_id)
     if attempt is None:
         print(f"No attempt found with id {attempt_id}.")
     else:
         print(_fmt_attempt(attempt))
+
+
+def _view_statistics(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
+    """Display workflow statistics."""
+    print("\n--- Workflow Statistics ---")
+    statistics = statistics_service.compute_statistics()
+
+    # Ask for output format
+    format_choice = _choose("Output format", ["text", "json"])
+
+    if format_choice == "json":
+        print(json.dumps(statistics.to_dict(), indent=2))
+    else:
+        print(_fmt_statistics(statistics))
 
 
 MENU = [
@@ -412,11 +506,16 @@ MENU = [
     ("Add attempt", _add_attempt),
     ("List attempts", _list_attempts_menu),
     ("Get attempt detail", _detail_attempt),
+    ("View Statistics", _view_statistics),
     ("Exit", None),
 ]
 
 
-def run_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+def run_interactive(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
         print("\n" + "=" * 44)
@@ -431,6 +530,6 @@ def run_interactive(service: WorkflowRunService, attempt_service: AttemptService
             print("Goodbye.")
             sys.exit(0)
         try:
-            handler(service, attempt_service)
+            handler(service, attempt_service, statistics_service)
         except KeyboardInterrupt:
             print()

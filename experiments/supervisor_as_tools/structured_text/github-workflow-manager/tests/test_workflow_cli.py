@@ -9,6 +9,7 @@ from src.models.workflow_status import WorkflowStatus
 from src.models.workflow_conclusion import WorkflowConclusion
 from src.services.workflow_run_service import WorkflowRunService
 from src.services.attempt_service import AttemptService
+from src.services.statistics_service import StatisticsService
 
 
 def _make_run(run_id: str = "run-1", branch: str = "main", duration: float = 10.0) -> WorkflowRun:
@@ -42,7 +43,12 @@ def attempt_service():
     return svc
 
 
-def test_cli_list_filter_duration_min_max(service, attempt_service, capsys):
+@pytest.fixture
+def statistics_service(service, attempt_service):
+    return StatisticsService(service, attempt_service)
+
+
+def test_cli_list_filter_duration_min_max(service, attempt_service, statistics_service, capsys):
     r1 = _make_run("r1", duration=5.0)
     r2 = _make_run("r2", duration=15.0)
     r3 = _make_run("r3", duration=25.0)
@@ -51,14 +57,14 @@ def test_cli_list_filter_duration_min_max(service, attempt_service, capsys):
     service.add_workflow_run(r2)
     service.add_workflow_run(r3)
 
-    run_cli(service, attempt_service, ["list", "--duration-min", "10.0", "--duration-max", "20.0"])
+    run_cli(service, attempt_service, statistics_service, ["list", "--duration-min", "10.0", "--duration-max", "20.0"])
     captured = capsys.readouterr()
     assert "r2" in captured.out
     assert "r1" not in captured.out
     assert "r3" not in captured.out
 
 
-def test_cli_list_filter_created_after(service, attempt_service, capsys):
+def test_cli_list_filter_created_after(service, attempt_service, statistics_service, capsys):
     now = datetime.now(timezone.utc)
     before = now - timedelta(hours=1)
     after = now + timedelta(hours=1)
@@ -73,13 +79,13 @@ def test_cli_list_filter_created_after(service, attempt_service, capsys):
 
     # ISO format datetime string
     iso_time = now.isoformat()
-    run_cli(service, attempt_service, ["list", "--created-after", iso_time])
+    run_cli(service, attempt_service, statistics_service, ["list", "--created-after", iso_time])
     captured = capsys.readouterr()
     assert "r2" in captured.out
     assert "r1" not in captured.out
 
 
-def test_cli_list_compound_filters(service, attempt_service, capsys):
+def test_cli_list_compound_filters(service, attempt_service, statistics_service, capsys):
     r1 = _make_run("r1", branch="main", duration=5.0)
     r1.status = WorkflowStatus.COMPLETED
 
@@ -96,6 +102,7 @@ def test_cli_list_compound_filters(service, attempt_service, capsys):
     run_cli(
         service,
         attempt_service,
+        statistics_service,
         [
             "list",
             "--branch",
@@ -112,27 +119,28 @@ def test_cli_list_compound_filters(service, attempt_service, capsys):
     assert "r3" not in captured.out
 
 
-def test_cli_list_duration_invalid_range_raises(service, attempt_service, capsys):
+def test_cli_list_duration_invalid_range_raises(service, attempt_service, statistics_service, capsys):
     with pytest.raises(SystemExit) as exc_info:
-        run_cli(service, attempt_service, ["list", "--duration-min", "20.0", "--duration-max", "10.0"])
+        run_cli(service, attempt_service, statistics_service, ["list", "--duration-min", "20.0", "--duration-max", "10.0"])
     assert exc_info.value.code == 1
     captured = capsys.readouterr()
     assert "must be <=" in captured.err
 
 
-def test_cli_list_duration_negative_min_raises(service, attempt_service, capsys):
+def test_cli_list_duration_negative_min_raises(service, attempt_service, statistics_service, capsys):
     with pytest.raises(SystemExit) as exc_info:
-        run_cli(service, attempt_service, ["list", "--duration-min", "-1.0"])
+        run_cli(service, attempt_service, statistics_service, ["list", "--duration-min", "-1.0"])
     assert exc_info.value.code == 1
     captured = capsys.readouterr()
     assert "non-negative" in captured.err
 
 
-def test_cli_list_has_attempts_exclusive(service, attempt_service, capsys):
+def test_cli_list_has_attempts_exclusive(service, attempt_service, statistics_service, capsys):
     with pytest.raises(SystemExit) as exc_info:
         run_cli(
             service,
             attempt_service,
+            statistics_service,
             ["list", "--has-attempts", "--no-attempts"],
         )
     assert exc_info.value.code == 1
@@ -140,15 +148,15 @@ def test_cli_list_has_attempts_exclusive(service, attempt_service, capsys):
     assert "cannot be used together" in captured.err
 
 
-def test_cli_list_created_after_invalid_format(service, attempt_service, capsys):
+def test_cli_list_created_after_invalid_format(service, attempt_service, statistics_service, capsys):
     with pytest.raises(SystemExit) as exc_info:
-        run_cli(service, attempt_service, ["list", "--created-after", "invalid-date"])
+        run_cli(service, attempt_service, statistics_service, ["list", "--created-after", "invalid-date"])
     assert exc_info.value.code == 1
     captured = capsys.readouterr()
     assert "Invalid" in captured.err or "ISO 8601" in captured.err
 
 
-def test_cli_list_no_runs_found(service, attempt_service, capsys):
-    run_cli(service, attempt_service, ["list"])
+def test_cli_list_no_runs_found(service, attempt_service, statistics_service, capsys):
+    run_cli(service, attempt_service, statistics_service, ["list"])
     captured = capsys.readouterr()
     assert "No runs found" in captured.out

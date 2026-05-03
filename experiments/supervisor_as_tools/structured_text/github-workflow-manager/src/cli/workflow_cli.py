@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 from datetime import datetime, timezone
 
@@ -9,6 +10,7 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
+from ..services.statistics_service import StatisticsService
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -39,6 +41,24 @@ def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
         f"  created_at      : {attempt.created_at.isoformat()}\n"
         f"  duration_seconds: {attempt.duration_seconds}\n"
     )
+
+
+def _fmt_statistics(statistics) -> str:
+    """Format WorkflowStatistics for text output."""
+    lines = [
+        "Workflow Statistics:",
+        f"  total_runs                 : {statistics.total_runs}",
+        "  count_by_conclusion        :",
+    ]
+    for conclusion, count in sorted(statistics.count_by_conclusion.items()):
+        lines.append(f"    {conclusion}: {count}")
+    lines.extend([
+        f"  average_duration_seconds   : {statistics.average_duration_seconds:.2f}",
+        f"  min_duration_seconds       : {statistics.min_duration_seconds or '—'}",
+        f"  max_duration_seconds       : {statistics.max_duration_seconds or '—'}",
+        f"  average_attempts_per_run   : {statistics.average_attempts_per_run:.2f}",
+    ])
+    return "\n".join(lines)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -155,10 +175,24 @@ def build_parser() -> argparse.ArgumentParser:
     attempt_detail_p = sub.add_parser("attempt-detail", help="Show details for a single attempt")
     attempt_detail_p.add_argument("attempt_id", type=int, help="Attempt ID")
 
+    # stats
+    stats_p = sub.add_parser("stats", help="Display workflow statistics")
+    stats_p.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+
     return parser
 
 
-def run_cli(service: WorkflowRunService, attempt_service: AttemptService, args=None) -> None:
+def run_cli(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+    args=None,
+) -> None:
     parser = build_parser()
     ns = parser.parse_args(args)
     tracker = WorkflowRunTracker(service)
@@ -337,3 +371,10 @@ def run_cli(service: WorkflowRunService, attempt_service: AttemptService, args=N
             print(f"No attempt found with id {ns.attempt_id}.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_attempt(attempt))
+
+    elif ns.command == "stats":
+        statistics = statistics_service.compute_statistics()
+        if ns.format == "json":
+            print(json.dumps(statistics.to_dict(), indent=2))
+        else:
+            print(_fmt_statistics(statistics))
