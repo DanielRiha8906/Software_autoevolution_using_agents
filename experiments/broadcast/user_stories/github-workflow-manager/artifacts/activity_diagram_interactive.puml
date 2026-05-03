@@ -114,7 +114,32 @@ repeat
         :Print matching runs;
       endif
 
-    case (9 — Exit)
+    case (9 — View statistics)
+      :WorkflowStatisticsService.compute_statistics();
+      :Print statistics;
+
+    case (10 — Export workflow runs)
+      :Prompt output file path;
+      :WorkflowRunExportService.export_to_file();
+      if (success?) then (yes)
+        :Print "Exported <count> run(s) to <filepath>";
+      else (no)
+        :Print error message;
+      endif
+
+    case (11 — Import workflow runs)
+      :Prompt input file path;
+      :WorkflowRunExportService.import_from_file();
+      if (success?) then (yes)
+        :Print "Imported <count> run(s) from <filepath>";
+        if (skipped entries?) then (yes)
+          :Print <count> entries skipped with reasons;
+        endif
+      else (no)
+        :Print error message;
+      endif
+
+    case (12 — Exit)
       :Print "Goodbye.";
       stop
 

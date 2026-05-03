@@ -149,6 +149,12 @@ package "services" #DDFFD4 {
         +__init__(workflow_service: WorkflowRunService, attempt_service: AttemptService)
         +compute_statistics() : WorkflowRunStatistics
     }
+
+    class WorkflowRunExportService {
+        --
+        +{static} export_to_file(service: WorkflowRunService, filepath: str) : int
+        +{static} import_from_file(service: WorkflowRunService, filepath: str) : Tuple[int, List[str]]
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -157,6 +163,7 @@ package "cli" #FFE5E5 {
         +run_cli(workflow_service: WorkflowRunService, attempt_service: AttemptService, args) : None
         -_fmt_run(run: WorkflowRun) : str
         -_fmt_attempt(attempt: WorkflowRunAttempt) : str
+        -_fmt_statistics(stats) : str
     }
 
     class "interactive_menu" <<module>> {
@@ -168,6 +175,10 @@ package "cli" #FFE5E5 {
         -_filter_menu(service: WorkflowRunService) : None
         -_create_attempt(attempt_service: AttemptService) : None
         -_list_attempts(attempt_service: AttemptService) : None
+        -_query_runs(workflow_service, attempt_service) : None
+        -_view_statistics(workflow_service, attempt_service) : None
+        -_export_runs(workflow_service: WorkflowRunService) : None
+        -_import_runs(workflow_service: WorkflowRunService) : None
     }
 }
 
@@ -192,13 +203,17 @@ AttemptService            ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunTracker
 "workflow_cli"             ..>  WorkflowQuery
 "workflow_cli"             ..>  WorkflowStatisticsService
+"workflow_cli"             ..>  WorkflowRunExportService
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  AttemptService
 "interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowQuery
 "interactive_menu"         ..>  WorkflowStatisticsService
+"interactive_menu"         ..>  WorkflowRunExportService
 WorkflowStatisticsService  "1" --> "1" WorkflowRunService  : -_workflow_service
 WorkflowStatisticsService  "1" --> "1" AttemptService     : -_attempt_service
 WorkflowStatisticsService       ..>  WorkflowRunStatistics : returns
+WorkflowRunExportService        ..>  WorkflowRunService
+WorkflowRunExportService        ..>  WorkflowRun
 
 @enduml
