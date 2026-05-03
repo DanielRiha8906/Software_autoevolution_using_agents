@@ -20,6 +20,8 @@ repeat
       :Run update task flow;
     case (6 — Delete task)
       :Run delete task flow;
+    case (7 — Check status)
+      :Run check status flow;
     case (0/q — Quit)
       :Clear screen;
       stop
@@ -45,6 +47,33 @@ partition "Add/Update Task Flow" {
   endif
   :Create/update task with due_date;
   :Persist to storage;
+}
+
+partition "Change Status Flow" {
+  :Pick task from list;
+  :Select action (start / done / reopen);
+  if (Action == start?) then (yes)
+    :Call mark_in_progress();
+    :Transition PENDING → IN_PROGRESS;
+  else
+    if (Action == done?) then (yes)
+      :Call mark_done();
+      :Transition IN_PROGRESS → DONE;
+    else
+      :Call reopen();
+      :Transition DONE → PENDING;
+    endif
+  endif
+  :Update updated_at timestamp;
+  :Persist to storage;
+  :Display updated task;
+}
+
+partition "Check Status Flow" {
+  :Pick task from list;
+  :Call is_pending(), is_in_progress(), is_completed();
+  :Call is_overdue() if due_date exists;
+  :Display status results (true/false);
 }
 
 @enduml

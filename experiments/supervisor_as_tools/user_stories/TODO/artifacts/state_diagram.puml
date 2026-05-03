@@ -2,8 +2,30 @@
 
 [*] --> PENDING
 
-PENDING --> IN_PROGRESS : start
-IN_PROGRESS --> DONE : complete
-DONE --> IN_PROGRESS : reopen
+PENDING --> PENDING : mark_in_progress()\n[already pending]
+PENDING --> IN_PROGRESS : mark_in_progress()
+
+IN_PROGRESS --> IN_PROGRESS : mark_in_progress()\n[already in progress]
+IN_PROGRESS --> IN_PROGRESS : mark_done()\n[no-op]
+IN_PROGRESS --> DONE : mark_done()
+
+DONE --> DONE : mark_done()\n[already done]
+DONE --> DONE : reopen()\n[no-op]
+DONE --> PENDING : reopen()
+
+note right of PENDING
+  is_pending() = true
+  is_overdue() = depends on due_date
+end note
+
+note right of IN_PROGRESS
+  is_in_progress() = true
+  is_overdue() = depends on due_date
+end note
+
+note right of DONE
+  is_completed() = true
+  is_overdue() = false (always)
+end note
 
 @enduml

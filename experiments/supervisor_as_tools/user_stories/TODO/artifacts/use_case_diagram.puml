@@ -14,6 +14,7 @@ rectangle "TODO Manager" {
     usecase "Change task status" as I_STATUS
     usecase "Update task" as I_UPDATE
     usecase "Delete task" as I_DELETE
+    usecase "Check task status" as I_CHECK
     usecase "Set task due date" as I_DUEDATE
     usecase "View task due date" as I_VIEWDUE
     usecase "Quit application" as I_QUIT
@@ -29,6 +30,12 @@ rectangle "TODO Manager" {
     usecase "Reopen task" as C_REOPEN
     usecase "Update task" as C_UPDATE
     usecase "Delete task" as C_DELETE
+    usecase "Mark in-progress" as C_MARK_IN_PROG
+    usecase "Mark done" as C_MARK_DONE
+    usecase "Check if pending" as C_IS_PENDING
+    usecase "Check if in-progress" as C_IS_IN_PROG
+    usecase "Check if completed" as C_IS_COMPLETED
+    usecase "Check if overdue" as C_IS_OVERDUE
     usecase "Set task due date" as C_DUEDATE
   }
 }
@@ -42,6 +49,7 @@ UI ..> I_SHOW   : <<exclude>>
 UI ..> I_STATUS : <<exclude>>
 UI ..> I_UPDATE : <<exclude>>
 UI ..> I_DELETE : <<exclude>>
+UI ..> I_CHECK  : <<exclude>>
 UI ..> I_DUEDATE : <<exclude>>
 UI ..> I_VIEWDUE : <<exclude>>
 UI ..> I_QUIT   : <<exclude>>
@@ -58,6 +66,12 @@ CLI ..> C_DONE   : <<exclude>>
 CLI ..> C_REOPEN : <<exclude>>
 CLI ..> C_UPDATE : <<exclude>>
 CLI ..> C_DELETE : <<exclude>>
+CLI ..> C_MARK_IN_PROG : <<exclude>>
+CLI ..> C_MARK_DONE : <<exclude>>
+CLI ..> C_IS_PENDING : <<exclude>>
+CLI ..> C_IS_IN_PROG : <<exclude>>
+CLI ..> C_IS_COMPLETED : <<exclude>>
+CLI ..> C_IS_OVERDUE : <<exclude>>
 CLI ..> C_DUEDATE : <<exclude>>
 
 C_ADD ..> C_DUEDATE : <<include>>

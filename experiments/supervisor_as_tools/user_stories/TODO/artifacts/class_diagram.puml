@@ -21,6 +21,13 @@ package "models" #DDEEFF {
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
+        +is_pending() : Boolean
+        +is_in_progress() : Boolean
+        +is_completed() : Boolean
+        +is_overdue() : Boolean
+        +mark_in_progress() : Task
+        +mark_done() : Task
+        +reopen() : Task
     }
 }
 
@@ -73,6 +80,13 @@ package "services" #DDFFD4 {
         +reopenTask(taskId: String) : Task
         +updateTask(taskId: String, title: String [0..1], description: String [0..1], due_date: DateTime [0..1]) : Task
         +deleteTask(taskId: String) : void
+        +mark_in_progress(taskId: String) : Task
+        +mark_done(taskId: String) : Task
+        +reopen(taskId: String) : Task
+        +is_pending(taskId: String) : Boolean
+        +is_in_progress(taskId: String) : Boolean
+        +is_completed(taskId: String) : Boolean
+        +is_overdue(taskId: String) : Boolean
     }
 }
 

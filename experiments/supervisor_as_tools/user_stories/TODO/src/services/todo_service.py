@@ -40,3 +40,40 @@ class TodoService:
 
     def delete_task(self, task_id: str) -> None:
         self._manager.delete(task_id)
+
+    def mark_in_progress(self, task_id: str) -> Task:
+        """Mark task as in-progress and persist."""
+        task = self._manager.get(task_id)
+        task.mark_in_progress()
+        self._manager._persist()
+        return task
+
+    def mark_done(self, task_id: str) -> Task:
+        """Mark task as done and persist."""
+        task = self._manager.get(task_id)
+        task.mark_done()
+        self._manager._persist()
+        return task
+
+    def reopen(self, task_id: str) -> Task:
+        """Reopen task (transition to PENDING) and persist."""
+        task = self._manager.get(task_id)
+        task.reopen()
+        self._manager._persist()
+        return task
+
+    def is_pending(self, task_id: str) -> bool:
+        """Check if task is pending."""
+        return self._manager.get(task_id).is_pending()
+
+    def is_in_progress(self, task_id: str) -> bool:
+        """Check if task is in progress."""
+        return self._manager.get(task_id).is_in_progress()
+
+    def is_completed(self, task_id: str) -> bool:
+        """Check if task is completed."""
+        return self._manager.get(task_id).is_completed()
+
+    def is_overdue(self, task_id: str) -> bool:
+        """Check if task is overdue."""
+        return self._manager.get(task_id).is_overdue()
