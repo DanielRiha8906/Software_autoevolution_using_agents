@@ -226,3 +226,36 @@ class WorkflowRunService:
             skipped=skipped_count,
             errors=error_messages,
         )
+
+    def get_run_by_number(self, run_number: int) -> Optional[WorkflowRun]:
+        """Get a workflow run by its run_number.
+
+        Args:
+            run_number: The run number to search for
+
+        Returns:
+            WorkflowRun if found, None otherwise
+        """
+        return next((r for r in self._runs if r.run_number == run_number), None)
+
+    def update_workflow_run(self, run: WorkflowRun) -> WorkflowRun:
+        """Update an existing workflow run.
+
+        Args:
+            run: The updated WorkflowRun object
+
+        Returns:
+            The updated WorkflowRun
+
+        Raises:
+            ValueError: If run with given ID is not found
+        """
+        existing_index = next(
+            (i for i, r in enumerate(self._runs) if r.id == run.id), None
+        )
+        if existing_index is None:
+            raise ValueError(f"Run with id '{run.id}' not found.")
+
+        self._runs[existing_index] = run
+        self._persist()
+        return run

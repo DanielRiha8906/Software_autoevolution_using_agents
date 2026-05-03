@@ -14,6 +14,8 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
 from ..services.statistics_service import StatisticsService
+from ..services.github_import_service import GitHubImportService
+from ..github_api.exceptions import GitHubApiError, TokenResolutionError
 from .workflow_cli import _parse_iso8601
 
 
@@ -481,6 +483,58 @@ def _import_runs(service: WorkflowRunService) -> None:
         print(f"\nError: {e}")
 
 
+def _fetch_from_github(service: WorkflowRunService) -> None:
+    """Fetch workflow runs from GitHub with interactive prompts."""
+    print("\n--- Fetch from GitHub ---")
+
+    owner = _prompt("GitHub owner/org")
+    if not owner:
+        print("No owner provided, operation cancelled.")
+        return
+
+    repo = _prompt("Repository name")
+    if not repo:
+        print("No repo provided, operation cancelled.")
+        return
+
+    branch = _prompt("Branch (leave blank for all)", "")
+    branch = branch if branch else None
+
+    status = _prompt("Status filter (leave blank for all)", "")
+    status = status if status in ["queued", "in_progress", "completed"] else None
+
+    use_env_token = _choose("Use GITHUB_TOKEN from environment?", ["Yes", "No"])
+    github_token = None
+    if use_env_token == "No":
+        token_choice = _choose("Token source", ["Prompt now", "Use from env/secrets/.env"])
+        if token_choice == "Prompt now":
+            github_token = _prompt("GitHub Token")
+
+    force = _choose("Update existing runs?", ["No", "Yes"]) == "Yes"
+    incremental = _choose("Incremental (only new runs)?", ["No", "Yes"]) == "Yes"
+
+    try:
+        import_service = GitHubImportService(service)
+        result = import_service.import_from_github(
+            owner=owner,
+            repo=repo,
+            branch=branch,
+            status=status,
+            github_token=github_token,
+            force=force,
+            incremental=incremental,
+        )
+        print("\n" + result.summary())
+        if result.errors:
+            print("\nErrors:")
+            for error in result.errors:
+                print(f"  {error}")
+    except (GitHubApiError, TokenResolutionError) as e:
+        print(f"\nError: {e}")
+    except Exception as e:
+        print(f"\nError: {e}")
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
@@ -493,6 +547,7 @@ MENU = [
     ("View workflow statistics", _view_statistics),
     ("Export runs", _export_runs),
     ("Import runs", _import_runs),
+    ("Fetch from GitHub", _fetch_from_github),
     ("Exit", None),
 ]
 

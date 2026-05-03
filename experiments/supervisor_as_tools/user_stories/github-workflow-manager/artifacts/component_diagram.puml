@@ -20,6 +20,13 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunService" as SVC
     component "AttemptService" as ATTEMPT
     component "StatisticsService" as STATS
+    component "GitHubImportService" as IMPORT
+  }
+
+  package "GitHub API integration" #CCDDFF {
+    component "GitHubApiClient" as GITHUB_CLIENT
+    component "TokenResolver" as TOKEN_RESOLVER
+    component "GitHubRunMapper" as MAPPER
   }
 
   package "Persistence layer" {
@@ -33,6 +40,8 @@ package "GitHub Workflow Manager" {
     component "WorkflowConclusion" as CONCLUSION
   }
 }
+
+cloud "GitHub API" as GITHUB_API
 
 MAIN --> CLI
 MAIN --> IM
@@ -49,11 +58,22 @@ IM --> ATTEMPT
 CLI --> STATS
 IM --> STATS
 
+CLI --> IMPORT
+IM --> IMPORT
+
 TRACKER --> SVC
 ATTEMPT --> SVC
+IMPORT --> SVC
 STATS --> SVC
 SVC --> STOR
 STOR --> JSON_FILE
+
+IMPORT --> GITHUB_CLIENT
+IMPORT --> TOKEN_RESOLVER
+IMPORT --> MAPPER
+
+GITHUB_CLIENT --> GITHUB_API
+MAPPER --> RUN
 
 SVC ..> RUN
 RUN --> STATUS
