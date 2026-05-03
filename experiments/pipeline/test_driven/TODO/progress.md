@@ -159,3 +159,90 @@ All new tests pass successfully:
 - [x] progress.md updated with this summary
 
 Duration: 253.8s | Cost: $0.429106 USD | Turns: 17
+
+---
+
+## Task 03: Add TaskComment domain class
+
+**Architecture:** pipeline | **Strategy:** test_driven | **Project:** TODO
+
+**Objective:** Create a `TaskComment` domain class with `id`, `task_id`, `content`, and `created_at`, plus optional `author` and `updated_at`, with full serialisation support and content validation.
+
+### Summary
+
+Successfully implemented TaskComment domain class with full serialization support, timezone awareness, and comprehensive validation.
+
+### Files Changed
+
+1. **src/models/task_comment.py** (NEW)
+   - Created TaskComment dataclass with 6 attributes:
+     - `id`: auto-generated UUID string
+     - `task_id`: string reference to a Task
+     - `content`: required non-empty string with validation
+     - `created_at`: auto-set to current time in CEST timezone
+     - `author`: optional string field
+     - `updated_at`: optional datetime field in CEST timezone
+   - Implemented `__post_init__()` validation to reject empty content
+   - Implemented `to_dict()` for serialization with ISO 8601 datetimes
+   - Implemented `from_dict()` classmethod for deserialization
+
+2. **src/models/__init__.py**
+   - Added TaskComment import and export
+
+3. **artifacts/class_diagram.puml**
+   - Added TaskComment class definition with all attributes and methods
+   - Added relationship: `TaskComment --> Task : task_id`
+
+4. **tests/test_task_comment.py** (NEW)
+   - Created 12 comprehensive test cases
+
+### Test Results
+
+```
+73 tests passed
+- 61 existing tests (all pass)
+- 12 new tests for TaskComment functionality
+```
+
+All new tests pass successfully:
+- ✅ test_task_comment_can_be_created
+- ✅ test_task_comment_has_unique_uuid_id
+- ✅ test_task_comment_id_is_uuid_string
+- ✅ test_task_comment_has_created_at
+- ✅ test_task_comment_created_at_uses_cest
+- ✅ test_empty_content_raises
+- ✅ test_serializes_to_dict
+- ✅ test_created_at_serializes_as_string
+- ✅ test_round_trips_via_dict
+- ✅ test_optional_author
+- ✅ test_has_updated_at_attribute
+- ✅ test_updated_at_uses_cest_when_present
+
+### Implementation Details
+
+**Key features:**
+- UUID auto-generation: `field(default_factory=lambda: str(uuid.uuid4()))`
+- Created_at auto-set: `field(default_factory=lambda: datetime.now(CEST))`
+- CEST timezone constant: `timezone(timedelta(hours=2))`
+- Content validation: Empty strings rejected in `__post_init__()`
+- Serialization: created_at serialized as ISO 8601 string
+- Deserialization: `datetime.fromisoformat()` restores timezone from ISO string
+- Optional fields: author and updated_at with None defaults
+- Conditional serialization: updated_at only included in dict if not None
+
+**Timezone handling:**
+- All datetime fields (created_at, updated_at) use CEST timezone
+- ISO 8601 serialization preserves timezone information
+- Round-trip serialization maintains exact datetime values
+
+### Definition of Done ✓
+
+- [x] All 12 provided test cases pass
+- [x] All 61 existing tests still pass (73 total)
+- [x] Code compiles without syntax/import errors
+- [x] TaskComment fully serializable and deserializable
+- [x] CEST timezone properly handled in all datetime fields
+- [x] UML diagrams updated with TaskComment class
+- [x] progress.md updated with this summary
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
