@@ -191,3 +191,119 @@ Duration: 411.6s | Cost: $0.728537 USD | Turns: 19
 - No breaking changes to existing code paths (CalculationResult unchanged)
 
 Duration: 370.2s | Cost: $0.609688 USD | Turns: 16
+
+## Task 04
+
+**Description:** Add MemoryService for managing MemoryEntry
+
+**Status:** ✅ Complete
+
+### Files Changed
+
+1. `src/services/memory_service.py` (new file)
+   - Created MemoryService class with dependency injection of MemoryJsonStorage
+   - Implemented store(entry: MemoryEntry) → validates MemoryEntry type, delegates to storage
+   - Implemented retrieve_all() → returns list[MemoryEntry], gracefully handles empty/missing storage
+
+2. `src/storage/memory_json_storage.py` (new file)
+   - Created MemoryJsonStorage class for JSON file persistence of MemoryEntry objects
+   - Implemented save(entry) → appends entry to JSON file via _write_raw()
+   - Implemented load_all() → deserializes JSON records via _read_raw() and MemoryEntry.from_dict()
+   - Implemented _read_raw() → handles missing files, malformed JSON, returns [] gracefully
+   - Implemented _write_raw() → auto-creates parent directories, writes formatted JSON with indent=2
+   - Storage file: artifacts/memory_entries.json
+
+3. `src/services/__init__.py`
+   - Added MemoryService export to services package public API
+
+4. `src/storage/__init__.py`
+   - Added MemoryJsonStorage export to storage package public API
+
+5. `src/__main__.py`
+   - Added _build_memory_service() function to instantiate MemoryService with MemoryJsonStorage
+   - Added --memory CLI flag to argument parser for one-shot mode
+   - Modified main() to instantiate MemoryService and pass to CalculatorCLI
+   - Integrated memory display logic for --memory flag execution
+
+6. `src/cli/calculator_cli.py`
+   - Extended constructor to accept optional memory_service parameter
+   - Added show_memory() public method for one-shot --memory CLI flag display
+   - Added _show_memory() private method for interactive menu option 10
+   - Updated _print_menu() to display "View memory" as option 10
+   - Updated run_interactive() to route option 10 to _show_memory()
+   - Displays entries using MemoryEntry.__str__() formatting
+
+7. `tests/test_memory_service.py` (new file)
+   - 35 comprehensive tests covering MemoryService and MemoryJsonStorage
+   - 2 initialization tests
+   - 9 store() tests (single, multiple, operations, success/failure, execution_time)
+   - 5 retrieve_all() tests (empty, single, multiple, round-trip)
+   - 5 round-trip persistence tests (single, multiple, failed entries, cross-instance)
+   - 4 error handling tests (missing file, corrupted JSON, recovery)
+   - 7 MemoryJsonStorage direct tests (file creation, save/load, backward compatibility)
+   - 3 integration tests
+
+8. `tests/test_cli.py`
+   - Updated 12 existing tests to use menu option "11" (Exit) instead of "10"
+   - Tests: test_exit_choice, test_add_operation, test_invalid_choice_retries, test_invalid_number_retries, test_history_empty, test_history_shows_entries, test_square_menu_option, test_sqrt_menu_option, test_power_menu_option, test_modulo_menu_option, test_sqrt_negative_error_in_interactive, test_modulo_by_zero_error_in_interactive
+
+9. `artifacts/class_diagram.puml`
+   - Added MemoryService class with store() and retrieve_all() methods
+   - Added MemoryJsonStorage class with save(), load_all(), _read_raw(), _write_raw() methods
+   - Added relationships: CalculatorCLI → MemoryService, MemoryService → MemoryJsonStorage, MemoryJsonStorage ↔ MemoryEntry
+   - Updated CalculatorCLI to include memory_service field and new methods
+
+10. `artifacts/component_diagram.puml`
+    - Added Memory Service component to service layer
+    - Added Memory JSON Storage component to storage layer
+    - Added initialization and usage relationships from Main and CLI to MemoryService
+    - Added dependency from MemoryService to MemoryJsonStorage
+    - Added artifacts/memory_entries.json database with read/write relationships
+
+11. `artifacts/sequence_diagram_memory.puml` (new file)
+    - Created new sequence diagram showing store() flow: User → CLI → MemoryService → MemoryJsonStorage → JSON file
+    - Showing retrieve_all() flow: User → CLI → MemoryService → MemoryJsonStorage → JSON file
+    - Documents internal _read_raw, to_dict, _write_raw steps
+
+### Test Results
+
+- Total tests: 214 (35 new MemoryService tests + 24 CLI tests)
+- Passed: 214
+- Failed: 0
+- Status: ✅ All tests pass (including all 179 existing tests from previous tasks)
+
+### Requirements Met
+
+**Must:**
+- ✅ Implemented MemoryService to manage MemoryEntry objects
+- ✅ Provided basic operations: store(entry) and retrieve_all()
+- ✅ Ensured integration with calculation flow (accessible via CLI)
+- ✅ All new functionality accessible via `python -m src` (interactive menu option 10 + --memory CLI flag)
+
+**Should:**
+- ✅ Service responsibilities limited to MemoryEntry lifecycle management
+- ✅ Storage implementation (file I/O, serialization) kept separate in MemoryJsonStorage
+
+**Could:**
+- ⏭ Filtering/querying capabilities (not implemented - scheduled for later task)
+
+**Won't:**
+- ✅ Persistence details not placed inside service class
+
+### Key Implementation Details
+
+1. **Separation of Concerns:** MemoryService delegates all file I/O to MemoryJsonStorage; service only validates types and orchestrates operations
+2. **Graceful Degradation:** Missing or corrupted storage files return empty list [] rather than raising exceptions
+3. **Type Safety:** Full type hints throughout; store() validates MemoryEntry type and raises TypeError on invalid input
+4. **Serialization:** Uses MemoryEntry.to_dict/from_dict methods; leverages existing backward compatibility
+5. **CLI Integration:** Both interactive menu (option 10: "View memory") and one-shot flag (--memory)
+6. **Persistent Storage:** artifacts/memory_entries.json auto-created with formatted JSON (indent=2)
+
+### CLI Accessibility
+
+The memory service is now fully accessible via:
+1. **Interactive mode:** `python -m src` → option 10 displays all memory entries
+2. **One-shot CLI:** `python -m src --memory` displays all entries and exits
+3. **Help:** `python -m src --help` documents the --memory flag
+
+Duration: 656.7s | Cost: $1.174119 USD | Turns: 16
