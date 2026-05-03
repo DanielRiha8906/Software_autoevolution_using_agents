@@ -15,9 +15,15 @@ if (CLI operation provided?) then (yes)
 
     if (Calculation successful?) then (yes)
       :Save result to history;
+      if (Memory service available?) then (yes)
+        :Record success to memory;
+      endif
       :Show result;
       stop
     else (no)
+      if (Memory service available?) then (yes)
+        :Record failure to memory;
+      endif
       :Show calculation error;
       stop
     endif
@@ -51,13 +57,26 @@ else (no)
 
           if (Calculation successful?) then (yes)
             :Save result to history;
+            if (Memory service available?) then (yes)
+              :Record success to memory;
+            endif
             :Show result;
           else (no)
+            if (Memory service available?) then (yes)
+              :Record failure to memory;
+            endif
             :Show calculation error;
           endif
 
         else (no)
           :Show input error;
+        endif
+
+      case (Memory)
+        if (Memory service available?) then (yes)
+          :Show memory operations (list/summary/clear);
+        else (no)
+          :Show memory unavailable message;
         endif
 
       case (Invalid choice)

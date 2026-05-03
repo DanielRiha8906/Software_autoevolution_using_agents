@@ -1,4 +1,4 @@
-@startuml
+@startuml state_diagram_interactive
 
 skinparam defaultFontSize 13
 skinparam stateFontStyle bold
@@ -9,6 +9,8 @@ top to bottom direction
 
 Menu --> FirstOperand : operation selected
 Menu --> Feedback : history selected
+Menu --> MemoryView : memory selected [optional]
+Menu --> MemorySummary : summary selected [optional]
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
@@ -21,5 +23,8 @@ SecondOperand --> Feedback : invalid number
 Calculating --> Feedback : success / show result
 Calculating --> Feedback : error / show error
 Feedback --> Menu
+
+MemoryView --> Menu : done viewing
+MemorySummary --> Menu : done viewing
 
 @enduml

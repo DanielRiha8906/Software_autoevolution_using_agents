@@ -130,3 +130,83 @@ Successfully introduced MemoryEntry, a new domain class that represents both suc
 - No changes to services or storage layer in this task (foundation for future integration)
 
 Duration: 162.5s | Cost: $0.324856 USD | Turns: 26
+
+---
+
+## Task 04: Add MemoryService for managing MemoryEntry
+
+**Status**: Completed
+
+### Summary
+Successfully implemented MemoryService to manage MemoryEntry objects. The service provides comprehensive lifecycle management for memory entries (store, retrieve, filter, clear) and integrates seamlessly with the existing CalculatorService to capture both successful and failed operations. All functionality is exposed via CLI in both interactive and one-shot modes.
+
+### Files Changed
+- `src/storage/memory_json_storage.py` — New file; storage layer for MemoryEntry objects with save/load/clear operations, graceful error handling, and auto-directory creation
+- `src/services/memory_service.py` — New file; service layer with methods for storing, retrieving (by ID, all, by operation, successes/failures), clearing, and counting entries
+- `src/services/__init__.py` — Added MemoryService export
+- `src/storage/__init__.py` — Added MemoryJsonStorage export
+- `src/services/calculator_service.py` — Added optional memory_service parameter; records both successful and failed operations to memory while maintaining exception propagation
+- `src/cli/calculator_cli.py` — Added optional memory_service parameter; extended interactive menu with memory options (dynamically shown only when memory_service is available); added methods for displaying memory list, detail, failures, summary, and clearing entries
+- `src/__main__.py` — Build MemoryService and MemoryJsonStorage instances; added --memory flag with choices (list, detail, failures, summary, clear); wired memory commands to CLI methods; updated help documentation
+- `artifacts/class_diagram.puml` — Added MemoryService and MemoryJsonStorage classes with full method signatures; updated dependencies showing optional memory_service relationship
+- `artifacts/component_diagram.puml` — Added Memory Service and Memory Storage components; updated integration points showing optional dependencies
+- `artifacts/activity_diagram.puml` — Added memory recording steps in operation flows
+- `artifacts/state_diagram_interactive.puml` — Added MemoryView and MemorySummary states with transitions
+- `artifacts/use_case_diagram.puml` — Added four new memory-related use cases
+
+### Test Results
+- Total tests: 80
+- Passed: 80
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Implementation Details
+
+**MemoryService Methods:**
+- `store(entry: MemoryEntry) → str` — Persist entry, return ID
+- `retrieve_by_id(entry_id: str) → MemoryEntry | None` — Fetch by ID
+- `retrieve_all() → list[MemoryEntry]` — All entries
+- `retrieve_by_operation(operation: str) → list[MemoryEntry]` — Filter by operation
+- `retrieve_successes() → list[MemoryEntry]` — Only successful operations
+- `retrieve_failures() → list[MemoryEntry]` — Only failed operations
+- `clear() → int` — Delete all entries, return count
+- `count() → int` — Total entry count
+- `count_by_status() → dict[str, int]` — Count by success/failure
+- `count_by_operation() → dict[str, int]` — Count per operation type
+
+**MemoryJsonStorage:**
+- Mirrors JsonStorage pattern for CalculationResult but handles MemoryEntry
+- Stores to `artifacts/memory.json` (separate from `artifacts/calculations.json`)
+- Graceful handling of missing/corrupt files (returns empty list)
+- Auto-creates parent directories on save
+
+**CalculatorService Integration:**
+- Optional parameter: `memory_service: MemoryService | None = None`
+- On successful operation: creates MemoryEntry with success=True, result=...
+- On exception: creates MemoryEntry with success=False, error_message=..., then re-raises
+- Both success and failure states are recorded to memory
+- Exceptions are still propagated to the caller (not swallowed)
+
+**CLI Integration:**
+- One-shot mode commands:
+  - `python -m src --memory list` — Display all entries
+  - `python -m src --memory detail <id>` — Show one entry
+  - `python -m src --memory failures` — Show failed operations
+  - `python -m src --memory summary` — Display statistics
+  - `python -m src --memory clear` — Delete all entries with confirmation
+- Interactive mode: Memory options appear in menu only when memory_service is available (preserves backward compatibility with existing tests)
+- Dynamic menu construction: when memory_service is None, menu stays compact; when provided, memory options expand the menu
+
+**Design Patterns:**
+- Dependency injection: MemoryService receives MemoryJsonStorage in constructor
+- Optional integration: CalculatorService and CalculatorCLI accept memory_service as optional parameter
+- Single responsibility: MemoryService handles lifecycle only; persistence is separate
+- Storage agnostic: MemoryJsonStorage can be swapped for other implementations
+
+**Backward Compatibility:**
+- All 80 existing tests pass without modification
+- Memory service is optional; code works without it
+- Interactive menu structure is dynamic: same menu numbering as before when memory_service is None
+- CalculationResult and JsonStorage remain unchanged
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

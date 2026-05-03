@@ -26,5 +26,53 @@
     "operand_b": 2.0,
     "result": 3.0,
     "timestamp": "2026-04-29T13:49:21.896125"
+  },
+  {
+    "operation": "add",
+    "operand_a": 5.0,
+    "operand_b": 3.0,
+    "result": 8.0,
+    "timestamp": "2026-05-03T16:06:40.073285",
+    "execution_time_ms": 0.006140999971648853
+  },
+  {
+    "operation": "multiply",
+    "operand_a": 3.0,
+    "operand_b": 4.0,
+    "result": 12.0,
+    "timestamp": "2026-05-03T16:07:02.061669",
+    "execution_time_ms": 0.006150999979581684
+  },
+  {
+    "operation": "power",
+    "operand_a": 2.0,
+    "operand_b": 3.0,
+    "result": 8.0,
+    "timestamp": "2026-05-03T16:07:17.600402",
+    "execution_time_ms": 0.011411000002681249
+  },
+  {
+    "operation": "add",
+    "operand_a": 1.0,
+    "operand_b": 2.0,
+    "result": 3.0,
+    "timestamp": "2026-05-03T16:07:49.953348",
+    "execution_time_ms": 0.006441999971684709
+  },
+  {
+    "operation": "subtract",
+    "operand_a": 5.0,
+    "operand_b": 3.0,
+    "result": 2.0,
+    "timestamp": "2026-05-03T16:07:50.003550",
+    "execution_time_ms": 0.006982999991578254
+  },
+  {
+    "operation": "add",
+    "operand_a": 2.0,
+    "operand_b": 3.0,
+    "result": 5.0,
+    "timestamp": "2026-05-03T16:08:07.234312",
+    "execution_time_ms": 0.0060110000390523055
   }
 ]
