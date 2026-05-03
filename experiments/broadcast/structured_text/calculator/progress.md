@@ -299,4 +299,4 @@ All 81 tests pass, including:
   - Dependency injection wiring in __main__.py
   - Both models implement serialization protocol (to_dict/from_dict)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 561.6s | Cost: $1.018192 USD | Turns: 29
