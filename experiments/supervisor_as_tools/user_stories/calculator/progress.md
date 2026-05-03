@@ -260,4 +260,4 @@ Duration: 352.5s | Cost: $0.708198 USD | Turns: 26
 - All statistics derived from MemoryEntry fields only (operation_name, success, execution_time_ms)
 - No breaking changes to existing APIs; MemoryEntry and MemoryService unchanged
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 510.3s | Cost: $1.080297 USD | Turns: 19
