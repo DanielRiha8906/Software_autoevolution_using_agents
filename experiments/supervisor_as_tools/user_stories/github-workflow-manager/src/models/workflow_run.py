@@ -5,6 +5,7 @@ from typing import Optional
 from .workflow_status import WorkflowStatus
 from .workflow_conclusion import WorkflowConclusion
 from .workflow_run_attempt import WorkflowRunAttempt
+from .validation_error import ValidationError
 
 
 @dataclass
@@ -39,6 +40,87 @@ class WorkflowRun:
             "duration_seconds": self.duration_seconds,
             "attempts": [attempt.to_dict() for attempt in self.attempts],
         }
+
+    @classmethod
+    def validate_dict(cls, data: dict) -> None:
+        """Validate a dictionary for WorkflowRun creation.
+
+        Args:
+            data: Dictionary to validate
+
+        Raises:
+            ValidationError: If any validation fails
+        """
+        errors = []
+
+        # Check required fields
+        required_fields = ["id", "workflow_name", "branch", "status", "created_at"]
+        for field in required_fields:
+            if field not in data:
+                errors.append(f"Missing required field: {field}")
+
+        if errors:
+            raise ValidationError(errors)
+
+        # Validate status enum
+        try:
+            WorkflowStatus(data["status"])
+        except ValueError:
+            errors.append(f"Invalid status: {data['status']}")
+
+        # Validate conclusion enum if present
+        if data.get("conclusion") is not None:
+            try:
+                WorkflowConclusion(data["conclusion"])
+            except ValueError:
+                errors.append(f"Invalid conclusion: {data['conclusion']}")
+
+        # Validate datetime fields
+        try:
+            datetime.fromisoformat(data["created_at"])
+        except (ValueError, TypeError):
+            errors.append(f"created_at must be valid ISO 8601, got {data['created_at']}")
+
+        if data.get("updated_at") is not None:
+            try:
+                datetime.fromisoformat(data["updated_at"])
+            except (ValueError, TypeError):
+                errors.append(f"updated_at must be valid ISO 8601, got {data['updated_at']}")
+
+        # Validate duration_seconds is non-negative
+        if "duration_seconds" in data:
+            try:
+                duration = float(data["duration_seconds"])
+                if duration < 0:
+                    errors.append(f"duration_seconds cannot be negative, got {duration}")
+            except (TypeError, ValueError):
+                errors.append(f"duration_seconds must be a number, got {type(data['duration_seconds']).__name__}")
+
+        # Validate run_number is int if present
+        if data.get("run_number") is not None:
+            if not isinstance(data["run_number"], int):
+                errors.append(f"run_number must be int, got {type(data['run_number']).__name__}")
+
+        # Validate commit_sha is string if present
+        if data.get("commit_sha") is not None:
+            if not isinstance(data["commit_sha"], str):
+                errors.append(f"commit_sha must be string, got {type(data['commit_sha']).__name__}")
+
+        # Validate attempts array items
+        if "attempts" in data:
+            attempts_data = data.get("attempts", [])
+            if not isinstance(attempts_data, list):
+                errors.append(f"attempts must be array, got {type(attempts_data).__name__}")
+            else:
+                for idx, attempt_data in enumerate(attempts_data):
+                    try:
+                        WorkflowRunAttempt.validate_dict(attempt_data)
+                    except ValidationError as e:
+                        for msg in e.messages:
+                            errors.append(f"attempts[{idx}]: {msg}")
+
+        if errors:
+            raise ValidationError(errors)
 
     @classmethod
     def from_dict(cls, data: dict) -> "WorkflowRun":

@@ -89,7 +89,44 @@ repeat
         :Print all attempts;
       endif
 
-    case (8 — Exit)
+    case (8 — Export runs)
+      :Prompt output file path;
+      :Choose apply filters? (No / Yes);
+      if (filters?) then (yes)
+        :Choose filter type\n(branch / status / conclusion);
+        if (branch?) then (yes)
+          :Prompt branch name;
+        elseif (status?) then (yes)
+          :Choose status from list;
+        else (conclusion)
+          :Choose conclusion from list;
+        endif
+      endif
+      :WorkflowRunService.export_runs();
+      if (error?) then (yes)
+        :Print error message;
+      else (no)
+        :Print "Exported <count> runs to <path>";
+      endif
+
+    case (9 — Import runs)
+      :Prompt input file path;
+      :Choose dry-run? (No / Yes);
+      :Choose duplicate handling? (Skip / Replace);
+      :WorkflowRunService.import_runs();
+      if (error?) then (yes)
+        :Print error message;
+      else (no)
+        :Print import summary;
+        if (validation errors?) then (yes)
+          :Print validation errors;
+        endif
+      endif
+      if (dry-run?) then (yes)
+        :Print "(Dry-run mode: no changes made)";
+      endif
+
+    case (10 — Exit)
       :Print "Goodbye.";
       stop
 

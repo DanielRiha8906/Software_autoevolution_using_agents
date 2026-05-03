@@ -8,6 +8,8 @@ from ..models.workflow_attempt_status import WorkflowAttemptStatus
 from ..models.workflow_attempt_conclusion import WorkflowAttemptConclusion
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_run_attempt import WorkflowRunAttempt
+from ..models.import_result import ImportResult
+from ..models.validation_error import ValidationError
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
@@ -412,6 +414,73 @@ def _view_statistics(service: WorkflowRunService) -> None:
     print(formatted_report)
 
 
+def _export_runs(service: WorkflowRunService) -> None:
+    """Export runs to a file with optional filtering."""
+    print("\n--- Export Workflow Runs ---")
+    output_path = _prompt("Output file path")
+
+    if not output_path:
+        print("No path provided, operation cancelled.")
+        return
+
+    filter_kwargs = {}
+    apply_filters = _choose("Apply filters?", ["No", "Yes"])
+    if apply_filters == "Yes":
+        filter_type = _choose("Filter by", ["branch", "status", "conclusion"])
+
+        if filter_type == "branch":
+            branch = _prompt("Branch name")
+            if branch:
+                filter_kwargs["branch"] = branch
+
+        elif filter_type == "status":
+            status_val = _choose("Status", [s.value for s in WorkflowStatus])
+            filter_kwargs["status"] = WorkflowStatus(status_val)
+
+        elif filter_type == "conclusion":
+            conclusion_val = _choose("Conclusion", [c.value for c in WorkflowConclusion])
+            filter_kwargs["conclusion"] = WorkflowConclusion(conclusion_val)
+
+    try:
+        service.export_runs(output_path, **filter_kwargs)
+        filtered_runs = service.filter_runs(**filter_kwargs)
+        print(f"\nExported {len(filtered_runs)} runs to {output_path}")
+    except IOError as e:
+        print(f"\nError: {e}")
+
+
+def _import_runs(service: WorkflowRunService) -> None:
+    """Import runs from a file with duplicate handling."""
+    print("\n--- Import Workflow Runs ---")
+    input_path = _prompt("Input file path")
+
+    if not input_path:
+        print("No path provided, operation cancelled.")
+        return
+
+    dry_run_choice = _choose("Dry-run?", ["No", "Yes"])
+    dry_run = dry_run_choice == "Yes"
+
+    dup_handling = _choose("Duplicate handling?", ["Skip", "Replace"])
+    skip_duplicates = dup_handling == "Skip"
+
+    try:
+        result = service.import_runs(input_path, dry_run=dry_run, skip_duplicates=skip_duplicates)
+        print("\n" + result.summary())
+        if result.errors:
+            print("\nValidation errors:")
+            for error in result.errors:
+                print(f"  {error}")
+        if dry_run:
+            print("\n(Dry-run mode: no changes made)")
+    except FileNotFoundError as e:
+        print(f"\nError: {e}")
+    except ValidationError as e:
+        print(f"\nError: Validation failed: {e}")
+    except Exception as e:
+        print(f"\nError: {e}")
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
@@ -422,6 +491,8 @@ MENU = [
     ("Add attempt", _add_attempt),
     ("List attempts", _list_attempts),
     ("View workflow statistics", _view_statistics),
+    ("Export runs", _export_runs),
+    ("Import runs", _import_runs),
     ("Exit", None),
 ]
 

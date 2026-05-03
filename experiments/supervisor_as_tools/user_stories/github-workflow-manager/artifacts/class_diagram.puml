@@ -59,6 +59,7 @@ package "models" #DDEEFF {
         --
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRun
+        +{static} validate_dict(data: dict) : None
         +is_terminal() : bool
         +is_running() : bool
         +is_successful() : bool
@@ -77,6 +78,28 @@ package "models" #DDEEFF {
         --
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRunAttempt
+        +{static} validate_dict(data: dict) : None
+    }
+
+    class ValidationError <<Exception>> {
+        -_messages : list[str]
+        --
+        +__init__(messages: Union[str, list[str]])
+        +message : str {property}
+        +messages : list[str] {property}
+        +__str__() : str
+    }
+
+    class ImportResult <<dataclass>> {
+        +total     : int
+        +imported  : int
+        +skipped   : int
+        +errors    : list
+        --
+        +error_count : int {property}
+        +skipped_count : int {property}
+        +is_success() : bool
+        +summary() : str
     }
 }
 
@@ -87,6 +110,8 @@ package "storage" #FFF3CC {
         +__init__(filepath: str)
         +save(runs: List[WorkflowRun]) : None
         +load() : List[WorkflowRun]
+        +export_to_file(runs: List[WorkflowRun], output_path: str) : None
+        +import_from_file(input_path: str) : List[WorkflowRun]
     }
 }
 
@@ -114,6 +139,8 @@ package "services" #DDFFD4 {
         +filter_runs(branch: Optional[str] = None,\n  status: Optional[WorkflowStatus] = None,\n  conclusion: Optional[WorkflowConclusion] = None,\n  duration_min: Optional[float] = None,\n  duration_max: Optional[float] = None,\n  created_after: Optional[datetime] = None,\n  created_before: Optional[datetime] = None,\n  updated_after: Optional[datetime] = None,\n  updated_before: Optional[datetime] = None,\n  has_attempts: Optional[bool] = None) : List[WorkflowRun]
         +add_workflow_run_attempt(run_id: int, attempt: WorkflowRunAttempt) : WorkflowRunAttempt
         +validate_attempt_uniqueness(attempts: list) : None
+        +export_runs(output_path: str, branch: Optional[str] = None,\n  status: Optional[WorkflowStatus] = None,\n  conclusion: Optional[WorkflowConclusion] = None) : None
+        +import_runs(input_path: str, dry_run: bool = False,\n  skip_duplicates: bool = True) : ImportResult
         -_persist() : None
     }
 
@@ -158,19 +185,26 @@ package "cli" #FFE5E5 {
         -_add_attempt(service: WorkflowRunService) : None
         -_list_attempts(service: WorkflowRunService) : None
         -_view_statistics(service: WorkflowRunService) : None
+        -_export_runs(service: WorkflowRunService) : None
+        -_import_runs(service: WorkflowRunService) : None
     }
 }
 
 WorkflowRun                ..>  WorkflowStatus           : status
 WorkflowRun                ..>  WorkflowConclusion       : conclusion
 WorkflowRun            "1" --> "*" WorkflowRunAttempt    : +attempts
+WorkflowRun                ..>  ValidationError          : raises
 WorkflowRunAttempt         ..>  WorkflowAttemptStatus    : status
 WorkflowRunAttempt         ..>  WorkflowAttemptConclusion : conclusion
+WorkflowRunAttempt         ..>  ValidationError          : raises
+WorkflowJsonStorage        ..>  WorkflowRun
+WorkflowJsonStorage        ..>  ValidationError          : raises
 WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunService         ..>  WorkflowRunAttempt
+WorkflowRunService         ..>  ImportResult
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 AttemptService       "1" --> "1" WorkflowRunService  : -_run_service
@@ -183,9 +217,13 @@ StatisticsReport           ..>  WorkflowStatus
 "workflow_cli"             ..>  WorkflowRunTracker
 "workflow_cli"             ..>  AttemptService
 "workflow_cli"             ..>  StatisticsService
+"workflow_cli"             ..>  ImportResult
+"workflow_cli"             ..>  ValidationError
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  AttemptService
 "interactive_menu"         ..>  StatisticsService
+"interactive_menu"         ..>  ImportResult
+"interactive_menu"         ..>  ValidationError
 
 @enduml

@@ -5,6 +5,7 @@ from ..models.workflow_run import WorkflowRun
 from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
+from ..models.import_result import ImportResult
 from ..storage.workflow_json_storage import WorkflowJsonStorage
 
 
@@ -145,3 +146,83 @@ class WorkflowRunService:
         run.attempts.append(attempt)
         self._persist()
         return attempt
+
+    def export_runs(
+        self,
+        output_path: str,
+        branch: Optional[str] = None,
+        status: Optional[WorkflowStatus] = None,
+        conclusion: Optional[WorkflowConclusion] = None,
+    ) -> None:
+        """Export workflow runs to a file with optional filtering.
+
+        Args:
+            output_path: Path where the JSON file will be written
+            branch: Optional branch filter
+            status: Optional status filter
+            conclusion: Optional conclusion filter
+
+        Raises:
+            IOError: If the file cannot be written
+        """
+        filtered = self.filter_runs(branch=branch, status=status, conclusion=conclusion)
+        self._storage.export_to_file(filtered, output_path)
+
+    def import_runs(
+        self,
+        input_path: str,
+        dry_run: bool = False,
+        skip_duplicates: bool = True,
+    ) -> ImportResult:
+        """Import workflow runs from a file.
+
+        Args:
+            input_path: Path to the JSON file to import
+            dry_run: If True, validate but don't persist changes
+            skip_duplicates: If True, skip runs with duplicate IDs; if False, replace them
+
+        Returns:
+            ImportResult with import statistics
+
+        Raises:
+            FileNotFoundError: If the input file does not exist
+            json.JSONDecodeError: If the JSON is malformed
+            ValidationError: If validation fails
+        """
+        imported_runs = self._storage.import_from_file(input_path)
+
+        total = len(imported_runs)
+        imported_count = 0
+        skipped_count = 0
+        error_messages = []
+
+        for run in imported_runs:
+            try:
+                # Check if run already exists
+                existing = self.get_run_detail(run.id)
+                if existing is not None:
+                    if skip_duplicates:
+                        skipped_count += 1
+                        continue
+                    else:
+                        # Remove old, add new (force mode)
+                        self._runs = [r for r in self._runs if r.id != run.id]
+                        self._runs.append(run)
+                        imported_count += 1
+                else:
+                    # No duplicate, add new
+                    self._runs.append(run)
+                    imported_count += 1
+            except Exception as e:
+                error_messages.append(f"Run {run.id}: {str(e)}")
+
+        # Persist only if not dry_run
+        if not dry_run:
+            self._persist()
+
+        return ImportResult(
+            total=total,
+            imported=imported_count,
+            skipped=skipped_count,
+            errors=error_messages,
+        )
