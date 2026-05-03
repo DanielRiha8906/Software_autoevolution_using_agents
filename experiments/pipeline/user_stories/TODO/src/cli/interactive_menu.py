@@ -85,6 +85,8 @@ class InteractiveMenu:
                 self._do_delete(tasks)
             elif choice == "8":
                 self._do_manage_comments(tasks)
+            elif choice == "9":
+                self._do_report()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -113,6 +115,7 @@ class InteractiveMenu:
         print("  6. Set due date")
         print("  7. Delete task")
         print("  8. Manage comments")
+        print("  9. View summary report")
         print("  0. Quit")
         print()
 
@@ -599,4 +602,25 @@ class InteractiveMenu:
             print(f"\n  Updated comment")
         except ValueError as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_report(self) -> None:
+        _clear()
+        report = self._service.generate_report()
+        print("  Task Summary Report\n")
+        print(f"  Total tasks:       {report.total_count}")
+        print(f"    Pending:        {report.pending_count}")
+        print(f"    In progress:    {report.in_progress_count}")
+        print(f"    Done:           {report.done_count}")
+        print()
+        print(f"  With due date:     {report.due_date_set_count}")
+        print(f"  Overdue:           {report.overdue_count}")
+        print()
+        completion_pct = report.completion_rate * 100
+        print(f"  Completion rate:   {completion_pct:.1f}%")
+        if report.avg_days_to_completion is not None:
+            print(f"  Avg days to completion: {report.avg_days_to_completion:.1f}")
+        else:
+            print("  Avg days to completion: N/A")
+        print()
         input("  Press Enter to continue...")

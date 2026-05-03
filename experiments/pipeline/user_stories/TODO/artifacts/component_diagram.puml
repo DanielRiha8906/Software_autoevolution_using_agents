@@ -19,11 +19,13 @@ package "TODO Application" {
         component "Task Manager" as MGR
         component "Comment Management\n(add, view, edit, delete)" as CMT
         component "Date Filtering\n(week, month, year, range)" as DateFilter
+        component "Report Generation\n(summary statistics)" as Report
     }
 
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus)" as Model
         component "Task Comment Model\n(TaskComment)" as CommentModel
+        component "Summary Report Model\n(TaskSummaryReport)" as ReportModel
     }
 
     package "Persistence Layer" {
@@ -42,11 +44,14 @@ CLI --> SVC
 SVC --> MGR
 SVC --> CMT
 SVC --> DateFilter
+SVC --> Report
 DateFilter --> MGR
+Report --> MGR
 MGR --> Storage
 MGR ..> Model
 MGR ..> CommentModel
 CMT ..> CommentModel
+Report ..> ReportModel
 Storage ..> Model
 Storage ..> CommentModel
 

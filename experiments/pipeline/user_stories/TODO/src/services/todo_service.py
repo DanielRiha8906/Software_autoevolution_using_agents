@@ -4,6 +4,7 @@ from typing import Optional
 from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..models.task_comment import TaskComment
+from ..models.task_summary_report import TaskSummaryReport
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
 
@@ -196,3 +197,39 @@ class TodoService:
         if not content or not content.strip():
             raise ValueError("Comment content cannot be empty")
         return self._manager.edit_comment(task_id, comment_id, content.strip())
+
+    def generate_report(self) -> TaskSummaryReport:
+        """Generate a summary report of task statistics.
+
+        Returns:
+            TaskSummaryReport: Summary statistics including total count, status breakdown,
+                             completion rate, and average days to completion for done tasks.
+        """
+        tasks = self.list_tasks()
+        total_count = len(tasks)
+
+        pending_count = len(self.list_tasks(status=TaskStatus.PENDING))
+        in_progress_count = len(self.list_tasks(status=TaskStatus.IN_PROGRESS))
+        done_count = len(self.list_tasks(status=TaskStatus.DONE))
+
+        overdue_count = sum(1 for task in tasks if task.is_overdue())
+        due_date_set_count = sum(1 for task in tasks if task.due_date is not None)
+
+        completion_rate = done_count / total_count if total_count > 0 else 0.0
+
+        avg_days_to_completion = None
+        done_tasks = [t for t in tasks if t.is_completed()]
+        if done_tasks:
+            total_days = sum((t.updated_at - t.created_at).days for t in done_tasks)
+            avg_days_to_completion = total_days / len(done_tasks)
+
+        return TaskSummaryReport(
+            total_count=total_count,
+            pending_count=pending_count,
+            in_progress_count=in_progress_count,
+            done_count=done_count,
+            overdue_count=overdue_count,
+            due_date_set_count=due_date_set_count,
+            completion_rate=completion_rate,
+            avg_days_to_completion=avg_days_to_completion,
+        )

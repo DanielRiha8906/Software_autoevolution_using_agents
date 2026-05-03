@@ -44,6 +44,17 @@ package "models" #DDEEFF {
         +to_dict() : Dictionary
         +from_dict(data: Dictionary) : TaskComment
     }
+
+    class TaskSummaryReport {
+        +total_count : int
+        +pending_count : int
+        +in_progress_count : int
+        +done_count : int
+        +overdue_count : int
+        +due_date_set_count : int
+        +completion_rate : float
+        +avg_days_to_completion : float [0..1]
+    }
 }
 
 package "storage" #FFF3CC {
@@ -104,6 +115,7 @@ package "services" #DDFFD4 {
         +get_comments(task_id: String) : List<TaskComment>
         +delete_comment(task_id: String, comment_id: String) : void
         +edit_comment(task_id: String, comment_id: String, content: String) : TaskComment
+        +generate_report() : TaskSummaryReport
     }
 }
 
@@ -116,6 +128,7 @@ package "cli" #FFE5E5 {
         -_parse_and_list_by_week(week: String, status: TaskStatus [0..1]) : List<Task>
         -_parse_and_list_by_month(month: String, status: TaskStatus [0..1]) : List<Task>
         -_parse_and_list_by_year(year: String, status: TaskStatus [0..1]) : List<Task>
+        -_cmd_report(args: Namespace) : Integer
     }
 
     class InteractiveMenu {
@@ -129,11 +142,13 @@ package "cli" #FFE5E5 {
         -_do_pick_month(status: TaskStatus [0..1]) : List<Task> [0..1]
         -_do_pick_year(status: TaskStatus [0..1]) : List<Task> [0..1]
         -_display_task_list_with_summary(tasks: List<Task>, status: TaskStatus [0..1], before: DateTime [0..1], after: DateTime [0..1], overdue_only: Boolean) : void
+        -_do_report() : void
     }
 }
 
 Task --> TaskStatus : status
 Task *-- TaskComment : comments
+TodoService --> TaskSummaryReport : generates
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
