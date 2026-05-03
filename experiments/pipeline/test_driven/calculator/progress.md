@@ -52,4 +52,4 @@ Duration: 259.3s | Cost: $0.404111 USD | Turns: 16
 - All new operations exposed via `python -m src` in both interactive and CLI modes
 - Display symbols added for nice string output (4 new operations formatted with Unicode symbols)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 420.3s | Cost: $0.684168 USD | Turns: 21
