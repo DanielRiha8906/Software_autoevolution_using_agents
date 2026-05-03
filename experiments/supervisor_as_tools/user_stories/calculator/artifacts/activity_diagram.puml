@@ -18,9 +18,13 @@ if (CLI operation provided?) then (yes)
     if (Calculation successful?) then (yes)
       :Record execution time to result;
       :Save result to history;
+      :Record MemoryEntry with result;
+      :Save MemoryEntry to storage;
       :Show result;
       stop
     else (no)
+      :Record MemoryEntry with error;
+      :Save MemoryEntry to storage;
       :Show calculation error;
       stop
     endif
@@ -46,6 +50,10 @@ else (no)
         :Load calculation history;
         :Show history;
 
+      case (View Memory)
+        :Load memory entries;
+        :Show memory entries;
+
       case (Operation)
         :Read operands;
 
@@ -57,8 +65,12 @@ else (no)
           if (Calculation successful?) then (yes)
             :Record execution time to result;
             :Save result to history;
+            :Record MemoryEntry with result;
+            :Save MemoryEntry to storage;
             :Show result;
           else (no)
+            :Record MemoryEntry with error;
+            :Save MemoryEntry to storage;
             :Show calculation error;
           endif
 

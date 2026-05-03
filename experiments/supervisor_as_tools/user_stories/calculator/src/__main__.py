@@ -5,13 +5,16 @@ from pathlib import Path
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
+from .services.memory_service import MemoryService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
 
-def _build_service() -> CalculatorService:
+def _build_service() -> tuple[CalculatorService, MemoryService]:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
-    return CalculatorService(Calculator(), JsonStorage(storage_path))
+    calculator_service = CalculatorService(Calculator(), JsonStorage(storage_path))
+    memory_service = MemoryService(calculator_service, JsonStorage(storage_path))
+    return calculator_service, memory_service
 
 
 def _as_number(value: str) -> float:
@@ -34,6 +37,11 @@ def main() -> None:
         help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
     )
     parser.add_argument(
+        "--memory",
+        action="store_true",
+        help="Display all recorded memory entries",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -41,8 +49,12 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    service = _build_service()
-    cli = CalculatorCLI(service)
+    calculator_service, memory_service = _build_service()
+    cli = CalculatorCLI(calculator_service, memory_service)
+
+    if args.memory:
+        cli.show_memory_cli()
+        sys.exit(0)
 
     if args.operation:
         if len(args.operands) != 2:

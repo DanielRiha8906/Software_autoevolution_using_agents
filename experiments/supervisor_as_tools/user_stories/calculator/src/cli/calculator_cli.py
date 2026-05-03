@@ -1,7 +1,11 @@
 import sys
+from typing import TYPE_CHECKING
 
 from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
+
+if TYPE_CHECKING:
+    from ..services.memory_service import MemoryService
 
 
 class CalculatorCLI:
@@ -16,8 +20,9 @@ class CalculatorCLI:
         (Operation.MODULO,   "Modulo"),
     ]
 
-    def __init__(self, service: CalculatorService) -> None:
+    def __init__(self, service: CalculatorService, memory_service: "MemoryService | None" = None) -> None:
         self.service = service
+        self.memory_service = memory_service
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -30,7 +35,8 @@ class CalculatorCLI:
             choice = input("Choose option: ").strip()
 
             history_opt = len(self._MENU) + 1
-            exit_opt    = len(self._MENU) + 2
+            memory_opt  = len(self._MENU) + 2
+            exit_opt    = len(self._MENU) + 3
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -38,6 +44,10 @@ class CalculatorCLI:
 
             if choice == str(history_opt):
                 self._show_history()
+                continue
+
+            if choice == str(memory_opt):
+                self._show_memory()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -76,7 +86,8 @@ class CalculatorCLI:
         for i, (_, label) in enumerate(self._MENU, 1):
             print(f"  {i}. {label}")
         print(f"  {len(self._MENU) + 1}. View history")
-        print(f"  {len(self._MENU) + 2}. Exit")
+        print(f"  {len(self._MENU) + 2}. View memory entries")
+        print(f"  {len(self._MENU) + 3}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -103,4 +114,30 @@ class CalculatorCLI:
         print()
         for i, entry in enumerate(history, 1):
             print(f"  {i}. {entry}  [{entry.timestamp}]")
+        print()
+
+    def show_memory_cli(self) -> None:
+        if not self.memory_service:
+            print("Memory service is not available.", file=sys.stderr)
+            return
+        entries = self.memory_service.get_all_entries()
+        if not entries:
+            print("No memory entries recorded yet.")
+            return
+        for entry in entries:
+            result_str = str(entry.result) if entry.success else entry.error_message
+            print(f"[ID: {entry.entry_id[:8]}...] {entry.operation_name}({entry.operand_a}, {entry.operand_b}) -> {result_str} | {entry.execution_time_ms}ms")
+
+    def _show_memory(self) -> None:
+        if not self.memory_service:
+            print("\n  Memory service is not available.\n")
+            return
+        entries = self.memory_service.get_all_entries()
+        if not entries:
+            print("\n  No memory entries recorded yet.\n")
+            return
+        print()
+        for i, entry in enumerate(entries, 1):
+            result_str = str(entry.result) if entry.success else entry.error_message
+            print(f"  {i}. [ID: {entry.entry_id[:8]}...] {entry.operation_name}({entry.operand_a}, {entry.operand_b}) -> {result_str} | {entry.execution_time_ms}ms")
         print()

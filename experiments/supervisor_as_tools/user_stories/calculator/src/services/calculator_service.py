@@ -26,4 +26,5 @@ class CalculatorService:
         return calc_result
 
     def get_history(self) -> list[CalculationResult]:
-        return self.storage.load_all()
+        all_records = self.storage.load_all()
+        return [r for r in all_records if isinstance(r, CalculationResult)]

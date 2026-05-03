@@ -10,8 +10,11 @@ top to bottom direction
 ParsingOperation --> Calculating : operation valid
 ParsingOperation --> ErrorShown : operation invalid
 
-Calculating --> ResultShown : success
-Calculating --> ErrorShown : error
+Calculating --> MemoryRecorded : success / record entry
+Calculating --> MemoryRecorded : error / record error
+
+MemoryRecorded --> ResultShown : show result
+MemoryRecorded --> ErrorShown : show error
 
 ResultShown --> [*]
 ErrorShown --> [*]
