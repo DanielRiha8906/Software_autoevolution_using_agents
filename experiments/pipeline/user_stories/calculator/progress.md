@@ -95,3 +95,38 @@ Duration: 592.2s | Cost: $1.021847 USD | Turns: 19
 - ✅ All functionality accessible via python -m src (--show-history flag + interactive history view)
 
 Duration: 756.5s | Cost: $1.392113 USD | Turns: 24
+
+## Task 04: MemoryService for Memory Management
+
+**Status**: ✅ Complete
+
+**Description**: Create a MemoryService class that handles storing and retrieving MemoryEntry objects, centralizing memory management and decoupling business logic from persistence details.
+
+**Files Changed**:
+- `src/services/memory_service.py` — NEW class with `__init__(storage: JsonStorage)`, `store(entry: MemoryEntry) -> None`, `retrieve() -> list[MemoryEntry]` methods; delegates all persistence to injected JsonStorage
+- `src/services/calculator_service.py` — Updated constructor to accept `memory_service: MemoryService` (instead of `storage: JsonStorage`); updated `perform()` to call `self.memory_service.store(entry)`; updated `get_history()` to call `self.memory_service.retrieve()`
+- `src/services/__init__.py` — Added MemoryService to exports
+- `src/__main__.py` — Updated `_build_service()` to instantiate MemoryService and wrap JsonStorage, then pass to CalculatorService
+- `artifacts/class_diagram.puml` — Added MemoryService class; updated CalculatorService dependency from JsonStorage to MemoryService
+- `artifacts/component_diagram.puml` — Added Memory Service component; updated Service → Memory → Store dependency chain
+- `tests/test_memory_service.py` — NEW: 17 comprehensive tests covering store(), retrieve(), integration with real JsonStorage, and edge cases
+- `tests/test_calculator_service.py` — Updated 43 tests to use MemoryService instead of direct JsonStorage mocking
+- `tests/test_calculator_service_memory_entry.py` — Updated 26 tests for MemoryService wrapper
+- `tests/test_execution_time_feature.py` — Updated service fixture and tests for MemoryService
+
+**Test Results**:
+- Total tests: 343 (all passing)
+- Passed: 343 ✅
+- Failed: 0
+- New tests: 17 for MemoryService (store, retrieve, integration, edge cases)
+- Integration tests: All existing CalculatorService tests updated and passing
+- Coverage: MemoryService delegation to JsonStorage, round-trip with real storage, error entry handling, mixed success/error histories
+
+**Acceptance Criteria Met**:
+- ✅ MemoryService provides `store(entry: MemoryEntry) -> None` and `retrieve() -> list[MemoryEntry]` operations
+- ✅ Every completed calculation (success or failure) recorded via MemoryService.store()
+- ✅ Persistence details (file I/O, serialization) remain in JsonStorage, not in MemoryService
+- ✅ MemoryService has no business logic, only MemoryEntry lifecycle management
+- ✅ All functionality accessible via `python -m src` (existing --show-history flag and interactive menu continue to work)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

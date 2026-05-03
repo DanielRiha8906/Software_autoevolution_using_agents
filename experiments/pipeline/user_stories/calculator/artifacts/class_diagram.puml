@@ -64,15 +64,25 @@ package "services" #DDFFD4 {
         +calculate(op: Operation, a: float, b: float) : float
     }
 
-    class CalculatorService {
-        -calculator : Calculator
+    class MemoryService {
         -storage : JsonStorage
         --
-        +CalculatorService(calculator: Calculator, storage: JsonStorage)
+        +MemoryService(storage: JsonStorage)
+        +store(entry: MemoryEntry) : void
+        +retrieve() : list[MemoryEntry]
+        ..
+        note on right : Encapsulates storage access;\\nabstraction over JsonStorage
+    }
+
+    class CalculatorService {
+        -calculator : Calculator
+        -memory_service : MemoryService
+        --
+        +CalculatorService(calculator: Calculator, memory_service: MemoryService)
         +perform(operation: Operation, a: float, b: float) : MemoryEntry
         +get_history() : list[MemoryEntry]
         ..
-        note on right : Wraps results with error handling;\\nsaves to storage
+        note on right : Wraps results with error handling;\\nsaves via MemoryService
     }
 }
 
@@ -105,13 +115,15 @@ package "cli" #FFE5E5 {
 
 CalculatorCLI --> CalculatorService : service
 CalculatorService --> Calculator : calculator
-CalculatorService --> JsonStorage : storage
+CalculatorService --> MemoryService : memory_service
+MemoryService --> JsonStorage : storage
 
 CalculatorService ..> MemoryEntry : create, return
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 CalculatorCLI ..> MemoryEntry : receive, display
 Calculator ..> Operation
+MemoryService ..> MemoryEntry : store, retrieve
 JsonStorage ..> MemoryEntry : save, load
 
 @enduml

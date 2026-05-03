@@ -1,13 +1,13 @@
 from ..models.operation import Operation
 from ..models.memory_entry import MemoryEntry
-from ..storage.json_storage import JsonStorage
 from .calculator import Calculator
+from .memory_service import MemoryService
 
 
 class CalculatorService:
-    def __init__(self, calculator: Calculator, storage: JsonStorage) -> None:
+    def __init__(self, calculator: Calculator, memory_service: MemoryService) -> None:
         self.calculator = calculator
-        self.storage = storage
+        self.memory_service = memory_service
 
     def perform(self, operation: Operation, a: float, b: float) -> MemoryEntry:
         try:
@@ -29,8 +29,8 @@ class CalculatorService:
                 error=str(e),
                 error_type=type(e).__name__,
             )
-        self.storage.save(entry)
+        self.memory_service.store(entry)
         return entry
 
     def get_history(self) -> list[MemoryEntry]:
-        return self.storage.load_all()
+        return self.memory_service.retrieve()

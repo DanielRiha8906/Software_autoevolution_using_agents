@@ -5,13 +5,16 @@ from pathlib import Path
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
+from .services.memory_service import MemoryService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
 
 def _build_service() -> CalculatorService:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
-    return CalculatorService(Calculator(), JsonStorage(storage_path))
+    storage = JsonStorage(storage_path)
+    memory_service = MemoryService(storage)
+    return CalculatorService(Calculator(), memory_service)
 
 
 def _as_number(value: str) -> float:

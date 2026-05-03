@@ -5,12 +5,15 @@ from src.models.calculation_result import CalculationResult
 from src.models.memory_entry import MemoryEntry
 from src.services.calculator import Calculator
 from src.services.calculator_service import CalculatorService
+from src.services.memory_service import MemoryService
+from src.storage.json_storage import JsonStorage
 
 
 class TestCalculatorService:
     def setup_method(self):
-        self.storage = MagicMock()
-        self.service = CalculatorService(Calculator(), self.storage)
+        self.storage_mock = MagicMock(spec=JsonStorage)
+        self.memory_service = MemoryService(self.storage_mock)
+        self.service = CalculatorService(Calculator(), self.memory_service)
 
     def test_perform_add_returns_result(self):
         result = self.service.perform(Operation.ADD, 3, 5)
@@ -30,8 +33,8 @@ class TestCalculatorService:
 
     def test_perform_saves_to_storage(self):
         self.service.perform(Operation.ADD, 3, 5)
-        self.storage.save.assert_called_once()
-        saved: MemoryEntry = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved: MemoryEntry = self.storage_mock.save.call_args[0][0]
         assert saved.result == 8
 
     def test_perform_divide_by_zero_returns_error(self):
@@ -42,14 +45,14 @@ class TestCalculatorService:
 
     def test_perform_divide_by_zero_saves_error(self):
         result = self.service.perform(Operation.DIVIDE, 5, 0)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert isinstance(saved, MemoryEntry)
         assert saved.error is not None
 
     def test_get_history_delegates_to_storage(self):
         mock_history = [MemoryEntry("add", 1, 2, 3, None, None, "2026-01-01T00:00:00")]
-        self.storage.load_all.return_value = mock_history
+        self.storage_mock.load_all.return_value = mock_history
         assert self.service.get_history() == mock_history
 
     def test_result_has_timestamp(self):
@@ -66,8 +69,8 @@ class TestCalculatorService:
 
     def test_perform_square_saves_to_storage(self):
         self.service.perform(Operation.SQUARE, 5, 0)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert saved.result == 25
 
     @pytest.mark.parametrize("value,expected", [
@@ -91,8 +94,8 @@ class TestCalculatorService:
 
     def test_perform_sqrt_saves_to_storage(self):
         self.service.perform(Operation.SQRT, 16, 0)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert saved.result == 4
 
     def test_perform_sqrt_negative_returns_error(self):
@@ -103,8 +106,8 @@ class TestCalculatorService:
 
     def test_perform_sqrt_negative_saves_error(self):
         result = self.service.perform(Operation.SQRT, -5, 0)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert isinstance(saved, MemoryEntry)
         assert saved.error is not None
 
@@ -129,8 +132,8 @@ class TestCalculatorService:
 
     def test_perform_power_saves_to_storage(self):
         self.service.perform(Operation.POWER, 3, 2)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert saved.result == 9
 
     @pytest.mark.parametrize("base,exp,expected", [
@@ -155,8 +158,8 @@ class TestCalculatorService:
 
     def test_perform_modulo_saves_to_storage(self):
         self.service.perform(Operation.MODULO, 10, 3)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert saved.result == 1
 
     def test_perform_modulo_by_zero_returns_error(self):
@@ -167,8 +170,8 @@ class TestCalculatorService:
 
     def test_perform_modulo_by_zero_saves_error(self):
         result = self.service.perform(Operation.MODULO, 10, 0)
-        self.storage.save.assert_called_once()
-        saved = self.storage.save.call_args[0][0]
+        self.storage_mock.save.assert_called_once()
+        saved = self.storage_mock.save.call_args[0][0]
         assert isinstance(saved, MemoryEntry)
         assert saved.error is not None
 
