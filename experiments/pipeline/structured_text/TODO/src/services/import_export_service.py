@@ -10,8 +10,10 @@ from typing import Optional
 
 from ..models.task import Task
 from ..models.task_comment import TaskComment
+from ..models.project import Project
 from .comment_manager import CommentManager
 from .task_manager import TaskManager
+from .project_manager import ProjectManager
 
 
 class ImportExportError(Exception):
@@ -20,33 +22,36 @@ class ImportExportError(Exception):
 
 
 class ExportService:
-    """Service for exporting tasks and comments to JSON files.
+    """Service for exporting tasks, comments, and projects to JSON files.
 
-    Exports all tasks and comments to a JSON file with structure:
+    Exports all tasks, comments, and projects to a JSON file with structure:
     {
         "tasks": [...],
-        "comments": [...]
+        "comments": [...],
+        "projects": [...]
     }
     """
 
-    def __init__(self, task_manager: TaskManager, comment_manager: CommentManager) -> None:
+    def __init__(self, task_manager: TaskManager, comment_manager: CommentManager, project_manager: ProjectManager) -> None:
         """Initialize ExportService with managers.
 
         Args:
             task_manager: TaskManager instance for reading tasks
             comment_manager: CommentManager instance for reading comments
+            project_manager: ProjectManager instance for reading projects
         """
         self._task_manager = task_manager
         self._comment_manager = comment_manager
+        self._project_manager = project_manager
 
-    def export_to_file(self, filepath: str) -> tuple[int, int]:
-        """Export all tasks and comments to a JSON file.
+    def export_to_file(self, filepath: str) -> tuple[int, int, int]:
+        """Export all tasks, comments, and projects to a JSON file.
 
         Args:
             filepath: Path to write the JSON file to
 
         Returns:
-            Tuple of (tasks_exported, comments_exported)
+            Tuple of (tasks_exported, comments_exported, projects_exported)
 
         Raises:
             ImportExportError: If file cannot be written
@@ -54,10 +59,12 @@ class ExportService:
         try:
             tasks = self._task_manager.list_all()
             comments = self._comment_manager.list_all()
+            projects = self._project_manager.list_all()
 
             export_data = {
                 "tasks": [t.to_dict() for t in tasks],
                 "comments": [c.to_dict() for c in comments],
+                "projects": [p.to_dict() for p in projects],
             }
 
             # Write to file
@@ -66,13 +73,13 @@ class ExportService:
             with path.open("w", encoding="utf-8") as f:
                 json.dump(export_data, f, indent=2, ensure_ascii=False)
 
-            return len(tasks), len(comments)
+            return len(tasks), len(comments), len(projects)
         except Exception as e:
             raise ImportExportError(f"Failed to export to {filepath}: {e}")
 
 
 class ImportService:
-    """Service for importing tasks and comments from JSON files.
+    """Service for importing tasks, comments, and projects from JSON files.
 
     Validates JSON structure and handles ID conflicts according to specified mode:
     - 'fail' (default): Raise error on any ID conflict
@@ -80,18 +87,20 @@ class ImportService:
     - 'replace': Overwrite existing records with imported data
     """
 
-    def __init__(self, task_manager: TaskManager, comment_manager: CommentManager) -> None:
+    def __init__(self, task_manager: TaskManager, comment_manager: CommentManager, project_manager: ProjectManager) -> None:
         """Initialize ImportService with managers.
 
         Args:
             task_manager: TaskManager instance for writing tasks
             comment_manager: CommentManager instance for writing comments
+            project_manager: ProjectManager instance for writing projects
         """
         self._task_manager = task_manager
         self._comment_manager = comment_manager
+        self._project_manager = project_manager
 
-    def import_from_file(self, filepath: str, mode: str = "fail") -> tuple[int, int, int]:
-        """Import tasks and comments from a JSON file.
+    def import_from_file(self, filepath: str, mode: str = "fail") -> tuple[int, int, int, int]:
+        """Import tasks, comments, and projects from a JSON file.
 
         Args:
             filepath: Path to the JSON file to import from
@@ -101,7 +110,7 @@ class ImportService:
                 - 'replace': Overwrite existing records
 
         Returns:
-            Tuple of (tasks_imported, comments_imported, conflicts_detected)
+            Tuple of (tasks_imported, comments_imported, projects_imported, conflicts_detected)
 
         Raises:
             ImportExportError: If file cannot be read, JSON is invalid,
@@ -143,24 +152,37 @@ class ImportService:
         except (KeyError, ValueError) as e:
             raise ImportExportError(f"Invalid comment format in {filepath}: {e}")
 
+        # Parse and validate projects
+        projects_to_import = []
+        try:
+            for project_dict in data.get("projects", []):
+                project = Project.from_dict(project_dict)
+                projects_to_import.append(project)
+        except (KeyError, ValueError) as e:
+            raise ImportExportError(f"Invalid project format in {filepath}: {e}")
+
         # Check for conflicts
         existing_task_ids = set(t.id for t in self._task_manager.list_all())
         existing_comment_ids = set(c.id for c in self._comment_manager.list_all())
+        existing_project_ids = set(p.id for p in self._project_manager.list_all())
 
         conflicts = 0
         task_conflicts = [t.id for t in tasks_to_import if t.id in existing_task_ids]
         comment_conflicts = [c.id for c in comments_to_import if c.id in existing_comment_ids]
-        conflicts = len(task_conflicts) + len(comment_conflicts)
+        project_conflicts = [p.id for p in projects_to_import if p.id in existing_project_ids]
+        conflicts = len(task_conflicts) + len(comment_conflicts) + len(project_conflicts)
 
         if mode == "fail" and conflicts > 0:
             raise ImportExportError(
-                f"Import conflicts detected: {len(task_conflicts)} task(s) and "
-                f"{len(comment_conflicts)} comment(s) already exist. Use --mode skip or --mode replace."
+                f"Import conflicts detected: {len(task_conflicts)} task(s), "
+                f"{len(comment_conflicts)} comment(s), and {len(project_conflicts)} project(s) already exist. "
+                f"Use --mode skip or --mode replace."
             )
 
         # Apply imports based on mode
         tasks_imported = 0
         comments_imported = 0
+        projects_imported = 0
 
         if mode == "skip":
             # Only import records that don't conflict
@@ -174,6 +196,11 @@ class ImportService:
                     self._comment_manager._comments[comment.id] = comment
                     comments_imported += 1
 
+            for project in projects_to_import:
+                if project.id not in existing_project_ids:
+                    self._project_manager._projects[project.id] = project
+                    projects_imported += 1
+
         else:
             # For 'fail' mode (no conflicts) or 'replace' mode: import all
             for task in tasks_to_import:
@@ -184,11 +211,16 @@ class ImportService:
                 self._comment_manager._comments[comment.id] = comment
                 comments_imported += 1
 
+            for project in projects_to_import:
+                self._project_manager._projects[project.id] = project
+                projects_imported += 1
+
         # Persist changes
         self._task_manager._persist()
         self._comment_manager._persist()
+        self._project_manager._persist()
 
-        return tasks_imported, comments_imported, conflicts
+        return tasks_imported, comments_imported, projects_imported, conflicts
 
     def _validate_schema(self, data: dict) -> None:
         """Validate JSON schema for import.
@@ -210,3 +242,7 @@ class ImportService:
 
         if not isinstance(data["comments"], list):
             raise ImportExportError("'comments' must be a list")
+
+        # Projects key is optional (for backward compatibility)
+        if "projects" in data and not isinstance(data["projects"], list):
+            raise ImportExportError("'projects' must be a list if present")

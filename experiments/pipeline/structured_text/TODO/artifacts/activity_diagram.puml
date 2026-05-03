@@ -68,10 +68,11 @@ repeat
           partition "ExportService.export_to_file()" {
             :Gather all tasks from TaskManager;
             :Gather all comments from CommentManager;
+            :Gather all projects from ProjectManager;
             :Serialize to JSON structure;
             :Write JSON file to path;
           }
-          :Display export summary (count of tasks and comments);
+          :Display export summary (count of tasks, comments, and projects);
         case (2 — Import)
           :Prompt for import file path;
           :Prompt for conflict mode (fail/skip/replace);
@@ -81,6 +82,7 @@ repeat
             :Validate JSON schema;
             :Parse Task objects;
             :Parse TaskComment objects;
+            :Parse Project objects;
             :Check for ID conflicts;
             switch (mode)
               case (fail)
@@ -101,6 +103,35 @@ repeat
         case (0 — Back)
           stop
       endswitch
+    case (12 — Manage projects)
+      :Display projects list;
+      repeat
+        :Display project menu;
+        switch (project choice)
+          case (1 — Create project)
+            :Prompt for project name;
+            :Create project;
+          case (2 — Show project details)
+            :Select project;
+            :Display project details;
+          case (3 — Update project)
+            :Select project;
+            :Prompt for new name;
+            :Update project;
+          case (4 — Delete project)
+            :Select project;
+            :Delete project (unassign tasks);
+          case (5 — Assign task to project)
+            :Select task;
+            :Select project;
+            :Assign task to project;
+          case (6 — Unassign task from project)
+            :Select task;
+            :Unassign task from project;
+          case (0 — Back)
+            stop
+        endswitch
+      repeat while (manage projects)
     case (0/q — Quit)
       :Clear screen;
       stop

@@ -1,44 +1,58 @@
 @startuml sequence_diagram
 
-title List Tasks with Filtering
+title Assign Task to Project
 
 actor User
-participant CLI as TodoCLI
+participant Menu as InteractiveMenu
 participant Service as TodoService
 participant TaskMgr as TaskManager
-participant TZ as TimezoneUtils
+participant ProjMgr as ProjectManager
 database Storage as JsonStorage
 
-User -> CLI: list [--status=...] [--due-after=...] [--due-before=...] [--overdue]
-activate CLI
-CLI -> Service: list_tasks(status, due_after, due_before, overdue)
-activate Service
-Service -> TaskMgr: list_by_filter(status, due_after, due_before, overdue)
-activate TaskMgr
+User -> Menu: Select "Assign task to project"
+activate Menu
 
+Menu -> Service: get_task(task_id prefix)
+activate Service
+Service -> TaskMgr: get(task_id)
+activate TaskMgr
 TaskMgr -> Storage: load()
 activate Storage
 Storage --> TaskMgr: List<Task>
 deactivate Storage
-
-TaskMgr -> TaskMgr: filter_by_status(tasks, status)
-TaskMgr -> TaskMgr: filter_by_due_date(tasks, due_after, due_before)
-
-alt overdue filter is specified
-  TaskMgr -> TaskMgr: filter_by_overdue(tasks, overdue)
-  note over TaskMgr, TZ
-    Task.is_overdue() compares current UTC time
-    against task.due_date
-  end note
-end
-
-TaskMgr --> Service: List<Task> (filtered)
+TaskMgr --> Service: Task
 deactivate TaskMgr
-
-Service --> CLI: List<Task>
+Service --> Menu: Task
 deactivate Service
 
-CLI -> User: Display filtered task list
-deactivate CLI
+Menu -> Service: get_project(project_id prefix)
+activate Service
+Service -> ProjMgr: get(project_id)
+activate ProjMgr
+ProjMgr -> Storage: load()
+activate Storage
+Storage --> ProjMgr: List<Project>
+deactivate Storage
+ProjMgr --> Service: Project
+deactivate ProjMgr
+Service --> Menu: Project
+deactivate Service
+
+Menu -> Service: assign_task_to_project(task_id, project_id)
+activate Service
+Service -> TaskMgr: assign_to_project(task_id, project_id)
+activate TaskMgr
+TaskMgr -> TaskMgr: Get task and set project_id
+TaskMgr -> Storage: save([task_dict, ...])
+activate Storage
+Storage --> TaskMgr: (success)
+deactivate Storage
+TaskMgr --> Service: Task (updated)
+deactivate TaskMgr
+Service --> Menu: Task (updated)
+deactivate Service
+
+Menu -> User: Display "Task assigned to project"
+deactivate Menu
 
 @enduml

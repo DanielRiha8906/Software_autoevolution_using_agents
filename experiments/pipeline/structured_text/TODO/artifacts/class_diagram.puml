@@ -16,6 +16,7 @@ package "models" #DDEEFF {
         +description : String [0..1]
         +status : TaskStatus
         +due_date : DateTime [0..1]
+        +project_id : String [0..1]
         +created_at : DateTime
         +updated_at : DateTime
         --
@@ -26,6 +27,15 @@ package "models" #DDEEFF {
         +mark_done() : Task
         +reopen() : Task
         +is_completed() : Boolean
+    }
+
+    class Project {
+        +id : String
+        +name : String
+        +created_at : DateTime
+        --
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : Project
     }
 
     class TaskStatistics {
@@ -59,6 +69,12 @@ package "models" #DDEEFF {
         Foreign key reference to Task via task_id
         Supports optional author and update timestamp
     end note
+
+    Task "0..*" -- "0..1" Project : "assigned to"
+    note right of Project
+        Projects group tasks. Deleting a project
+        unassigns (not cascades) its tasks.
+    end note
 }
 
 package "storage" #FFF3CC {
@@ -90,6 +106,7 @@ package "services" #DDFFD4 {
     exception TaskNotFoundError
     exception CommentNotFoundError
     exception ImportExportError
+    exception ProjectNotFoundError
 
     class TaskManager {
         -storage : JsonStorage
@@ -104,12 +121,16 @@ package "services" #DDFFD4 {
         +update(task_id: String, title: String [0..1], description: String [0..1]) : Task
         +set_status(task_id: String, status: TaskStatus) : Task
         +delete(task_id: String) : void
+        +list_by_project(project_id: String) : List<Task>
+        +assign_to_project(task_id: String, project_id: String) : Task
+        +unassign_from_project(task_id: String) : Task
         -load() : void
         -persist() : void
     }
     note right of TaskManager
         list_by_filter() combines status, date range, and overdue filters.
         Raises ValueError if due_after > due_before.
+        list_by_project() filters tasks by project_id.
     end note
 
     class CommentManager {
@@ -127,9 +148,28 @@ package "services" #DDFFD4 {
         -persist() : void
     }
 
+    class ProjectManager {
+        -storage : JsonStorage
+        -projects : Dictionary<String, Project>
+        --
+        +ProjectManager(storage: JsonStorage [0..1])
+        +add(name: String) : Project
+        +get(project_id: String) : Project
+        +list_all() : List<Project>
+        +delete(project_id: String) : void
+        +update(project_id: String, name: String) : Project
+        -load() : void
+        -persist() : void
+    }
+    note right of ProjectManager
+        Stores projects in a separate JSON file.
+        Supports ID prefix lookup for get/delete/update.
+    end note
+
     class TodoService {
         -manager : TaskManager
         -comment_manager : CommentManager
+        -project_manager : ProjectManager
         --
         +TodoService(storage: JsonStorage [0..1])
         +add_task(title: String, description: String [0..1]) : Task
@@ -144,42 +184,51 @@ package "services" #DDFFD4 {
         +get_comments(task_id: String) : List<TaskComment>
         +delete_comment(comment_id: String) : void
         +get_statistics() : TaskStatistics
-        +export_tasks_and_comments(filepath: String) : tuple[int, int]
-        +import_tasks_and_comments(filepath: String, mode: String) : tuple[int, int, int]
+        +create_project(name: String) : Project
+        +list_projects() : List<Project>
+        +get_project(project_id: String) : Project
+        +delete_project(project_id: String) : void
+        +list_tasks_by_project(project_id: String) : List<Task>
+        +assign_task_to_project(task_id: String, project_id: String) : Task
+        +unassign_task_from_project(task_id: String) : Task
+        +update_project(project_id: String, name: String) : Project
+        +export_tasks_and_comments(filepath: String) : tuple[int, int, int]
+        +import_tasks_and_comments(filepath: String, mode: String) : tuple[int, int, int, int]
     }
     note right of TodoService
-        delete_task() cascades: deletes all comments
-        for the task before deleting the task
-        export_tasks_and_comments() delegates to ExportService
-        import_tasks_and_comments() delegates to ImportService
+        delete_task() cascades: deletes all comments.
+        delete_project() unassigns (not cascades) tasks.
+        export/import now handle projects as well.
     end note
 
     class ExportService {
         -task_manager : TaskManager
         -comment_manager : CommentManager
+        -project_manager : ProjectManager
         --
-        +ExportService(task_manager: TaskManager, comment_manager: CommentManager)
-        +export_to_file(filepath: String) : tuple[int, int]
+        +ExportService(task_manager: TaskManager, comment_manager: CommentManager, project_manager: ProjectManager)
+        +export_to_file(filepath: String) : tuple[int, int, int]
     }
     note right of ExportService
-        Exports all tasks and comments to JSON file.
-        Returns (tasks_exported, comments_exported).
+        Exports all tasks, comments, and projects to JSON file.
+        Returns (tasks_exported, comments_exported, projects_exported).
         Raises ImportExportError if file cannot be written.
     end note
 
     class ImportService {
         -task_manager : TaskManager
         -comment_manager : CommentManager
+        -project_manager : ProjectManager
         --
-        +ImportService(task_manager: TaskManager, comment_manager: CommentManager)
-        +import_from_file(filepath: String, mode: String) : tuple[int, int, int]
+        +ImportService(task_manager: TaskManager, comment_manager: CommentManager, project_manager: ProjectManager)
+        +import_from_file(filepath: String, mode: String) : tuple[int, int, int, int]
         -_validate_schema(data: Dictionary) : void
     }
     note right of ImportService
-        Imports tasks and comments from JSON file.
+        Imports tasks, comments, and projects from JSON file.
         Mode: 'fail' (stop on conflict), 'skip' (skip conflicts),
         or 'replace' (overwrite existing).
-        Returns (tasks_imported, comments_imported, conflicts_detected).
+        Returns (tasks_imported, comments_imported, projects_imported, conflicts_detected).
     end note
 }
 
@@ -209,17 +258,22 @@ TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 CommentManager --> JsonStorage : storage
 CommentManager ..> CommentNotFoundError : raises
+ProjectManager --> JsonStorage : storage
+ProjectManager ..> ProjectNotFoundError : raises
 TodoService --> TaskManager : manager
 TodoService --> CommentManager : comment_manager
+TodoService --> ProjectManager : project_manager
 TodoService ..> TaskStatistics : returns
+TodoService --> ExportService : uses (export)
+TodoService --> ImportService : uses (import)
 ExportService --> TaskManager : task_manager
 ExportService --> CommentManager : comment_manager
+ExportService --> ProjectManager : project_manager
 ExportService ..> ImportExportError : raises
 ImportService --> TaskManager : task_manager
 ImportService --> CommentManager : comment_manager
+ImportService --> ProjectManager : project_manager
 ImportService ..> ImportExportError : raises
-TodoService --> ExportService : uses (export)
-TodoService --> ImportService : uses (import)
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 
