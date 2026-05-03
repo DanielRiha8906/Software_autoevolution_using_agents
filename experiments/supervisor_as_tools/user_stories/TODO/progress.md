@@ -198,4 +198,4 @@ Implemented 7 status transition and state checking methods on the Task model wit
 - `state_diagram.puml` — Enhanced state transitions with guard conditions
 - `use_case_diagram.puml` — 7 new use cases (3 status changes + 4 state checks)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 391.8s | Cost: $0.800551 USD | Turns: 29
