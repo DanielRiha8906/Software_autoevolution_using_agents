@@ -105,4 +105,4 @@ Successfully implemented status transition and query methods on the Task class, 
 - ✅ CLI command integration
 - ✅ Interactive menu functionality
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 347.9s | Cost: $0.638082 USD | Turns: 15
