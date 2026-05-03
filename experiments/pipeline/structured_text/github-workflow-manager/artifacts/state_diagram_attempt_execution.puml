@@ -1,0 +1,35 @@
+@startuml state_diagram_attempt_execution
+
+title WorkflowRunAttempt execution lifecycle
+
+skinparam state {
+  BackgroundColor #DDEEFF
+  BorderColor #3366AA
+  FontStyle bold
+}
+
+[*] --> REQUESTED : attempt created
+
+REQUESTED --> QUEUED   : accepted
+
+QUEUED    --> WAITING    : concurrency group\nor deployment gate
+QUEUED    --> IN_PROGRESS : runner acquired
+
+WAITING   --> IN_PROGRESS : gate resolved
+
+state COMPLETED {
+  [*] --> SUCCESS
+  [*] --> FAILURE
+  [*] --> CANCELLED
+  [*] --> SKIPPED
+  [*] --> TIMED_OUT
+  [*] --> ACTION_REQUIRED
+  [*] --> NEUTRAL
+  [*] --> STALE
+}
+
+IN_PROGRESS --> COMPLETED : execution finished
+
+COMPLETED --> [*]
+
+@enduml

@@ -25,7 +25,18 @@ repeat
       :WorkflowRunTracker.track();
       :Print "Added run <id>";
 
-    case (2 — List all runs)
+    case (2 — Create workflow attempt)
+      :Prompt run ID;
+      :Prompt attempt number;
+      :Choose status from list;
+      :Choose conclusion (optional, 0 to skip);
+      :Prompt completion time (optional);
+      :Prompt duration in seconds (optional);
+      :Prompt logs URL (optional);
+      :WorkflowAttemptTracker.create_attempt();
+      :Print "Created attempt <id>";
+
+    case (3 — List all runs)
       :WorkflowRunService.list_runs();
       if (no runs?) then (yes)
         :Print "No runs recorded.";
@@ -33,7 +44,7 @@ repeat
         :Print all runs;
       endif
 
-    case (3 — Get run detail)
+    case (4 — Get run detail)
       :Prompt run ID;
       :WorkflowRunService.get_run_detail(run_id);
       if (found?) then (yes)
@@ -42,7 +53,16 @@ repeat
         :Print "No run found with id '<id>'";
       endif
 
-    case (4 — Filter runs)
+    case (5 — List attempts by run)
+      :Prompt run ID;
+      :WorkflowAttemptService.filter_by_run_id(run_id);
+      if (no attempts?) then (yes)
+        :Print "No attempts for this run.";
+      else (no)
+        :Print all attempts;
+      endif
+
+    case (6 — Filter runs)
       :Choose filter type\n(branch / status / conclusion);
       if (branch?) then (yes)
         :Prompt branch name;
@@ -60,7 +80,7 @@ repeat
         :Print matching runs;
       endif
 
-    case (5 — Query workflow state)
+    case (7 — Query workflow state)
       :Prompt run ID;
       :WorkflowRunService.get_run_detail(run_id);
       if (found?) then (yes)
@@ -70,7 +90,7 @@ repeat
         :Print "No run found with id '<id>'";
       endif
 
-    case (6 — Exit)
+    case (8 — Exit)
       :Print "Goodbye.";
       stop
 
