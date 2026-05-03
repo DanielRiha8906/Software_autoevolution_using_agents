@@ -150,4 +150,4 @@ All tests pass including:
 **Won't Have (Not Applicable):**
 - Performance optimization — out of scope
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 654.8s | Cost: $1.246197 USD | Turns: 13
