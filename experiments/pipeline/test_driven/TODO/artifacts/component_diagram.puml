@@ -18,6 +18,7 @@ package "TODO Application" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
         component "Comments Service" as CSVC
+        component "Task Statistics Service" as STATS
     }
 
     package "Domain Model" {
@@ -40,6 +41,7 @@ CLI --> SVC
 SVC --> MGR
 CSVC --> SVC : validates tasks
 CSVC --> Storage : persistence
+STATS --> SVC : analyzes tasks
 MGR --> Storage
 MGR ..> Model
 Storage ..> Model

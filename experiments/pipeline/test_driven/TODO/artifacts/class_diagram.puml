@@ -101,6 +101,21 @@ package "services" #DDFFD4 {
         +delete_comment(comment_id: String) : void
         +delete_comments_for_task(task_id: String) : void
     }
+
+    class TaskStatistics {
+        +total : int
+        +count_per_status : dict
+        +overdue_count : int
+        +with_due_date_count : int
+        +completion_rate : float
+    }
+
+    class TaskStatisticsService {
+        -_service : TodoService
+        --
+        +TaskStatisticsService(todo_service: TodoService)
+        +compute() : TaskStatistics
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -127,6 +142,8 @@ TodoService --> TaskManager : manager
 CommentsService --> TodoService : todo_service
 CommentsService --> JsonStorage : storage
 CommentsService --> TaskComment : contains
+TaskStatisticsService --> TodoService : uses
+TaskStatisticsService --> TaskStatistics : returns
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 

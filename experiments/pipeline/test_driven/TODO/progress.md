@@ -63,3 +63,74 @@ All tests pass:
 ✅ No database query engine used (in-memory filtering)
 
 Duration: 452.6s | Cost: $0.830710 USD | Turns: 23
+
+---
+
+# Task 06: Implement TaskStatisticsService
+
+## Summary
+
+Implemented `TaskStatisticsService` that computes aggregate statistics from stored tasks, including total count, per-status breakdown, overdue count, tasks with due dates, and completion rate as a percentage.
+
+## Files Changed
+
+- `src/services/task_statistics_service.py` — Created new service with TaskStatistics dataclass and TaskStatisticsService class
+- `src/services/statistics_service.py` — Created alias module for test imports (re-exports from task_statistics_service)
+- `src/services/__init__.py` — Added TaskStatisticsService and TaskStatistics exports
+- `src/cli/todo_cli.py` — Added statistics subcommand (python -m src statistics)
+- `src/cli/interactive_menu.py` — Added menu option 8 for "View statistics"
+- `tests/test_statistics_service.py` — Created comprehensive test suite (22 tests)
+- `artifacts/class_diagram.puml` — Added TaskStatistics and TaskStatisticsService classes
+- `artifacts/component_diagram.puml` — Added Task Statistics Service component
+
+## Test Results
+
+All tests pass:
+- **8 required tests**: PASS (test_report_is_dataclass, test_total_count, test_count_per_status, test_overdue_count, test_with_due_date_count, test_completion_rate, test_empty_task_list_statistics, test_output_is_deterministic)
+- **14 additional comprehensive tests**: PASS (edge cases, invariants, integration)
+- **109 total tests**: ALL PASS
+- **87 existing tests**: PASS (no regressions)
+
+## Implementation Details
+
+### Core Features
+1. **TaskStatistics Dataclass**: Contains 5 fields:
+   - `total: int` — total number of tasks
+   - `count_per_status: dict[TaskStatus, int]` — count per status (PENDING, IN_PROGRESS, DONE)
+   - `overdue_count: int` — tasks with due_date in the past
+   - `with_due_date_count: int` — tasks with non-None due_date
+   - `completion_rate: float` — percentage of completed tasks (0-100)
+
+2. **TaskStatisticsService.compute()**: Computes all statistics in one call:
+   - Gets all tasks via `TodoService.list_tasks()`
+   - Counts tasks per status
+   - Uses `list_tasks(overdue=True)` for overdue count
+   - Filters tasks with `due_date is not None` for due date count
+   - Calculates completion_rate: `(done_count / total * 100) if total > 0 else 0.0`
+
+3. **CLI Integration**:
+   - Command: `python -m src statistics`
+   - Displays formatted report with aligned output
+
+4. **Interactive Menu**:
+   - Menu option 8: "View statistics"
+   - Displays statistics in formatted box with aligned columns
+
+### Edge Cases Handled
+- Empty task list: completion_rate = 0.0 (not NaN or exception)
+- No tasks with due dates: with_due_date_count = 0
+- All tasks completed: completion_rate = 100.0
+- No overdue tasks: overdue_count = 0
+- Division by zero: Protected by `if total > 0` check
+
+## Constraints Met
+✅ All provided tests pass (8/8)
+✅ Existing tests still pass (87/87, no regressions)
+✅ Code compiles without syntax errors
+✅ TaskStatistics is a @dataclass (not dict, not custom class)
+✅ Completion rate expressed as 0-100 percentage
+✅ Empty task lists handled safely
+✅ All functionality accessible via `python -m src`
+✅ Return type is deterministic dataclass
+
+Duration: 414.9s | Cost: $0.732374 USD | Turns: 15
