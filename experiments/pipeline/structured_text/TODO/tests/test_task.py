@@ -165,3 +165,283 @@ def test_task_roundtrip_with_due_date():
     assert restored.status == task.status
     assert restored.created_at == task.created_at
     assert restored.updated_at == task.updated_at
+
+
+# ===== Task Status Change Methods (Task 02) =====
+
+class TestIsCompleted:
+    """Tests for Task.is_completed() method."""
+
+    @pytest.mark.parametrize("status,expected", [
+        (TaskStatus.PENDING, False),
+        (TaskStatus.IN_PROGRESS, False),
+        (TaskStatus.DONE, True),
+    ])
+    def test_is_completed_returns_correct_boolean(self, status, expected):
+        """is_completed() returns True only when status is DONE, False otherwise."""
+        task = Task(title="Test", status=status)
+        assert task.is_completed() is expected
+
+    def test_is_completed_pending_task(self):
+        """Newly created tasks are PENDING and not completed."""
+        task = Task(title="New task")
+        assert task.is_completed() is False
+
+    def test_is_completed_after_mark_done(self):
+        """After mark_done(), is_completed() returns True."""
+        task = Task(title="Test")
+        task.mark_done()
+        assert task.is_completed() is True
+
+    def test_is_completed_after_mark_in_progress(self):
+        """IN_PROGRESS status yields is_completed() False."""
+        task = Task(title="Test")
+        task.mark_in_progress()
+        assert task.is_completed() is False
+
+
+class TestMarkDone:
+    """Tests for Task.mark_done() method."""
+
+    def test_mark_done_sets_status_to_done(self):
+        """mark_done() sets status to DONE."""
+        task = Task(title="Test", status=TaskStatus.PENDING)
+        task.mark_done()
+        assert task.status == TaskStatus.DONE
+
+    def test_mark_done_updates_timestamp(self):
+        """mark_done() updates updated_at to a later time."""
+        task = Task(title="Test")
+        original_updated = task.updated_at
+        # Small delay to ensure timestamp difference
+        import time
+        time.sleep(0.01)
+        task.mark_done()
+        assert task.updated_at > original_updated
+
+    def test_mark_done_returns_self(self):
+        """mark_done() returns self for method chaining."""
+        task = Task(title="Test")
+        result = task.mark_done()
+        assert result is task
+
+    def test_mark_done_from_in_progress(self):
+        """mark_done() works from IN_PROGRESS status."""
+        task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+        task.mark_done()
+        assert task.status == TaskStatus.DONE
+
+    def test_mark_done_from_done_already(self):
+        """mark_done() on already DONE task idempotent."""
+        task = Task(title="Test", status=TaskStatus.DONE)
+        first_done_time = task.updated_at
+        import time
+        time.sleep(0.01)
+        task.mark_done()
+        assert task.status == TaskStatus.DONE
+        assert task.updated_at > first_done_time
+
+    def test_mark_done_method_chaining(self):
+        """mark_done() can be chained with other methods."""
+        task = Task(title="Test", status=TaskStatus.PENDING)
+        result = task.mark_done()
+        assert result.is_completed() is True
+
+    def test_mark_done_created_at_unchanged(self):
+        """mark_done() does not change created_at."""
+        task = Task(title="Test")
+        original_created = task.created_at
+        task.mark_done()
+        assert task.created_at == original_created
+
+
+class TestMarkInProgress:
+    """Tests for Task.mark_in_progress() method."""
+
+    def test_mark_in_progress_sets_status(self):
+        """mark_in_progress() sets status to IN_PROGRESS."""
+        task = Task(title="Test", status=TaskStatus.PENDING)
+        task.mark_in_progress()
+        assert task.status == TaskStatus.IN_PROGRESS
+
+    def test_mark_in_progress_updates_timestamp(self):
+        """mark_in_progress() updates updated_at to a later time."""
+        task = Task(title="Test")
+        original_updated = task.updated_at
+        import time
+        time.sleep(0.01)
+        task.mark_in_progress()
+        assert task.updated_at > original_updated
+
+    def test_mark_in_progress_returns_self(self):
+        """mark_in_progress() returns self for method chaining."""
+        task = Task(title="Test")
+        result = task.mark_in_progress()
+        assert result is task
+
+    def test_mark_in_progress_from_pending(self):
+        """mark_in_progress() works from PENDING status."""
+        task = Task(title="Test", status=TaskStatus.PENDING)
+        task.mark_in_progress()
+        assert task.status == TaskStatus.IN_PROGRESS
+
+    def test_mark_in_progress_from_done(self):
+        """mark_in_progress() can set a DONE task back to IN_PROGRESS."""
+        task = Task(title="Test", status=TaskStatus.DONE)
+        task.mark_in_progress()
+        assert task.status == TaskStatus.IN_PROGRESS
+
+    def test_mark_in_progress_method_chaining(self):
+        """mark_in_progress() can be chained with other methods."""
+        task = Task(title="Test", status=TaskStatus.PENDING)
+        result = task.mark_in_progress()
+        assert result.status == TaskStatus.IN_PROGRESS
+        assert result.is_completed() is False
+
+
+class TestReopen:
+    """Tests for Task.reopen() method."""
+
+    def test_reopen_sets_status_to_pending(self):
+        """reopen() sets status to PENDING."""
+        task = Task(title="Test", status=TaskStatus.DONE)
+        task.reopen()
+        assert task.status == TaskStatus.PENDING
+
+    def test_reopen_updates_timestamp(self):
+        """reopen() updates updated_at to a later time."""
+        task = Task(title="Test", status=TaskStatus.DONE)
+        original_updated = task.updated_at
+        import time
+        time.sleep(0.01)
+        task.reopen()
+        assert task.updated_at > original_updated
+
+    def test_reopen_returns_self(self):
+        """reopen() returns self for method chaining."""
+        task = Task(title="Test", status=TaskStatus.DONE)
+        result = task.reopen()
+        assert result is task
+
+    def test_reopen_from_done(self):
+        """reopen() works from DONE status."""
+        task = Task(title="Test", status=TaskStatus.DONE)
+        task.reopen()
+        assert task.status == TaskStatus.PENDING
+
+    def test_reopen_from_in_progress(self):
+        """reopen() can set an IN_PROGRESS task back to PENDING."""
+        task = Task(title="Test", status=TaskStatus.IN_PROGRESS)
+        task.reopen()
+        assert task.status == TaskStatus.PENDING
+
+    def test_reopen_method_chaining(self):
+        """reopen() can be chained with other methods."""
+        task = Task(title="Test", status=TaskStatus.DONE)
+        result = task.reopen()
+        assert result.status == TaskStatus.PENDING
+        assert result.is_completed() is False
+
+
+class TestStatusTransitions:
+    """Tests for combined status transition scenarios."""
+
+    def test_pending_to_in_progress_to_done(self):
+        """Transitions: PENDING → IN_PROGRESS → DONE."""
+        task = Task(title="Test", status=TaskStatus.PENDING)
+        assert task.is_completed() is False
+
+        task.mark_in_progress()
+        assert task.status == TaskStatus.IN_PROGRESS
+        assert task.is_completed() is False
+
+        task.mark_done()
+        assert task.status == TaskStatus.DONE
+        assert task.is_completed() is True
+
+    def test_done_to_pending_to_in_progress(self):
+        """Transitions: DONE → PENDING (reopen) → IN_PROGRESS."""
+        task = Task(title="Test", status=TaskStatus.DONE)
+        assert task.is_completed() is True
+
+        task.reopen()
+        assert task.status == TaskStatus.PENDING
+        assert task.is_completed() is False
+
+        task.mark_in_progress()
+        assert task.status == TaskStatus.IN_PROGRESS
+        assert task.is_completed() is False
+
+    def test_done_back_to_in_progress_directly(self):
+        """Transitions: DONE → IN_PROGRESS (without reopen)."""
+        task = Task(title="Test", status=TaskStatus.DONE)
+        task.mark_in_progress()
+        assert task.status == TaskStatus.IN_PROGRESS
+        assert task.is_completed() is False
+
+    def test_timestamps_strictly_increasing_across_transitions(self):
+        """Timestamps increase strictly with each status change."""
+        import time
+        task = Task(title="Test")
+        t1 = task.updated_at
+
+        time.sleep(0.01)
+        task.mark_in_progress()
+        t2 = task.updated_at
+        assert t2 > t1
+
+        time.sleep(0.01)
+        task.mark_done()
+        t3 = task.updated_at
+        assert t3 > t2
+
+        time.sleep(0.01)
+        task.reopen()
+        t4 = task.updated_at
+        assert t4 > t3
+
+
+class TestIsOverdueAfterStatusChanges:
+    """Tests for is_overdue() behavior after status changes."""
+
+    def test_is_overdue_remains_true_after_mark_in_progress(self):
+        """is_overdue() stays True after mark_in_progress()."""
+        past = datetime.now(timezone.utc) - timedelta(days=10)
+        task = Task(title="Test", due_date=past, status=TaskStatus.PENDING)
+        assert task.is_overdue() is True
+
+        task.mark_in_progress()
+        assert task.is_overdue() is True
+
+    def test_is_overdue_becomes_false_after_mark_done(self):
+        """is_overdue() becomes False after mark_done()."""
+        past = datetime.now(timezone.utc) - timedelta(days=10)
+        task = Task(title="Test", due_date=past, status=TaskStatus.PENDING)
+        assert task.is_overdue() is True
+
+        task.mark_done()
+        assert task.is_overdue() is False
+
+    def test_is_overdue_becomes_true_after_reopen(self):
+        """is_overdue() becomes True again after reopen() from DONE."""
+        past = datetime.now(timezone.utc) - timedelta(days=10)
+        task = Task(title="Test", due_date=past, status=TaskStatus.DONE)
+        assert task.is_overdue() is False
+
+        task.reopen()
+        assert task.is_overdue() is True
+
+    def test_completed_task_not_overdue_regardless_of_transitions(self):
+        """A DONE task is never overdue, even after transitions."""
+        past = datetime.now(timezone.utc) - timedelta(days=10)
+        task = Task(title="Test", due_date=past)
+
+        task.mark_in_progress()
+        task.mark_done()
+        assert task.is_overdue() is False
+
+        # Reopen and complete again
+        task.reopen()
+        task.mark_in_progress()
+        task.mark_done()
+        assert task.is_overdue() is False

@@ -22,6 +22,10 @@ package "models" #DDEEFF {
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
         +isOverdue() : Boolean
+        +markInProgress() : Task
+        +markDone() : Task
+        +reopen() : Task
+        +isCompleted() : Boolean
     }
     note right of Task
         toDict() conditionally includes due_date
