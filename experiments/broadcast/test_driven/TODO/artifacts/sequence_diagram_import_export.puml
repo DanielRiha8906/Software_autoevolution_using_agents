@@ -1,0 +1,105 @@
+@startuml sequence_diagram_import_export
+
+title Import/Export Sequence Diagram
+
+actor User
+participant "CLI/Menu" as UI
+participant "TaskImportExportService" as IES
+participant "TodoService" as TS
+participant "TaskManager" as TM
+participant "CommentsService" as CS
+participant "JSON File" as File
+
+== Export Flow ==
+
+User -> UI: export(path)
+activate UI
+UI -> IES: export(path)
+activate IES
+
+IES -> TS: list_tasks()
+activate TS
+TS -> TM: list_all()
+activate TM
+TM --> TS: List<Task>
+deactivate TM
+TS --> IES: List<Task>
+deactivate TS
+
+IES -> CS: get_all_comments()
+activate CS
+CS --> IES: List<TaskComment>
+deactivate CS
+
+IES -> IES: build export_data\n(tasks, comments)
+IES -> File: write JSON\n(tasks + comments)
+File --> IES: success
+IES --> UI: return
+
+deactivate IES
+UI --> User: "Exported to {path}"
+deactivate UI
+
+== Import Flow ==
+
+User -> UI: import(path)
+activate UI
+UI -> IES: import_from(path)
+activate IES
+
+IES -> File: read JSON
+File --> IES: parsed data
+IES -> IES: validate structure\n(check keys, types, ids)
+
+IES -> TS: list_tasks()
+activate TS
+TS -> TM: list_all()
+activate TM
+TM --> TS: List<Task>
+deactivate TM
+TS --> IES: List<Task>
+deactivate TS
+
+IES -> IES: collect existing task IDs
+loop for each task in import data
+  alt task.id not in existing
+    IES -> TM: add task directly to _tasks
+    activate TM
+    deactivate TM
+  end
+end
+
+IES -> TM: _persist()
+activate TM
+TM -> File: save tasks
+File --> TM: success
+deactivate TM
+
+IES -> CS: get_all_comments()
+activate CS
+CS --> IES: List<TaskComment>
+deactivate CS
+
+IES -> IES: collect existing comment IDs
+loop for each comment in import data
+  alt comment.id not in existing
+    IES -> CS: add to _comments[task_id]
+    activate CS
+    deactivate CS
+  end
+end
+
+IES -> IES: check if persist needed
+opt if comments added and persist available
+  IES -> CS: _persist()
+  activate CS
+  deactivate CS
+end
+
+IES --> UI: return
+
+deactivate IES
+UI --> User: "Imported from {path}"
+deactivate UI
+
+@enduml

@@ -1,4 +1,4 @@
-@startuml
+@startuml activity_diagram
 
 start
 :Launch application;
@@ -20,6 +20,17 @@ repeat
       :Run update task flow;
     case (6 — Delete task)
       :Run delete task flow;
+    case (7 — View statistics)
+      :Compute and display statistics;
+    case (8 — Export to JSON)
+      :Prompt for export path;
+      :Export tasks and comments to JSON;
+      :Display success message;
+    case (9 — Import from JSON)
+      :Prompt for import path;
+      :Validate JSON structure;
+      :Import tasks and comments (skip duplicates);
+      :Display success message;
     case (0/q — Quit)
       :Clear screen;
       stop

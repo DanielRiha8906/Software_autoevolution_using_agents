@@ -17,6 +17,8 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Comments Service" as CS
+        component "Import/Export Service" as IES
     }
 
     package "Domain Model" {
@@ -34,12 +36,21 @@ Main --> IM : interactive mode
 Main --> CLI : command mode
 
 IM --> SVC
+IM --> CS
+IM --> IES
 CLI --> SVC
+CLI --> CS
+CLI --> IES
 
 SVC --> MGR
+CS --> SVC
+IES --> SVC
+IES --> CS
+
 MGR --> Storage
 MGR ..> Model
 Storage ..> Model
+CS ..> Model
 
 Storage --> DB : read/write
 

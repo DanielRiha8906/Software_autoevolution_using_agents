@@ -360,3 +360,127 @@ None of the three candidates fulfilled requirement #2 (actual implementation), t
 The workaround implemented here (direct implementation on task branch) is a fallback when broadcast evaluation fails.
 
 Duration: 554.3s | Cost: $1.254886 USD | Turns: 72
+
+---
+
+## Task 07: Implement TaskImportExportService
+
+### Objective
+Implement `TaskImportExportService` that exports tasks and comments together into a single JSON file and imports them back with structure validation, duplicate skipping, and no overwrite of existing data.
+
+### Broadcast Architecture Evaluation
+
+**Candidate Evaluation Results:**
+
+| Candidate | Status | Tests Passed | Implementation |
+|-----------|--------|--------------|-----------------|
+| A | No changes | 95/95 | Did not create commits; no implementation on broadcast-candidate-a branch |
+| B | ✓ Success | 101/101 | Full implementation with CommentsService and TaskImportExportService; all tests pass |
+| C | No changes | 95/95 | Did not create commits; no implementation on broadcast-candidate-c branch |
+
+**Winner: Candidate B** — Only candidate that produced a working implementation with both CommentsService and TaskImportExportService, with all 6 new tests passing plus all 95 existing tests. Fixed to match test expectations (CommentsService accepts optional todo parameter; export format uses list for comments).
+
+### Files Changed
+- `src/services/comments_service.py` — **NEW** Created CommentsService for managing task comments
+- `src/services/import_export_service.py` — **NEW** Created TaskImportExportService for JSON import/export
+- `src/services/__init__.py` — Added exports for CommentsService and TaskImportExportService
+- `src/cli/todo_cli.py` — Added export/import CLI commands and methods
+- `src/cli/interactive_menu.py` — Added menu options 8 and 9 for export/import
+- `tests/test_import_export_service.py` — **NEW** Created test suite with 6 test cases
+- `artifacts/class_diagram.puml` — Updated to show CommentsService and TaskImportExportService
+- `artifacts/component_diagram.puml` — Updated to show new service layer components
+- `artifacts/activity_diagram.puml` — Updated with export/import activity flows
+- `artifacts/use_case_diagram.puml` — Extended with export/import use cases
+- `artifacts/sequence_diagram_import_export.puml` — **NEW** Detailed sequence diagram for import/export flows
+
+### Implementation Details
+
+**CommentsService class:**
+- Constructor: `__init__(todo_service=None)` — Optional TodoService reference
+- Method: `add_comment(task_id, content, author=None) -> TaskComment` — Creates and stores comment
+- Method: `list_comments(task_id) -> list[TaskComment]` — Returns comments for a task
+- Method: `get_all_comments() -> list[TaskComment]` — Returns all comments across all tasks
+- Method: `to_dict() -> dict` — Serializes comments as dict mapping task_id to list of comment dicts
+- Method: `from_dict(data: dict)` — Deserializes comments from dict representation
+- Storage: In-memory dictionary mapping task_id to list of TaskComment objects
+
+**TaskImportExportService class:**
+- Constructor: `__init__(todo_service: TodoService, comments_service: CommentsService)`
+- Method: `export(path: str)` — Exports tasks and comments to JSON file
+  - Creates JSON with keys: "tasks" (list) and "comments" (list of comment dicts)
+  - Uses Task.to_dict() and TaskComment.to_dict() formats
+  - Creates parent directories if needed
+- Method: `import_from(path: str)` — Imports tasks and comments from JSON file
+  - Validates JSON structure (must have "tasks" and "comments" keys)
+  - Validates tasks are list of dicts with required "id" field
+  - Validates comments are list of dicts with "id" and "task_id" fields
+  - Skips duplicate tasks (by ID) — checks existing task IDs
+  - Skips duplicate comments (by ID) — checks existing comment IDs
+  - Preserves existing data — no overwrites
+  - Persists changes to storage
+  - Raises ValueError for invalid JSON structure, FileNotFoundError for missing file
+
+**CLI Integration:**
+- One-shot: `python -m src export <path>` — Exports to JSON file
+- One-shot: `python -m src import <path>` — Imports from JSON file
+- Interactive menu options 8 and 9 for export and import with user prompts
+
+### JSON Schema
+```json
+{
+  "tasks": [
+    {
+      "id": "uuid-string",
+      "title": "task title",
+      "description": "optional description",
+      "status": "PENDING|IN_PROGRESS|DONE",
+      "created_at": "ISO 8601 datetime",
+      "updated_at": "ISO 8601 datetime",
+      "due_date": "ISO 8601 datetime (optional)"
+    }
+  ],
+  "comments": [
+    {
+      "id": "uuid-string",
+      "task_id": "uuid-string",
+      "content": "comment text",
+      "created_at": "ISO 8601 datetime",
+      "author": "optional author name",
+      "updated_at": "ISO 8601 datetime (optional)"
+    }
+  ]
+}
+```
+
+### Test Results
+- **Total tests**: 101 passed (6 new import/export tests + 95 existing)
+- **New tests**: All 6 TaskImportExportService tests passing
+  - ✓ test_export_creates_json_file: Creates file at specified path
+  - ✓ test_export_contains_tasks_and_comments: JSON includes all tasks and comments
+  - ✓ test_import_restores_tasks: Tasks are restored correctly on import
+  - ✓ test_import_validates_structure: Invalid JSON structure raises exception
+  - ✓ test_import_restores_comments: Comments are restored with correct content
+  - ✓ test_import_skips_duplicates: Re-importing same file skips duplicates
+- **Existing tests**: All 95 existing tests remain passing (backward compatible)
+
+### Requirements Met
+- ✓ TaskImportExportService created with export() and import_from() methods
+- ✓ CommentsService created to manage task comments
+- ✓ JSON schema includes "tasks" and "comments" top-level keys
+- ✓ Schema matches Task.to_dict() and TaskComment.to_dict() formats
+- ✓ Structure validation: raises exception for invalid JSON schema
+- ✓ Duplicate skipping: checks task and comment IDs, no overwrites
+- ✓ Existing data preservation: imports only new items, preserves existing ones
+- ✓ CLI support: python -m src export <path> and python -m src import <path>
+- ✓ Interactive menu support: Options 8 and 9 for export/import
+- ✓ All 101 tests passing
+- ✓ UML diagrams updated to reflect new services and architecture
+- ✓ No external dependencies (uses only json, pathlib, datetime)
+
+### Notes
+- Candidate B was the only implementer that created actual code and commits
+- Implementation required minor fix to CommentsService constructor signature to match test expectations
+- Export format changed from dict-of-lists to flat list for comments to match test schema expectations
+- All diagrams successfully updated with proper @startuml/@enduml tags
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
