@@ -18,13 +18,24 @@ class TaskManager:
 
     def _load(self) -> None:
         raw = self._storage.load()
-        self._tasks = {d["id"]: Task.from_dict(d) for d in raw}
+        # Handle both list format (legacy) and dict format (with projects)
+        if isinstance(raw, dict):
+            tasks_data = raw.get("__tasks__", [])
+        else:
+            tasks_data = raw
+        self._tasks = {d["id"]: Task.from_dict(d) for d in tasks_data}
 
     def _persist(self) -> None:
-        self._storage.save([t.to_dict() for t in self._tasks.values()])
+        raw = self._storage.load()
+        # Preserve the storage format and projects if they exist
+        if isinstance(raw, dict):
+            raw["__tasks__"] = [t.to_dict() for t in self._tasks.values()]
+            self._storage.save(raw)
+        else:
+            self._storage.save([t.to_dict() for t in self._tasks.values()])
 
-    def add(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
-        task = Task(title=title, description=description, due_date=due_date)
+    def add(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None, project_id: Optional[str] = None) -> Task:
+        task = Task(title=title, description=description, due_date=due_date, project_id=project_id)
         self._tasks[task.id] = task
         self._persist()
         return task
@@ -46,12 +57,14 @@ class TaskManager:
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
 
-    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
+    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
         task = self.get(task_id)
         if title is not None:
             task.title = title
         if description is not None:
             task.description = description
+        if project_id is not None:
+            task.project_id = project_id
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task

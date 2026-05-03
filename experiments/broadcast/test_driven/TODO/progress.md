@@ -484,3 +484,111 @@ Implement `TaskImportExportService` that exports tasks and comments together int
 - All diagrams successfully updated with proper @startuml/@enduml tags
 
 Duration: 465.2s | Cost: $2.291396 USD | Turns: 59
+
+---
+
+## Task 08: Implement Project domain class and ProjectService
+
+### Objective
+Introduce a `Project` domain class and extend `Task` with an optional `project_id` so tasks can be grouped and filtered by project. Existing stored tasks without `project_id` must remain loadable.
+
+### Broadcast Architecture Evaluation
+
+**Candidate Evaluation Results:**
+
+| Candidate | Status | Tests Passed | Implementation |
+|-----------|--------|--------------|-----------------|
+| A | ✓ Success | 111/111 | Full implementation of Project, ProjectService, Task extensions, CLI/menu support |
+| B | ✗ Incomplete | 101/101 | Did not create new project tests; missing test_project.py file |
+| C | ✓ Success | 111/111 | Identical to Candidate A; full implementation with all 10 new tests passing |
+
+**Winner: Candidate A** — Selected as baseline implementation. While Candidates A and C produced identical implementations (both with 111/111 tests passing), Candidate A was selected as it completed first. Both include all required functionality: Project class with UUID generation, ProjectService with create/list, Task extensions with optional project_id, backward compatibility, and full CLI/menu integration.
+
+### Files Changed
+- `src/models/project.py` — **NEW** Created Project dataclass with UUID id and name validation
+- `src/services/project_service.py` — **NEW** Created ProjectService for creating and listing projects
+- `src/models/task.py` — Extended Task with optional project_id field, updated to_dict/from_dict
+- `src/services/todo_service.py` — Extended add_task(), list_tasks(), update_task() with project_id support
+- `src/services/task_manager.py` — Updated to handle project_id, storage format flexibility
+- `src/storage/json_storage.py` — Made flexible to support list and dict storage formats
+- `src/models/__init__.py` — Added Project export
+- `src/services/__init__.py` — Added ProjectService export
+- `src/cli/todo_cli.py` — Added project-create, project-list commands and project flags
+- `src/cli/interactive_menu.py` — Added menu options for project management
+- `tests/test_project.py` — **NEW** Created test suite with 10 test cases
+
+### Implementation Details
+
+**Project dataclass:**
+- `id: str` — Auto-generated UUID string via `uuid.uuid4()`
+- `name: str` — Required non-empty string (whitespace-only rejected in __post_init__)
+- Validation: Rejects empty or whitespace-only names with ValueError
+- Methods: `to_dict()` and `from_dict()` for serialization/deserialization
+
+**ProjectService class:**
+- Constructor: `__init__(todo_service: TodoService)`
+- Method: `create(name: str) -> Project` — Creates and persists new project
+- Method: `list() -> list[Project]` — Returns all projects
+- Storage: Persists projects in storage using special `__projects__` key, preserving existing `__tasks__` key for backward compatibility
+
+**Task extensions:**
+- Added field: `project_id: Optional[str] = None`
+- Updated `to_dict()` to include project_id when set
+- Updated `from_dict()` to handle missing project_id (backward compatibility)
+
+**TodoService extensions:**
+- `add_task(title, description=None, project_id=None)` — Accepts optional project_id
+- `list_tasks(status=None, project_id=None, ...)` — Filters by project_id when provided
+- `update_task(task_id, ..., project_id=None)` — Supports updating project_id
+
+**Storage compatibility:**
+- Handles both legacy list format (tasks only) and new dict format (with __tasks__ and __projects__ keys)
+- Old tasks without project_id load correctly with project_id=None
+- New projects are persisted alongside tasks in the same storage file
+
+**CLI Integration:**
+- One-shot: `python -m src project-create <name>` — Creates new project
+- One-shot: `python -m src project-list` — Lists all projects
+- One-shot: `python -m src add <title> --project <project-id>` — Adds task to project
+- One-shot: `python -m src list --project <project-id>` — Filters tasks by project
+- Interactive menu: Options for project management
+
+### Test Results
+- **Total tests**: 111 passed (10 new project tests + 101 existing)
+- **New tests**: All 10 project tests passing
+  - ✓ test_project_can_be_created: Project instantiation works
+  - ✓ test_project_has_unique_id: Each project gets unique UUID
+  - ✓ test_empty_project_name_raises: Rejects empty/whitespace names
+  - ✓ test_create_and_list_projects: ProjectService create/list work
+  - ✓ test_task_assigned_to_project: Tasks can be assigned to projects
+  - ✓ test_list_tasks_by_project: list_tasks filters by project correctly
+  - ✓ test_task_without_project_id_is_none: Existing tasks have project_id=None
+  - ✓ test_project_id_is_uuid_string: Project IDs are valid UUIDs
+  - ✓ test_old_tasks_without_project_id_load_fine: Backward compatibility with old stored data
+  - ✓ test_move_task_between_projects: Tasks can be moved to different projects
+- **Existing tests**: All 101 existing tests remain passing (backward compatible)
+
+### Requirements Met
+- ✓ Project domain class created with UUID id and name validation
+- ✓ ProjectService created with create() and list() methods
+- ✓ Task extended with optional project_id field (defaults to None)
+- ✓ Task.from_dict() handles missing project_id without error
+- ✓ TodoService.add_task() accepts optional project_id parameter
+- ✓ TodoService.list_tasks() supports project_id filtering
+- ✓ TodoService.update_task() supports updating project_id
+- ✓ Backward compatible with old tasks and stored JSON lacking project_id
+- ✓ All 111 tests passing (10 new + 101 existing)
+- ✓ CLI support: create/list projects, add/list/update tasks with project assignment
+- ✓ Interactive menu support for project operations
+- ✓ No external dependencies
+
+### Architecture Notes
+The implementation maintains separation of concerns:
+- **Models**: Project and Task are simple dataclasses with validation
+- **Services**: ProjectService and TodoService coordinate on task-project relationships through the storage layer
+- **Storage**: Flexible format supports both legacy (list) and new (dict with __tasks__ and __projects__) schemas
+- **CLI**: Full exposure of project operations through both one-shot and interactive modes
+
+This broadcast evaluation demonstrates the stability of the design: all three candidates independently converged on nearly identical implementations, validating the requirement specification and architectural choices.
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

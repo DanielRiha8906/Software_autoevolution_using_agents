@@ -17,6 +17,7 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Project Service" as PS
         component "Comments Service" as CS
         component "Import/Export Service" as IES
     }
@@ -36,13 +37,16 @@ Main --> IM : interactive mode
 Main --> CLI : command mode
 
 IM --> SVC
+IM --> PS
 IM --> CS
 IM --> IES
 CLI --> SVC
+CLI --> PS
 CLI --> CS
 CLI --> IES
 
 SVC --> MGR
+PS --> SVC
 CS --> SVC
 IES --> SVC
 IES --> CS

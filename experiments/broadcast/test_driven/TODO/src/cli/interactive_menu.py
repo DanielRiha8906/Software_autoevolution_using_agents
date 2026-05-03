@@ -5,6 +5,7 @@ from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
+from ..services.project_service import ProjectService
 from ..services.statistics_service import TaskStatisticsService
 from ..services.comments_service import CommentsService
 from ..services.import_export_service import TaskImportExportService
@@ -56,6 +57,7 @@ class InteractiveMenu:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._project_service = ProjectService(self._service)
         self._comments_service = CommentsService()
         self._import_export_service = TaskImportExportService(self._service, self._comments_service)
 
@@ -90,6 +92,10 @@ class InteractiveMenu:
                 self._do_export()
             elif choice == "9":
                 self._do_import()
+            elif choice == "10":
+                self._do_project_list()
+            elif choice == "11":
+                self._do_project_create()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -119,6 +125,8 @@ class InteractiveMenu:
         print("  7. View statistics")
         print("  8. Export to JSON")
         print("  9. Import from JSON")
+        print("  10. List projects")
+        print("  11. Create project")
         print("  0. Quit")
         print()
 
@@ -324,5 +332,31 @@ class InteractiveMenu:
             self._import_export_service.import_from(path)
             print(f"\n  Imported from {path}")
         except (FileNotFoundError, ValueError) as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_project_list(self) -> None:
+        _clear()
+        print("  Projects\n")
+        projects = self._project_service.list()
+        if not projects:
+            print("  (no projects yet)")
+        else:
+            for project in projects:
+                print(f"  {project.id[:8]}  {project.name}")
+        print()
+        input("  Press Enter to continue...")
+
+    def _do_project_create(self) -> None:
+        _clear()
+        print("  Create new project\n")
+        name = _prompt("Project name")
+        if not name:
+            input("  Project name cannot be empty. Press Enter...")
+            return
+        try:
+            project = self._project_service.create(name)
+            print(f"\n  Created: {project.id[:8]}  {project.name}")
+        except ValueError as e:
             print(f"\n  Error: {e}")
         input("  Press Enter to continue...")
