@@ -245,4 +245,4 @@ All new tests pass successfully:
 - [x] UML diagrams updated with TaskComment class
 - [x] progress.md updated with this summary
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 321.5s | Cost: $0.518330 USD | Turns: 17
