@@ -6,6 +6,7 @@ from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.statistics_service import WorkflowStatisticsService
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -107,11 +108,28 @@ def _filter_menu(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
+def _show_statistics(service: WorkflowRunService) -> None:
+    stats_service = WorkflowStatisticsService(service)
+    report = stats_service.compute()
+    print("\n--- Workflow Statistics ---")
+    total_runs = sum(report.count_by_conclusion.values())
+    print(f"Total runs: {total_runs}")
+    print("\nRuns by conclusion:")
+    for conclusion, count in report.count_by_conclusion.items():
+        print(f"  {conclusion.value}: {count}")
+    print(f"\nDuration (seconds):")
+    print(f"  Average: {report.avg_duration_seconds:.2f}")
+    print(f"  Minimum: {report.min_duration_seconds:.2f}")
+    print(f"  Maximum: {report.max_duration_seconds:.2f}")
+    print(f"\nAverage attempts per run: {report.avg_attempts_per_run:.3f}")
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
     ("Get run detail", _detail_run),
     ("Filter runs", _filter_menu),
+    ("View statistics", _show_statistics),
     ("Exit", None),
 ]
 

@@ -7,6 +7,7 @@ from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.statistics_service import WorkflowStatisticsService
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -72,6 +73,9 @@ def build_parser() -> argparse.ArgumentParser:
     detail_p = sub.add_parser("detail", help="Show details for a single run")
     detail_p.add_argument("run_id", help="Run ID")
 
+    # statistics
+    sub.add_parser("statistics", help="Show workflow run statistics")
+
     return parser
 
 
@@ -113,3 +117,17 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_run(run))
+
+    elif ns.command == "statistics":
+        stats_service = WorkflowStatisticsService(service)
+        report = stats_service.compute()
+        print("\n--- Workflow Statistics ---")
+        print(f"Total runs: {sum(report.count_by_conclusion.values())}")
+        print("\nRuns by conclusion:")
+        for conclusion, count in report.count_by_conclusion.items():
+            print(f"  {conclusion.value}: {count}")
+        print(f"\nDuration (seconds):")
+        print(f"  Average: {report.avg_duration_seconds:.2f}")
+        print(f"  Minimum: {report.min_duration_seconds:.2f}")
+        print(f"  Maximum: {report.max_duration_seconds:.2f}")
+        print(f"\nAverage attempts per run: {report.avg_attempts_per_run:.3f}")
