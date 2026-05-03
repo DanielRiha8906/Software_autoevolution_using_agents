@@ -30,13 +30,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
-        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo", "sin", "cos", "tan", "log", "ln", "exp"],
+        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo | sin | cos | tan | log | ln | exp)",
     )
     parser.add_argument(
         "--memory",
@@ -46,7 +46,7 @@ def main() -> None:
     parser.add_argument(
         "--filter-operation",
         metavar="OPERATION",
-        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo", "sin", "cos", "tan", "log", "ln", "exp"],
         help="Filter memory entries by operation name",
     )
     parser.add_argument(
@@ -127,6 +127,12 @@ def main() -> None:
         print(f"  Sqrt:     {stats.operation_counts['sqrt']}")
         print(f"  Power:    {stats.operation_counts['power']}")
         print(f"  Modulo:   {stats.operation_counts['modulo']}")
+        print(f"  Sin:      {stats.operation_counts['sin']}")
+        print(f"  Cos:      {stats.operation_counts['cos']}")
+        print(f"  Tan:      {stats.operation_counts['tan']}")
+        print(f"  Log:      {stats.operation_counts['log']}")
+        print(f"  Ln:       {stats.operation_counts['ln']}")
+        print(f"  Exp:      {stats.operation_counts['exp']}")
         print(f"\nTotal errors: {stats.total_errors}")
         print(f"Error rate: {stats.error_rate:.1f}%")
         print(f"Average execution time: {stats.avg_execution_time_ms:.2f} ms")

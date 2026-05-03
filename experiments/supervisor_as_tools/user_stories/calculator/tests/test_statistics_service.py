@@ -36,6 +36,12 @@ class TestStatisticsServiceGenerate:
             "sqrt": 0,
             "power": 0,
             "modulo": 0,
+            "sin": 0,
+            "cos": 0,
+            "tan": 0,
+            "log": 0,
+            "ln": 0,
+            "exp": 0,
         }
         assert stats.total_errors == 0
         assert stats.error_rate == 0.0

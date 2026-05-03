@@ -40,33 +40,33 @@ class TestRunCommand:
 class TestRunInteractive:
     def test_exit_choice(self, capsys):
         cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["12"]):
+        with patch("builtins.input", side_effect=["18"]):
             cli.run_interactive()
         assert "Goodbye" in capsys.readouterr().out
 
     def test_add_operation(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("add", 3, 5, 8, _TS)
-        with patch("builtins.input", side_effect=["1", "3", "5", "12"]):
+        with patch("builtins.input", side_effect=["1", "3", "5", "18"]):
             cli.run_interactive()
         assert "8" in capsys.readouterr().out
 
     def test_invalid_choice_retries(self, capsys):
         cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["99", "12"]):
+        with patch("builtins.input", side_effect=["99", "18"]):
             cli.run_interactive()
         assert "Invalid choice" in capsys.readouterr().out
 
     def test_invalid_number_retries(self, capsys):
         cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["1", "abc", "12"]):
+        with patch("builtins.input", side_effect=["1", "abc", "18"]):
             cli.run_interactive()
         assert "Invalid number" in capsys.readouterr().out
 
     def test_history_empty(self, capsys):
         cli, service = _make_cli()
         service.get_history.return_value = []
-        with patch("builtins.input", side_effect=["9", "12"]):
+        with patch("builtins.input", side_effect=["15", "18"]):
             cli.run_interactive()
         assert "No calculations" in capsys.readouterr().out
 
@@ -75,7 +75,7 @@ class TestRunInteractive:
         service.get_history.return_value = [
             CalculationResult("add", 1, 2, 3, _TS),
         ]
-        with patch("builtins.input", side_effect=["9", "12"]):
+        with patch("builtins.input", side_effect=["15", "18"]):
             cli.run_interactive()
         assert "1 + 2 = 3" in capsys.readouterr().out
 
@@ -122,44 +122,171 @@ class TestRunInteractiveNewOps:
     def test_square_menu_option(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("square", 5, 0, 25, _TS)
-        with patch("builtins.input", side_effect=["5", "5", "0", "12"]):
+        with patch("builtins.input", side_effect=["5", "5", "0", "18"]):
             cli.run_interactive()
         assert "25" in capsys.readouterr().out
 
     def test_sqrt_menu_option(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("sqrt", 9, 0, 3.0, _TS)
-        with patch("builtins.input", side_effect=["6", "9", "0", "12"]):
+        with patch("builtins.input", side_effect=["6", "9", "0", "18"]):
             cli.run_interactive()
         assert "3" in capsys.readouterr().out
 
     def test_power_menu_option(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("power", 2, 3, 8, _TS)
-        with patch("builtins.input", side_effect=["7", "2", "3", "12"]):
+        with patch("builtins.input", side_effect=["7", "2", "3", "18"]):
             cli.run_interactive()
         assert "8" in capsys.readouterr().out
 
     def test_modulo_menu_option(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("modulo", 10, 3, 1, _TS)
-        with patch("builtins.input", side_effect=["8", "10", "3", "12"]):
+        with patch("builtins.input", side_effect=["8", "10", "3", "18"]):
             cli.run_interactive()
         assert "1" in capsys.readouterr().out
 
     def test_sqrt_negative_error_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.side_effect = ValueError("Square root of negative numbers is not allowed")
-        with patch("builtins.input", side_effect=["6", "-4", "0", "12"]):
+        with patch("builtins.input", side_effect=["6", "-4", "0", "18"]):
             cli.run_interactive()
         assert "Square root of negative numbers is not allowed" in capsys.readouterr().out
 
     def test_modulo_by_zero_error_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.side_effect = ValueError("Modulo by zero is not allowed")
-        with patch("builtins.input", side_effect=["8", "10", "0", "12"]):
+        with patch("builtins.input", side_effect=["8", "10", "0", "18"]):
             cli.run_interactive()
         assert "Modulo by zero is not allowed" in capsys.readouterr().out
+
+
+class TestRunCommandScientificOps:
+    def test_sin_operation(self, capsys):
+        cli, service = _make_cli()
+        import math
+        service.perform.return_value = CalculationResult("sin", math.pi / 2, 0, 1.0, _TS)
+        cli.run_command("sin", math.pi / 2, 0)
+        assert "1" in capsys.readouterr().out
+
+    def test_cos_operation(self, capsys):
+        cli, service = _make_cli()
+        import math
+        service.perform.return_value = CalculationResult("cos", 0, 0, 1.0, _TS)
+        cli.run_command("cos", 0, 0)
+        assert "1" in capsys.readouterr().out
+
+    def test_tan_operation(self, capsys):
+        cli, service = _make_cli()
+        service.perform.return_value = CalculationResult("tan", 0, 0, 0.0, _TS)
+        cli.run_command("tan", 0, 0)
+        assert "0" in capsys.readouterr().out
+
+    def test_log_operation(self, capsys):
+        cli, service = _make_cli()
+        service.perform.return_value = CalculationResult("log", 100, 0, 2.0, _TS)
+        cli.run_command("log", 100, 0)
+        assert "2" in capsys.readouterr().out
+
+    def test_ln_operation(self, capsys):
+        cli, service = _make_cli()
+        import math
+        service.perform.return_value = CalculationResult("ln", math.e, 0, 1.0, _TS)
+        cli.run_command("ln", math.e, 0)
+        assert "1" in capsys.readouterr().out
+
+    def test_exp_operation(self, capsys):
+        cli, service = _make_cli()
+        import math
+        service.perform.return_value = CalculationResult("exp", 1, 0, math.e, _TS)
+        cli.run_command("exp", 1, 0)
+        assert str(math.e)[:4] in capsys.readouterr().out
+
+    def test_log_zero_error_exits(self):
+        cli, service = _make_cli()
+        service.perform.side_effect = ValueError("Logarithm of x <= 0 is not allowed")
+        with pytest.raises(SystemExit):
+            cli.run_command("log", 0, 0)
+
+    def test_ln_zero_error_exits(self):
+        cli, service = _make_cli()
+        service.perform.side_effect = ValueError("Logarithm of x <= 0 is not allowed")
+        with pytest.raises(SystemExit):
+            cli.run_command("ln", 0, 0)
+
+    def test_log_negative_error_exits(self):
+        cli, service = _make_cli()
+        service.perform.side_effect = ValueError("Logarithm of x <= 0 is not allowed")
+        with pytest.raises(SystemExit):
+            cli.run_command("log", -5, 0)
+
+    def test_ln_negative_error_exits(self):
+        cli, service = _make_cli()
+        service.perform.side_effect = ValueError("Logarithm of x <= 0 is not allowed")
+        with pytest.raises(SystemExit):
+            cli.run_command("ln", -5, 0)
+
+
+class TestRunInteractiveScientificOps:
+    def test_sin_menu_option(self, capsys):
+        cli, service = _make_cli()
+        import math
+        service.perform.return_value = CalculationResult("sin", math.pi / 2, 0, 1.0, _TS)
+        with patch("builtins.input", side_effect=["9", str(math.pi / 2), "0", "18"]):
+            cli.run_interactive()
+        assert "1" in capsys.readouterr().out
+
+    def test_cos_menu_option(self, capsys):
+        cli, service = _make_cli()
+        service.perform.return_value = CalculationResult("cos", 0, 0, 1.0, _TS)
+        with patch("builtins.input", side_effect=["10", "0", "0", "18"]):
+            cli.run_interactive()
+        assert "1" in capsys.readouterr().out
+
+    def test_tan_menu_option(self, capsys):
+        cli, service = _make_cli()
+        service.perform.return_value = CalculationResult("tan", 0, 0, 0.0, _TS)
+        with patch("builtins.input", side_effect=["11", "0", "0", "18"]):
+            cli.run_interactive()
+        assert "0" in capsys.readouterr().out
+
+    def test_log_menu_option(self, capsys):
+        cli, service = _make_cli()
+        service.perform.return_value = CalculationResult("log", 100, 0, 2.0, _TS)
+        with patch("builtins.input", side_effect=["12", "100", "0", "18"]):
+            cli.run_interactive()
+        assert "2" in capsys.readouterr().out
+
+    def test_ln_menu_option(self, capsys):
+        cli, service = _make_cli()
+        import math
+        service.perform.return_value = CalculationResult("ln", math.e, 0, 1.0, _TS)
+        with patch("builtins.input", side_effect=["13", str(math.e), "0", "18"]):
+            cli.run_interactive()
+        assert "1" in capsys.readouterr().out
+
+    def test_exp_menu_option(self, capsys):
+        cli, service = _make_cli()
+        import math
+        service.perform.return_value = CalculationResult("exp", 1, 0, math.e, _TS)
+        with patch("builtins.input", side_effect=["14", "1", "0", "18"]):
+            cli.run_interactive()
+        assert str(math.e)[:4] in capsys.readouterr().out
+
+    def test_log_zero_error_in_interactive(self, capsys):
+        cli, service = _make_cli()
+        service.perform.side_effect = ValueError("Logarithm of x <= 0 is not allowed")
+        with patch("builtins.input", side_effect=["12", "0", "0", "18"]):
+            cli.run_interactive()
+        assert "Logarithm of x <= 0 is not allowed" in capsys.readouterr().out
+
+    def test_ln_negative_error_in_interactive(self, capsys):
+        cli, service = _make_cli()
+        service.perform.side_effect = ValueError("Logarithm of x <= 0 is not allowed")
+        with patch("builtins.input", side_effect=["13", "-5", "0", "18"]):
+            cli.run_interactive()
+        assert "Logarithm of x <= 0 is not allowed" in capsys.readouterr().out
 
 
 class TestShowFilteredMemoryCli:
