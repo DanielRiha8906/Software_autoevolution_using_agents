@@ -3,6 +3,7 @@ from typing import Optional
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
+from ..models.task_comment import TaskComment
 from ..storage.json_storage import JsonStorage
 
 
@@ -83,4 +84,58 @@ class TaskManager:
     def delete(self, task_id: str) -> None:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
+        self._persist()
+
+    def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
+        """Add a comment to a task.
+
+        Args:
+            task_id: The ID of the task to comment on.
+            content: The comment content (non-empty string).
+            author: Optional author name for the comment.
+
+        Returns:
+            TaskComment: The created comment.
+
+        Raises:
+            ValueError: If content is empty.
+            TaskNotFoundError: If task is not found.
+        """
+        task = self.get(task_id)
+        comment = TaskComment(content=content, task_id=task.id, author=author)
+        task.comments.append(comment)
+        self._persist()
+        return comment
+
+    def get_comments(self, task_id: str) -> list[TaskComment]:
+        """Get all comments for a task.
+
+        Args:
+            task_id: The ID of the task.
+
+        Returns:
+            list[TaskComment]: All comments for the task.
+
+        Raises:
+            TaskNotFoundError: If task is not found.
+        """
+        task = self.get(task_id)
+        return task.comments
+
+    def delete_comment(self, task_id: str, comment_id: str) -> None:
+        """Delete a comment from a task.
+
+        Args:
+            task_id: The ID of the task.
+            comment_id: The ID of the comment to delete.
+
+        Raises:
+            TaskNotFoundError: If task is not found.
+            ValueError: If comment is not found on the task.
+        """
+        task = self.get(task_id)
+        comment = next((c for c in task.comments if c.id == comment_id), None)
+        if comment is None:
+            raise ValueError(f"Comment '{comment_id}' not found on task '{task.id}'")
+        task.comments.remove(comment)
         self._persist()
