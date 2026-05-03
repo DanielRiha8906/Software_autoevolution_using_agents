@@ -174,6 +174,10 @@ class TodoCLI:
         p_delete_comment.add_argument("id", help="Comment ID")
         p_delete_comment.set_defaults(func=self._cmd_delete_comment)
 
+        # report
+        p_report = sub.add_parser("report", help="View task summary report")
+        p_report.set_defaults(func=self._cmd_report)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -347,4 +351,12 @@ class TodoCLI:
         self._service.delete_comment(args.id)
         comment_id = comment.id[:8]
         print(f"Deleted comment {comment_id}")
+        return 0
+
+    def _cmd_report(self, args: argparse.Namespace) -> int:
+        report = self._service.generate_summary_report()
+        print("\n  Task Summary Report\n")
+        for line in str(report).split("\n"):
+            print(f"  {line}")
+        print()
         return 0
