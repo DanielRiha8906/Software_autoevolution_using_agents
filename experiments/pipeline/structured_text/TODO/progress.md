@@ -236,3 +236,101 @@ Verified complete implementation of Task 04 requirements from Task 03. All MUST 
 - **Test Coverage**: 206 tests covering all scenarios including custom storage paths
 
 Duration: 467.4s | Cost: $0.935453 USD | Turns: 17
+
+## Task 05: Add due date and overdue filtering to task queries
+
+### Summary
+
+Successfully implemented due date range and overdue status filtering for task queries with full timezone support (CEST/UTC+2), CLI integration, and comprehensive test coverage.
+
+### Files Changed
+
+**Source Code:**
+- `src/utils/timezone_utils.py` — NEW: Utility functions for CEST timezone handling (now_in_cest, is_overdue_cest, utc_to_cest)
+- `src/utils/__init__.py` — NEW: Package initialization for utilities module
+- `src/services/task_manager.py` — Added list_by_filter() method with status, due_after, due_before, overdue parameters
+- `src/services/todo_service.py` — Extended list_tasks() signature with new filter parameters
+- `src/cli/todo_cli.py` — Added CLI flags: --due-after, --due-before, --overdue, --not-overdue
+- `src/cli/interactive_menu.py` — Enhanced menu option 1 with date range and overdue filtering UI
+
+**Tests:**
+- `tests/test_task05_filtering_and_timezone.py` — NEW: 59 comprehensive tests covering all filtering combinations, timezone conversions, and edge cases
+
+**Documentation:**
+- `artifacts/class_diagram.puml` — Added TimezoneUtils class, updated TaskManager and TodoService signatures
+- `artifacts/activity_diagram.puml` — Enhanced list/filter flow with detailed filtering steps
+- `artifacts/sequence_diagram.puml` — Complete redesign showing list with filtering sequence
+- `artifacts/component_diagram.puml` — Added TimezoneUtils component and dependency
+- `artifacts/use_case_diagram.puml` — Added three filtering use cases with include relationships
+- `artifacts/state_diagram.puml` — No changes (task states unchanged)
+- `analysis.md` — Analysis of requirements and current state
+- `design.md` — Detailed implementation design
+
+### Test Results
+
+✅ All 265 tests passed
+- New tests: 59 (TaskManager filtering, TodoService compatibility, timezone utilities, CLI parsing, integration)
+- Existing tests: 206 (all still passing)
+- No production bugs discovered
+
+### Features Implemented
+
+**Must (All Completed):**
+- ✅ Extend task query interface with due date range filter (due_before, due_after)
+- ✅ Extend task query interface with overdue status filter
+- ✅ Return filtered collections consistent with existing list_tasks format (list[Task])
+- ✅ Overdue detection uses current CEST time (UTC+2)
+- ✅ All functionality accessible via `python -m src` (interactive menu + CLI flags)
+
+**Should (All Completed):**
+- ✅ Support combining new filters with existing status filter in single call
+- ✅ Preserve existing list_tasks(status=...) behavior unchanged
+
+**Could (Not Completed):**
+- ❌ Text search by partial match on task title/description (out of scope)
+
+**Won't (Not Implemented):**
+- ❌ Reimplement/replace existing status filtering (as specified)
+- ❌ Use database query engine or external index (as specified)
+
+### Implementation Details
+
+**Core Filtering Method:**
+- `TaskManager.list_by_filter(status, due_after, due_before, overdue)` — Sequential filtering: status → date range → overdue
+- Tasks without due_date excluded from date range filters
+- Overdue check respects DONE status (done tasks never overdue)
+- Validation: ValueError raised if due_after > due_before
+
+**TodoService Integration:**
+- Extended `list_tasks()` signature with optional parameters (all default to None)
+- Delegates to TaskManager.list_by_filter()
+- Backward compatible: existing calls work unchanged
+
+**Timezone Support:**
+- `now_in_cest()` — Returns current time in CEST (UTC+2) using zoneinfo
+- `is_overdue_cest()` — Checks if task is overdue using CEST for comparison
+- `utc_to_cest()` — Converts UTC datetime to CEST
+- Handles DST transitions correctly (uses IANA timezone database)
+
+**CLI Exposure:**
+- Flags: `--due-after <ISO8601>`, `--due-before <ISO8601>`, `--overdue`, `--not-overdue`
+- Accepts ISO 8601 strings (e.g., "2026-05-15" or "2026-05-15T14:30:00+00:00")
+- Combines with existing `--status` flag
+
+**Interactive Menu:**
+- Menu option 1: Enhanced with submenu for filtering by date range and overdue status
+- Accepts user input in YYYY-MM-DD format
+- Displays which filters are active
+
+**Test Coverage:**
+- Filter by status, due_after, due_before, overdue individually
+- Combined filters (all combinations)
+- Date range validation
+- Tasks without due_date handling
+- Overdue respects DONE status
+- Backward compatibility
+- CLI argument parsing
+- Timezone conversions (UTC↔CEST)
+- Edge cases (boundary times, DST)
+
+Duration: 575.1s | Cost: $1.296892 USD | Turns: 20

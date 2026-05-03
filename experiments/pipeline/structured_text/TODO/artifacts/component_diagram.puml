@@ -28,6 +28,10 @@ package "TODO Application" {
     package "Persistence Layer" {
         component "JSON Storage\n(JsonStorage)" as Storage
     }
+
+    package "Utility Layer" {
+        component "Timezone Utils\n(TimezoneUtils)" as TZ
+    }
 }
 
 database "todo_data.json" as DB
@@ -42,6 +46,7 @@ SVC --> MGR
 SVC --> CMT
 MGR --> Storage
 CMT --> Storage
+MGR --> TZ : uses (for filtering)
 MGR ..> Model
 CMT ..> CMTModel
 Storage ..> Model

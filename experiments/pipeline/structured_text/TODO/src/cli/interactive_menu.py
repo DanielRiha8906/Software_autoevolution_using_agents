@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
@@ -132,9 +133,59 @@ class InteractiveMenu:
         status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
         status = status_map.get(raw)
 
+        # Ask for date filtering
         _clear()
-        tasks = self._service.list_tasks(status)
-        label = f"[{_STATUS_NAME[status]}]" if status else "[all]"
+        print("  Filter by due date (leave blank for no date filter):")
+        due_after_str = _prompt("Due on or after (YYYY-MM-DD)") or None
+        due_after = None
+        if due_after_str:
+            try:
+                due_after = datetime.fromisoformat(due_after_str)
+            except ValueError:
+                print(f"  Error: Invalid date format '{due_after_str}'. Using no date filter.")
+                due_after = None
+
+        due_before_str = _prompt("Due on or before (YYYY-MM-DD)") or None
+        due_before = None
+        if due_before_str:
+            try:
+                due_before = datetime.fromisoformat(due_before_str)
+            except ValueError:
+                print(f"  Error: Invalid date format '{due_before_str}'. Using no date filter.")
+                due_before = None
+
+        # Ask for overdue filtering
+        _clear()
+        print("  Filter by overdue status:")
+        print("  1. Overdue only")
+        print("  2. Not overdue only")
+        print("  0. All (default)")
+        overdue_raw = input("  > ").strip()
+        overdue_map = {"1": True, "2": False}
+        overdue = overdue_map.get(overdue_raw)
+
+        _clear()
+        tasks = self._service.list_tasks(
+            status=status,
+            due_after=due_after,
+            due_before=due_before,
+            overdue=overdue,
+        )
+
+        # Build label showing which filters are active
+        filters = []
+        if status:
+            filters.append(_STATUS_NAME[status])
+        if due_after:
+            filters.append(f"due≥{due_after.strftime('%Y-%m-%d')}")
+        if due_before:
+            filters.append(f"due≤{due_before.strftime('%Y-%m-%d')}")
+        if overdue is True:
+            filters.append("overdue")
+        elif overdue is False:
+            filters.append("not-overdue")
+
+        label = f"[{', '.join(filters)}]" if filters else "[all]"
         print(f"  Tasks {label}\n")
         if not tasks:
             print("  (none)")
