@@ -395,4 +395,4 @@ Duration: 465.9s | Cost: $0.993832 USD | Turns: 18
 - **Error Handling:** New ProjectNotFoundError exception. Proper validation of project names (non-empty). Graceful handling of missing project references.
 - **Cascade Behavior:** Deleting a project unassigns all tasks (sets project_id to None), preserving task data while removing project association.
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 525.7s | Cost: $1.225336 USD | Turns: 19
