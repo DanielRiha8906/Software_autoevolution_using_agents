@@ -172,3 +172,53 @@ Successfully implemented CommentsService with CommentManager to manage the full 
 - activity_diagram.puml: Added 3 new menu options for comment operations
 
 Duration: 381.7s | Cost: $0.668918 USD | Turns: 29
+
+## Task 05: Extend list_tasks() with due date range and overdue filtering
+
+### Summary
+Successfully extended TodoService.list_tasks() to support filtering by due date ranges and overdue status. Added three new optional parameters (overdue, due_before, due_after) that combine with the existing status filter using AND semantics. Updated CLI to expose the new filtering capabilities with proper CEST timezone validation.
+
+### Files Changed
+- `src/services/todo_service.py` - Extended list_tasks() signature and added filtering logic with CEST datetime validation
+- `src/cli/todo_cli.py` - Added CLI arguments for due date filtering and datetime parsing
+- `artifacts/class_diagram.puml` - Updated TodoService.listTasks() signature and added _validate_datetime_cest() method
+
+### Test Results
+- **All 87 tests passing** ✅ (no new tests in test suite, but all existing tests continue to pass)
+- Existing tests verify:
+  - Task.is_overdue() behavior with CEST timezone
+  - Due date validation (timezone-aware, CEST-only)
+  - Serialization/deserialization of due dates
+  - Service layer operations on tasks with due dates
+
+### Implementation Details
+
+**TodoService.list_tasks() extension:**
+- New signature: `list_tasks(status: Optional[TaskStatus] = None, overdue: Optional[bool] = None, due_before: Optional[datetime] = None, due_after: Optional[datetime] = None) -> list[Task]`
+- Parameters:
+  * `overdue: Optional[bool]` - When True, filters for tasks where is_overdue() returns True; when False, filters for non-overdue tasks
+  * `due_before: Optional[datetime]` - Filters for tasks with due_date < due_before (excludes tasks with None due_date)
+  * `due_after: Optional[datetime]` - Filters for tasks with due_date > due_after (excludes tasks with None due_date)
+- All datetime parameters validated to be CEST-aware (UTC+2); naive or non-CEST datetimes raise ValueError
+- Filtering uses AND semantics: all specified filters must pass for a task to be included
+- Backward compatible: existing calls with no filters or status-only continue to work unchanged
+
+**Private validation method:**
+- `_validate_datetime_cest(dt: datetime, name: str) -> None` - Validates that datetime is timezone-aware and uses CEST timezone
+
+**CLI enhancements:**
+- New arguments for `list` subcommand:
+  * `--overdue` - Boolean flag to filter only overdue tasks
+  * `--due-before <ISO_8601>` - String argument for date cutoff (ISO 8601 format with CEST timezone)
+  * `--due-after <ISO_8601>` - String argument for date cutoff (ISO 8601 format with CEST timezone)
+- Added `_parse_datetime_cest(date_str: str) -> datetime` method to parse ISO 8601 strings with CEST validation
+- Updated `_cmd_list()` to extract new CLI arguments, parse datetime strings, and pass to service layer
+- Enhanced output formatting to display due_date in ISO format when present
+
+**Validation and error handling:**
+- Non-CEST or naive datetimes raise ValueError with clear error message
+- Invalid ISO 8601 format raises ValueError
+- Tasks with None due_date excluded from range filters (due_before/due_after)
+- All validation happens before filtering for fail-fast semantics
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

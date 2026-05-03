@@ -93,12 +93,13 @@ package "services" #DDFFD4 {
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1]) : Task
         +getTask(taskId: String) : Task
-        +listTasks(status: TaskStatus [0..1]) : List<Task>
+        +listTasks(status: TaskStatus [0..1], overdue: Boolean [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1]) : List<Task>
         +startTask(taskId: String) : Task
         +completeTask(taskId: String) : Task
         +reopenTask(taskId: String) : Task
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +deleteTask(taskId: String) : void
+        -_validate_datetime_cest(dt: DateTime, name: String) : void
     }
 
     class CommentsService {
