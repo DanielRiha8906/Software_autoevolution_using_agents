@@ -542,4 +542,4 @@ Sorting: Results sorted by (due_date is None, due_date) — due dates first, Non
 - `component_diagram.puml` — Updated component relationship to show filtering responsibilities
 - `activity_diagram.puml` — Added "List/Filter Flow" partition with all filter options, date parsing, validation, and result display
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 665.9s | Cost: $1.671507 USD | Turns: 29
