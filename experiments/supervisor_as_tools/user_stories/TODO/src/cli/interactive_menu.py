@@ -128,16 +128,88 @@ class InteractiveMenu:
         status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
         status = status_map.get(raw)
 
+        # Date range filtering
+        due_before = None
+        due_after = None
+        overdue_only = False
+
         _clear()
-        tasks = self._service.list_tasks(status)
-        label = f"[{_STATUS_NAME[status]}]" if status else "[all]"
+        print("  Filter by date range (leave blank for no filter):")
+        print("  1. Show overdue tasks only")
+        print("  2. Show tasks due before a date")
+        print("  3. Show tasks due after a date")
+        print("  4. Show tasks in a date range")
+        print("  0. No date filter")
+        date_choice = input("  > ").strip()
+
+        if date_choice == "1":
+            overdue_only = True
+        elif date_choice == "2":
+            due_before_str = _prompt("Due before date (ISO 8601)")
+            if due_before_str:
+                try:
+                    due_before = parse_datetime_or_iso_string(due_before_str)
+                except ValueError as e:
+                    print(f"\n  Error: {e}")
+                    input("  Press Enter to continue...")
+                    return
+        elif date_choice == "3":
+            due_after_str = _prompt("Due after date (ISO 8601)")
+            if due_after_str:
+                try:
+                    due_after = parse_datetime_or_iso_string(due_after_str)
+                except ValueError as e:
+                    print(f"\n  Error: {e}")
+                    input("  Press Enter to continue...")
+                    return
+        elif date_choice == "4":
+            due_after_str = _prompt("Due after date (ISO 8601)")
+            due_before_str = _prompt("Due before date (ISO 8601)")
+            if due_after_str:
+                try:
+                    due_after = parse_datetime_or_iso_string(due_after_str)
+                except ValueError as e:
+                    print(f"\n  Error: {e}")
+                    input("  Press Enter to continue...")
+                    return
+            if due_before_str:
+                try:
+                    due_before = parse_datetime_or_iso_string(due_before_str)
+                except ValueError as e:
+                    print(f"\n  Error: {e}")
+                    input("  Press Enter to continue...")
+                    return
+            # Validate range
+            if due_after is not None and due_before is not None and due_after > due_before:
+                print("\n  Error: due after date cannot be after due before date")
+                input("  Press Enter to continue...")
+                return
+
+        _clear()
+        tasks = self._service.list_tasks(
+            status=status,
+            due_before=due_before,
+            due_after=due_after,
+            overdue_only=overdue_only,
+        )
+        label_parts = []
+        if status:
+            label_parts.append(_STATUS_NAME[status])
+        if overdue_only:
+            label_parts.append("overdue")
+        if due_before:
+            label_parts.append(f"due before {due_before.strftime('%Y-%m-%d')}")
+        if due_after:
+            label_parts.append(f"due after {due_after.strftime('%Y-%m-%d')}")
+        label = f"[{', '.join(label_parts)}]" if label_parts else "[all]"
         print(f"  Tasks {label}\n")
         if not tasks:
             print("  (none)")
         else:
             for task in tasks:
                 desc = f"  — {task.description}" if task.description else ""
-                print(f"  {_task_line(task)}{desc}")
+                due = f"  (due: {task.due_date.strftime('%Y-%m-%d')})" if task.due_date else ""
+                print(f"  {_task_line(task)}{desc}{due}")
         print()
         input("  Press Enter to continue...")
 

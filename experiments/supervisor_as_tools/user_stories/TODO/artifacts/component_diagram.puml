@@ -46,7 +46,7 @@ SVC --> MGR
 SVC --> CMT
 
 MGR --> Storage
-MGR --> DTUtils : validate dates
+MGR --> DTUtils : validate & filter dates
 MGR ..> Model
 CMT --> Storage : persist comments
 CMT --> MGR : validate tasks

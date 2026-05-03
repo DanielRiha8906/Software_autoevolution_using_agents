@@ -9,7 +9,7 @@ repeat
 
   switch (choice)
     case (1 — List/filter)
-      :Run list/filter flow;
+      :Run list/filter flow with date and status;
     case (2 — Add task)
       :Run add task flow;
     case (3 — Show details)
@@ -30,6 +30,49 @@ repeat
   endswitch
 
 repeat while (user continues)
+
+partition "List/Filter Flow" {
+  :Select status filter (pending / in progress / done / all);
+  :Select date filter option;
+  switch (date_filter_choice)
+    case (overdue only)
+      :Set overdue_only = true;
+    case (due before)
+      :Input due_before date;
+      if (Valid date?) then (yes)
+        :Parse to datetime;
+      else (invalid)
+        :Show error;
+        :Return to input;
+      endif
+    case (due after)
+      :Input due_after date;
+      if (Valid date?) then (yes)
+        :Parse to datetime;
+      else (invalid)
+        :Show error;
+        :Return to input;
+      endif
+    case (date range)
+      :Input due_after and due_before dates;
+      if (Both valid?) then (yes)
+        :Parse both datetimes;
+        if (due_after <= due_before?) then (yes)
+          :Proceed with range;
+        else (invalid range)
+          :Show error: after > before;
+          :Return to input;
+        endif
+      else (invalid)
+        :Show error;
+        :Return to input;
+      endif
+    case (no date filter)
+      :Skip date filtering;
+  endswitch
+  :Call list_tasks(status, due_before, due_after, overdue_only);
+  :Display filtered results;
+}
 
 partition "Add/Update Task Flow" {
   :Input title, description;
