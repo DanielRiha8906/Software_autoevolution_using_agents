@@ -1,5 +1,6 @@
 import argparse
 import sys
+from datetime import datetime
 from typing import Optional
 
 from ..models.task_status import TaskStatus
@@ -59,6 +60,9 @@ class TodoCLI:
             choices=["pending", "in_progress", "done"],
             help="Filter by status",
         )
+        p_list.add_argument("--due-before", help="Filter tasks with due_date before cutoff (ISO format, CEST timezone)")
+        p_list.add_argument("--due-after", help="Filter tasks with due_date after cutoff (ISO format, CEST timezone)")
+        p_list.add_argument("--overdue", action="store_true", help="Filter only overdue tasks")
         p_list.set_defaults(func=self._cmd_list)
 
         # show
@@ -102,7 +106,34 @@ class TodoCLI:
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
         status = TaskStatus(args.status) if args.status else None
-        tasks = self._service.list_tasks(status)
+        due_before = None
+        due_after = None
+
+        if args.due_before:
+            try:
+                due_before = datetime.fromisoformat(args.due_before)
+            except ValueError as e:
+                print(f"Error parsing --due-before: {e}", file=sys.stderr)
+                return 1
+
+        if args.due_after:
+            try:
+                due_after = datetime.fromisoformat(args.due_after)
+            except ValueError as e:
+                print(f"Error parsing --due-after: {e}", file=sys.stderr)
+                return 1
+
+        try:
+            tasks = self._service.list_tasks(
+                status=status,
+                due_before=due_before,
+                due_after=due_after,
+                overdue=args.overdue,
+            )
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
         if not tasks:
             print("No tasks found.")
             return 0

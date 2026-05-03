@@ -1,7 +1,8 @@
 import os
+from datetime import datetime
 from typing import Optional
 
-from ..models.task import Task
+from ..models.task import Task, CEST
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
@@ -79,6 +80,8 @@ class InteractiveMenu:
                 self._do_update(tasks)
             elif choice == "6":
                 self._do_delete(tasks)
+            elif choice == "7":
+                self._do_filter_due_date()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -105,6 +108,7 @@ class InteractiveMenu:
         print("  4. Change status  (start / done / reopen)")
         print("  5. Update task    (title / description)")
         print("  6. Delete task")
+        print("  7. Filter by due date")
         print("  0. Quit")
         print()
 
@@ -243,3 +247,79 @@ class InteractiveMenu:
         except TaskNotFoundError as e:
             print(f"\n  Error: {e}")
         input("  Press Enter to continue...")
+
+    def _do_filter_due_date(self) -> None:
+        _clear()
+        print("  Filter by due date\n")
+        print("  1. Overdue tasks")
+        print("  2. Due before date")
+        print("  3. Due after date")
+        print("  0. Cancel")
+        choice = input("  > ").strip()
+
+        if choice == "0":
+            return
+        elif choice == "1":
+            # Overdue filter
+            _clear()
+            tasks = self._service.list_tasks(overdue=True)
+            label = "[overdue]"
+            print(f"  Tasks {label}\n")
+            if not tasks:
+                print("  (none)")
+            else:
+                for task in tasks:
+                    desc = f"  — {task.description}" if task.description else ""
+                    print(f"  {_task_line(task)}{desc}")
+            print()
+            input("  Press Enter to continue...")
+        elif choice == "2":
+            # Due before filter
+            _clear()
+            date_str = _prompt("Due before (YYYY-MM-DD HH:MM)")
+            if not date_str:
+                input("  Date cannot be empty. Press Enter...")
+                return
+            try:
+                due_before = datetime.strptime(date_str, "%Y-%m-%d %H:%M").replace(tzinfo=CEST)
+                tasks = self._service.list_tasks(due_before=due_before)
+                _clear()
+                label = "[before]"
+                print(f"  Tasks {label}\n")
+                if not tasks:
+                    print("  (none)")
+                else:
+                    for task in tasks:
+                        desc = f"  — {task.description}" if task.description else ""
+                        print(f"  {_task_line(task)}{desc}")
+                print()
+                input("  Press Enter to continue...")
+            except ValueError as e:
+                _clear()
+                print(f"  Error parsing date: {e}")
+                input("  Press Enter to continue...")
+        elif choice == "3":
+            # Due after filter
+            _clear()
+            date_str = _prompt("Due after (YYYY-MM-DD HH:MM)")
+            if not date_str:
+                input("  Date cannot be empty. Press Enter...")
+                return
+            try:
+                due_after = datetime.strptime(date_str, "%Y-%m-%d %H:%M").replace(tzinfo=CEST)
+                tasks = self._service.list_tasks(due_after=due_after)
+                _clear()
+                label = "[after]"
+                print(f"  Tasks {label}\n")
+                if not tasks:
+                    print("  (none)")
+                else:
+                    for task in tasks:
+                        desc = f"  — {task.description}" if task.description else ""
+                        print(f"  {_task_line(task)}{desc}")
+                print()
+                input("  Press Enter to continue...")
+            except ValueError as e:
+                _clear()
+                print(f"  Error parsing date: {e}")
+                input("  Press Enter to continue...")
