@@ -2,14 +2,17 @@ from datetime import datetime
 from typing import Optional, Union
 
 from ..models.task import Task
+from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
+from .comment_manager import CommentManager
 from .task_manager import TaskManager
 
 
 class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
+        self._comment_manager = CommentManager(self._manager)
 
     def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None) -> Task:
         if not title or not title.strip():
@@ -77,3 +80,20 @@ class TodoService:
     def is_overdue(self, task_id: str) -> bool:
         """Check if task is overdue."""
         return self._manager.get(task_id).is_overdue()
+
+    # ── Comment management ─────────────────────────────────────────────────
+
+    def add_comment(self, task_id: str, content: str) -> TaskComment:
+        return self._comment_manager.add(task_id, content)
+
+    def get_comment(self, comment_id: str) -> TaskComment:
+        return self._comment_manager.get(comment_id)
+
+    def list_task_comments(self, task_id: str) -> list[TaskComment]:
+        return self._comment_manager.list_by_task(task_id)
+
+    def update_comment(self, comment_id: str, content: str) -> TaskComment:
+        return self._comment_manager.update(comment_id, content)
+
+    def delete_comment(self, comment_id: str) -> None:
+        self._comment_manager.delete(comment_id)

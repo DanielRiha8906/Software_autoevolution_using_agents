@@ -28,4 +28,8 @@ note right of DONE
   is_overdue() = false (always)
 end note
 
+note top of PENDING
+  Comments can be added/removed at any task state
+end note
+
 @enduml
