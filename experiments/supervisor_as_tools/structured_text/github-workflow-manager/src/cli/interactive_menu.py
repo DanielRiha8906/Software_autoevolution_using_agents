@@ -1,11 +1,14 @@
 import sys
 from typing import Optional
+from datetime import datetime, timezone
 
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
+from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.attempt_service import AttemptService
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -62,7 +65,20 @@ def _fmt_run(run: WorkflowRun) -> str:
     )
 
 
-def _add_run(service: WorkflowRunService) -> None:
+def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
+    conclusion = attempt.conclusion or "—"
+    return (
+        f"  id              : {attempt.id}\n"
+        f"  run_id          : {attempt.run_id}\n"
+        f"  attempt_number  : {attempt.attempt_number}\n"
+        f"  status          : {attempt.status}\n"
+        f"  conclusion      : {conclusion}\n"
+        f"  created_at      : {attempt.created_at.isoformat()}\n"
+        f"  duration_seconds: {attempt.duration_seconds}\n"
+    )
+
+
+def _add_run(service: WorkflowRunService, attempt_service: AttemptService) -> None:
     tracker = WorkflowRunTracker(service)
     print("\n--- Add Workflow Run ---")
     name = _prompt("Workflow name")
@@ -88,7 +104,7 @@ def _add_run(service: WorkflowRunService) -> None:
     print(f"\nAdded run {run.id}")
 
 
-def _list_runs(service: WorkflowRunService) -> None:
+def _list_runs(service: WorkflowRunService, attempt_service: AttemptService) -> None:
     runs = service.list_runs()
     if not runs:
         print("\nNo runs recorded.")
@@ -98,7 +114,7 @@ def _list_runs(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
-def _detail_run(service: WorkflowRunService) -> None:
+def _detail_run(service: WorkflowRunService, attempt_service: AttemptService) -> None:
     run_id = _prompt("\nEnter run ID")
     run = service.get_run_detail(run_id)
     if run is None:
@@ -107,7 +123,7 @@ def _detail_run(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
-def _check_run_state(service: WorkflowRunService) -> None:
+def _check_run_state(service: WorkflowRunService, attempt_service: AttemptService) -> None:
     run_id = _prompt("\nEnter run ID")
     run = service.get_run_detail(run_id)
     if run is None:
@@ -122,7 +138,7 @@ def _check_run_state(service: WorkflowRunService) -> None:
     print(f"    is_cancelled: {run.is_cancelled()}")
 
 
-def _filter_menu(service: WorkflowRunService) -> None:
+def _filter_menu(service: WorkflowRunService, attempt_service: AttemptService) -> None:
     filter_by = _choose("Filter by", ["branch", "status", "conclusion"])
     if filter_by == "branch":
         branch = _prompt("Branch name")
@@ -142,17 +158,58 @@ def _filter_menu(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
+def _add_attempt(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    print("\n--- Add Workflow Attempt ---")
+    run_id = int(_prompt("Run ID"))
+    attempt_number = int(_prompt("Attempt number"))
+    status = _prompt("Status")
+    conclusion = _prompt("Conclusion (leave blank for none)", "") or None
+    duration_seconds = _prompt_float("Duration (seconds)", 0.0)
+
+    attempt = attempt_service.create_attempt(
+        run_id=run_id,
+        attempt_number=attempt_number,
+        status=status,
+        conclusion=conclusion,
+        created_at=datetime.now(timezone.utc),
+        duration_seconds=duration_seconds,
+    )
+    print(f"\nAdded attempt {attempt.id}")
+
+
+def _list_attempts_menu(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    attempts = attempt_service.list_attempts()
+    if not attempts:
+        print("\nNo attempts recorded.")
+        return
+    print(f"\n--- {len(attempts)} attempt(s) ---")
+    for attempt in attempts:
+        print(_fmt_attempt(attempt))
+
+
+def _detail_attempt(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    attempt_id = int(_prompt("\nEnter attempt ID"))
+    attempt = attempt_service.get_attempt_detail(attempt_id)
+    if attempt is None:
+        print(f"No attempt found with id {attempt_id}.")
+    else:
+        print(_fmt_attempt(attempt))
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
     ("Get run detail", _detail_run),
     ("Check run state", _check_run_state),
     ("Filter runs", _filter_menu),
+    ("Add attempt", _add_attempt),
+    ("List attempts", _list_attempts_menu),
+    ("Get attempt detail", _detail_attempt),
     ("Exit", None),
 ]
 
 
-def run_interactive(service: WorkflowRunService) -> None:
+def run_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
         print("\n" + "=" * 44)
@@ -167,6 +224,6 @@ def run_interactive(service: WorkflowRunService) -> None:
             print("Goodbye.")
             sys.exit(0)
         try:
-            handler(service)
+            handler(service, attempt_service)
         except KeyboardInterrupt:
             print()
