@@ -13,6 +13,7 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.statistics_service import StatisticsService
+from ..services.github_fetch_service import GitHubFetchService
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -290,6 +291,49 @@ def _import_runs(service: WorkflowRunService) -> None:
         print(f"Error: {e}")
 
 
+def _fetch_from_github(service: WorkflowRunService) -> None:
+    """Fetch workflow runs from GitHub and import them."""
+    print("\n--- Fetch from GitHub ---")
+    owner = _prompt("GitHub repository owner")
+    repo = _prompt("GitHub repository name")
+    skip_dup = _choose("Handle duplicates", ["fail on duplicate", "skip duplicate"], allow_blank=False)
+    skip_duplicates = skip_dup == "skip duplicate"
+
+    try:
+        github_service = GitHubFetchService()
+        runs = github_service.fetch_workflow_runs(owner=owner, repo=repo)
+
+        imported_count = 0
+        skipped_count = 0
+        errors = []
+
+        for run in runs:
+            if any(r.id == run.id for r in service.list_runs()):
+                if skip_duplicates:
+                    skipped_count += 1
+                    continue
+                else:
+                    errors.append(f"Run {run.id} already exists")
+                    continue
+
+            try:
+                service.add_workflow_run(run)
+                imported_count += 1
+            except ValueError as e:
+                errors.append(str(e))
+
+        print(f"\nSuccessfully imported {imported_count} runs from GitHub ({skipped_count} duplicates skipped)")
+        if errors:
+            print(f"Warnings ({len(errors)} items):")
+            for error in errors[:5]:
+                print(f"  - {error}")
+            if len(errors) > 5:
+                print(f"  ... and {len(errors) - 5} more")
+
+    except ValueError as e:
+        print(f"Error: {e}")
+
+
 MENU = [
     ("Add workflow run", lambda s, a: _add_run(s)),
     ("List all runs", lambda s, a: _list_runs(s)),
@@ -302,6 +346,7 @@ MENU = [
     ("View statistics", lambda s, a: _statistics(s, a)),
     ("Export runs to JSON", lambda s, a: _export_runs(s)),
     ("Import runs from JSON", lambda s, a: _import_runs(s)),
+    ("Fetch from GitHub", lambda s, a: _fetch_from_github(s)),
     ("Exit", None),
 ]
 
