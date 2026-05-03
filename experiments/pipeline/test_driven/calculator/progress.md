@@ -205,3 +205,42 @@ Duration: 359.1s | Cost: $0.668301 USD | Turns: 16
 - Type hints and error handling throughout
 
 Duration: 492.4s | Cost: $0.895554 USD | Turns: 18
+
+## Task 08: Scientific Calculator
+
+**Status:** Completed
+
+**Files Changed:**
+- src/models/operation.py — Added SIN, COS, TAN, LOG, LN, EXP enum members
+- src/services/scientific_calculator.py — New ScientificCalculator class extending Calculator with 6 trigonometric, logarithmic, and exponential methods
+- src/services/__init__.py — Added ScientificCalculator to imports and __all__ exports
+- src/__main__.py — Updated to instantiate ScientificCalculator, added new operations to argparse choices and usage string
+- src/cli/calculator_cli.py — Extended _MENU with 6 new scientific operations
+- artifacts/class_diagram.puml — Updated to show ScientificCalculator class, inheritance relationship, new methods, and extended Operation enum
+- tests/test_scientific_calculator.py — New test file with 9 test cases
+
+**Test Results:**
+- 9/9 test_scientific_calculator.py tests: PASSED ✓
+  - test_scientific_calculator_exists
+  - test_sin
+  - test_cos
+  - test_tan
+  - test_log_base_10
+  - test_log_of_non_positive_raises
+  - test_ln
+  - test_exp
+  - test_standard_operations_still_work
+
+**Implementation Summary:**
+- Created ScientificCalculator class inheriting from Calculator to extend functionality without code duplication
+- Implemented 6 new mathematical methods: sin(a, b=0), cos(a, b=0), tan(a, b=0), log(a, b=0), ln(a, b=0), exp(a, b=0)
+- Domain error handling: log() and ln() raise ValueError for non-positive inputs (x <= 0)
+- All methods use Python standard library math module (sin, cos, tan, log10, log, exp)
+- Extended Operation enum with 6 new members (SIN, COS, TAN, LOG, LN, EXP)
+- Overrode calculate() method in ScientificCalculator with extended dispatch table supporting all 14 operations
+- CLI integration: New operations accessible via --operation flag and interactive menu options
+- Backward compatibility verified: inherited Calculator methods (add, divide, etc.) work correctly
+- All functionality exposed via `python -m src` (both one-shot --operation flag and interactive menu)
+- UML diagrams updated to reflect new class structure and operation types
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

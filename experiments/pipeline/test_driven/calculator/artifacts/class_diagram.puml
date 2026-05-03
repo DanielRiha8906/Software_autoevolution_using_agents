@@ -13,6 +13,12 @@ package "models" #DDEEFF {
         SQRT
         POWER
         MODULO
+        SIN
+        COS
+        TAN
+        LOG
+        LN
+        EXP
         --
         +fromString(value: String) : Operation
         +displayName() : String
@@ -62,6 +68,16 @@ package "services" #DDFFD4 {
         +sqrt(a: float, b: float = 0) : float
         +power(a: float, b: float) : float
         +modulo(a: float, b: float) : float
+        +calculate(op: Operation, a: float, b: float) : float
+    }
+
+    class ScientificCalculator {
+        +sin(a: float, b: float = 0) : float
+        +cos(a: float, b: float = 0) : float
+        +tan(a: float, b: float = 0) : float
+        +log(a: float, b: float = 0) : float
+        +ln(a: float, b: float = 0) : float
+        +exp(a: float, b: float = 0) : float
         +calculate(op: Operation, a: float, b: float) : float
     }
 
@@ -129,6 +145,8 @@ package "cli" #FFE5E5 {
         -_prompt_and_import() : void
     }
 }
+
+ScientificCalculator --|> Calculator
 
 CalculatorCLI --> CalculatorService : service
 CalculatorCLI --> MemoryService : memory_service
