@@ -50,6 +50,15 @@ repeat
             stop
         endswitch
       repeat while (manage comments)
+    case (10 — View statistics)
+      :Call TodoService.get_statistics();
+      partition "Statistics Computation" {
+        :Count total tasks;
+        :Count by status (PENDING, IN_PROGRESS, DONE);
+        :Count overdue tasks;
+        :Count tasks with due date;
+      }
+      :Display task statistics;
     case (0/q — Quit)
       :Clear screen;
       stop
