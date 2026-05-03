@@ -146,4 +146,4 @@ Implemented `MemoryService` to manage the lifecycle of `MemoryEntry` objects. Th
 - Interface Simplicity: Two public methods (store, retrieve) with clear contracts
 - In-memory implementation: State persists for the lifetime of the service instance
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 92.8s | Cost: $0.249394 USD | Turns: 29
