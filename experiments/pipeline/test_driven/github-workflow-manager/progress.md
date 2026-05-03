@@ -76,3 +76,49 @@ Implemented five state-checking methods on the WorkflowRun model to encapsulate 
 5. UML Designer — Updated artifacts/class_diagram.puml
 
 Duration: 247.6s | Cost: $0.429886 USD | Turns: 19
+
+---
+
+## Task 03: Create WorkflowRunAttempt Domain Object
+
+**Status:** ✅ COMPLETE
+
+**Summary:**
+Introduced `WorkflowRunAttempt` as a first-class domain object representing individual retry attempts of a workflow run. The model tracks attempt-level metadata (attempt number, status, conclusion, timing) and is associated with `WorkflowRun` by `run_id` foreign key. Includes full serialization support with timezone validation (CEST only).
+
+**Files Changed:**
+- `src/models/workflow_run_attempt.py` — Created new dataclass with 7 fields, validation, and serialization
+- `src/models/__init__.py` — Added import and export of WorkflowRunAttempt
+- `tests/test_workflow_run_attempt.py` — Created with 8 test cases (all passing)
+- `artifacts/class_diagram.puml` — Added WorkflowRunAttempt class and 1-N relationship with WorkflowRun
+- `artifacts/component_diagram.puml` — Added WorkflowRunAttempt component to domain model package
+
+**Test Results:**
+- All 8 new tests: ✅ PASS
+- All 28 existing tests: ✅ PASS
+- Total: 36/36 tests passed
+
+**Implementation Details:**
+1. Added `WorkflowRunAttempt` dataclass with fields: id, run_id, attempt_number, status, conclusion, created_at, duration_seconds
+2. Validation in `__post_init__()`:
+   - attempt_number must be > 0 (raises ValueError if ≤ 0)
+   - created_at must be timezone-aware with CEST (UTC+2) only
+   - duration_seconds (if not None) must be ≥ 0
+3. Serialization methods:
+   - `to_dict()` — Converts all fields to dict, datetime to ISO string
+   - `from_dict()` — Reconstructs from dict, preserving CEST timezone on round-trip
+4. duration_seconds is optional with default None
+
+**Key Validations:**
+- attempt_number ≥ 1 (GitHub retry logic uses 1-based numbering)
+- created_at requires CEST timezone (UTC+2) — rejects UTC and naive datetimes
+- Round-trip serialization preserves CEST timezone info through ISO format
+
+**Pipeline Execution:**
+1. Data Analyst — Analyzed test suite and existing models, documented exact requirements
+2. System Architect — Designed class structure, methods, and validation logic
+3. Programmer — Implemented WorkflowRunAttempt dataclass and updated exports
+4. Pytest-Tester — Created and ran test suite (8/8 pass)
+5. UML Designer — Updated class and component diagrams
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

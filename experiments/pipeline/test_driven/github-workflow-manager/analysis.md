@@ -1,67 +1,201 @@
-# Analysis: Add duration_seconds to WorkflowRun
+# Analysis: WorkflowRunAttempt Domain Object Implementation
 
-## Current State of WorkflowRun
+## Current Codebase State
 
-**File:** `src/models/workflow_run.py`
+### Existing Structure
+- **Models directory**: `/src/models/` contains three existing domain objects:
+  - `workflow_run.py`: WorkflowRun dataclass with 9 fields + methods
+  - `workflow_status.py`: WorkflowStatus enum (6 values)
+  - `workflow_conclusion.py`: WorkflowConclusion enum (8 values)
+- **Models are exported** via `/src/models/__init__.py`
+- **Patterns established**: Dataclasses with `@dataclass`, `__post_init__()` validation, `to_dict()`, and `from_dict()` serialization
 
-The `WorkflowRun` class is a Python dataclass with 9 fields:
-- `id` (str)
-- `workflow_name` (str)
-- `branch` (str)
-- `status` (WorkflowStatus enum)
-- `conclusion` (Optional[WorkflowConclusion] enum)
-- `created_at` (datetime)
-- `updated_at` (Optional[datetime])
-- `run_number` (Optional[int])
-- `commit_sha` (Optional[str])
+### No WorkflowRunAttempt Yet
+- File does not exist: `/src/models/workflow_run_attempt.py`
+- Not imported in `/src/models/__init__.py`
 
-**Serialization methods:**
-- `to_dict()` — converts all fields to a dictionary, serializing enums to their `.value` and datetimes to ISO format
-- `from_dict(data: dict)` — reconstructs a WorkflowRun from a dictionary, converting strings back to enums and datetimes
+## Existing Domain Model Patterns
 
-**Validation:** Currently, the dataclass has no field-level validation. The class is defined with `@dataclass` decorator from the `dataclasses` module.
+### WorkflowRun Pattern (Key Reference)
+```python
+@dataclass
+class WorkflowRun:
+    # Fields with type hints
+    id: str
+    workflow_name: str
+    branch: str
+    status: WorkflowStatus
+    conclusion: Optional[WorkflowConclusion]
+    created_at: datetime
+    updated_at: Optional[datetime]
+    run_number: Optional[int]
+    commit_sha: Optional[str]
+    duration_seconds: float = 0.0
 
-## Required Changes
+    def __post_init__(self) -> None:
+        """Validate that duration_seconds is not negative."""
+        if self.duration_seconds < 0:
+            raise ValueError("duration_seconds must be non-negative")
 
-**1. Class Definition Addition:**
-Add `duration_seconds: float = 0.0` as a new field in the dataclass. Since it has a default value, it can be placed at the end after existing fields.
+    def to_dict(self) -> dict:
+        # Serializes enum.value, converts datetime to isoformat()
+        # Handles None values explicitly
 
-**Critical constraint:** The test suite expects validation to reject negative values. The dataclass decorator alone does not provide this. The solution is to use `__post_init__()` method to validate after initialization.
+    @classmethod
+    def from_dict(cls, data: dict) -> "WorkflowRun":
+        # Enum fields reconstructed via enum(data["field"])
+        # datetime.fromisoformat() for datetime fields
+        # .get() with defaults for optional fields
+```
 
-**2. Serialization Changes (to_dict method):**
-Add `"duration_seconds": self.duration_seconds` to the returned dictionary. No special serialization is needed since float serializes directly to JSON.
+### Key Implementation Notes from WorkflowRun
+1. Validation via `__post_init__()`
+2. Enums stored as `.value` strings in dict
+3. datetime serialization via `.isoformat()` and `datetime.fromisoformat()`
+4. Optional fields checked with `.get()` and None fallback
+5. Float fields default to 0.0 when missing in from_dict
 
-**3. Deserialization Changes (from_dict method):**
-Add backward compatibility using `data.get("duration_seconds", 0.0)` to handle both:
-- New records with the field present
-- Old records without the field — they will use the default
+## Exact Requirements from Test Suite
 
-## Test Suite Requirements
+### Field Definitions (from _attempt helper)
+| Field | Type | Required | Constraints | Default |
+|-------|------|----------|-------------|---------|
+| id | int | Yes | No validation shown | N/A |
+| run_id | int | Yes | No validation shown | N/A |
+| attempt_number | int | Yes | Must be > 0 (≥ 1) | N/A |
+| status | str | Yes | No enum constraint shown in tests | N/A |
+| conclusion | str | Yes | No enum constraint shown in tests | N/A |
+| created_at | datetime | Yes | CEST timezone ONLY (UTC+2) | N/A |
+| duration_seconds | float | No | Optional field | None or 0.0 |
 
-All 9 tests must pass:
+### Validation Requirements
 
-1. `test_workflow_run_has_duration_seconds` — attribute must exist
-2. `test_duration_seconds_defaults_to_zero` — must be 0.0 when not specified
-3. `test_duration_seconds_can_be_set` — must accept positive values
-4. `test_negative_duration_raises` — must raise exception on negative input (requires `__post_init__()`)
-5. `test_duration_seconds_in_to_dict` — must appear in `to_dict()` output
-6. `test_duration_seconds_round_trips_via_dict` — `to_dict()` + `from_dict()` must preserve value
-7. `test_old_dict_without_duration_seconds_loads_with_default` — old dicts must load with default 0.0
-8. `test_existing_fields_unchanged` — existing fields must continue to work
+**1. attempt_number validation (test_attempt_number_must_be_positive)**
+- Must reject attempt_number ≤ 0
+- Should raise Exception (ValueError recommended, matching WorkflowRun pattern)
+- Validation in `__post_init__()`
 
-## Backward Compatibility Requirements
+**2. created_at timezone validation (test_created_at_must_use_cest)**
+- Must reject any timezone except CEST
+- CEST = timezone(timedelta(hours=2))
+- Must raise Exception if timezone is not CEST
+- Test explicitly checks rejection of timezone.utc
 
-The `from_dict()` method must use `data.get()` for optional fields. When loading old JSON files without `duration_seconds`, the default 0.0 will be used. No schema migration is needed.
+**3. created_at timezone preservation (test_created_at_round_trips_as_cest)**
+- After `to_dict()` and `from_dict()` roundtrip
+- Restored object's `created_at.tzinfo` must equal CEST
+- This means from_dict() must convert parsed datetime to CEST timezone
 
-## Validation Mechanism
+**4. duration_seconds optionality (test_optional_duration_seconds, test_duration_seconds_defaults_to_none_or_zero)**
+- May be omitted from constructor call
+- Defaults to None OR 0.0 (test checks: `is None or == 0.0`)
+- Can accept float values like 5.5
+- Test shows: `_attempt()` without duration_seconds, then checks default
 
-The `__post_init__()` method should raise `ValueError` if `duration_seconds < 0`.
+### Serialization Requirements (test_serializes_to_dict, test_round_trips_via_dict)
+- `to_dict()` method must exist
+- Must include all fields: id, run_id, attempt_number, status, conclusion, created_at, duration_seconds
+- `from_dict()` class method must exist
+- Must reconstruct object with all fields matching original
+- Round-trip via dict preserves id, run_id, attempt_number, created_at, etc.
 
-## Files to Modify
+## Ambiguities and Assumptions
 
-1. **`src/models/workflow_run.py`** — Add field, validation, and serialization changes
+### 1. Enum Types for status and conclusion
+**Ambiguity**: Test uses strings ("completed", "success") but doesn't show if these should be Enum types like WorkflowStatus/WorkflowConclusion.
 
-## Diagram Impact
+**Working assumption**: Since tests use plain strings and don't import any status/conclusion enums, treat as plain str fields. If enums are intended, they would be imported and tested like WorkflowRun does. However, it's possible the architect/programmer may introduce enums later.
 
-The class diagram (`artifacts/class_diagram.puml`) must be updated to show:
-- Add `+duration_seconds : float` to the WorkflowRun attributes list
+**Decision for analysis**: Fields can be plain str or Enum; implementation should accept plain strings in tests (no type coercion needed).
+
+### 2. duration_seconds Default Value
+**Ambiguity**: Test checks `assert attempt.duration_seconds is None or attempt.duration_seconds == 0.0` — either is acceptable.
+
+**Working assumption**: Default to None (more idiomatic for optional), but 0.0 is also valid. Implementation will use None to match "optional" semantics.
+
+**Decision**: Use `Optional[float] = None` with optional parameter handling in from_dict().
+
+### 3. Integer Types for IDs
+**Ambiguity**: WorkflowRun uses `id: str`, but test uses `id=1` (int). WorkflowRunAttempt may use integers for IDs.
+
+**Working assumption**: Use int for id and run_id based on test's dict assertion structure and int literals in _attempt().
+
+### 4. CEST Timezone Handling in from_dict()
+**Ambiguity**: How to handle datetime deserialization when source might not have tzinfo.
+
+**Working assumption**: fromisoformat() will preserve tzinfo if present in ISO string. For validation, must check/convert to CEST before returning from from_dict().
+
+## Scope: What's In, Out, and Borderline
+
+### Explicitly In Scope
+- Create `/src/models/workflow_run_attempt.py`
+- Implement WorkflowRunAttempt dataclass
+- Implement `__post_init__()` with validation
+- Implement `to_dict()` serialization
+- Implement `from_dict()` deserialization
+- Import in `/src/models/__init__.py`
+- All 8 test cases must pass
+
+### Explicitly Out of Scope
+- No changes to baseline/
+- No changes to services/, storage/, or cli/ (these can reference the new model but don't need modification for the model itself)
+- No new tests (test file provided, not to be modified)
+- No enum definitions for status/conclusion (use str)
+
+### Borderline: Not Explicitly Required but Inferred
+- Should `duration_seconds` be validated (non-negative like WorkflowRun)? Not tested, but pattern suggests YES.
+- Should type hints match WorkflowRun patterns? Yes, for consistency.
+- Should docstrings be added? No requirement shown, but good practice.
+
+## Suggested Implementation Priorities
+
+### Priority 1: Field Definition (Load-Bearing)
+- Dataclass with exact 7 fields as specified
+- Correct type hints: id (int), run_id (int), attempt_number (int), status (str), conclusion (str), created_at (datetime), duration_seconds (Optional[float])
+- Default for duration_seconds critical for tests
+
+### Priority 2: Validation in __post_init__ (Test Blocker)
+- Check attempt_number > 0, raise ValueError if not
+- Check created_at.tzinfo equals CEST (timedelta(hours=2)), raise ValueError if not
+- Check duration_seconds is None or >= 0 (pattern consistency)
+
+### Priority 3: Serialization/Deserialization (Test Blocker)
+- to_dict() must convert datetime to isoformat() string, handle None values
+- from_dict() must use datetime.fromisoformat() AND ensure timezone is CEST
+- Both must roundtrip all 7 fields correctly
+
+### Priority 4: Import Export (Integration)
+- Add to `/src/models/__init__.py`
+- Ensure test can `from src.models.workflow_run_attempt import WorkflowRunAttempt`
+
+## Related Objects and Dependencies
+
+### Direct Dependencies (in test imports)
+- datetime, timezone, timedelta (Python stdlib)
+- CEST constant definition (local to test as timezone(timedelta(hours=2)))
+
+### Related Models (same package)
+- WorkflowRun: Use as pattern reference for structure
+- WorkflowStatus, WorkflowConclusion: Do NOT use (tests don't show dependency)
+
+### No Service/Storage Changes Needed
+- Tests only instantiate and serialize the model directly
+- No service layer integration required for this task
+- WorkflowRunAttempt may be used by services later, but that's outside this task scope
+
+## Summary of What Must Be Created
+
+**Single file**: `/src/models/workflow_run_attempt.py`
+
+**Must contain**:
+1. Import statements: dataclass, field, datetime, timezone, timedelta, Optional
+2. CEST timezone constant (or define inline)
+3. WorkflowRunAttempt dataclass with:
+   - 7 fields as specified
+   - `__post_init__()` for 2 validations (attempt_number > 0, created_at in CEST)
+   - `to_dict()` method
+   - `from_dict()` class method
+4. Update `/src/models/__init__.py` to export WorkflowRunAttempt
+
+**Test File** (already provided, read-only):
+- `tests/test_workflow_run_attempt.py` (assumed location based on test suite provided)
