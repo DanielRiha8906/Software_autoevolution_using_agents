@@ -72,6 +72,14 @@ package "services" #DDFFD4 {
         +perform(operation: Operation, a: float, b: float) : CalculationResult
         +getHistory() : List<CalculationResult>
     }
+
+    class MemoryService {
+        -storage : MemoryJsonStorage
+        --
+        +MemoryService(storage: MemoryJsonStorage)
+        +store(entry: MemoryEntry) : void
+        +retrieve_all() : List<MemoryEntry>
+    }
 }
 
 package "storage" #FFF3CC {
@@ -84,37 +92,54 @@ package "storage" #FFF3CC {
         -readRaw() : List<Dictionary>
         -writeRaw(records: List<Dictionary>) : void
     }
+
+    class MemoryJsonStorage {
+        -filepath : Path | str
+        --
+        +MemoryJsonStorage(filepath: Path | str)
+        +save(entry: MemoryEntry) : void
+        +load_all() : List<MemoryEntry>
+        -_read_raw() : List<Dictionary>
+        -_write_raw(records: List<Dictionary>) : void
+    }
 }
 
 package "cli" #FFE5E5 {
     class CalculatorCLI {
         -MENU : List<Tuple<Operation, String>>
         -service : CalculatorService
+        -memory_service : MemoryService | None
         --
-        +CalculatorCLI(service: CalculatorService)
-        +runInteractive() : void
-        +runCommand(operation: String, a: float, b: float) : void
-        -printMenu() : void
-        -resolveMenuChoice(choice: String) : Operation [0..1]
-        -promptNumber(prompt: String) : float [0..1]
-        -showHistory() : void
+        +CalculatorCLI(service: CalculatorService, memory_service: MemoryService | None)
+        +run_interactive() : void
+        +run_command(operation: String, a: float, b: float) : void
+        +show_memory() : void
+        -_print_menu() : void
+        -_resolve_menu_choice(choice: String) : Operation [0..1]
+        -_prompt_number(prompt: String) : float [0..1]
+        -_show_history() : void
+        -_show_memory() : void
     }
 }
 
 CalculatorCLI --> CalculatorService : service
+CalculatorCLI --> MemoryService : memory_service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
+MemoryService --> MemoryJsonStorage : storage
 
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
+MemoryService ..> MemoryEntry : manages
+MemoryJsonStorage ..> MemoryEntry : persists
 
 note right of MemoryEntry
-  Alternative to CalculationResult
-  with success/error tracking
-  and unique entry ID
+  Captures both successful
+  and failed calculations
+  with error tracking and ID
 end note
 
 @enduml

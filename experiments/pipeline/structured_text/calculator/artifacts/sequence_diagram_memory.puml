@@ -1,0 +1,60 @@
+@startuml sequence_diagram_memory
+
+skinparam sequenceActorBackgroundColor #DDEEFF
+skinparam sequenceActorBorderColor #3366AA
+skinparam sequenceParticipantBackgroundColor #DDFFD4
+skinparam sequenceParticipantBorderColor #66AA33
+
+actor User
+participant "CalculatorCLI" as CLI
+participant "MemoryService" as MemService
+participant "MemoryJsonStorage" as MemStore
+database "memory_entries.json" as DB
+
+== Store Memory Entry ==
+
+User -> CLI: show_memory()
+activate CLI
+CLI -> MemService: retrieve_all()
+activate MemService
+MemService -> MemStore: load_all()
+activate MemStore
+MemStore -> DB: read file
+activate DB
+DB --> MemStore: JSON data
+deactivate DB
+MemStore -> MemStore: parse entries to MemoryEntry objects
+MemStore --> MemService: List<MemoryEntry>
+deactivate MemStore
+MemService --> CLI: List<MemoryEntry>
+deactivate MemService
+CLI -> CLI: display entries
+CLI --> User: show memory list
+deactivate CLI
+
+== Store New Entry (implicit via CalculatorService) ==
+
+User -> CLI: run_command(operation)
+activate CLI
+CLI -> CLI: perform calculation via CalculatorService
+CLI -> CLI: create MemoryEntry from result
+note right of CLI: Application layer creates entry
+
+User -> CLI: CLI calls store indirectly
+MemService -> MemStore: save(entry: MemoryEntry)
+activate MemStore
+MemStore -> MemStore: _read_raw()
+note right of MemStore: Load existing entries
+MemStore -> MemStore: entry.to_dict()
+note right of MemStore: Convert to dictionary
+MemStore -> MemStore: _write_raw(records)
+note right of MemStore: Write updated list to file
+MemStore -> DB: write JSON array
+activate DB
+deactivate DB
+MemStore --> MemService: void
+deactivate MemStore
+MemService --> CLI: complete
+deactivate CLI
+
+@enduml
