@@ -9,6 +9,7 @@ from ..models.workflow_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_attempt_service import WorkflowAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.workflow_statistics_service import WorkflowStatisticsService
 from ..utils.timezone_converter import parse_datetime_with_timezone
 
 
@@ -440,6 +441,41 @@ def _query_attempt_state(attempt_service: WorkflowAttemptService) -> None:
     print(f"  Cancelled : {'yes' if attempt.is_cancelled() else 'no'}")
 
 
+def _view_statistics(stats_service: WorkflowStatisticsService) -> None:
+    """Display workflow statistics report."""
+    report = stats_service.compute_report()
+    print("\n--- Workflow Statistics Report ---")
+    print(f"Total Runs: {report.total_runs}")
+    print(f"\nRuns by Conclusion:")
+    # Sort with None at the end for display
+    items = sorted(
+        report.conclusion_counts.items(),
+        key=lambda x: (x[0] is None, x[0])
+    )
+    for conclusion, count in items:
+        label = conclusion if conclusion is not None else "incomplete"
+        print(f"  {label}: {count}")
+    print(f"\nDuration Statistics (seconds):")
+    print(f"  Average: {report.average_duration_seconds:.2f}")
+    print(f"  Min: {report.min_duration_seconds}")
+    print(f"  Max: {report.max_duration_seconds}")
+    print(f"\nAverage Duration by Conclusion (seconds):")
+    # Sort with None at the end for display
+    items = sorted(
+        report.duration_by_conclusion.items(),
+        key=lambda x: (x[0] is None, x[0])
+    )
+    for conclusion, avg_duration in items:
+        label = conclusion if conclusion is not None else "incomplete"
+        print(f"  {label}: {avg_duration:.2f}")
+    print(f"\nAttempt Statistics:")
+    print(f"  Total Attempts: {report.total_attempts}")
+    print(f"  Average Attempts per Run: {report.average_attempts_per_run:.2f}")
+    print(f"  Runs with Attempts: {report.runs_with_attempts}")
+    print(f"  Runs without Attempts: {report.runs_with_no_attempts}")
+    print(f"\nGenerated at: {report.generated_at.isoformat()}")
+
+
 def _run_menu(
     service: WorkflowRunService,
     attempt_service: Optional[WorkflowAttemptService] = None,
@@ -506,6 +542,7 @@ def _attempt_menu(
 MENU = [
     ("Workflow Runs", "runs"),
     ("Workflow Attempts", "attempts"),
+    ("View Statistics", "statistics"),
     ("Exit", None),
 ]
 
@@ -513,6 +550,7 @@ MENU = [
 def run_interactive(
     service: WorkflowRunService,
     attempt_service: Optional[WorkflowAttemptService] = None,
+    stats_service: Optional[WorkflowStatisticsService] = None,
 ) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
@@ -535,5 +573,10 @@ def run_interactive(
                     print("Attempt service not initialized.")
                     continue
                 _attempt_menu(attempt_service)
+            elif submenu == "statistics":
+                if stats_service is None:
+                    print("Statistics service not initialized.")
+                    continue
+                _view_statistics(stats_service)
         except KeyboardInterrupt:
             print()

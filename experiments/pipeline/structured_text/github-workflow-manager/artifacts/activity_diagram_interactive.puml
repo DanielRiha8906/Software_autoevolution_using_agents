@@ -10,7 +10,7 @@ start
 
 repeat
 
-  :Display main menu:\n1. Workflow Runs\n2. Workflow Attempts\n3. Exit;
+  :Display main menu:\n1. Workflow Runs\n2. Workflow Attempts\n3. View Statistics\n4. Exit;
   :Wait for user selection;
 
   if (Exit?) then (yes)
@@ -128,6 +128,9 @@ repeat
             break
         endswitch
       repeat while (user continues in attempts menu)
+    else (View Statistics)
+      :WorkflowStatisticsService.compute_report();
+      :Display statistics report:\n  total runs\n  conclusion counts\n  duration statistics\n  attempt statistics\n  generated_at;
     endif
   endif
 

@@ -89,6 +89,16 @@ if (CLI arguments provided?) then (yes)
         :Exit code 1;
       endif
 
+    case (report)
+      :Parse output format flag:\n--format [text|json];
+      :WorkflowStatisticsService.compute_report();
+      if (format == json?) then (yes)
+        :Serialize report.to_dict() as JSON;
+        :Print formatted JSON;
+      else (text)
+        :Print formatted text report:\n  total runs\n  conclusion counts\n  duration stats\n  attempt stats\n  generated_at;
+      endif
+
   endswitch
   stop
 

@@ -60,7 +60,7 @@ def test_cli_add_with_duration_seconds(mock_service, capsys):
         "--conclusion", "success",
         "--duration-seconds", "123.45",
     ]
-    run_cli(mock_service, args)
+    run_cli(mock_service, args=args)
     captured = capsys.readouterr()
     assert "Added run" in captured.out
 
@@ -78,7 +78,7 @@ def test_cli_add_without_duration_seconds_defaults(mock_service, capsys):
         "--branch", "main",
         "--status", "completed",
     ]
-    run_cli(mock_service, args)
+    run_cli(mock_service, args=args)
     captured = capsys.readouterr()
     assert "Added run" in captured.out
 
@@ -96,7 +96,7 @@ def test_cli_add_duration_seconds_float(mock_service, capsys):
         "--status", "in_progress",
         "--duration-seconds", "45.6789",
     ]
-    run_cli(mock_service, args)
+    run_cli(mock_service, args=args)
     captured = capsys.readouterr()
     assert "Added run" in captured.out
 
@@ -111,7 +111,7 @@ def test_cli_list_shows_duration_seconds(mock_service, capsys):
     mock_service.add_workflow_run(run)
 
     args = ["list"]
-    run_cli(mock_service, args)
+    run_cli(mock_service, args=args)
     captured = capsys.readouterr()
     assert "duration_seconds: 99.99" in captured.out
 
@@ -122,6 +122,6 @@ def test_cli_detail_shows_duration_seconds(mock_service, capsys):
     mock_service.add_workflow_run(run)
 
     args = ["detail", "run-detail"]
-    run_cli(mock_service, args)
+    run_cli(mock_service, args=args)
     captured = capsys.readouterr()
     assert "duration_seconds: 55.5" in captured.out
