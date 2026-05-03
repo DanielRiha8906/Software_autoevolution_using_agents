@@ -19,6 +19,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
     component "AttemptService" as ATTEMPT
+    component "StatisticsService" as STATS
   }
 
   package "Persistence layer" {
@@ -45,13 +46,18 @@ IM --> SVC
 CLI --> ATTEMPT
 IM --> ATTEMPT
 
+CLI --> STATS
+IM --> STATS
+
 TRACKER --> SVC
 ATTEMPT --> SVC
+STATS --> SVC
 SVC --> STOR
 STOR --> JSON_FILE
 
 SVC ..> RUN
 RUN --> STATUS
 RUN --> CONCLUSION
+STATS ..> RUN
 
 @enduml

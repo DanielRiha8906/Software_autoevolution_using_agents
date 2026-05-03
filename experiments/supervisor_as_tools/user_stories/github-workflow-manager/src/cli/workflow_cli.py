@@ -10,6 +10,7 @@ from ..models.workflow_run import WorkflowRun
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
+from ..services.statistics_service import StatisticsService
 
 
 def _parse_iso8601(timestamp_str: str) -> datetime:
@@ -197,6 +198,22 @@ def build_parser() -> argparse.ArgumentParser:
     attempt_list.add_argument("--run-id", required=True, help="Run ID")
     attempt_list.add_argument("--sort", action="store_true", help="Sort by attempt_number ascending")
 
+    # stats
+    stats_p = sub.add_parser("stats", help="View workflow statistics")
+    stats_p.add_argument("--branch", default=None, help="Filter by branch")
+    stats_p.add_argument(
+        "--status",
+        default=None,
+        choices=[s.value for s in WorkflowStatus],
+        help="Filter by status",
+    )
+    stats_p.add_argument(
+        "--conclusion",
+        default=None,
+        choices=[c.value for c in WorkflowConclusion],
+        help="Filter by conclusion",
+    )
+
     return parser
 
 
@@ -322,3 +339,22 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             except ValueError as e:
                 print(f"Error: {e}", file=sys.stderr)
                 sys.exit(1)
+
+    elif ns.command == "stats":
+        # Build filter_kwargs from optional arguments
+        filter_kwargs = {}
+
+        if ns.branch is not None:
+            filter_kwargs["branch"] = ns.branch
+
+        if ns.status is not None:
+            filter_kwargs["status"] = WorkflowStatus(ns.status)
+
+        if ns.conclusion is not None:
+            filter_kwargs["conclusion"] = WorkflowConclusion(ns.conclusion)
+
+        filtered_runs = service.filter_runs(**filter_kwargs)
+        stats_service = StatisticsService()
+        report = stats_service.compute_statistics(filtered_runs)
+        formatted_report = stats_service.format_statistics_for_terminal(report)
+        print(formatted_report)
