@@ -16,6 +16,8 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by status"         as I_FSTATUS
     usecase "Filter by conclusion"     as I_FCONCL
     usecase "View statistics"          as I_STATS
+    usecase "Export data to JSON"      as I_EXPORT
+    usecase "Import data from JSON"    as I_IMPORT
     usecase "Exit application"         as I_EXIT
   }
 
@@ -28,6 +30,8 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by conclusion"     as C_FCONCL
     usecase "Get run detail"           as C_DETAIL
     usecase "View statistics"          as C_STATS
+    usecase "Export data to JSON"      as C_EXPORT
+    usecase "Import data from JSON"    as C_IMPORT
   }
 }
 
@@ -39,6 +43,8 @@ UI --> I_LIST
 UI --> I_DETAIL
 UI --> I_FILTER
 UI --> I_STATS
+UI --> I_EXPORT
+UI --> I_IMPORT
 UI --> I_EXIT
 
 I_FILTER --> I_FBRANCH  : <<extend>>
@@ -49,6 +55,8 @@ CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
 CLI --> C_STATS
+CLI --> C_EXPORT
+CLI --> C_IMPORT
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>

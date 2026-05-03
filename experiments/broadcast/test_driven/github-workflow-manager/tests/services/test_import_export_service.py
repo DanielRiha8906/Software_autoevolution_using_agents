@@ -1,0 +1,135 @@
+import json
+import pytest
+from datetime import datetime, timezone, timedelta
+from src.models.workflow_run import WorkflowRun
+from src.models.workflow_status import WorkflowStatus
+from src.models.workflow_conclusion import WorkflowConclusion
+from src.models.workflow_run_attempt import WorkflowRunAttempt
+from src.services.workflow_run_service import WorkflowRunService
+from src.services.attempt_service import AttemptService
+from src.services.import_export_service import WorkflowImportExportService
+from src.storage.workflow_json_storage import WorkflowJsonStorage
+
+
+CEST = timezone(timedelta(hours=2))
+
+
+def _run(run_id):
+    return WorkflowRun(
+        id=run_id,
+        workflow_name="CI",
+        branch="main",
+        status=WorkflowStatus.COMPLETED,
+        conclusion=WorkflowConclusion.SUCCESS,
+        created_at=datetime.now(timezone.utc),
+        updated_at=None,
+        run_number=None,
+        commit_sha=None,
+        duration_seconds=10.0,
+    )
+
+
+def _attempt(run_id, attempt_number):
+    return WorkflowRunAttempt(
+        id=attempt_number,
+        run_id=run_id,
+        attempt_number=attempt_number,
+        status="completed",
+        conclusion="success",
+        created_at=datetime.now(CEST),
+    )
+
+
+@pytest.fixture
+def setup(tmp_path):
+    storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+    attempt_svc = AttemptService()
+    run_svc = WorkflowRunService(storage, attempt_svc)
+
+    run = _run("r1")
+    run_svc.add_workflow_run(run)
+
+    attempt_svc.create(_attempt("r1", 1))
+
+    svc = WorkflowImportExportService(run_svc)
+    return svc, run_svc, attempt_svc, run, tmp_path
+
+
+def test_export_creates_json_file(setup):
+    svc, _, _, _, tmp_path = setup
+    path = tmp_path / "export.json"
+    svc.export(str(path))
+    assert path.exists()
+
+
+def test_export_contains_runs_and_attempts(setup):
+    svc, _, _, run, tmp_path = setup
+    path = tmp_path / "export.json"
+    svc.export(str(path))
+
+    data = json.loads(path.read_text())
+
+    assert "runs" in data
+    assert "attempts" in data
+    assert any(r["id"] == run.id for r in data["runs"])
+    assert any(a["run_id"] == run.id for a in data["attempts"])
+
+
+def test_import_restores_runs_and_attempts(setup, tmp_path):
+    svc, run_svc, attempt_svc, run, tmp_path = setup
+    path = tmp_path / "export.json"
+    svc.export(str(path))
+
+    new_storage = WorkflowJsonStorage(str(tmp_path / "runs2.json"))
+    new_attempt_svc = AttemptService()
+    new_run_svc = WorkflowRunService(new_storage, new_attempt_svc)
+    new_svc = WorkflowImportExportService(new_run_svc)
+
+    new_svc.import_from(str(path))
+
+    assert new_run_svc.get_run_detail(run.id) is not None
+    attempts = new_attempt_svc.get_by_run_id(run.id)
+    assert len(attempts) == 1
+
+
+def test_import_validates_structure(tmp_path):
+    bad = tmp_path / "bad.json"
+    bad.write_text(json.dumps({"garbage": True}))
+
+    storage = WorkflowJsonStorage(str(tmp_path / "runs.json"))
+    run_svc = WorkflowRunService(storage, AttemptService())
+    svc = WorkflowImportExportService(run_svc)
+
+    with pytest.raises(Exception):
+        svc.import_from(str(bad))
+
+
+def test_import_skips_duplicate_runs(setup, tmp_path):
+    svc, run_svc, _, run, tmp_path = setup
+    path = tmp_path / "export.json"
+    svc.export(str(path))
+
+    svc.import_from(str(path))
+
+    runs = run_svc.list_runs()
+    assert len([r for r in runs if r.id == run.id]) == 1
+
+
+def test_import_skips_duplicate_attempts(setup, tmp_path):
+    svc, _, attempt_svc, run, tmp_path = setup
+    path = tmp_path / "export.json"
+    svc.export(str(path))
+
+    svc.import_from(str(path))
+
+    attempts = attempt_svc.get_by_run_id(run.id)
+    assert len(attempts) == 1
+
+
+def test_no_external_calls_in_import_export():
+    from src.services import import_export_service
+    import inspect
+    source = inspect.getsource(import_export_service)
+
+    assert "requests" not in source
+    assert "subprocess" not in source
