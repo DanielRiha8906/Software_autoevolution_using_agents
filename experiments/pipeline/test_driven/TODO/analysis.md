@@ -1,258 +1,304 @@
-# Task 07: TaskImportExportService Analysis
+# Task 08 Analysis: Project Domain Class and Task Grouping
 
-## Task Overview
-Implement a `TaskImportExportService` that handles bidirectional import/export of tasks and comments in a single JSON file, with duplicate detection and validation, without overwriting existing data.
+## Task Summary
+Introduce a `Project` domain class to organize tasks, extend `Task` with an optional `project_id` field for grouping and filtering, and ensure backward compatibility with existing stored tasks that lack `project_id`.
 
-## Current Class Structure (from artifacts and source code)
+## Current State Analysis
 
-### Models
-- **Task** (`src/models/task.py`)
-  - Fields: `id`, `title`, `description` (opt), `status`, `created_at`, `updated_at`, `due_date` (opt)
-  - Methods: `to_dict()`, `from_dict()`, status change methods
-  - Key behavior: IDs are UUIDs, datetimes are ISO format strings in dict form
+### Task Model Structure
+**File:** `/src/models/task.py`
 
-- **TaskComment** (`src/models/task_comment.py`)
-  - Fields: `id`, `task_id`, `content`, `created_at`, `author` (opt), `updated_at` (opt)
-  - Methods: `to_dict()`, `from_dict()`
-  - Validation: Content cannot be empty
+The `Task` dataclass currently has these fields:
+- `id`: UUID string (auto-generated)
+- `title`: Required string
+- `description`: Optional string
+- `status`: TaskStatus enum (PENDING, IN_PROGRESS, DONE)
+- `created_at`: Datetime with timezone (defaults to UTC)
+- `updated_at`: Datetime with timezone (defaults to UTC)
+- `due_date`: Optional datetime with timezone
 
-- **TaskStatus** (`src/models/task_status.py`)
-  - Enum with: PENDING, IN_PROGRESS, DONE
+Key methods:
+- `to_dict()`: Serializes task to dictionary, includes `due_date` only if not None
+- `from_dict()`: Deserializes from dictionary using `data.get()` for optional fields
+- Status mutation methods: `mark_in_progress()`, `mark_done()`, `reopen()` (update `updated_at` to CEST)
+- Query methods: `is_completed()`, `is_pending()`, `is_in_progress()`, `is_overdue()`
 
-### Storage Layer
-- **JsonStorage** (`src/storage/json_storage.py`)
-  - Handles JSON persistence at filesystem level
-  - Current structure: `{"tasks": [...], "comments": [...]}`
-  - Methods: `load()`, `save()`, `load_comments()`, `save_comments()`
-  - Preserves existing data when saving (merge pattern)
+### Storage and Serialization
+**File:** `/src/storage/json_storage.py`
 
-### Service Layer
-- **TaskManager** (`src/services/task_manager.py`)
-  - Manages Task CRUD operations in-memory with persistence
-  - Stores tasks in dict keyed by ID
-  - Methods: `add()`, `get()`, `list_all()`, `list_by_status()`, `update()`, `set_status()`, `delete()`
-  - Error handling: `TaskNotFoundError`
-
-- **TodoService** (`src/services/todo_service.py`)
-  - Higher-level wrapper over TaskManager
-  - Methods: `add_task()`, `get_task()`, `list_tasks()`, `start_task()`, `complete_task()`, `reopen_task()`, `update_task()`, `delete_task()`
-  - Timezone validation (requires CEST for filtering)
-
-- **CommentsService** (`src/services/comments_service.py`)
-  - Manages TaskComment CRUD operations in-memory with persistence
-  - Stores comments in dict keyed by ID
-  - Methods: `add_comment()`, `list_comments()`, `delete_comment()`, `delete_comments_for_task()`
-  - Validates that task exists before adding comment
-  - Sorts comments by created_at
-
-- **TaskStatisticsService** (`src/services/task_statistics_service.py`)
-  - Computes statistics on tasks via TodoService
-
-### CLI Layer
-- **TodoCLI** (`src/cli/todo_cli.py`)
-  - Commands: add, list, show, start, done, reopen, update, delete, statistics
-  - Entry point via `argparse` subcommands
-  
-- **InteractiveMenu** (`src/cli/interactive_menu.py`)
-  - Menu-driven CLI for interactive mode
-  - Default entry point when no args provided
-
-- **__main__.py** (`src/__main__.py`)
-  - Routes to CLI or interactive menu based on argv
-
-## Existing to_dict/from_dict Patterns
-
-### Task.to_dict() Pattern
-```
+The JSON storage uses a dict structure:
+```json
 {
-  "id": "uuid-string",
-  "title": "title",
-  "description": null or "text",
-  "status": "pending" | "in_progress" | "done",
-  "created_at": "ISO8601",
-  "updated_at": "ISO8601",
-  "due_date": null or "ISO8601"  (optional key)
+  "tasks": [...],
+  "comments": [...]
 }
 ```
 
-### TaskComment.to_dict() Pattern
-```
+Key patterns:
+- `load()` returns a list of task dictionaries
+- `save(tasks)` expects a list of task dictionaries
+- Supports legacy list format for backward compatibility
+- Preserves existing data structure when saving (merges with existing tasks/comments)
+
+**Serialization chain:**
+1. Task → dict via `to_dict()` → JSON string via `json.dump()`
+2. JSON string via `json.load()` → dict → Task via `from_dict()`
+
+### TodoService and TaskManager
+**Files:** `/src/services/todo_service.py`, `/src/services/task_manager.py`
+
+**TaskManager** (lower level):
+- Owns `_tasks: dict[str, Task]` in-memory cache
+- Methods: `add()`, `get()`, `list_all()`, `list_by_status()`, `update()`, `set_status()`, `delete()`
+- Loads all tasks from storage on init via `_load()`
+- Persists to storage after every mutation via `_persist()`
+
+**TodoService** (higher level, public API):
+- Wraps TaskManager
+- `add_task()`: Creates task, optionally sets due_date
+- `list_tasks()`: Filters by status, due_before, due_after, overdue (boolean)
+- Status change: `start_task()`, `complete_task()`, `reopen_task()`
+- CRUD: `get_task()`, `update_task()`, `delete_task()`
+
+### Current Filtering Capabilities
+`TodoService.list_tasks()` currently supports:
+- `status: Optional[TaskStatus]` — exact match on task status
+- `due_before: Optional[datetime]` — tasks with due_date < cutoff
+- `due_after: Optional[datetime]` — tasks with due_date > cutoff
+- `overdue: bool` — filter to only overdue tasks (due_date < now)
+
+All filters are combined with AND logic on the in-memory task list.
+
+### CLI Entry Points
+**File:** `/src/cli/todo_cli.py`
+
+Available commands:
+- `add` — add task (--description optional)
+- `list` — list tasks (--status, --due-before, --due-after, --overdue)
+- `show` — show task details
+- `start` — mark in-progress
+- `done` — mark done
+- `reopen` — reopen task
+- `update` — update title/description
+- `delete` — delete task
+- `statistics` — show aggregates
+- `export` — export to JSON file
+- `import` — import from JSON file
+
+The CLI runs through argparse subcommands. Interactive menu also exists.
+
+### Model Exports
+**File:** `/src/models/__init__.py`
+
+Currently exports: `Task`, `TaskStatus`, `TaskComment`
+
+## Key Design Constraints
+
+1. **Backward Compatibility**: Tasks stored without `project_id` must load successfully. The `from_dict()` method must handle missing `project_id` as None.
+
+2. **JSON Persistence**: The existing JSON structure and serialization pattern must be maintained. A task without `project_id` should not have it in the dict (or have it as null).
+
+3. **In-Memory Caching**: TaskManager keeps all tasks in `_tasks` dict. New filtering by project_id must work with this existing pattern.
+
+4. **Service Layering**: TodoService acts as a public facade; it should expose project filtering to callers, but TaskManager can be extended with lower-level project support.
+
+5. **CLI Integration**: Any new project-related functionality must be wired into the argparse CLI and interactive menu to be accessible.
+
+## Files to Create or Modify
+
+### New Files
+
+1. **`src/models/project.py`**
+   - Define `Project` dataclass with:
+     - `id`: UUID string (auto-generated)
+     - `name`: Required string
+     - `description`: Optional string
+     - `created_at`: Datetime with timezone
+   - Methods: `to_dict()`, `from_dict()`, `__repr__()` for CLI display
+
+2. **`src/services/project_service.py`**
+   - `ProjectService` class managing Project CRUD
+   - Constructor: takes optional JsonStorage
+   - Methods:
+     - `create(name: str, description: Optional[str] = None) -> Project`
+     - `get(project_id: str) -> Project`
+     - `list_all() -> List[Project]`
+     - `update(project_id: str, name: Optional[str] = None, description: Optional[str] = None) -> Project`
+     - `delete(project_id: str) -> void`
+   - Will need separate storage keys in JSON (similar to "tasks" and "comments")
+
+### Modified Files
+
+1. **`src/models/task.py`**
+   - Add field: `project_id: Optional[str] = None`
+   - Update `to_dict()` to include `project_id` only if not None
+   - Update `from_dict()` to safely extract `project_id` using `data.get("project_id")`
+   - No changes to timezone handling or other logic
+
+2. **`src/models/__init__.py`**
+   - Export `Project` alongside `Task`, `TaskStatus`, `TaskComment`
+
+3. **`src/storage/json_storage.py`**
+   - Add `load_projects()` and `save_projects()` methods
+   - Store projects under "projects" key in JSON, preserving existing merging pattern
+   - Maintain backward compatibility (file may lack "projects" key initially)
+
+4. **`src/services/todo_service.py`**
+   - Add optional `project_id: Optional[str] = None` parameter to:
+     - `add_task()` — allow specifying project when creating
+     - `list_tasks()` — add project_id filter (in addition to existing filters)
+   - No changes to status, due_date, or other existing logic
+   - Validation: optionally verify project_id exists (or defer to ProjectService)
+
+5. **`src/services/task_manager.py`**
+   - Add lower-level `list_by_project(project_id: str) -> List[Task]` method
+   - No changes to existing public API; all project filtering done in TodoService
+
+6. **`src/cli/todo_cli.py`**
+   - Extend `add` command: add `--project` or `-p` optional argument
+   - Extend `list` command: add `--project` optional filter argument
+   - Add new `project` subcommand group:
+     - `project create` — create new project
+     - `project list` — list all projects
+     - `project show <id>` — show project details
+     - `project delete <id>` — delete project
+     - `project update <id>` — update project name/description
+
+7. **`src/cli/interactive_menu.py`**
+   - Add project management menu option
+   - Update task list display to optionally show project (or only when filtering)
+   - Add "create project" and "filter by project" menu options
+
+## Data Format Examples
+
+### Task with project_id (new)
+```json
 {
-  "id": "uuid-string",
-  "task_id": "uuid-string",
-  "content": "text",
-  "created_at": "ISO8601",
-  "author": null or "string",
-  "updated_at": null or "ISO8601"  (optional key)
+  "id": "abc-123",
+  "title": "Build dashboard",
+  "description": "Create analytics dashboard",
+  "status": "in_progress",
+  "project_id": "proj-456",
+  "created_at": "2026-05-03T10:00:00+00:00",
+  "updated_at": "2026-05-03T10:00:00+00:00",
+  "due_date": "2026-06-01T12:00:00+02:00"
 }
 ```
 
-## TodoService and CommentsService Interfaces
+### Task without project_id (backward compatible)
+```json
+{
+  "id": "xyz-789",
+  "title": "Review PR",
+  "description": null,
+  "status": "pending",
+  "created_at": "2026-05-03T09:00:00+00:00",
+  "updated_at": "2026-05-03T09:00:00+00:00"
+}
+```
+Note: `project_id` key omitted entirely (not null), `due_date` omitted if None.
 
-### TodoService
-- Constructor: `TodoService(storage: Optional[JsonStorage] = None)`
-- Does NOT directly manage comments
-- Accesses TaskManager via `self._manager`
-- All task operations go through manager
+### Project
+```json
+{
+  "id": "proj-456",
+  "name": "Platform Modernization",
+  "description": "Upgrade our backend to microservices",
+  "created_at": "2026-05-01T08:00:00+00:00"
+}
+```
 
-### CommentsService
-- Constructor: `CommentsService(todo_service: TodoService, storage: Optional[JsonStorage] = None)`
-- Maintains independent in-memory dict: `self._comments`
-- Persists separately via `self._storage.save_comments()`
-- Validates task existence via todo_service
-- No cascade delete built-in (manual call needed)
+### Full storage file (after Task 08)
+```json
+{
+  "tasks": [...],
+  "comments": [...],
+  "projects": [...]
+}
+```
 
-## What Needs to be Implemented
+## Backward Compatibility Strategy
 
-### New File: `src/services/task_import_export_service.py`
+1. **Reading old files**: When `Task.from_dict()` is called on a dict without `project_id`, it defaults to None. No error.
 
-**Class: TaskImportExportService**
+2. **Writing**: New tasks always include `project_id` in dict (as None if not set). Existing tests should not break because `from_dict(task.to_dict())` round-trips correctly.
 
-#### Methods Required:
+3. **Storage upgrade**: The first time the app writes, old-format files are preserved (no "projects" key yet). If a project is created/deleted, the "projects" key appears.
 
-1. **`export(filepath: str) -> None`**
-   - Exports all tasks AND comments from TodoService and CommentsService
-   - Creates/writes to single JSON file at filepath
-   - Structure: `{"tasks": [...], "comments": [...]}`
-   - Both tasks and comments use their existing `to_dict()` format
-   - Overwrites file completely (not merge)
+4. **Service initialization**: ProjectService and TodoService can be instantiated independently. TodoService doesn't require ProjectService to exist initially (project_id is optional).
 
-2. **`import_from(filepath: str) -> tuple[List[Task], List[TaskComment]]`**
-   - Reads JSON file and imports both tasks and comments
-   - Validates JSON structure against schema (must have "tasks" and "comments" arrays)
-   - **Duplicate handling:**
-     - For tasks: Skip if task with same ID already exists in TodoService
-     - For comments: Skip if comment with same ID already exists in CommentsService
-   - **No overwrite:** Existing tasks/comments in the service are never modified
-   - Returns tuple of (imported_tasks, imported_comments) - excluding duplicates
-   - Raises ValueError on malformed JSON or missing arrays
+## Integration Points
 
-3. **Constructor: `__init__(todo_service: TodoService, comments_service: CommentsService)`**
-   - Takes references to both services
-   - No storage parameter (services already manage storage)
+1. **TodoService.add_task()**: Needs to accept optional project_id. Should optionally validate that project exists (or leave as unchecked foreign key for simplicity).
 
-#### Error Handling:
-- `ValueError`: Invalid JSON format, missing "tasks"/"comments" arrays, schema mismatch
-- `FileNotFoundError`: If import filepath doesn't exist (let it propagate)
-- Task with comment that references non-existent task: Skip the comment or raise?
-  - **ASSUMPTION**: Skip the comment (import doesn't fail, but comment is skipped)
+2. **TodoService.list_tasks()**: Needs to filter by project_id when provided. Can use TaskManager's new `list_by_project()` internally.
 
-#### Design Decisions:
-- No modification of existing data in services (skip duplicates)
-- Validation at import time: structure only, not semantic validation
-- Export is full snapshot (tasks + comments in one file)
-- Import is additive only (no delete, no update)
-- Service instances must be passed in (no storage coupling)
+3. **Task.from_dict()**: Must safely extract project_id; no error if missing.
 
-## Gaps and Design Questions
+4. **CLI `add` command**: Parse `--project` flag, pass to `add_task()`.
 
-1. **Task-Comment Referential Integrity on Import**
-   - What if import file contains comments for non-existent tasks?
-   - ASSUMPTION: Skip such comments silently (don't fail the import)
-   - Could be configurable in future (strict vs lenient mode)
+5. **CLI `list` command**: Parse `--project` flag, pass to `list_tasks()`.
 
-2. **Export Scope**
-   - Export everything vs selective export?
-   - ASSUMPTION: Always export all tasks and all comments (full snapshot)
-   - Could add filters in future (status-based, date-range, etc.)
+6. **Interactive menu**: Detect if projects exist; optionally show on task lines or in a submenu.
 
-3. **Duplicate Detection Strategy**
-   - Use ID as sole key?
-   - ASSUMPTION: Yes, ID is unique within each entity type
-   - No content-based duplicate detection (hash of title/description)
+## Testing Implications
 
-4. **File Format Versioning**
-   - Should the export include a version marker?
-   - ASSUMPTION: No version field (keep it simple for Task 07)
-   - If needed: Could add `{"version": "1.0", "tasks": [...], "comments": [...]}`
+1. **Backward compatibility tests**: Ensure old task dicts (no project_id) load as Task with project_id=None.
 
-5. **CLI Integration**
-   - Should there be `python -m src export <file>` and `import <file>` commands?
-   - ASSUMPTION: Yes, per Experiment Governance requirements
-   - Will be implemented by python-programmer after this analysis
+2. **Task.from_dict() tests**: Test with and without project_id key in input dict.
 
-6. **Interactive Menu Integration**
-   - Should InteractiveMenu have export/import options?
-   - ASSUMPTION: Yes, as menu items for full feature completeness
-   - Programmer can add as needed
+3. **Task.to_dict() tests**: Verify project_id omitted from dict if None, included if set.
 
-## Scope Signals
+4. **TodoService.list_tasks() tests**: Add tests for project_id filter combined with other filters.
 
-**In:**
-- Single JSON file with tasks + comments together
-- Duplicate detection (ID-based)
-- Schema validation on import
-- Export/import methods on the service
-- CLI integration (export/import commands and flags)
-- Interactive menu options
+5. **ProjectService tests**: Full CRUD cycle, unique ID generation, from_dict/to_dict round-trips.
 
-**Out (Not for Task 07):**
-- Encrypted/compressed export
-- Selective export (filtering by status, date, etc.)
-- Incremental sync (only changed items)
-- CSV/XML/other formats
-- Conflict resolution on duplicate detection
-- Batch import/export of multiple files
+6. **Storage tests**: Verify projects are saved/loaded, old files without projects key still work.
 
-**Borderline:**
-- Referential integrity validation (skip vs fail) - Decision: Skip silently
-- File versioning - Decision: Not needed for Task 07
-- Relative vs absolute paths - Use absolute paths (standard Python)
+7. **CLI tests**: Test new `--project` flags on `add` and `list`, new `project` subcommand.
 
-## Implementation Dependencies
+## Scope: In vs. Out
 
-### Required Imports in new service:
-- `from typing import Optional, List, Tuple`
-- `from pathlib import Path`
-- `import json`
-- `from ..models.task import Task`
-- `from ..models.task_comment import TaskComment`
-- `from .todo_service import TodoService`
-- `from .comments_service import CommentsService`
+**In (Task 08 scope):**
+- Project domain class
+- Task.project_id optional field
+- ProjectService CRUD
+- TodoService integration (add_task with project_id, list_tasks by project)
+- CLI: project commands and --project flag on add/list
+- Backward compatibility for tasks without project_id
 
-### Service Integration Pattern:
-Services are instantiated in TodoCLI and InteractiveMenu. The import/export service will need to:
-- Be instantiated in both CLI and interactive contexts
-- Receive todo_service and comments_service instances
-- Example: `import_export_svc = TaskImportExportService(todo_service, comments_service)`
+**Out (deferred):**
+- Permission/authorization by project
+- Project templates or quick-start
+- Task grouping by other attributes (assignee, tag, category)
+- Project archiving/soft delete
+- Bulk operations across projects
+- Advanced filtering (e.g., "all tasks in project X without due date")
 
-## Suggested Priorities
+## Remaining Ambiguities
 
-1. **High**: Implement core export/import logic in TaskImportExportService
-   - Both methods must handle to_dict/from_dict correctly
-   - Duplicate detection must work accurately
+1. **Foreign key validation**: Should TodoService.add_task() verify that a provided project_id actually exists, or allow orphaned references?
+   - **Assumption**: Allow unchecked references for now (simpler, no circular dependency). ProjectService can validate on its side.
 
-2. **High**: Validate JSON structure on import (schema validation)
-   - Catch malformed files early
-   - Provide clear error messages
+2. **Deletion cascade**: If a project is deleted, what happens to its tasks?
+   - **Assumption**: Tasks are NOT automatically deleted. Their project_id becomes orphaned (which is allowed). User must manually delete or reassign tasks if needed.
 
-3. **Medium**: Add CLI commands (export/import flags to TodoCLI)
-   - Standard: `python -m src export <filepath>`
-   - Standard: `python -m src import <filepath>`
+3. **Project filtering priority**: If user provides both --status and --project filters, how are they combined?
+   - **Assumption**: AND logic (tasks must match both filters). Consistent with current status + due_date filtering.
 
-4. **Medium**: Add interactive menu options
-   - Menu item for "Export to file"
-   - Menu item for "Import from file"
-   - Prompt for filepath
+4. **Project list sorting**: How should `project list` output be ordered?
+   - **Assumption**: By created_at ascending (oldest first) to match task display conventions.
 
-5. **Low**: Polish error messages and feedback
-   - Report how many items were imported
-   - Warn about skipped duplicates
+5. **Default project**: Is there a "no project" or "default project" concept?
+   - **Assumption**: No default project. project_id=None means "unassigned to any project".
 
-## File Paths Reference
+## Summary
 
-**Key source files:**
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/src/models/task.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/src/models/task_comment.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/src/services/todo_service.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/src/services/comments_service.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/src/cli/todo_cli.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/src/cli/interactive_menu.py`
+Task 08 adds lightweight project support to the TODO app by:
+1. Introducing a simple Project model and ProjectService
+2. Extending Task with optional project_id (backward compatible)
+3. Extending TodoService and TaskManager with project-aware filtering
+4. Wiring project management and task-project association into the CLI
+5. Maintaining full backward compatibility with existing task data
 
-**Diagram references:**
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/artifacts/class_diagram.puml`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/artifacts/component_diagram.puml`
-
-**Test examples:**
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/tests/test_comments_service.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/TODO/tests/test_task.py`
+The implementation is minimal, focused, and follows existing patterns (dataclass models, service layer, JSON storage, argparse CLI).

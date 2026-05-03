@@ -212,3 +212,112 @@ All tests pass:
 ✅ UML diagrams updated to reflect all changes
 
 Duration: 436.5s | Cost: $0.881558 USD | Turns: 17
+
+---
+
+# Task 08: Project Domain Class and Task Grouping
+
+## Summary
+
+Successfully implemented Project domain class and extended Task with optional project_id for grouping and filtering tasks by project. All existing tasks remain loadable without project_id.
+
+## Files Changed
+
+### New Files
+- `src/models/project.py` — Project dataclass with UUID id, name, description, created_at
+- `src/services/project_service.py` — ProjectService with CRUD operations and storage integration
+- `tests/test_project.py` — 15 tests for Project model
+- `tests/test_project_service.py` — 19 tests for ProjectService
+- `tests/test_task_project_integration.py` — 13 tests for Task-Project integration
+- `tests/test_todo_service_project_filtering.py` — 13 tests for TodoService project filtering
+- `tests/test_storage_project_roundtrip.py` — 8 tests for storage roundtrip
+- `tests/test_backward_compat.py` — 9 tests for backward compatibility
+
+### Modified Files
+- `src/models/task.py` — Added optional project_id field, updated serialization
+- `src/models/__init__.py` — Exported Project class
+- `src/storage/json_storage.py` — Added load_projects() and save_projects() methods
+- `src/services/task_manager.py` — Added project_id parameter to add/update, new list_by_project() method
+- `src/services/todo_service.py` — Added project_id parameter to add_task/list_tasks/update_task
+- `src/services/__init__.py` — Exported ProjectService and ProjectNotFoundError
+- `src/cli/todo_cli.py` — Added --project flag to add/list/update, added project subcommand group
+- `src/cli/interactive_menu.py` — Added project management menu options and filtering
+- `artifacts/class_diagram.puml` — Updated to reflect Project class and relationships
+- `artifacts/component_diagram.puml` — Added Project Service component
+- `artifacts/use_case_diagram.puml` — Added project management use cases
+
+## Test Results
+
+- **Total Tests:** 201 (77 new + 124 existing)
+- **Passed:** 201 (100%)
+- **Failed:** 0
+- **Errors:** 0
+
+All provided test cases pass:
+- ✅ test_project_can_be_created
+- ✅ test_project_has_unique_id
+- ✅ test_empty_project_name_raises
+- ✅ test_create_and_list_projects
+- ✅ test_task_assigned_to_project
+- ✅ test_list_tasks_by_project
+- ✅ test_task_without_project_id_is_none
+- ✅ test_project_id_is_uuid_string
+- ✅ test_old_tasks_without_project_id_load_fine
+- ✅ test_move_task_between_projects
+
+## Implementation Details
+
+### Project Model
+- UUID string id (auto-generated)
+- Required name (validated non-empty)
+- Optional description
+- Automatic created_at timestamp
+- Serialization/deserialization with safe .get() for backward compatibility
+
+### ProjectService
+- CRUD operations: create, get, list_all, update, delete
+- Storage integration with load/persist pattern
+- Prefix-based lookup support
+- ProjectNotFoundError exception
+- Ordered by created_at ascending
+
+### Task Changes
+- New optional project_id field (defaults to None)
+- Serialization omits None project_id (backward compatible)
+- Deserialization safely extracts project_id using .get()
+- Old task dicts without project_id field load successfully
+
+### TodoService
+- add_task() accepts optional project_id parameter
+- list_tasks() supports filtering by project_id with AND-logic
+- update_task() can change task's project_id
+- All existing list_tasks() behavior preserved when project_id not specified
+
+### Storage
+- New "projects" key in JSON file
+- Graceful handling of old files without "projects" key
+- load_projects() returns empty list for missing/old files
+- save_projects() merges with existing data (preserves tasks and comments)
+
+### CLI Integration
+- New --project flag for add, list, update commands
+- New project subcommand group: create, list, show, delete, update
+- Project management integrated into interactive menu
+- Project filtering available in interactive mode
+
+## Key Design Decisions
+- No cascade delete: deleting a project leaves tasks orphaned but intact
+- No FK validation: TodoService doesn't validate project_id references
+- AND logic for filtering: combining project_id with status/due filters
+- Backward compatible: all old tasks and storage formats continue to work
+- UUID format for project ids, following Task id pattern
+
+## Constraints Met
+✅ All 201 tests pass (77 new coverage, 124 existing unchanged)
+✅ Backward compatibility with old storage format
+✅ CLI accessible via `python -m src` (both flags and interactive menu)
+✅ UML diagrams updated to reflect current architecture
+✅ No breaking changes to existing functionality
+✅ All provided test cases pass
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

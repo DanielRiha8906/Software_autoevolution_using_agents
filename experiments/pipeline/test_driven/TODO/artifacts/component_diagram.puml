@@ -17,6 +17,7 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Project Service" as PSVC
         component "Comments Service" as CSVC
         component "Task Statistics Service" as STATS
         component "Import/Export Service" as IESVC
@@ -24,6 +25,7 @@ package "TODO Application" {
 
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus)" as Model
+        component "Project Model\n(Project)" as PModel
     }
 
     package "Persistence Layer" {
@@ -37,11 +39,14 @@ Main --> IM : interactive mode
 Main --> CLI : command mode
 
 IM --> SVC
+IM --> PSVC
 IM --> IESVC
 CLI --> SVC
+CLI --> PSVC
 CLI --> IESVC
 
 SVC --> MGR
+PSVC --> Storage
 CSVC --> SVC : validates tasks
 CSVC --> Storage : persistence
 STATS --> SVC : analyzes tasks
@@ -49,7 +54,9 @@ IESVC --> SVC : uses
 IESVC --> CSVC : uses
 MGR --> Storage
 MGR ..> Model
+PSVC ..> PModel
 Storage ..> Model
+Storage ..> PModel
 
 Storage --> DB : read/write
 

@@ -10,6 +10,17 @@ package "models" #DDEEFF {
         DONE
     }
 
+    class Project {
+        +id : String
+        +name : String
+        +description : String [0..1]
+        +created_at : DateTime
+        --
+        +__post_init__() : void
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : Project
+    }
+
     class Task {
         +id : String
         +title : String
@@ -18,6 +29,7 @@ package "models" #DDEEFF {
         +created_at : DateTime
         +updated_at : DateTime
         +due_date : DateTime [0..1]
+        +project_id : String [0..1]
         --
         +__post_init__() : void
         +to_dict() : Dictionary
@@ -54,40 +66,58 @@ package "storage" #FFF3CC {
         +save(tasks: List<Dictionary>) : void
         +load_comments() : List<Dictionary>
         +save_comments(comments: List<Dictionary>) : void
+        +load_projects() : List<Dictionary>
+        +save_projects(projects: List<Dictionary>) : void
     }
 }
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
+    exception ProjectNotFoundError
 
     class TaskManager {
         -storage : JsonStorage
         -tasks : Dictionary<String, Task>
         --
         +TaskManager(storage: JsonStorage [0..1])
-        +add(title: String, description: String [0..1]) : Task
+        +add(title: String, description: String [0..1], project_id: String [0..1]) : Task
         +get(taskId: String) : Task
         +listAll() : List<Task>
         +listByStatus(status: TaskStatus) : List<Task>
-        +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
+        +listByProject(project_id: String) : List<Task>
+        +update(taskId: String, title: String [0..1], description: String [0..1], project_id: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
         +delete(taskId: String) : void
         -load() : void
         -persist() : void
     }
 
+    class ProjectService {
+        -_storage : JsonStorage
+        -_projects : Dictionary<String, Project>
+        --
+        +ProjectService(storage: JsonStorage [0..1])
+        +create(name: String, description: String [0..1]) : Project
+        +get(project_id: String) : Project
+        +list_all() : List<Project>
+        +update(project_id: String, name: String [0..1], description: String [0..1]) : Project
+        +delete(project_id: String) : void
+        -_load() : void
+        -_persist() : void
+    }
+
     class TodoService {
-        -manager : TaskManager
+        -_manager : TaskManager
         --
         +TodoService(storage: JsonStorage [0..1])
-        +addTask(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
-        +getTask(taskId: String) : Task
-        +listTasks(status: TaskStatus [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1], overdue: bool) : List<Task>
-        +startTask(taskId: String) : Task
-        +completeTask(taskId: String) : Task
-        +reopenTask(taskId: String) : Task
-        +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
-        +deleteTask(taskId: String) : void
+        +add_task(title: String, description: String [0..1], due_date: DateTime [0..1], project_id: String [0..1]) : Task
+        +get_task(taskId: String) : Task
+        +list_tasks(status: TaskStatus [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1], overdue: bool, project_id: String [0..1]) : List<Task>
+        +start_task(taskId: String) : Task
+        +complete_task(taskId: String) : Task
+        +reopen_task(taskId: String) : Task
+        +update_task(taskId: String, title: String [0..1], description: String [0..1], project_id: String [0..1]) : Task
+        +delete_task(taskId: String) : void
     }
 
     class CommentsService {
@@ -148,10 +178,14 @@ package "cli" #FFE5E5 {
 }
 
 Task --> TaskStatus : status
+Task --> Project : references [0..1]
 TaskComment --> Task : task_id
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
-TodoService --> TaskManager : manager
+ProjectService --> JsonStorage : storage
+ProjectService --> Project : manages
+ProjectService ..> ProjectNotFoundError : raises
+TodoService --> TaskManager : _manager
 CommentsService --> TodoService : todo_service
 CommentsService --> JsonStorage : storage
 CommentsService --> TaskComment : contains
