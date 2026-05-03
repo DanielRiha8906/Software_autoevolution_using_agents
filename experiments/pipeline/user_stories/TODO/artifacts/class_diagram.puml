@@ -75,6 +75,7 @@ package "services" #DDFFD4 {
         +add_comment(task_id: String, content: String, author: String [0..1]) : TaskComment
         +get_comments(task_id: String) : List<TaskComment>
         +delete_comment(task_id: String, comment_id: String) : void
+        +edit_comment(task_id: String, comment_id: String, content: String) : TaskComment
         -load() : void
         -persist() : void
     }
@@ -95,6 +96,7 @@ package "services" #DDFFD4 {
         +add_comment(task_id: String, content: String, author: String [0..1]) : TaskComment
         +get_comments(task_id: String) : List<TaskComment>
         +delete_comment(task_id: String, comment_id: String) : void
+        +edit_comment(task_id: String, comment_id: String, content: String) : TaskComment
     }
 }
 

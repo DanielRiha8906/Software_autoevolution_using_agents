@@ -650,6 +650,202 @@ class TestTodoServiceDeleteComment:
         assert comments[0].id == c1.id
 
 
+class TestTaskManagerEditComment:
+    """Test TaskManager.edit_comment() method."""
+
+    def test_edit_comment_updates_content(self, manager):
+        """Test that edit_comment() updates the comment content."""
+        task = manager.add("Task")
+        comment = manager.add_comment(task.id, "Old content")
+        updated = manager.edit_comment(task.id, comment.id, "New content")
+        assert updated.content == "New content"
+
+    def test_edit_comment_sets_updated_at(self, manager):
+        """Test that edit_comment() sets updated_at timestamp."""
+        task = manager.add("Task")
+        comment = manager.add_comment(task.id, "Original")
+        before = datetime.now(timezone.utc)
+        updated = manager.edit_comment(task.id, comment.id, "Modified")
+        after = datetime.now(timezone.utc)
+        assert updated.updated_at is not None
+        assert before <= updated.updated_at <= after
+
+    def test_edit_comment_persists(self, manager):
+        """Test that edited comment is persisted."""
+        task = manager.add("Task")
+        comment = manager.add_comment(task.id, "Original")
+        manager.edit_comment(task.id, comment.id, "Updated")
+        retrieved = manager.get(task.id)
+        assert retrieved.comments[0].content == "Updated"
+
+    def test_edit_comment_nonexistent_task_raises(self, manager):
+        """Test edit_comment() raises TaskNotFoundError for missing task."""
+        with pytest.raises(TaskNotFoundError):
+            manager.edit_comment("nonexistent-id", "comment-id", "New content")
+
+    def test_edit_comment_nonexistent_comment_raises(self, manager):
+        """Test edit_comment() raises ValueError for missing comment."""
+        task = manager.add("Task")
+        with pytest.raises(ValueError, match="Comment .* not found"):
+            manager.edit_comment(task.id, "nonexistent-id", "New content")
+
+    def test_edit_comment_empty_content_raises(self, manager):
+        """Test edit_comment() rejects empty content."""
+        task = manager.add("Task")
+        comment = manager.add_comment(task.id, "Original")
+        with pytest.raises(ValueError, match="Comment content cannot be empty"):
+            manager.edit_comment(task.id, comment.id, "")
+
+    def test_edit_comment_whitespace_only_raises(self, manager):
+        """Test edit_comment() rejects whitespace-only content."""
+        task = manager.add("Task")
+        comment = manager.add_comment(task.id, "Original")
+        with pytest.raises(ValueError, match="Comment content cannot be empty"):
+            manager.edit_comment(task.id, comment.id, "   ")
+
+    def test_edit_comment_strips_whitespace(self, manager):
+        """Test that edit_comment() strips whitespace from content."""
+        task = manager.add("Task")
+        comment = manager.add_comment(task.id, "Original")
+        updated = manager.edit_comment(task.id, comment.id, "  Trimmed  ")
+        assert updated.content == "Trimmed"
+
+    def test_edit_comment_preserves_other_fields(self, manager):
+        """Test that edit_comment() preserves id, task_id, author, created_at."""
+        task = manager.add("Task")
+        comment = manager.add_comment(task.id, "Original", author="Alice")
+        original_id = comment.id
+        original_author = comment.author
+        original_created_at = comment.created_at
+
+        updated = manager.edit_comment(task.id, comment.id, "Modified")
+        assert updated.id == original_id
+        assert updated.author == original_author
+        assert updated.created_at == original_created_at
+
+    def test_edit_comment_multiple_times(self, manager):
+        """Test editing a comment multiple times."""
+        task = manager.add("Task")
+        comment = manager.add_comment(task.id, "Version 1")
+        manager.edit_comment(task.id, comment.id, "Version 2")
+        manager.edit_comment(task.id, comment.id, "Version 3")
+        retrieved = manager.get_comments(task.id)
+        assert len(retrieved) == 1
+        assert retrieved[0].content == "Version 3"
+
+
+class TestTodoServiceEditComment:
+    """Test TodoService.edit_comment() method."""
+
+    def test_edit_comment_updates_content(self, service):
+        """Test that edit_comment() updates the comment content."""
+        task = service.add_task("Task")
+        comment = service.add_comment(task.id, "Old")
+        updated = service.edit_comment(task.id, comment.id, "New")
+        assert updated.content == "New"
+
+    def test_edit_comment_sets_updated_at(self, service):
+        """Test that edit_comment() sets updated_at timestamp."""
+        task = service.add_task("Task")
+        comment = service.add_comment(task.id, "Original")
+        before = datetime.now(timezone.utc)
+        updated = service.edit_comment(task.id, comment.id, "Modified")
+        after = datetime.now(timezone.utc)
+        assert updated.updated_at is not None
+        assert before <= updated.updated_at <= after
+
+    def test_edit_comment_empty_content_raises(self, service):
+        """Test edit_comment() rejects empty content."""
+        task = service.add_task("Task")
+        comment = service.add_comment(task.id, "Original")
+        with pytest.raises(ValueError, match="Comment content cannot be empty"):
+            service.edit_comment(task.id, comment.id, "")
+
+    def test_edit_comment_whitespace_only_raises(self, service):
+        """Test edit_comment() rejects whitespace-only content."""
+        task = service.add_task("Task")
+        comment = service.add_comment(task.id, "Original")
+        with pytest.raises(ValueError, match="Comment content cannot be empty"):
+            service.edit_comment(task.id, comment.id, "   ")
+
+    def test_edit_comment_strips_whitespace(self, service):
+        """Test that edit_comment() strips whitespace from content."""
+        task = service.add_task("Task")
+        comment = service.add_comment(task.id, "Original")
+        updated = service.edit_comment(task.id, comment.id, "  Trimmed  ")
+        assert updated.content == "Trimmed"
+
+    def test_edit_comment_nonexistent_task_raises(self, service):
+        """Test edit_comment() raises TaskNotFoundError for missing task."""
+        with pytest.raises(TaskNotFoundError):
+            service.edit_comment("nonexistent-id", "comment-id", "New")
+
+    def test_edit_comment_nonexistent_comment_raises(self, service):
+        """Test edit_comment() raises ValueError for missing comment."""
+        task = service.add_task("Task")
+        with pytest.raises(ValueError, match="Comment .* not found"):
+            service.edit_comment(task.id, "nonexistent-id", "New")
+
+
+class TestTaskManagerGetCommentsSorted:
+    """Test TaskManager.get_comments() sorting by created_at."""
+
+    def test_get_comments_sorted_empty_list(self, manager):
+        """Test get_comments() returns empty list for task with no comments."""
+        task = manager.add("Task")
+        comments = manager.get_comments(task.id)
+        assert comments == []
+
+    def test_get_comments_sorted_single_comment(self, manager):
+        """Test get_comments() with single comment."""
+        task = manager.add("Task")
+        comment = manager.add_comment(task.id, "Only comment")
+        comments = manager.get_comments(task.id)
+        assert len(comments) == 1
+        assert comments[0].id == comment.id
+
+    def test_get_comments_sorted_by_created_at_ascending(self, manager):
+        """Test that get_comments() returns comments sorted by created_at ascending (oldest first)."""
+        task = manager.add("Task")
+
+        # Create comments with explicit timestamps
+        dt1 = datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc)
+        dt2 = datetime(2026, 5, 2, 10, 0, tzinfo=timezone.utc)
+        dt3 = datetime(2026, 5, 3, 10, 0, tzinfo=timezone.utc)
+
+        c3 = TaskComment(content="Third", task_id=task.id, created_at=dt3)
+        c1 = TaskComment(content="First", task_id=task.id, created_at=dt1)
+        c2 = TaskComment(content="Second", task_id=task.id, created_at=dt2)
+
+        # Add in non-sequential order
+        task.comments.extend([c3, c1, c2])
+        manager._persist()
+
+        # Get comments should return sorted (oldest first)
+        comments = manager.get_comments(task.id)
+        assert len(comments) == 3
+        assert comments[0].content == "First"
+        assert comments[1].content == "Second"
+        assert comments[2].content == "Third"
+
+    def test_get_comments_preserves_insertion_order_when_same_timestamp(self, manager):
+        """Test get_comments() with comments created at same timestamp."""
+        task = manager.add("Task")
+        dt = datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc)
+
+        c1 = TaskComment(content="First", task_id=task.id, created_at=dt)
+        c2 = TaskComment(content="Second", task_id=task.id, created_at=dt)
+
+        task.comments.extend([c1, c2])
+        manager._persist()
+
+        comments = manager.get_comments(task.id)
+        assert len(comments) == 2
+        # When timestamps are equal, sort is stable, preserving order
+        assert comments[0].id == c1.id
+        assert comments[1].id == c2.id
+
+
 # ─── Integration Tests ──────────────────────────────────────────────────────
 
 class TestCommentIntegration:
@@ -737,3 +933,19 @@ class TestCommentIntegration:
         remaining = service.get_comments(task.id)
         assert len(remaining) == 1
         assert remaining[0].id == c2.id
+
+    def test_comment_edit_lifecycle(self, service):
+        """Test comment edit lifecycle: create, edit, verify."""
+        task = service.add_task("Task")
+        comment = service.add_comment(task.id, "Original", author="User1")
+
+        # Edit the comment
+        updated = service.edit_comment(task.id, comment.id, "Modified")
+        assert updated.content == "Modified"
+        assert updated.author == "User1"
+        assert updated.updated_at is not None
+
+        # Verify persistence
+        comments = service.get_comments(task.id)
+        assert len(comments) == 1
+        assert comments[0].content == "Modified"

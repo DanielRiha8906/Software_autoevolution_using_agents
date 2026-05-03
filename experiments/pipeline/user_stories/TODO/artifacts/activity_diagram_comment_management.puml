@@ -1,0 +1,50 @@
+@startuml activity_diagram_comment_management
+
+start
+
+:Pick a task;
+:Display task;
+repeat
+  :Show comments submenu;
+  :Wait for user choice;
+
+  switch (choice)
+    case (1 — Add comment)
+      :Prompt for comment content;
+      :Prompt for author (optional);
+      :Call TodoService.add_comment();
+      :Display success message;
+    case (2 — View/edit/delete)
+      if (comments exist?) then (yes)
+        :Pick comment from list;
+        :Display comment details;
+        switch (choice)
+          case (1 — Edit)
+            :Prompt for new content;
+            :Call TodoService.edit_comment();
+            :Display success message;
+          case (2 — Delete)
+            :Prompt for confirmation;
+            if (confirmed?) then (yes)
+              :Call TodoService.delete_comment();
+              :Display success message;
+            else (no)
+              :Show cancelled message;
+            endif
+          case (0 — Back)
+            :Return to submenu;
+        endswitch
+      else (no)
+        :Display "no comments" message;
+      endif
+    case (0 — Back)
+      :Return to main menu;
+      break
+  endswitch
+
+repeat while (user continues)
+
+:Return to main menu;
+stop
+
+@enduml

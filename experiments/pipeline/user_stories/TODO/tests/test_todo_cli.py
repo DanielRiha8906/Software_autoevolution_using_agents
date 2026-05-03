@@ -228,3 +228,241 @@ def test_add_with_description_and_due_date(cli, capsys):
     assert "Complete task" in out
     assert "Task description" in out
     assert "2026-05-15T14:30:00+00:00" in out
+
+
+# ─── Comment CLI command tests ──────────────────────────────────────────────────
+
+def test_add_comment_success(cli, capsys):
+    """Test add-comment command successfully adds a comment."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    rc = cli.run(["add-comment", task_id, "Great work!"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Added comment" in out
+    assert "Great work!" in out
+
+
+def test_add_comment_with_author(cli, capsys):
+    """Test add-comment command with --author option."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    rc = cli.run(["add-comment", task_id, "Nice job!", "-a", "Alice"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "by Alice" in out
+
+
+def test_add_comment_empty_content_fails(cli, capsys):
+    """Test add-comment fails with empty content."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    rc = cli.run(["add-comment", task_id, "   "])
+    assert rc == 1
+    err = capsys.readouterr().err
+    assert "Error" in err
+
+
+def test_add_comment_missing_task_fails(cli, capsys):
+    """Test add-comment fails when task doesn't exist."""
+    rc = cli.run(["add-comment", "00000000", "Comment"])
+    assert rc == 1
+
+
+def test_list_comments_empty(cli, capsys):
+    """Test list-comments on task with no comments."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    rc = cli.run(["list-comments", task_id])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "(no comments)" in out
+
+
+def test_list_comments_with_comments(cli, capsys):
+    """Test list-comments displays all comments."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    cli.run(["add-comment", task_id, "First comment", "-a", "Alice"])
+    cli.run(["add-comment", task_id, "Second comment", "-a", "Bob"])
+
+    rc = cli.run(["list-comments", task_id])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "First comment" in out
+    assert "Second comment" in out
+    assert "Alice" in out
+    assert "Bob" in out
+
+
+def test_list_comments_shows_timestamps(cli, capsys):
+    """Test list-comments displays creation and update timestamps."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    cli.run(["add-comment", task_id, "Comment"])
+
+    rc = cli.run(["list-comments", task_id])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Created:" in out
+
+
+def test_list_comments_missing_task_fails(cli, capsys):
+    """Test list-comments fails when task doesn't exist."""
+    rc = cli.run(["list-comments", "00000000"])
+    assert rc == 1
+
+
+def test_delete_comment_success(cli, capsys):
+    """Test delete-comment successfully removes a comment."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    cli.run(["add-comment", task_id, "To delete"])
+    cli.run(["list-comments", task_id])
+    output = capsys.readouterr().out
+    # Extract comment ID from "  287a4899 — (no author)" line format
+    # Split by newlines and find the line with the comment ID
+    lines = output.split('\n')
+    comment_id = None
+    for line in lines:
+        if line.strip() and '—' in line:
+            comment_id = line.strip().split()[0]
+            break
+
+    assert comment_id is not None, "Could not extract comment ID from output"
+    rc = cli.run(["delete-comment", task_id, comment_id])
+    assert rc == 0
+    output = capsys.readouterr().out
+    assert "Deleted comment" in output
+
+
+def test_delete_comment_nonexistent_fails(cli, capsys):
+    """Test delete-comment fails when comment doesn't exist."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    rc = cli.run(["delete-comment", task_id, "00000000"])
+    assert rc == 1
+
+
+def test_delete_comment_missing_task_fails(cli, capsys):
+    """Test delete-comment fails when task doesn't exist."""
+    rc = cli.run(["delete-comment", "00000000", "comment-id"])
+    assert rc == 1
+
+
+def test_edit_comment_success(cli, capsys):
+    """Test edit-comment successfully updates a comment."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    cli.run(["add-comment", task_id, "Original"])
+    cli.run(["list-comments", task_id])
+    output = capsys.readouterr().out
+    # Extract comment ID from "  287a4899 — (no author)" line format
+    lines = output.split('\n')
+    comment_id = None
+    for line in lines:
+        if line.strip() and '—' in line:
+            comment_id = line.strip().split()[0]
+            break
+
+    assert comment_id is not None, "Could not extract comment ID from output"
+    rc = cli.run(["edit-comment", task_id, comment_id, "Updated content"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "Edited comment" in out
+    assert "Updated content" in out
+
+
+def test_edit_comment_empty_content_fails(cli, capsys):
+    """Test edit-comment fails with empty content."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    cli.run(["add-comment", task_id, "Original"])
+    cli.run(["list-comments", task_id])
+    output = capsys.readouterr().out
+    comment_id = output.split()[1]
+
+    rc = cli.run(["edit-comment", task_id, comment_id, "   "])
+    assert rc == 1
+
+
+def test_edit_comment_nonexistent_fails(cli, capsys):
+    """Test edit-comment fails when comment doesn't exist."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    rc = cli.run(["edit-comment", task_id, "00000000", "New content"])
+    assert rc == 1
+
+
+def test_edit_comment_missing_task_fails(cli, capsys):
+    """Test edit-comment fails when task doesn't exist."""
+    rc = cli.run(["edit-comment", "00000000", "comment-id", "Content"])
+    assert rc == 1
+
+
+def test_comment_prefix_matching_in_delete(cli, capsys):
+    """Test delete-comment works with comment ID prefix (first 8 chars)."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    cli.run(["add-comment", task_id, "To delete"])
+    cli.run(["list-comments", task_id])
+    output = capsys.readouterr().out
+    # Extract comment ID
+    lines = output.split('\n')
+    comment_id = None
+    for line in lines:
+        if line.strip() and '—' in line:
+            comment_id = line.strip().split()[0]
+            break
+
+    assert comment_id is not None
+    # Use only first 8 chars as prefix
+    rc = cli.run(["delete-comment", task_id, comment_id[:8]])
+    assert rc == 0
+
+
+def test_comment_prefix_matching_in_edit(cli, capsys):
+    """Test edit-comment works with comment ID prefix (first 8 chars)."""
+    _add(cli, "Task")
+    cli.run(["list"])
+    task_id = capsys.readouterr().out.split()[2]
+
+    cli.run(["add-comment", task_id, "Original"])
+    cli.run(["list-comments", task_id])
+    output = capsys.readouterr().out
+    # Extract comment ID
+    lines = output.split('\n')
+    comment_id = None
+    for line in lines:
+        if line.strip() and '—' in line:
+            comment_id = line.strip().split()[0]
+            break
+
+    assert comment_id is not None
+    # Use only first 8 chars as prefix
+    rc = cli.run(["edit-comment", task_id, comment_id[:8], "Updated"])
+    assert rc == 0

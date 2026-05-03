@@ -108,19 +108,19 @@ class TaskManager:
         return comment
 
     def get_comments(self, task_id: str) -> list[TaskComment]:
-        """Get all comments for a task.
+        """Get all comments for a task, sorted by created_at ascending.
 
         Args:
             task_id: The ID of the task.
 
         Returns:
-            list[TaskComment]: All comments for the task.
+            list[TaskComment]: All comments for the task, sorted by created_at ascending.
 
         Raises:
             TaskNotFoundError: If task is not found.
         """
         task = self.get(task_id)
-        return task.comments
+        return sorted(task.comments, key=lambda c: c.created_at)
 
     def delete_comment(self, task_id: str, comment_id: str) -> None:
         """Delete a comment from a task.
@@ -139,3 +139,29 @@ class TaskManager:
             raise ValueError(f"Comment '{comment_id}' not found on task '{task.id}'")
         task.comments.remove(comment)
         self._persist()
+
+    def edit_comment(self, task_id: str, comment_id: str, content: str) -> TaskComment:
+        """Edit a comment on a task.
+
+        Args:
+            task_id: The ID of the task.
+            comment_id: The ID of the comment to edit.
+            content: The new comment content (non-empty string).
+
+        Returns:
+            TaskComment: The updated comment.
+
+        Raises:
+            TaskNotFoundError: If task is not found.
+            ValueError: If comment is not found or content is empty.
+        """
+        task = self.get(task_id)
+        comment = next((c for c in task.comments if c.id == comment_id), None)
+        if comment is None:
+            raise ValueError(f"Comment '{comment_id}' not found on task '{task.id}'")
+        if not content or not content.strip():
+            raise ValueError("Comment content cannot be empty")
+        comment.content = content.strip()
+        comment.updated_at = datetime.now(timezone.utc)
+        self._persist()
+        return comment
