@@ -51,3 +51,23 @@ class WorkflowRun:
             commit_sha=data.get("commit_sha"),
             duration_seconds=data.get("duration_seconds", 0.0),
         )
+
+    def is_running(self) -> bool:
+        """Check if the workflow run is currently in progress."""
+        return self.status == WorkflowStatus.IN_PROGRESS
+
+    def is_terminal(self) -> bool:
+        """Check if the workflow run has completed."""
+        return self.status == WorkflowStatus.COMPLETED
+
+    def is_successful(self) -> bool:
+        """Check if the workflow run concluded successfully."""
+        return self.conclusion == WorkflowConclusion.SUCCESS
+
+    def is_failed(self) -> bool:
+        """Check if the workflow run failed."""
+        return self.conclusion == WorkflowConclusion.FAILURE
+
+    def is_cancelled(self) -> bool:
+        """Check if the workflow run was cancelled."""
+        return self.conclusion == WorkflowConclusion.CANCELLED
