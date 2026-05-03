@@ -140,6 +140,10 @@ class TodoCLI:
         p_delete_comment.add_argument("comment_id", help="Comment ID")
         p_delete_comment.set_defaults(func=self._cmd_delete_comment)
 
+        # stats
+        p_stats = sub.add_parser("stats", help="Show task statistics")
+        p_stats.set_defaults(func=self._cmd_stats)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -273,4 +277,15 @@ class TodoCLI:
         comment = self._service._comment_manager.get(args.comment_id)
         self._service.delete_comment(args.comment_id)
         print(f"Deleted comment {comment.id[:8]}")
+        return 0
+
+    def _cmd_stats(self, args: argparse.Namespace) -> int:
+        stats = self._service.get_statistics()
+        print(f"Task Statistics:")
+        print(f"  Total:           {stats.total_count}")
+        print(f"  Pending:         {stats.pending_count}")
+        print(f"  In Progress:     {stats.in_progress_count}")
+        print(f"  Done:            {stats.done_count}")
+        print(f"  Overdue:         {stats.overdue_count}")
+        print(f"  With due date:   {stats.with_due_date_count}")
         return 0

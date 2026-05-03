@@ -334,3 +334,102 @@ Successfully implemented due date range and overdue status filtering for task qu
 - Edge cases (boundary times, DST)
 
 Duration: 575.1s | Cost: $1.296892 USD | Turns: 20
+
+## Task 06: Add task statistics
+
+### Summary
+
+Successfully implemented task statistics functionality with comprehensive dataclass-based reporting. Statistics are computed on-demand from stored Task data and exposed via both CLI (`stats` command) and interactive menu (option 10).
+
+### Files Changed
+
+**Source Code:**
+- `src/models/task_statistics.py` — NEW: TaskStatistics dataclass with 6 aggregate metric fields
+- `src/services/todo_service.py` — Added get_statistics() method for computing aggregate statistics
+- `src/cli/todo_cli.py` — Added `stats` subcommand with formatted output
+- `src/cli/interactive_menu.py` — Added menu option 10 for viewing statistics
+
+**Tests:**
+- `tests/test_task_statistics.py` — NEW: 35 tests for TaskStatistics dataclass and get_statistics() method
+- `tests/test_cli_stats.py` — NEW: 23 tests for CLI stats command
+- `tests/test_interactive_menu_stats.py` — NEW: 24 tests for interactive menu option 10
+
+**Documentation:**
+- `artifacts/class_diagram.puml` — Added TaskStatistics dataclass, updated TodoService with get_statistics()
+- `artifacts/activity_diagram.puml` — Added case for menu option 10 with statistics computation flow
+- `artifacts/use_case_diagram.puml` — Added View statistics use cases (CLI + interactive)
+- `artifacts/component_diagram.puml` — Added TaskStatistics Model component
+- `analysis.md` — Detailed analysis of requirements and current architecture
+- `design.md` — Comprehensive implementation design with test specifications
+
+### Test Results
+
+✅ All 347 tests passed
+- New tests: 82 (35 + 23 + 24)
+- Existing tests: 265 (all still passing)
+- No production bugs discovered
+
+### Features Implemented
+
+**Must (All Completed):**
+- ✅ Compute total task count from stored Task data
+- ✅ Compute count per status (pending, in_progress, done)
+- ✅ Compute count of overdue tasks
+- ✅ Compute count of tasks with a due date set
+- ✅ Return structured report object as dataclass (not plain dict)
+- ✅ Accessible via `python -m src` — interactive menu option (10) and CLI flag (`stats`)
+
+**Should (All Completed):**
+- ✅ Include completion rate as a percentage (done / total)
+- ✅ Ensure deterministic output format regardless of task ordering
+
+**Could (Not Completed):**
+- ❌ Include average number of days from creation to completion for done tasks (out of scope)
+
+**Won't (Not Implemented):**
+- ❌ Generate charts or any visualization output (as specified)
+
+### Implementation Details
+
+**TaskStatistics Dataclass:**
+- `total_count: int` — Total number of tasks
+- `pending_count: int` — Tasks with status PENDING
+- `in_progress_count: int` — Tasks with status IN_PROGRESS
+- `done_count: int` — Tasks with status DONE
+- `overdue_count: int` — Tasks where is_overdue() returns True (active tasks only)
+- `with_due_date_count: int` — Tasks where due_date is not None
+
+**TodoService.get_statistics():**
+- Single-pass O(n) computation over all tasks
+- Reuses existing Task.is_overdue() for consistency
+- Returns immutable TaskStatistics dataclass
+
+**CLI Exposure:**
+- Command: `python -m src stats`
+- Displays all 6 metrics in formatted table
+- Exit code: 0 (always succeeds)
+
+**Interactive Menu:**
+- Option 10: View statistics
+- Displays metrics with clear labels and formatting
+- Waits for user to press Enter
+
+**Test Coverage:**
+- TaskStatistics instantiation (dataclass)
+- Empty task list (all counts zero)
+- Single status distributions
+- Mixed status distributions
+- Due date counting
+- Overdue counting (excluding DONE status)
+- CLI command and output format
+- Menu option handler
+- Parametrized tests for multiple scenarios
+- Edge cases and determinism validation
+
+**Diagrams Updated:**
+- Class diagram: Added TaskStatistics, updated TodoService
+- Activity diagram: Added statistics computation flow for menu option 10
+- Use case diagram: Added View statistics use cases for both CLI and interactive modes
+- Component diagram: Added TaskStatistics Model component
+
+Duration: 545.4s | Cost: $1.058962 USD | Turns: 15

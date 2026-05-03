@@ -88,6 +88,8 @@ class InteractiveMenu:
                 self._do_check_overdue(tasks)
             elif choice == "9":
                 self._do_manage_comments(tasks)
+            elif choice == "10":
+                self._do_statistics()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -117,6 +119,7 @@ class InteractiveMenu:
         print("  7. Check if task is completed")
         print("  8. Check if task is overdue")
         print("  9. Manage comments")
+        print("  10. View statistics")
         print("  0. Quit")
         print()
 
@@ -444,4 +447,17 @@ class InteractiveMenu:
             print(f"  Deleted comment {comment.id[:8]}")
         except CommentNotFoundError as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_statistics(self) -> None:
+        _clear()
+        stats = self._service.get_statistics()
+        print("  Task Statistics\n")
+        print(f"  Total tasks:           {stats.total_count}")
+        print(f"  Pending:               {stats.pending_count}")
+        print(f"  In Progress:           {stats.in_progress_count}")
+        print(f"  Done:                  {stats.done_count}")
+        print(f"  Overdue (active):      {stats.overdue_count}")
+        print(f"  With due date:         {stats.with_due_date_count}")
+        print()
         input("  Press Enter to continue...")

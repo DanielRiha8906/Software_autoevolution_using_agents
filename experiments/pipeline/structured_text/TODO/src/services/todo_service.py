@@ -4,6 +4,7 @@ from typing import Optional
 from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
+from ..models.task_statistics import TaskStatistics
 from ..storage.json_storage import JsonStorage
 from .comment_manager import CommentManager
 from .task_manager import TaskManager
@@ -122,3 +123,27 @@ class TodoService:
             CommentNotFoundError: If comment not found or prefix is ambiguous
         """
         self._comment_manager.delete(comment_id)
+
+    def get_statistics(self) -> TaskStatistics:
+        """Compute aggregate statistics over all tasks.
+
+        Returns:
+            TaskStatistics dataclass with aggregated metrics
+        """
+        tasks = self._manager.list_all()
+
+        total_count = len(tasks)
+        pending_count = sum(1 for t in tasks if t.status == TaskStatus.PENDING)
+        in_progress_count = sum(1 for t in tasks if t.status == TaskStatus.IN_PROGRESS)
+        done_count = sum(1 for t in tasks if t.status == TaskStatus.DONE)
+        overdue_count = sum(1 for t in tasks if t.is_overdue())
+        with_due_date_count = sum(1 for t in tasks if t.due_date is not None)
+
+        return TaskStatistics(
+            total_count=total_count,
+            pending_count=pending_count,
+            in_progress_count=in_progress_count,
+            done_count=done_count,
+            overdue_count=overdue_count,
+            with_due_date_count=with_due_date_count,
+        )
