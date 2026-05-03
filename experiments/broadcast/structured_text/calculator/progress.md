@@ -199,4 +199,4 @@ No test regressions. All existing tests continue to pass. The 15 MemoryEntry-spe
 - Roundtrip serialization/deserialization
 - Various operation types and edge cases
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 310.5s | Cost: $0.615759 USD | Turns: 47
