@@ -143,6 +143,15 @@ def build_parser() -> argparse.ArgumentParser:
     # statistics
     stats_p = sub.add_parser("statistics", help="View workflow statistics and report")
 
+    # export
+    export_p = sub.add_parser("export", help="Export all runs to JSON file")
+    export_p.add_argument("--output", required=True, help="Output file path")
+
+    # import
+    import_p = sub.add_parser("import", help="Import runs from JSON file")
+    import_p.add_argument("--input", required=True, help="Input file path")
+    import_p.add_argument("--skip-duplicates", action="store_true", help="Skip duplicate runs instead of failing")
+
     return parser
 
 
@@ -308,3 +317,26 @@ def run_cli(service: WorkflowRunService, attempt_service: AttemptService, args=N
         stats_service = StatisticsService(service, attempt_service)
         report = stats_service.compute_statistics()
         _print_statistics_report(report)
+
+    elif ns.command == "export":
+        try:
+            count = service.export_runs(ns.output)
+            print(f"Exported {count} runs to {ns.output}")
+        except Exception as e:
+            print(f"Error exporting runs: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "import":
+        try:
+            count, errors = service.import_runs(ns.input, skip_duplicates=ns.skip_duplicates)
+            print(f"Imported {count} runs from {ns.input}")
+            if errors:
+                print(f"Warnings during import ({len(errors)} items):")
+                for error in errors:
+                    print(f"  - {error}")
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
