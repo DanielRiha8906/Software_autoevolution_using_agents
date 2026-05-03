@@ -81,3 +81,33 @@ Duration: 420.3s | Cost: $0.684168 USD | Turns: 21
 - Follows existing CalculationResult pattern for consistency
 
 Duration: 402.7s | Cost: $0.690665 USD | Turns: 31
+
+## Task 04: MemoryService Implementation
+
+**Status:** Completed
+
+**Files Changed:**
+- src/services/memory_service.py — Created new MemoryService class with store() and retrieve() methods
+- src/services/__init__.py — Added MemoryService to imports and __all__ exports
+- tests/test_memory_service.py — New test file with 5 test cases
+- artifacts/class_diagram.puml — Updated to show MemoryService class in services package
+- artifacts/component_diagram.puml — Updated to show MemoryService component
+
+**Test Results:**
+- 5/5 test_memory_service.py tests: PASSED
+- 124/134 full test suite: PASSED (10 pre-existing CLI tests fail, unrelated to MemoryService)
+- All MemoryService tests passing
+- No regressions in existing tests
+
+**Implementation Summary:**
+- Created MemoryService as a stateful service managing MemoryEntry objects in memory
+- Constructor takes no arguments, initializes empty internal list: `_entries: list[MemoryEntry]`
+- `store(entry: MemoryEntry) -> None` appends entries to internal list
+- `retrieve() -> list[MemoryEntry]` returns all stored entries in insertion order
+- Strictly separates concerns: no file I/O or JSON serialization in MemoryService (belongs in storage layer)
+- Follows existing architecture pattern: domain service (MemoryService) uses domain objects (MemoryEntry), persistence handled separately
+- All type hints explicitly declared
+- Full docstrings for class and all public methods
+- Verified by test_memory_service_does_not_contain_file_io that no "open(" or "json.dump" appears in source
+
+Duration: 359.9s | Cost: $0.556227 USD | Turns: 21
