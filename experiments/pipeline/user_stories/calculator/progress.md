@@ -204,4 +204,4 @@ Duration: 565.8s | Cost: $1.062949 USD | Turns: 21
 - ✅ No visualization layer introduced (pure data + formatted CLI output only)
 - ✅ Accessible via python -m src as interactive menu option (item 11 "Show statistics") and one-shot CLI flag (--statistics)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 648.6s | Cost: $1.415466 USD | Turns: 31
