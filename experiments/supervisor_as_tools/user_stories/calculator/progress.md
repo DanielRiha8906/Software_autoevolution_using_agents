@@ -71,4 +71,4 @@ Duration: 220.3s | Cost: $0.388252 USD | Turns: 13
 - No breaking changes; all existing operations remain unchanged
 - Interactive menu expanded to 8 operations (positions 1-8), history at position 9, exit at position 10
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 427.1s | Cost: $0.703650 USD | Turns: 15
