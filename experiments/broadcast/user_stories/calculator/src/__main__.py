@@ -31,7 +31,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass flags for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory-history] [--history] [--memory-retrieve] [--memory-store OP OPERANDS... [--result R] | [--error MSG]]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory-history] [--history] [--memory-retrieve] [--memory-store OP OPERANDS... [--result R] | [--error MSG]] [--filter-op OP] [--filter-state STATE]",
     )
     parser.add_argument(
         "--operation",
@@ -70,6 +70,17 @@ def main() -> None:
         help="Error message for a failed memory entry (use with --memory-store)",
     )
     parser.add_argument(
+        "--filter-op",
+        metavar="OP",
+        help="Filter entries by operation type (e.g., add, subtract)",
+    )
+    parser.add_argument(
+        "--filter-state",
+        metavar="STATE",
+        choices=["success", "error"],
+        help="Filter entries by result state (success | error)",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -100,6 +111,8 @@ def main() -> None:
         except argparse.ArgumentTypeError as exc:
             parser.error(str(exc))
         cli.memory_store_command(args.memory_store, operands, result=args.result, error=args.error)
+    elif args.filter_op or args.filter_state:
+        cli.filter_command(operation=args.filter_op, state=args.filter_state)
     elif args.memory_history:
         cli.show_memory_history_command()
     elif args.history:

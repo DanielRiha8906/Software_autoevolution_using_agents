@@ -34,7 +34,8 @@ class CalculatorCLI:
 
             memory_history_opt = len(self._MENU) + 1
             history_opt        = len(self._MENU) + 2
-            exit_opt           = len(self._MENU) + 3
+            filter_opt         = len(self._MENU) + 3
+            exit_opt           = len(self._MENU) + 4
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -46,6 +47,10 @@ class CalculatorCLI:
 
             if choice == str(history_opt):
                 self._show_history()
+                continue
+
+            if choice == str(filter_opt):
+                self._filter_interactive()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -126,6 +131,25 @@ class CalculatorCLI:
             print(f"Error storing entry: {exc}", file=sys.stderr)
             sys.exit(1)
 
+    def filter_command(self, operation: str | None = None, state: str | None = None) -> None:
+        """Filter and display memory entries (one-shot mode).
+
+        Args:
+            operation: Operation type to filter by (e.g., 'add')
+            state: Result state to filter by ('success' or 'error')
+        """
+        try:
+            results = self.memory_service.filter_entries(operation=operation, state=state)
+            if not results:
+                print("No entries match the specified filters.")
+                return
+            print(f"Found {len(results)} matching entries:")
+            for entry in results:
+                self._print_memory_entry(entry)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
@@ -136,7 +160,8 @@ class CalculatorCLI:
             print(f"  {i}. {label}")
         print(f"  {len(self._MENU) + 1}. View memory history")
         print(f"  {len(self._MENU) + 2}. View calculation history")
-        print(f"  {len(self._MENU) + 3}. Exit")
+        print(f"  {len(self._MENU) + 3}. Filter calculations")
+        print(f"  {len(self._MENU) + 4}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -175,6 +200,43 @@ class CalculatorCLI:
         for entry in history:
             self._print_memory_entry(entry)
         print()
+
+    def _filter_interactive(self) -> None:
+        """Interactive filter dialog."""
+        print("\n=== Filter Calculations ===")
+
+        # Get available operations
+        valid_ops = self.memory_service.get_valid_operations()
+        if not valid_ops:
+            print("  No operations recorded yet.\n")
+            return
+
+        # Prompt for operation filter
+        print(f"\n  Available operations: {', '.join(valid_ops)}")
+        op_input = input("  Filter by operation (or press Enter to skip): ").strip()
+        operation = op_input if op_input else None
+
+        # Prompt for state filter
+        state_input = input("  Filter by state (success/error, or press Enter to skip): ").strip().lower()
+        state = None
+        if state_input:
+            if state_input not in ("success", "error"):
+                print("  Invalid state. Skipping state filter.\n")
+                state = None
+            else:
+                state = state_input
+
+        # Perform filtering
+        try:
+            results = self.memory_service.filter_entries(operation=operation, state=state)
+            if not results:
+                print("\n  No entries match the specified filters.\n")
+                return
+            print(f"\n  Found {len(results)} matching entries:\n")
+            for entry in results:
+                self._print_memory_entry(entry)
+        except ValueError as exc:
+            print(f"  Error: {exc}\n")
 
     def _print_memory_entry(self, entry: ResultEntry | ErrorEntry) -> None:
         """Format and print a single memory entry."""
