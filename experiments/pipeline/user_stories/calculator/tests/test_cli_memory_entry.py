@@ -150,7 +150,7 @@ class TestRunInteractiveWithMemoryEntry:
         cli, service = _make_cli()
         entry = MemoryEntry("add", 3, 5, 8, None, None, timestamp=_TS, uuid=_UUID)
         service.perform.return_value = entry
-        with patch("builtins.input", side_effect=["1", "3", "5", "14"]):
+        with patch("builtins.input", side_effect=["1", "3", "5", "20"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert "8" in output or "Result" in output
@@ -162,7 +162,7 @@ class TestRunInteractiveWithMemoryEntry:
             "divide", 5, 0, None, "Division by zero is not allowed", "ValueError", timestamp=_TS, uuid=_UUID
         )
         service.perform.return_value = entry
-        with patch("builtins.input", side_effect=["2", "5", "0", "14"]):
+        with patch("builtins.input", side_effect=["2", "5", "0", "20"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert "Error" in output and "Division by zero" in output
@@ -178,7 +178,7 @@ class TestRunInteractiveWithMemoryEntry:
         success_entry = MemoryEntry("add", 1, 2, 3, None, None, _TS, "uuid2")
         service.perform.side_effect = [error_entry, success_entry]
 
-        with patch("builtins.input", side_effect=["2", "5", "0", "1", "1", "2", "14"]):
+        with patch("builtins.input", side_effect=["2", "5", "0", "1", "1", "2", "20"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -193,7 +193,7 @@ class TestRunInteractiveWithMemoryEntry:
             MemoryEntry("divide", 5, 0, None, "Division by zero", "ValueError", timestamp=_TS, uuid="uuid2"),
         ]
         service.get_history.return_value = entries
-        with patch("builtins.input", side_effect=["9", "14"]):
+        with patch("builtins.input", side_effect=["15", "20"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert "ERROR" in output and "Division by zero" in output
@@ -203,7 +203,7 @@ class TestRunInteractiveWithMemoryEntry:
         cli, service = _make_cli()
         entries = [MemoryEntry("add", 1, 2, 3, None, None, _TS, "uuid1")]
         service.get_history.return_value = entries
-        with patch("builtins.input", side_effect=["9", "14"]):
+        with patch("builtins.input", side_effect=["15", "20"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert "1 + 2 = 3" in output
@@ -221,7 +221,7 @@ class TestRunInteractiveWithMemoryEntry:
             "1", "1", "1",  # Add
             "6", "-1", "0",  # Sqrt (error)
             "3", "3", "3",  # Multiply
-            "14"  # Exit
+            "20"  # Exit
         ]):
             cli.run_interactive()
 
@@ -245,7 +245,7 @@ class TestRunInteractiveWithMemoryEntry:
         cli, service = _make_cli()
         entry = MemoryEntry(op_name, a, b, float(result), None, None, timestamp=_TS, uuid=_UUID)
         service.perform.return_value = entry
-        with patch("builtins.input", side_effect=[op_choice, str(a), str(b), "14"]):
+        with patch("builtins.input", side_effect=[op_choice, str(a), str(b), "20"]):
             cli.run_interactive()
         output = capsys.readouterr().out
         assert str(result) in output

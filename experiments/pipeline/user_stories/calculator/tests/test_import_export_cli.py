@@ -479,15 +479,15 @@ class TestMenuIntegration:
             storage_path = Path(tmpdir) / "storage.json"
             cli, _, _ = _make_full_cli(storage_path)
 
-            # Menu should have: 8 operations + history + filter + statistics + export + import + exit
-            # Export should be option 12 (8 + 1 + 1 + 1 + 1)
+            # Menu should have: 8 operations + 6 utilities (history, filter, statistics, export, import, exit)
+            # Export should be option 18 (8 + 6 utilities, second to last)
             cli._print_menu()
             output = capsys.readouterr().out
             lines = output.split('\n')
             # Find the export line
             export_line = [l for l in lines if "export" in l.lower()]
             assert len(export_line) > 0
-            assert "12" in export_line[0]
+            assert "18" in export_line[0]
 
     def test_interactive_import_option_number(self, capsys):
         """Test that import option has correct menu number."""
@@ -501,4 +501,4 @@ class TestMenuIntegration:
             # Find the import line
             import_line = [l for l in lines if "import" in l.lower()]
             assert len(import_line) > 0
-            assert "13" in import_line[0]
+            assert "19" in import_line[0]

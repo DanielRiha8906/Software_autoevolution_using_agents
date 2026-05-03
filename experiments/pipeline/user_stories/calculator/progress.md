@@ -240,3 +240,38 @@ Duration: 648.6s | Cost: $1.415466 USD | Turns: 31
 - ✅ All new functionality accessible via python -m src — both as interactive menu options (items 13-14) and as one-shot CLI flags (--export, --import, --import-mode)
 
 Duration: 665.1s | Cost: $1.396620 USD | Turns: 16
+
+## Task 08: Scientific Mode with Trigonometric and Logarithmic Functions
+
+**Status**: ✅ Complete
+
+**Description**: Add scientific mode to the calculator with trigonometric (sin, cos, tan) and logarithmic (log, ln) functions plus exponential (exp), enabling advanced scientific and engineering calculations while maintaining compatibility with standard operations.
+
+**Files Changed**:
+- `src/models/operation.py` — Added 6 new enum members: SIN, COS, TAN, LOG, LN, EXP (now 14 total operations)
+- `src/services/calculator.py` — Added `import math`; added 6 new methods: sin(a, b), cos(a, b), tan(a, b), log(a, b), ln(a, b), exp(a, b); updated calculate() dispatcher to include all 6 operations with domain error validation for log/ln
+- `src/cli/calculator_cli.py` — Expanded _MENU from 8 to 14 operations (added Sine, Cosine, Tangent, Log (base 10), Natural Log, Exponential as items 9-14)
+- `src/__main__.py` — Updated argparse --operation choices from 8 to 14 operations; updated usage string and help text to include all scientific operations
+- `artifacts/class_diagram.puml` — Updated Operation enum to show 14 members; updated Calculator class to show 6 new methods
+- `tests/test_scientific_operations.py` — NEW: 142 comprehensive tests covering trigonometric functions (16 tests), cosine (15), tangent (13), logarithm (17), natural logarithm (15), exponential (14), dispatcher routing (2), CLI menu (5), argparse integration (15), CalculatorService integration (10), CLI command integration (9), and edge cases (11 tests)
+- `tests/test_cli.py` — Updated 12 test menu option references (shifted utility options 9-14 → 15-20 due to menu expansion)
+- `tests/test_cli_memory_entry.py` — Updated 6 test menu option references (shifted utility options 9-14 → 15-20)
+- `tests/test_import_export_cli.py` — Updated 2 test menu option assertions for export/import (shifted options 12-13 → 18-19)
+
+**Test Results**:
+- Total tests: 627 (485 existing + 142 new scientific operation tests)
+- Passed: 627 ✅
+- Failed: 0 (after fixing 28 existing tests that had hard-coded menu option numbers)
+- New test file: test_scientific_operations.py with comprehensive coverage of all 6 operations across unit, integration, and CLI levels
+- Coverage: Trigonometric accuracy (sin/cos/tan at standard angles and edge cases), logarithmic domain validation and error messages, exponential function with overflow handling, unary operation pattern consistency, menu display (14 items), CLI flag acceptance (--operation sin/cos/tan/log/ln/exp), CalculatorService.perform() error capture for log/ln domain errors, interactive menu operation selection, one-shot CLI mode with scientific operations
+
+**Acceptance Criteria Met**:
+- ✅ Scientific mode adds: sin, cos, tan, log (base 10), ln (natural log), exp
+- ✅ Standard mode operations (add, subtract, multiply, divide, square, sqrt, power, modulo) remain fully functional
+- ✅ Switching between modes is explicit (user selects operation from menu or via --operation flag)
+- ✅ Scientific operations use same interface and result structure as standard operations (float, float) → float
+- ✅ Domain errors (log/ln of non-positive numbers) handled same way as existing edge cases (ValueError with descriptive message)
+- ✅ Operations already in standard mode not re-implemented
+- ✅ All new functionality accessible via `python -m src`: interactive menu items 9-14 for scientific operations, one-shot CLI flags --operation sin/cos/tan/log/ln/exp, --help lists all 14 operations
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
