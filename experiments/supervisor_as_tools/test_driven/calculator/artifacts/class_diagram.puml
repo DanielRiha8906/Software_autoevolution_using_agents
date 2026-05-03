@@ -94,18 +94,24 @@ package "cli" #FFE5E5 {
     class CalculatorCLI {
         -MENU : List<Tuple<Operation, String>>
         -service : CalculatorService
+        -memory_service : MemoryService
         --
-        +CalculatorCLI(service: CalculatorService)
-        +runInteractive() : void
-        +runCommand(operation: String, a: float, b: float) : void
-        -printMenu() : void
-        -resolveMenuChoice(choice: String) : Operation [0..1]
-        -promptNumber(prompt: String) : float [0..1]
-        -showHistory() : void
+        +CalculatorCLI(service: CalculatorService, memory_service: Optional[MemoryService])
+        +run_interactive() : void
+        +run_command(operation: String, a: float, b: float) : void
+        +run_query(operation: Optional[String], success: Optional[bool]) : void
+        -_print_menu() : void
+        -_resolve_menu_choice(choice: String) : Operation [0..1]
+        -_prompt_number(prompt: String) : float [0..1]
+        -_show_history() : void
+        -_query_history() : void
+        -_prompt_optional_filter(prompt: String) : Optional[String]
+        -_prompt_success_filter(prompt: String) : Optional[bool]
     }
 }
 
 CalculatorCLI --> CalculatorService : service
+CalculatorCLI --> MemoryService : memory_service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 

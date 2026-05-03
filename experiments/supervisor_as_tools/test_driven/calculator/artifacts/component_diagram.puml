@@ -9,19 +9,23 @@ package "Calculator Application" {
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
     component "Application Service\n(CalculatorService)" as Service
+    component "Memory Service\n(MemoryService)" as Memory
     component "Calculation Engine\n(Calculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
-    component "Domain Models\n(Operation, CalculationResult)" as Models
+    component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
 
     Main --> CLI : initializes
     Main --> Service : initializes
+    Main --> Memory : initializes
 
     CLI --> Service : uses
+    CLI --> Memory : uses
     Service --> Calc : uses
     Service --> Store : uses
 
     Service ..> Models
     Store ..> Models
+    Memory ..> Models
 }
 
 database "calculations.json" as DB

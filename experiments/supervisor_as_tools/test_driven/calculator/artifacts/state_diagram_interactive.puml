@@ -9,6 +9,7 @@ top to bottom direction
 
 Menu --> FirstOperand : operation selected
 Menu --> Feedback : history selected
+Menu --> QueryFilter : query selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
@@ -20,6 +21,10 @@ SecondOperand --> Feedback : invalid number
 
 Calculating --> Feedback : success / show result
 Calculating --> Feedback : error / show error
+
+QueryFilter --> QueryResults : filter applied
+QueryResults --> Feedback : results shown
+
 Feedback --> Menu
 
 @enduml

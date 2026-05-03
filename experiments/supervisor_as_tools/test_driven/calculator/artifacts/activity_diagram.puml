@@ -43,6 +43,12 @@ else (no)
         :Load calculation history;
         :Show history;
 
+      case (Query)
+        :Prompt for operation filter;
+        :Prompt for success filter;
+        :Execute query;
+        :Show results;
+
       case (Operation)
         :Read operands;
 
