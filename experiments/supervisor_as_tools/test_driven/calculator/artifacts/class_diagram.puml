@@ -90,6 +90,13 @@ package "services" #DDFFD4 {
         +StatisticsService(memory: MemoryService)
         +compute() : StatisticsReport
     }
+
+    class ImportExportService {
+        --
+        +ImportExportService()
+        +export(memory: MemoryService, filepath: Union[str, Path]) : int
+        +import_from(memory: MemoryService, filepath: Union[str, Path]) : int
+    }
 }
 
 package "storage" #FFF3CC {
@@ -120,9 +127,11 @@ package "cli" #FFE5E5 {
 }
 
 CalculatorCLI --> CalculatorService : service
+CalculatorCLI --> ImportExportService : uses
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 StatisticsService --> MemoryService : uses
+ImportExportService --> MemoryService : uses
 
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> Operation
@@ -131,5 +140,6 @@ Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
 MemoryService ..> MemoryEntry : manages
 StatisticsService ..> StatisticsReport : creates
+ImportExportService ..> MemoryEntry : handles
 
 @enduml
