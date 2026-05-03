@@ -5,6 +5,7 @@ from typing import Optional
 
 from .models.operation import Operation
 from .services.calculator import Calculator
+from .services.scientific_calculator import ScientificCalculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
 from .services.statistics_service import StatisticsService
@@ -15,7 +16,7 @@ from .cli.calculator_cli import CalculatorCLI
 
 def _build_service() -> CalculatorService:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
-    return CalculatorService(Calculator(), JsonStorage(storage_path))
+    return CalculatorService(ScientificCalculator(), JsonStorage(storage_path))
 
 
 def _as_number(value: str) -> float:
@@ -36,17 +37,27 @@ def _as_bool(value: str) -> bool:
         raise argparse.ArgumentTypeError(f"'{value}' is not a valid boolean (use: true/false)")
 
 
+def _is_single_arg_operation(op_str: str) -> bool:
+    """Check if an operation requires only one argument."""
+    return op_str in ("sin", "cos", "tan", "log", "ln", "exp")
+
+
+def _is_unary_operation(op_str: str) -> bool:
+    """Check if an operation is unary (single argument)."""
+    return op_str in ("square", "sqrt", "sin", "cos", "tan", "log", "ln", "exp")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively, perform calculations, or query memory",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B | --query [--operation OP] [--success true|false] | --export FILE | --import FILE]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} OPERANDS | --query [--operation OP] [--success true|false] | --export FILE | --import FILE]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
-        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo", "sin", "cos", "tan", "log", "ln", "exp"],
+        help="Operation to perform (standard: add | subtract | multiply | divide | square | sqrt | power | modulo; scientific: sin | cos | tan | log | ln | exp)",
     )
     parser.add_argument(
         "--query",
@@ -79,7 +90,7 @@ def main() -> None:
         "operands",
         nargs="*",
         metavar="NUMBER",
-        help="Two operands (required when --operation is given)",
+        help="Operands (1 for unary: square, sqrt, sin, cos, tan, log, ln, exp; 2 for binary operations)",
     )
 
     args = parser.parse_args()
@@ -115,11 +126,13 @@ def main() -> None:
         cli.run_query(operation=operation_filter, success=args.success)
     elif args.operation:
         # Calculate mode
-        if len(args.operands) != 2:
-            parser.error("Exactly two operands are required when using --operation")
+        is_unary = _is_unary_operation(args.operation)
+        required_operands = 1 if is_unary else 2
+        if len(args.operands) != required_operands:
+            parser.error(f"{args.operation} requires exactly {required_operands} operand(s)")
         try:
             a = _as_number(args.operands[0])
-            b = _as_number(args.operands[1])
+            b = _as_number(args.operands[1]) if required_operands == 2 else 0.0
         except argparse.ArgumentTypeError as exc:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)
