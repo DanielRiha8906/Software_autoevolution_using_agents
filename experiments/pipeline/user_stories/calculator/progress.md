@@ -239,4 +239,4 @@ Duration: 648.6s | Cost: $1.415466 USD | Turns: 31
 - ✅ Only JSON format is supported (file extension validation enforces .json; no CSV/XML support)
 - ✅ All new functionality accessible via python -m src — both as interactive menu options (items 13-14) and as one-shot CLI flags (--export, --import, --import-mode)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 665.1s | Cost: $1.396620 USD | Turns: 16
