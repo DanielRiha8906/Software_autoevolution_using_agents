@@ -30,14 +30,14 @@ def main() -> None:
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide"],
-        help="Operation to perform (add | subtract | multiply | divide)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
+        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
     )
     parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
-        help="Two operands (required when --operation is given)",
+        help="Operands (one for unary ops, two for binary ops)",
     )
 
     args = parser.parse_args()
@@ -45,11 +45,21 @@ def main() -> None:
     cli = CalculatorCLI(service)
 
     if args.operation:
-        if len(args.operands) != 2:
-            parser.error("Exactly two operands are required when using --operation")
+        # Unary operations need 1 operand, binary operations need 2
+        unary_ops = {"square", "sqrt"}
+        is_unary = args.operation in unary_ops
+        required_operands = 1 if is_unary else 2
+
+        if len(args.operands) != required_operands:
+            if is_unary:
+                parser.error("Exactly one operand is required for this operation")
+            else:
+                parser.error("Exactly two operands are required for this operation")
+
         try:
             a = _as_number(args.operands[0])
-            b = _as_number(args.operands[1])
+            # For unary operations, pass dummy second operand (0)
+            b = _as_number(args.operands[1]) if not is_unary else 0
         except argparse.ArgumentTypeError as exc:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)

@@ -10,6 +10,10 @@ class CalculatorCLI:
         (Operation.SUBTRACT, "Subtract"),
         (Operation.MULTIPLY, "Multiply"),
         (Operation.DIVIDE,   "Divide"),
+        (Operation.SQUARE,   "Square"),
+        (Operation.SQRT,     "Square root"),
+        (Operation.POWER,    "Power"),
+        (Operation.MODULO,   "Modulo"),
     ]
 
     def __init__(self, service: CalculatorService) -> None:
@@ -44,9 +48,14 @@ class CalculatorCLI:
             a = self._prompt_number("Enter first number: ")
             if a is None:
                 continue
-            b = self._prompt_number("Enter second number: ")
-            if b is None:
-                continue
+
+            # Handle unary operations (only need one operand)
+            if operation in (Operation.SQUARE, Operation.SQRT):
+                b = 0
+            else:
+                b = self._prompt_number("Enter second number: ")
+                if b is None:
+                    continue
 
             try:
                 result = self.service.perform(operation, a, b)
@@ -54,9 +63,12 @@ class CalculatorCLI:
             except ValueError as exc:
                 print(f"\n  Error: {exc}\n")
 
-    def run_command(self, operation_str: str, a: float, b: float) -> None:
+    def run_command(self, operation_str: str, a: float, b: float | None = None) -> None:
         try:
             operation = Operation.from_string(operation_str)
+            # For unary operations, b should be unused; default to 0 if not provided
+            if b is None:
+                b = 0
             result = self.service.perform(operation, a, b)
             print(result)
         except ValueError as exc:

@@ -46,3 +46,79 @@ class TestCalculator:
         assert self.calc.calculate(Operation.SUBTRACT, 10, 4) == 6
         assert self.calc.calculate(Operation.MULTIPLY, 3, 5) == 15
         assert self.calc.calculate(Operation.DIVIDE,   10, 2) == 5.0
+
+    def test_square(self):
+        assert self.calc.square(5, 0) == 25
+
+    def test_square_zero(self):
+        assert self.calc.square(0, 0) == 0
+
+    def test_square_negative(self):
+        assert self.calc.square(-3, 0) == 9
+
+    def test_square_float(self):
+        assert self.calc.square(2.5, 0) == pytest.approx(6.25)
+
+    def test_sqrt(self):
+        assert self.calc.sqrt(25, 0) == 5.0
+
+    def test_sqrt_zero(self):
+        assert self.calc.sqrt(0, 0) == 0.0
+
+    def test_sqrt_float(self):
+        assert self.calc.sqrt(2, 0) == pytest.approx(1.414, abs=0.001)
+
+    def test_sqrt_negative_raises(self):
+        with pytest.raises(ValueError, match="Cannot take the square root of a negative number"):
+            self.calc.sqrt(-1, 0)
+
+    def test_sqrt_negative_float_raises(self):
+        with pytest.raises(ValueError, match="Cannot take the square root of a negative number"):
+            self.calc.sqrt(-0.5, 0)
+
+    def test_power(self):
+        assert self.calc.power(2, 3) == 8
+
+    def test_power_negative_exponent(self):
+        assert self.calc.power(2, -1) == pytest.approx(0.5)
+
+    def test_power_zero_exponent(self):
+        assert self.calc.power(5, 0) == 1
+
+    def test_power_float_exponent(self):
+        assert self.calc.power(2, 0.5) == pytest.approx(1.414, abs=0.001)
+
+    def test_power_negative_base(self):
+        assert self.calc.power(-2, 3) == -8
+
+    def test_modulo(self):
+        assert self.calc.modulo(10, 3) == 1
+
+    def test_modulo_result_zero(self):
+        assert self.calc.modulo(9, 3) == 0
+
+    def test_modulo_second_result_one(self):
+        assert self.calc.modulo(7, 2) == 1
+
+    def test_modulo_negative(self):
+        assert self.calc.modulo(-10, 3) == 2
+
+    def test_modulo_by_zero_raises(self):
+        with pytest.raises(ValueError, match="Modulo by zero is not allowed"):
+            self.calc.modulo(10, 0)
+
+    def test_modulo_by_zero_float_raises(self):
+        with pytest.raises(ValueError, match="Modulo by zero is not allowed"):
+            self.calc.modulo(5, 0)
+
+    def test_calculate_square(self):
+        assert self.calc.calculate(Operation.SQUARE, 5, 0) == 25
+
+    def test_calculate_sqrt(self):
+        assert self.calc.calculate(Operation.SQRT, 16, 0) == 4.0
+
+    def test_calculate_power(self):
+        assert self.calc.calculate(Operation.POWER, 2, 3) == 8
+
+    def test_calculate_modulo(self):
+        assert self.calc.calculate(Operation.MODULO, 10, 3) == 1
