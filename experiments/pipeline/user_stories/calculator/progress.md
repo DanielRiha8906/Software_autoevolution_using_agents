@@ -94,4 +94,4 @@ Duration: 592.2s | Cost: $1.021847 USD | Turns: 19
 - ✅ Existing calculation history not broken (backward compatible - old JSON loads correctly)
 - ✅ All functionality accessible via python -m src (--show-history flag + interactive history view)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 756.5s | Cost: $1.392113 USD | Turns: 24
