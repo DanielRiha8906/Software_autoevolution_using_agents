@@ -373,4 +373,4 @@ Successfully implemented export/import functionality for workflow runs to JSON f
 - **Interactive menu**: Export/import options with filtering, dry-run, and duplicate handling prompts
 - **Serialization**: Proper ISO 8601 datetime handling, enum value serialization, null value support
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 488.2s | Cost: $1.073144 USD | Turns: 23
