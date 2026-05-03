@@ -43,6 +43,16 @@ else (no)
         :Load calculation history;
         :Show history;
 
+      case (Filter by operation)
+        :Prompt for operation name;
+        :Filter memory entries by operation;
+        :Show filtered entries;
+
+      case (Filter by status)
+        :Prompt for success status;
+        :Filter memory entries by status;
+        :Show filtered entries;
+
       case (Operation)
         :Read operands;
 

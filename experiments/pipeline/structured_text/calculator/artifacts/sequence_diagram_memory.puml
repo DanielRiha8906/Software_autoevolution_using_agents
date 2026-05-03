@@ -32,6 +32,27 @@ CLI -> CLI: display entries
 CLI --> User: show memory list
 deactivate CLI
 
+== Filter Memory Entries ==
+
+User -> CLI: filter_by_operation(operation_name)
+activate CLI
+CLI -> MemService: filter_by_operation(operation_name)
+activate MemService
+MemService -> MemStore: load_all()
+activate MemStore
+MemStore -> DB: read file
+activate DB
+DB --> MemStore: JSON data
+deactivate DB
+MemStore --> MemService: List<MemoryEntry>
+deactivate MemStore
+MemService -> MemService: filter by operation name
+MemService --> CLI: filtered List<MemoryEntry>
+deactivate MemService
+CLI -> CLI: display filtered entries
+CLI --> User: show filtered memory list
+deactivate CLI
+
 == Store New Entry (implicit via CalculatorService) ==
 
 User -> CLI: run_command(operation)
