@@ -70,6 +70,17 @@ package "storage" #FFF3CC {
 }
 
 package "services" #DDFFD4 {
+    class GitHubFetchService {
+        -_secrets_path : Optional[str]
+        -_token        : Optional[str]
+        --
+        +__init__(secrets_path: Optional[str] = None)
+        +resolve_token() : str
+        +fetch(owner: str, repo: str) : List[WorkflowRun]
+        -_load_token_from_file() : Optional[str]
+        -_convert_to_workflow_run(data: dict) : WorkflowRun
+    }
+
     class WorkflowRunService {
         -_storage : WorkflowJsonStorage
         -_runs    : List[WorkflowRun]
@@ -144,6 +155,9 @@ package "cli" #FFE5E5 {
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
 WorkflowRunAttempt         ..>  WorkflowRun           : run_id
+GitHubFetchService         ..>  WorkflowRun           : returns
+GitHubFetchService         ..>  WorkflowStatus        : creates
+GitHubFetchService         ..>  WorkflowConclusion    : creates
 WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService    "1" --> "0..1" AttemptService   : -_attempt_service
 WorkflowRunService         ..>  WorkflowRun

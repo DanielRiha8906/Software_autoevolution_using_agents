@@ -289,3 +289,49 @@ Candidate A was selected as the representative solution based on being the first
 ✅ All 65 tests passing (7 new import/export tests + 58 existing tests)
 
 Duration: 265.3s | Cost: $0.589509 USD | Turns: 50
+
+---
+
+# Task 08: Implement GitHubFetchService
+
+## Broadcast Results
+
+### Candidate A
+**Approach:** Created `GitHubFetchService` class with token resolution (env var → .env file → user prompt) and `fetch(owner, repo)` method using `subprocess.run()` to call `gh api` CLI. Implemented `resolve_token()` method with three-tier fallback logic, `_load_token_from_file()` for parsing `.env` files, and `_convert_to_workflow_run()` for mapping GitHub API JSON to `WorkflowRun` domain objects with proper status/conclusion enum mapping. User-provided tokens not persisted. Non-zero exit codes raise exceptions. No `requests` library usage.
+
+**Test Score:** 73/73 passed (8 new GitHubFetchService tests + 65 existing tests)
+
+### Candidate B
+**Approach:** Identical implementation to Candidate A. `GitHubFetchService` with token resolution, `fetch()` method using `subprocess.run()`, JSON parsing with error handling, and conversion to `WorkflowRun` objects. All tests passing.
+
+**Test Score:** 73/73 passed
+
+### Candidate C
+**Approach:** Identical implementation to Candidates A and B. All tests passing with 100% convergence on implementation approach.
+
+**Test Score:** 73/73 passed
+
+## Winner: Candidate A
+
+All three candidates achieved identical test scores (73/73 total: 8 new + 65 existing) with complete convergence on implementation. All correctly implement:
+- GitHub token resolution with proper priority: environment variable → .env file → user prompt
+- User-provided tokens not auto-persisted to .env file
+- `subprocess.run()` integration with `gh api` command (no `requests` library)
+- Safe JSON parsing with error handling
+- Non-zero exit code exception raising with stderr details
+- Conversion of GitHub API response to `WorkflowRun` domain objects
+- Proper status and conclusion enum mapping from GitHub response data
+
+Candidate A was selected as the representative solution based on being the first successful implementation.
+
+## Files Changed
+- `src/services/github_fetch_service.py` — New file: `GitHubFetchService` class with token resolution and GitHub API integration
+- `src/services/__init__.py` — Updated to export GitHubFetchService
+- `tests/services/test_github_fetch_service.py` — New file: Test suite for GitHubFetchService (8 tests)
+- `artifacts/class_diagram.puml` — Added `GitHubFetchService` class with dependencies on `WorkflowRun`, `WorkflowStatus`, and `WorkflowConclusion`
+- `artifacts/component_diagram.puml` — Added `GitHubFetchService` component to service layer with dependencies to CLI and interactive menu
+
+## Test Result
+✅ All 73 tests passing (8 new GitHubFetchService tests + 65 existing tests)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
