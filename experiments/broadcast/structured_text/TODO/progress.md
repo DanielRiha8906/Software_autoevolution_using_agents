@@ -344,3 +344,108 @@ One-shot flags:
 - Timezone normalization verified through datetime comparison logic
 
 Duration: 723.9s | Cost: $1.555893 USD | Turns: 49
+
+## Task 06: Add task statistics
+
+### Broadcast Fan-out Results
+
+Three independent implementations were created on separate branches:
+
+| Candidate | Approach | Test Results | Notes |
+|-----------|----------|--------------|-------|
+| **A** | TaskStatistics dataclass + StatisticsService + CLI/Menu | 93/93 ✓ | **Selected** - Most comprehensive test coverage (12 new tests) |
+| **B** | TaskStatistics dataclass + StatisticsService + CLI/Menu | 81/81 ✓ | Missing new test file, completion_rate as percentage |
+| **C** | TaskStatistics dataclass + StatisticsService + CLI/Menu | 91/91 ✓ | Proper test file, module exports, 10 new tests |
+
+### Selected Solution: Implementer-A (broadcast-candidate-a)
+
+**Rationale**: All three candidates successfully implemented the statistics feature with proper CLI and interactive menu integration. Implementer-A was selected for having the most comprehensive test coverage with 12 new tests specifically validating the statistics functionality, resulting in 93 total tests passing. The implementation includes:
+- Clean TaskStatistics dataclass with validation
+- StatisticsService for computing statistics from TaskManager
+- Deterministic output regardless of task ordering
+- Both CLI and interactive menu access points
+- Completion rate calculation with edge case handling
+
+### Files Changed
+
+1. **src/models/task_statistics.py** (new file)
+   - Created TaskStatistics dataclass with fields:
+     - total_task_count, pending_count, in_progress_count, done_count
+     - overdue_count, tasks_with_due_date_count
+     - completion_rate: float (0.0-1.0 scale)
+   - Included validation in __post_init__() for non-negative counts
+
+2. **src/services/statistics_service.py** (new file)
+   - Created StatisticsService class accepting TaskManager
+   - Implements compute_statistics() -> TaskStatistics
+   - Deterministic computation leveraging existing TaskManager methods
+   - Handles edge case of zero total tasks (returns 0.0 completion rate)
+
+3. **src/cli/todo_cli.py** (modified)
+   - Added StatisticsService initialization
+   - Added 'stats' subcommand to argparse parser
+   - Implemented _cmd_stats() with formatted report output
+
+4. **src/cli/interactive_menu.py** (modified)
+   - Added StatisticsService initialization
+   - Added menu option "8. View statistics"
+   - Implemented _do_view_statistics() with formatted display
+
+5. **tests/test_statistics_service.py** (new file)
+   - 12 comprehensive tests covering:
+     - Empty task list scenarios
+     - Task status combinations and counts
+     - Completion rate calculations (0%, 50%, 100%, precision)
+     - Overdue task detection
+     - Due date tracking
+     - Deterministic output across instances
+
+6. **artifacts/class_diagram.puml** (modified)
+   - Added TaskStatistics dataclass to models package
+   - Added StatisticsService to services package
+   - Updated TodoCLI and InteractiveMenu to show stats_service dependency
+   - Added relationships between StatisticsService and TaskStatistics
+
+7. **artifacts/use_case_diagram.puml** (modified)
+   - Added "View statistics" use case to both interactive and CLI modes
+   - Added proper relationships to main use case flows
+
+### Requirements Compliance
+
+**Must:**
+- ✓ Compute total_task_count from Task storage
+- ✓ Compute count per status (pending, in_progress, done)
+- ✓ Compute overdue_count using Task.is_overdue()
+- ✓ Compute tasks_with_due_date_count
+- ✓ Return TaskStatistics dataclass (not plain dict)
+- ✓ All functionality accessible via python -m src:
+  - Interactive: Menu option 8 "View statistics"
+  - CLI: `python -m src stats`
+
+**Should:**
+- ✓ Include completion_rate: float (done_count / total_count)
+- ✓ Deterministic output regardless of task ordering (uses TaskManager methods)
+
+**Could:**
+- ✗ Average days from creation to completion (not required; Candidate-A prioritized core functionality)
+
+**Won't:**
+- ✓ No chart or visualization output
+
+### CLI Commands Available
+
+```
+Interactive: Menu option 8 "View statistics"
+
+One-shot:
+  python -m src stats
+```
+
+### Test Results
+
+- Baseline tests: 81/81 passing ✓
+- New statistics tests: 12/12 passing ✓
+- Total tests: 93/93 passing ✓
+- No regressions in existing functionality
+
+Duration: 607.8s | Cost: $1.475982 USD | Turns: 43

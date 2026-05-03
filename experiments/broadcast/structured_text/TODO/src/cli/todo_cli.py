@@ -7,6 +7,7 @@ from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.comments_service import CommentNotFoundError
 from ..services.todo_service import TodoService
+from ..services.statistics_service import StatisticsService
 from ..storage.json_storage import JsonStorage
 
 _STATUS_SYMBOLS = {
@@ -20,6 +21,7 @@ class TodoCLI:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._stats_service = StatisticsService(storage)
 
     def run(self, argv: Optional[list[str]] = None) -> int:
         parser = self._build_parser()
@@ -132,6 +134,10 @@ class TodoCLI:
         p_comment_update.add_argument("comment_id", help="Comment ID")
         p_comment_update.add_argument("content", help="New comment content")
         p_comment_update.set_defaults(func=self._cmd_comment_update)
+
+        # stats
+        p_stats = sub.add_parser("stats", help="View task statistics")
+        p_stats.set_defaults(func=self._cmd_stats)
 
         return parser
 
@@ -256,4 +262,18 @@ class TodoCLI:
     def _cmd_comment_update(self, args: argparse.Namespace) -> int:
         updated = self._service.update_comment(args.comment_id, args.content)
         print(f"Updated comment {updated.id[:8]}")
+        return 0
+
+    def _cmd_stats(self, args: argparse.Namespace) -> int:
+        stats = self._stats_service.compute_statistics()
+        print("\nTask Statistics")
+        print("=" * 40)
+        print(f"Total tasks:              {stats.total_task_count}")
+        print(f"Pending:                  {stats.pending_count}")
+        print(f"In progress:              {stats.in_progress_count}")
+        print(f"Done:                     {stats.done_count}")
+        print(f"Overdue:                  {stats.overdue_count}")
+        print(f"With due date:            {stats.tasks_with_due_date_count}")
+        print(f"Completion rate:          {stats.completion_rate:.1%}")
+        print("=" * 40)
         return 0
