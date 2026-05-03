@@ -58,3 +58,52 @@ def test_existing_fields_unchanged():
     assert run.workflow_name == "CI"
     assert run.branch == "main"
     assert run.status == WorkflowStatus.COMPLETED
+
+
+def test_is_running_when_in_progress():
+    assert _run(status=WorkflowStatus.IN_PROGRESS).is_running() is True
+
+
+def test_is_running_false_when_completed():
+    assert _run(status=WorkflowStatus.COMPLETED).is_running() is False
+
+
+def test_is_terminal_when_completed_success():
+    assert _run(status=WorkflowStatus.COMPLETED, conclusion=WorkflowConclusion.SUCCESS).is_terminal() is True
+
+
+def test_is_terminal_when_completed_failure():
+    assert _run(status=WorkflowStatus.COMPLETED, conclusion=WorkflowConclusion.FAILURE).is_terminal() is True
+
+
+def test_is_terminal_false_when_running():
+    assert _run(status=WorkflowStatus.IN_PROGRESS).is_terminal() is False
+
+
+def test_is_running_and_is_terminal_are_mutually_exclusive():
+    run = _run(status=WorkflowStatus.IN_PROGRESS)
+    assert not (run.is_running() and run.is_terminal())
+
+
+def test_is_successful():
+    assert _run(status=WorkflowStatus.COMPLETED, conclusion=WorkflowConclusion.SUCCESS).is_successful() is True
+
+
+def test_is_failed():
+    assert _run(status=WorkflowStatus.COMPLETED, conclusion=WorkflowConclusion.FAILURE).is_failed() is True
+
+
+def test_is_successful_and_is_failed_are_mutually_exclusive():
+    run = _run(status=WorkflowStatus.COMPLETED, conclusion=WorkflowConclusion.SUCCESS)
+    assert not (run.is_successful() and run.is_failed())
+
+
+def test_is_cancelled():
+    assert _run(status=WorkflowStatus.COMPLETED, conclusion=WorkflowConclusion.CANCELLED).is_cancelled() is True
+
+
+def test_methods_use_only_status_and_conclusion():
+    import inspect
+    source = inspect.getsource(WorkflowRun)
+    assert "requests" not in source
+    assert "open(" not in source
