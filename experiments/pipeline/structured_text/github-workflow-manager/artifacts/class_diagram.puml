@@ -44,6 +44,26 @@ package "models" #DDEEFF {
         +is_failed() : bool
         +is_cancelled() : bool
     }
+
+    class WorkflowRunAttempt {
+        +id               : str
+        +run_id           : str
+        +attempt_number   : int
+        +status           : WorkflowStatus
+        +conclusion       : Optional[WorkflowConclusion]
+        +started_at       : datetime
+        +completed_at     : Optional[datetime]
+        +duration_seconds : float
+        +logs_url         : Optional[str]
+        --
+        +to_dict() : dict
+        +{static} from_dict(data: dict) : WorkflowRunAttempt
+        +is_terminal() : bool
+        +is_running() : bool
+        +is_successful() : bool
+        +is_failed() : bool
+        +is_cancelled() : bool
+    }
 }
 
 package "storage" #FFF3CC {
@@ -53,6 +73,14 @@ package "storage" #FFF3CC {
         +__init__(filepath: str)
         +save(runs: List[WorkflowRun]) : None
         +load() : List[WorkflowRun]
+    }
+
+    class WorkflowAttemptJsonStorage {
+        +filepath : str
+        --
+        +__init__(filepath: str)
+        +save(attempts: List[WorkflowRunAttempt]) : None
+        +load() : List[WorkflowRunAttempt]
     }
 }
 
@@ -71,11 +99,34 @@ package "services" #DDFFD4 {
         -_persist() : None
     }
 
-    class WorkflowRunTracker {
-        -_service : WorkflowRunService
+    class WorkflowAttemptService {
+        -_storage   : WorkflowAttemptJsonStorage
+        -_attempts  : List[WorkflowRunAttempt]
         --
-        +__init__(service: WorkflowRunService)
+        +__init__(storage: WorkflowAttemptJsonStorage)
+        +add_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
+        +list_attempts() : List[WorkflowRunAttempt]
+        +get_attempt_detail(attempt_id: str) : Optional[WorkflowRunAttempt]
+        +filter_by_run_id(run_id: str) : List[WorkflowRunAttempt]
+        +filter_by_status(status: WorkflowStatus) : List[WorkflowRunAttempt]
+        +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRunAttempt]
+        -_persist() : None
+    }
+
+    class WorkflowRunTracker {
+        -_service           : WorkflowRunService
+        -_attempt_service   : Optional[WorkflowAttemptService]
+        --
+        +__init__(service: WorkflowRunService,\n  attempt_service: Optional[WorkflowAttemptService])
         +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str],\n  duration_seconds: float) : WorkflowRun
+        +create_attempt(run_id: str, attempt_number: int,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  completed_at: Optional[datetime],\n  duration_seconds: float,\n  logs_url: Optional[str],\n  attempt_id: Optional[str]) : WorkflowRunAttempt
+    }
+
+    class WorkflowAttemptTracker {
+        -_service : WorkflowAttemptService
+        --
+        +__init__(service: WorkflowAttemptService)
+        +create_attempt(run_id: str, attempt_number: int,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  completed_at: Optional[datetime],\n  duration_seconds: float,\n  logs_url: Optional[str],\n  attempt_id: Optional[str]) : WorkflowRunAttempt
     }
 }
 
@@ -95,14 +146,34 @@ package "cli" #FFE5E5 {
     }
 }
 
+' Domain model relationships
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
-WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
+WorkflowRunAttempt         ..>  WorkflowStatus        : status
+WorkflowRunAttempt         ..>  WorkflowConclusion    : conclusion
+WorkflowRun          "1" --o "0..*" WorkflowRunAttempt : attempts
+
+' Storage relationships
+WorkflowRunService         "1" --> "1" WorkflowJsonStorage : -_storage
+WorkflowAttemptService     "1" --> "1" WorkflowAttemptJsonStorage : -_storage
+
+' Service relationships
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
-WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
+WorkflowAttemptService     ..>  WorkflowRunAttempt
+WorkflowAttemptService     ..>  WorkflowStatus
+WorkflowAttemptService     ..>  WorkflowConclusion
+
+' Tracker relationships
+WorkflowRunTracker         "1" --> "1" WorkflowRunService  : -_service
+WorkflowRunTracker         "1" --> "0..1" WorkflowAttemptService : -_attempt_service
 WorkflowRunTracker         ..>  WorkflowRun
+WorkflowRunTracker         ..>  WorkflowRunAttempt
+WorkflowAttemptTracker     "1" --> "1" WorkflowAttemptService : -_service
+WorkflowAttemptTracker     ..>  WorkflowRunAttempt
+
+' CLI relationships
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService

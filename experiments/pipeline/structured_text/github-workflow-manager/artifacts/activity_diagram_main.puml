@@ -6,7 +6,7 @@ skinparam activityDiamondBackgroundColor #FFF3CC
 
 start
 
-:Load WorkflowJsonStorage\n& WorkflowRunService;
+:Load WorkflowJsonStorage,\nWorkflowAttemptJsonStorage,\nWorkflowRunService &\nWorkflowAttemptService;
 
 if (CLI arguments provided?) then (yes)
   :Parse args with argparse;
@@ -16,6 +16,11 @@ if (CLI arguments provided?) then (yes)
       :Read name, branch, status\nconclusion, run-number, commit-sha,\nduration-seconds;
       :WorkflowRunTracker.track();
       :Print "Added run <id>";
+
+    case (create-attempt)
+      :Read run-id, attempt-number, status\nconclusion, completed-at,\nduration-seconds, logs-url;
+      :WorkflowAttemptTracker.create_attempt();
+      :Print "Created attempt <id>";
 
     case (list)
       :WorkflowRunService.list_runs();
@@ -39,6 +44,14 @@ if (CLI arguments provided?) then (yes)
       else (no)
         :Print error to stderr;
         :Exit code 1;
+      endif
+
+    case (list-attempts)
+      :WorkflowAttemptService.filter_by_run_id(run_id);
+      if (no attempts?) then (yes)
+        :Print "No attempts for this run.";
+      else (no)
+        :Print formatted attempt list;
       endif
 
     case (query-state)
