@@ -75,4 +75,4 @@ Implemented five state-checking methods on the WorkflowRun model to encapsulate 
 4. Pytest-Tester — Created comprehensive test suite (28/28 pass)
 5. UML Designer — Updated artifacts/class_diagram.puml
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 247.6s | Cost: $0.429886 USD | Turns: 19
