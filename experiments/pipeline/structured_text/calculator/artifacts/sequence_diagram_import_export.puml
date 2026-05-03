@@ -1,0 +1,86 @@
+@startuml sequence_diagram_import_export
+
+skinparam defaultFontSize 12
+participant User as U
+participant CalculatorCLI as CLI
+participant MemoryService as MS
+participant MemoryJsonStorage as MJS
+participant "JSON File" as FILE
+
+== Export Flow ==
+
+U -> CLI: export_memory(filepath)
+activate CLI
+  CLI -> MS: export_to_file(filepath)
+  activate MS
+    MS -> MS: retrieve_all()
+    note right MS
+      Load all MemoryEntry objects
+      from storage
+    end note
+    MS -> MS: [entry.to_dict() for entry in entries]
+    note right MS
+      Convert each entry to dict
+      for JSON serialization
+    end note
+    MS -> FILE: Write JSON array
+    activate FILE
+    FILE --> MS: (file written)
+    deactivate FILE
+    MS -> MS: return count of entries
+  MS --> CLI: count
+  deactivate MS
+  CLI -> U: Print success + count
+deactivate CLI
+
+== Import Flow ==
+
+U -> CLI: import_memory(filepath, skip_invalid)
+activate CLI
+  CLI -> MS: import_from_file(filepath, skip_invalid)
+  activate MS
+    MS -> FILE: Read JSON file
+    activate FILE
+    FILE --> MS: JSON array
+    deactivate FILE
+    note right MS
+      Validate JSON is array type
+    end note
+    MS -> MS: for each entry_data in array
+    activate MS
+      note right MS
+        For each entry:
+        1. Validate it's a dict
+        2. Create MemoryEntry via from_dict()
+        3. Store via self.store(entry)
+
+        If skip_invalid=True:
+          - Skip invalid entries
+          - Record in skipped list
+        Else:
+          - Raise on first error
+      end note
+    deactivate MS
+    MS -> MS: return (imported_count, skipped_list)
+  MS --> CLI: (count, skipped)
+  deactivate MS
+  CLI -> U: Print success + count + skipped errors
+deactivate CLI
+
+note over U, FILE
+  JSON file format: array of MemoryEntry dicts
+  [
+    {
+      "operation": "add",
+      "operand_a": 5.0,
+      "operand_b": 3.0,
+      "result": 8.0,
+      "success": true,
+      "error_message": null,
+      ...
+    },
+    ...
+  ]
+end note
+
+@enduml

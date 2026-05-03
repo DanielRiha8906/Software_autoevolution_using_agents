@@ -1,0 +1,35 @@
+[
+  {
+    "operation": "add",
+    "operand_a": 1.0,
+    "operand_b": 2.0,
+    "result": 3.0,
+    "success": true,
+    "error_message": null,
+    "execution_timestamp": "2026-05-03T10:00:00",
+    "execution_time_ms": 1.5,
+    "memory_entry_id": "test-id-1"
+  },
+  {
+    "operation": "subtract",
+    "operand_a": 5.0,
+    "operand_b": 2.0,
+    "result": 3.0,
+    "success": true,
+    "error_message": null,
+    "execution_timestamp": "2026-05-03T10:02:00",
+    "execution_time_ms": 1.0,
+    "memory_entry_id": "test-id-3"
+  },
+  {
+    "operation": "sqrt",
+    "operand_a": 16.0,
+    "operand_b": 0.0,
+    "result": 4.0,
+    "success": true,
+    "error_message": null,
+    "execution_timestamp": "2026-05-03T10:05:00",
+    "execution_time_ms": 0.5,
+    "memory_entry_id": "test-id-4"
+  }
+]

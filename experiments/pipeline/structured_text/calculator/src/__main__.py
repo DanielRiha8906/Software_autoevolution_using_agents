@@ -31,8 +31,8 @@ def _as_number(value: str) -> float:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
-        description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory] [--statistics] [--memory-filter {operation,status} ...]",
+        description="OOP Calculator — run interactively or pass flags for one-shot use",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory] [--statistics] [--memory-filter {operation,status} ...] [--export [FILE]] [--import [FILE]] [--skip-invalid]",
     )
     parser.add_argument(
         "--operation",
@@ -68,6 +68,26 @@ def main() -> None:
         help="Status to filter by: success or failed (use with --memory-filter status)",
     )
     parser.add_argument(
+        "--export",
+        nargs="?",
+        const="__PROMPT__",
+        metavar="FILE",
+        help="Export memory entries to a JSON file (prompts for path if FILE not provided)",
+    )
+    parser.add_argument(
+        "--import",
+        dest="import_file",
+        nargs="?",
+        const="__PROMPT__",
+        metavar="FILE",
+        help="Import memory entries from a JSON file (prompts for path if FILE not provided)",
+    )
+    parser.add_argument(
+        "--skip-invalid",
+        action="store_true",
+        help="When importing, skip malformed entries instead of failing on the first error",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -78,6 +98,20 @@ def main() -> None:
     service = _build_service()
     memory_service = _build_memory_service()
     cli = CalculatorCLI(service, memory_service)
+
+    # Handle export flag
+    if args.export is not None:
+        # args.export will be filepath, or "__PROMPT__" if flag used without path
+        filepath = None if args.export == "__PROMPT__" else args.export
+        cli.export_memory(filepath)
+        return
+
+    # Handle import flag
+    if args.import_file is not None:
+        # args.import_file will be filepath, or "__PROMPT__" if flag used without path
+        filepath = None if args.import_file == "__PROMPT__" else args.import_file
+        cli.import_memory(filepath, skip_invalid=args.skip_invalid)
+        return
 
     if args.memory_filter:
         if args.memory_filter == "operation":

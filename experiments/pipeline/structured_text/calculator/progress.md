@@ -532,3 +532,136 @@ The statistics feature is now fully accessible via:
 3. **Help:** `python -m src --help` documents the --statistics flag
 
 Duration: 577.8s | Cost: $1.201188 USD | Turns: 15
+
+## Task 07
+
+**Description:** Add import and export of calculation history
+
+**Status:** ✅ Complete
+
+### Files Changed
+
+1. `src/services/memory_service.py`
+   - Added `import json` and `from pathlib import Path`
+   - Added `export_to_file(filepath: Path | str) -> int` method
+   - Added `import_from_file(filepath: Path | str, skip_invalid: bool = False) -> tuple[int, list[dict]]` method
+
+2. `src/cli/calculator_cli.py`
+   - Added `export_memory(filepath: str | None = None) -> None` method
+   - Added `import_memory(filepath: str | None = None, skip_invalid: bool = False) -> None` method
+   - Modified `run_interactive()` to add two new menu option branches (export/import)
+   - Modified `_print_menu()` to display new menu options 14-16 (export, import, exit)
+
+3. `src/__main__.py`
+   - Added `--export [FILE]` argument with nargs="?" and const="__PROMPT__"
+   - Added `--import [FILE]` argument with nargs="?" and const="__PROMPT__" (stored as import_file)
+   - Added `--skip-invalid` flag with action="store_true"
+   - Updated usage string and prog description
+   - Modified main() function to handle --export and --import flags before interactive mode
+
+4. `tests/test_import_export.py` (new file)
+   - 52 comprehensive tests covering:
+     - export_to_file (10 tests): file creation, parent directory creation, field preservation
+     - import_from_file (15 tests): JSON parsing, validation, skip-invalid behavior, append mode
+     - CLI methods (13 tests): export_memory/import_memory with file paths and prompting
+     - CLI flags (5 tests): --export, --import, --skip-invalid integration
+     - Edge cases (9 tests): large datasets, unicode, null values, round-trip
+
+5. `tests/test_cli.py` (modified)
+   - Updated 29 mock input sequences from exit option 14 to 16 (due to new menu options)
+
+6. `artifacts/class_diagram.puml` (modified)
+   - Added export_to_file() and import_from_file() methods to MemoryService
+   - Added export_memory() and import_memory() methods to CalculatorCLI
+
+7. `artifacts/activity_diagram.puml` (modified)
+   - Added --export and --import flag handling with precedence flow
+   - Added export and import menu option flows in interactive mode
+
+8. `artifacts/state_diagram_interactive.puml` (modified)
+   - Added Export and Import states with transitions
+
+9. `artifacts/component_diagram.puml` (modified)
+   - Added "User Files" component showing import/export data flow
+
+10. `artifacts/sequence_diagram_import_export.puml` (new file)
+    - Detailed sequence diagrams for export and import flows
+    - Shows JSON array format, validation, and skip-invalid behavior
+
+### Test Results
+
+- Total tests: 357 (52 new + 305 existing)
+- Passed: 357
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Requirements Met
+
+**Must:**
+- ✅ Allow exporting stored MemoryEntry records to a JSON file
+- ✅ Allow importing MemoryEntry records from a JSON file
+- ✅ Ensure data consistency after import (validate structure before applying)
+- ✅ Existing stored data must not be overwritten without explicit intent (append mode)
+- ✅ All new functionality accessible via `python -m src` (interactive menu options 14-15 + --export/--import flags)
+
+**Should:**
+- ✅ Schema matches the MemoryEntry serialization format from step 03 (uses to_dict/from_dict)
+
+**Could:**
+- ✅ Skip invalid or duplicate entries on import rather than failing (--skip-invalid flag)
+
+**Won't:**
+- ✅ No support for additional file formats (CSV, XML)
+
+### Key Implementation Details
+
+1. **Export (export_to_file):**
+   - Retrieves all entries via retrieve_all()
+   - Converts each to dict using to_dict()
+   - Creates parent directories automatically
+   - Returns count of exported entries
+   - Output: JSON array of dicts with indent=2
+
+2. **Import (import_from_file):**
+   - Validates file exists (FileNotFoundError)
+   - Parses JSON (JSONDecodeError)
+   - Checks is array (ValueError)
+   - Instantiates each entry via from_dict()
+   - Appends valid entries to storage (no replacement)
+   - Skips invalid entries if skip_invalid=True
+   - Returns tuple: (count_imported, list_of_skipped_dicts)
+   - Warns on duplicate IDs but allows them
+
+3. **CLI Integration:**
+   - Interactive menu: options 14 (export) and 15 (import) with prompts
+   - One-shot CLI: --export [FILE] and --import [FILE] flags
+   - Optional filepath: with no argument, user is prompted
+   - Skip-invalid: --skip-invalid flag only applies to import
+
+4. **Data Format:**
+   - JSON array of MemoryEntry dicts (same format as artifacts/memory_entries.json)
+   - 9 fields: operation, operand_a, operand_b, result, success, error_message, execution_timestamp, execution_time_ms, memory_entry_id
+   - Backward compatible: missing optional fields use from_dict defaults
+
+5. **Error Handling:**
+   - File I/O: clear error messages for permission/path issues
+   - JSON: reports parsing errors with line info
+   - Validation: per-entry errors tracked in skipped list
+   - User messaging: friendly messages to stdout
+
+### CLI Accessibility
+
+The import/export feature is fully accessible via:
+1. **Interactive mode:** `python -m src` → menu options 14-15 with filepath prompting
+2. **One-shot CLI:** `python -m src --export file.json --import file.json --skip-invalid`
+3. **Help:** `python -m src --help` documents --export, --import, --skip-invalid flags
+
+### Test Coverage
+
+- 52 import/export tests covering happy paths, error cases, edge cases
+- 29 existing CLI tests updated to handle new menu structure
+- Full round-trip testing: export then import preserves all data
+- Validation testing: malformed JSON, missing fields, duplicates
+- Integration testing: CLI flag combinations and interactive prompting
+
+Duration: 849.8s | Cost: $1.411345 USD | Turns: 20

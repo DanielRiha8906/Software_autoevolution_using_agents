@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 from ..models.memory_entry import MemoryEntry
 from ..models.calculation_statistics import CalculationStatistics
 from ..storage.memory_json_storage import MemoryJsonStorage
@@ -165,3 +168,103 @@ class MemoryService:
             max_execution_time_ms=max_time,
             per_operation_stats=per_operation_stats,
         )
+
+    def export_to_file(self, filepath: Path | str) -> int:
+        """
+        Export all memory entries to a JSON file.
+
+        Creates parent directories if they don't exist. Overwrites any
+        existing file at the given path.
+
+        Args:
+            filepath: Destination file path for the JSON export.
+
+        Returns:
+            Count of entries exported.
+
+        Raises:
+            OSError: If file cannot be written (permission denied, etc.)
+        """
+        filepath = Path(filepath)
+        entries = self.retrieve_all()
+        records = [entry.to_dict() for entry in entries]
+
+        # Create parent directories if needed
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write to file
+        with open(filepath, "w") as f:
+            json.dump(records, f, indent=2)
+
+        return len(entries)
+
+    def import_from_file(
+        self, filepath: Path | str, skip_invalid: bool = False
+    ) -> tuple[int, list[dict]]:
+        """
+        Import memory entries from a JSON file and append to storage.
+
+        Validates the file and each entry before storing. If skip_invalid
+        is True, invalid entries are skipped and reported. If False, the
+        first invalid entry raises an exception.
+
+        Args:
+            filepath: Source JSON file path (must exist and contain valid JSON array).
+            skip_invalid: If True, skip malformed entries and continue.
+                         If False, raise on first invalid entry.
+
+        Returns:
+            Tuple of (count_imported, list_of_skipped_entries).
+            Each skipped entry is a dict with keys: "data" and "error".
+
+        Raises:
+            FileNotFoundError: If file does not exist.
+            json.JSONDecodeError: If JSON is malformed and skip_invalid=False.
+            ValueError: If JSON is not an array, or on first invalid entry
+                       and skip_invalid=False.
+        """
+        filepath = Path(filepath)
+
+        # Check file exists
+        if not filepath.exists():
+            raise FileNotFoundError(f"File not found: {filepath}")
+
+        # Read and parse JSON
+        try:
+            with open(filepath, "r") as f:
+                data = json.load(f)
+        except json.JSONDecodeError as e:
+            raise json.JSONDecodeError(
+                f"Invalid JSON in {filepath}: {e.msg}",
+                e.doc,
+                e.pos,
+            ) from e
+
+        # Validate it's an array
+        if not isinstance(data, list):
+            raise ValueError(f"JSON must be an array, got {type(data).__name__}")
+
+        # Process entries
+        skipped: list[dict] = []
+        imported_count = 0
+
+        for idx, entry_data in enumerate(data):
+            try:
+                # Validate and create MemoryEntry
+                if not isinstance(entry_data, dict):
+                    raise ValueError(f"Entry {idx} is not a dict")
+
+                entry = MemoryEntry.from_dict(entry_data)
+                self.store(entry)
+                imported_count += 1
+
+            except Exception as e:
+                error_msg = str(e)
+                skipped.append({"data": entry_data, "error": error_msg})
+
+                if not skip_invalid:
+                    raise ValueError(
+                        f"Invalid entry at index {idx}: {error_msg}"
+                    ) from e
+
+        return (imported_count, skipped)
