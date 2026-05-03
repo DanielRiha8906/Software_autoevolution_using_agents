@@ -72,6 +72,16 @@ def build_parser() -> argparse.ArgumentParser:
     detail_p = sub.add_parser("detail", help="Show details for a single run")
     detail_p.add_argument("run_id", help="Run ID")
 
+    # check-state
+    check_p = sub.add_parser("check-state", help="Check run state")
+    check_p.add_argument("run_id", help="Run ID")
+    check_p.add_argument(
+        "--check",
+        required=True,
+        choices=["terminal", "running", "successful", "failed", "cancelled"],
+        help="State to check",
+    )
+
     return parser
 
 
@@ -113,3 +123,24 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_run(run))
+
+    elif ns.command == "check-state":
+        run = service.get_run_detail(ns.run_id)
+        if run is None:
+            print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
+            sys.exit(1)
+
+        check_type = ns.check
+        if check_type == "terminal":
+            result = run.is_terminal()
+        elif check_type == "running":
+            result = run.is_running()
+        elif check_type == "successful":
+            result = run.is_successful()
+        elif check_type == "failed":
+            result = run.is_failed()
+        elif check_type == "cancelled":
+            result = run.is_cancelled()
+
+        print(f"Run {ns.run_id} is_{check_type}: {result}")
+        sys.exit(0 if result else 1)

@@ -59,7 +59,16 @@ repeat
         :Print matching runs;
       endif
 
-    case (5 — Exit)
+    case (5 — Check run state)
+      :Prompt run ID;
+      :WorkflowRunService.get_run_detail(run_id);
+      if (found?) then (yes)
+        :Print is_terminal, is_running,\nis_successful, is_failed, is_cancelled;
+      else (no)
+        :Print "No run found with id '<id>'";
+      endif
+
+    case (6 — Exit)
       :Print "Goodbye.";
       stop
 
