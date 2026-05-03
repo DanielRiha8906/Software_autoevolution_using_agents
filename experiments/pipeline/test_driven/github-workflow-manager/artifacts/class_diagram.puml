@@ -83,6 +83,7 @@ package "services" #DDFFD4 {
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
         +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        +query(min_duration: Optional[float],\n  max_duration: Optional[float],\n  created_after: Optional[datetime],\n  created_before: Optional[datetime],\n  has_attempts: Optional[bool],\n  attempt_service: Optional[AttemptService]) : List[WorkflowRun]
         -_persist() : None
     }
 
@@ -125,6 +126,7 @@ WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
+WorkflowRunService         ..>  AttemptService : query() uses
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 AttemptService       "1" --> "*" WorkflowRunAttempt : manages

@@ -1,201 +1,350 @@
-# Analysis: WorkflowRunAttempt Domain Object Implementation
+# Analysis: Query Functionality for WorkflowRunService
 
-## Current Codebase State
+## Task Summary
 
-### Existing Structure
-- **Models directory**: `/src/models/` contains three existing domain objects:
-  - `workflow_run.py`: WorkflowRun dataclass with 9 fields + methods
-  - `workflow_status.py`: WorkflowStatus enum (6 values)
-  - `workflow_conclusion.py`: WorkflowConclusion enum (8 values)
-- **Models are exported** via `/src/models/__init__.py`
-- **Patterns established**: Dataclasses with `@dataclass`, `__post_init__()` validation, `to_dict()`, and `from_dict()` serialization
+Implement query functionality in `WorkflowRunService` to filter workflow runs by:
+1. **Duration range**: `min_duration` and `max_duration` filters on `duration_seconds` field
+2. **Timestamp range**: `created_before` and `created_after` as timezone-aware datetimes
+3. **Attempt presence**: `has_attempts=True` for runs with ≥1 attempts, `=False` for no attempts
 
-### No WorkflowRunAttempt Yet
-- File does not exist: `/src/models/workflow_run_attempt.py`
-- Not imported in `/src/models/__init__.py`
+The implementation must integrate with `AttemptService` to check attempt counts per run.
 
-## Existing Domain Model Patterns
+---
 
-### WorkflowRun Pattern (Key Reference)
-```python
-@dataclass
-class WorkflowRun:
-    # Fields with type hints
-    id: str
-    workflow_name: str
-    branch: str
-    status: WorkflowStatus
-    conclusion: Optional[WorkflowConclusion]
-    created_at: datetime
-    updated_at: Optional[datetime]
-    run_number: Optional[int]
-    commit_sha: Optional[str]
-    duration_seconds: float = 0.0
+## Current State of WorkflowRunService
 
-    def __post_init__(self) -> None:
-        """Validate that duration_seconds is not negative."""
-        if self.duration_seconds < 0:
-            raise ValueError("duration_seconds must be non-negative")
+### Location
+- **File**: `/src/services/workflow_run_service.py`
+- **Lines of code**: 38 lines
 
-    def to_dict(self) -> dict:
-        # Serializes enum.value, converts datetime to isoformat()
-        # Handles None values explicitly
+### Existing Methods
+| Method | Signature | Purpose |
+|--------|-----------|---------|
+| `__init__` | `(storage: WorkflowJsonStorage)` | Initialize with storage backend, load runs into memory |
+| `_persist` | `() -> None` | Write current runs list to storage |
+| `add_workflow_run` | `(run: WorkflowRun) -> WorkflowRun` | Add new run, raise ValueError if duplicate id |
+| `list_runs` | `() -> List[WorkflowRun]` | Return all runs |
+| `get_run_detail` | `(run_id: str) -> Optional[WorkflowRun]` | Fetch single run by id |
+| `filter_by_branch` | `(branch: str) -> List[WorkflowRun]` | Filter by branch field |
+| `filter_by_status` | `(status: WorkflowStatus) -> List[WorkflowRun]` | Filter by status enum |
+| `filter_by_conclusion` | `(conclusion: WorkflowConclusion) -> List[WorkflowRun]` | Filter by conclusion enum |
 
-    @classmethod
-    def from_dict(cls, data: dict) -> "WorkflowRun":
-        # Enum fields reconstructed via enum(data["field"])
-        # datetime.fromisoformat() for datetime fields
-        # .get() with defaults for optional fields
+### Architecture Pattern
+- **In-memory storage**: Loads all runs into `self._runs: List[WorkflowRun]` at init
+- **Lazy evaluation**: Each filter returns a new list (no query optimization)
+- **Persistence**: All mutations call `self._persist()` to update storage
+- **No transactions**: Single-threaded, no concurrency handling
+
+### Data Available for Filtering
+From `WorkflowRun` dataclass:
+```
+id: str
+workflow_name: str
+branch: str
+status: WorkflowStatus
+conclusion: Optional[WorkflowConclusion]
+created_at: datetime               # <-- Available for timestamp filtering
+updated_at: Optional[datetime]
+run_number: Optional[int]
+commit_sha: Optional[str]
+duration_seconds: float = 0.0      # <-- Available for duration filtering
 ```
 
-### Key Implementation Notes from WorkflowRun
-1. Validation via `__post_init__()`
-2. Enums stored as `.value` strings in dict
-3. datetime serialization via `.isoformat()` and `datetime.fromisoformat()`
-4. Optional fields checked with `.get()` and None fallback
-5. Float fields default to 0.0 when missing in from_dict
+---
 
-## Exact Requirements from Test Suite
+## What Query Method Signature Should Be
 
-### Field Definitions (from _attempt helper)
-| Field | Type | Required | Constraints | Default |
-|-------|------|----------|-------------|---------|
-| id | int | Yes | No validation shown | N/A |
-| run_id | int | Yes | No validation shown | N/A |
-| attempt_number | int | Yes | Must be > 0 (≥ 1) | N/A |
-| status | str | Yes | No enum constraint shown in tests | N/A |
-| conclusion | str | Yes | No enum constraint shown in tests | N/A |
-| created_at | datetime | Yes | CEST timezone ONLY (UTC+2) | N/A |
-| duration_seconds | float | No | Optional field | None or 0.0 |
+### Proposed Method: `query()`
 
-### Validation Requirements
+A single composite query method that accepts optional filter parameters:
 
-**1. attempt_number validation (test_attempt_number_must_be_positive)**
-- Must reject attempt_number ≤ 0
-- Should raise Exception (ValueError recommended, matching WorkflowRun pattern)
-- Validation in `__post_init__()`
+```python
+def query(
+    self,
+    min_duration: Optional[float] = None,
+    max_duration: Optional[float] = None,
+    created_after: Optional[datetime] = None,
+    created_before: Optional[datetime] = None,
+    has_attempts: Optional[bool] = None,
+    attempt_service: Optional[AttemptService] = None,
+) -> List[WorkflowRun]:
+    """
+    Filter workflow runs by duration, timestamp, and attempt presence.
+    
+    Args:
+        min_duration: Minimum duration_seconds (inclusive). None = no minimum.
+        max_duration: Maximum duration_seconds (inclusive). None = no maximum.
+        created_after: Runs created strictly after this datetime (exclusive).
+                       Expected to be timezone-aware.
+        created_before: Runs created strictly before this datetime (exclusive).
+                        Expected to be timezone-aware.
+        has_attempts: If True, return runs with ≥1 attempts.
+                      If False, return runs with 0 attempts.
+                      If None, ignore attempt count.
+        attempt_service: Required if has_attempts is not None.
+                         Provides access to attempt data.
+    
+    Returns:
+        List of WorkflowRun objects matching all specified filters.
+        Returns empty list if no matches found.
+        Filters are combined with AND logic (all must match).
+    
+    Raises:
+        ValueError: If has_attempts is not None but attempt_service is None.
+        ValueError: If created_after >= created_before (both provided).
+        TypeError: If datetime arguments are not timezone-aware.
+    """
+```
 
-**2. created_at timezone validation (test_created_at_must_use_cest)**
-- Must reject any timezone except CEST
-- CEST = timezone(timedelta(hours=2))
-- Must raise Exception if timezone is not CEST
-- Test explicitly checks rejection of timezone.utc
+### Alternative: Multiple Specialized Methods
 
-**3. created_at timezone preservation (test_created_at_round_trips_as_cest)**
-- After `to_dict()` and `from_dict()` roundtrip
-- Restored object's `created_at.tzinfo` must equal CEST
-- This means from_dict() must convert parsed datetime to CEST timezone
+Instead of one composite method, could have separate methods:
+- `filter_by_duration(min_duration, max_duration)`
+- `filter_by_created_range(created_after, created_before)`
+- `filter_by_attempt_presence(has_attempts, attempt_service)`
 
-**4. duration_seconds optionality (test_optional_duration_seconds, test_duration_seconds_defaults_to_none_or_zero)**
-- May be omitted from constructor call
-- Defaults to None OR 0.0 (test checks: `is None or == 0.0`)
-- Can accept float values like 5.5
-- Test shows: `_attempt()` without duration_seconds, then checks default
+**Recommendation**: Single `query()` method is cleaner and follows principle of least API surface. Specialized methods can be added later if needed. The task doesn't specify which approach, so a single composite method is more pragmatic.
 
-### Serialization Requirements (test_serializes_to_dict, test_round_trips_via_dict)
-- `to_dict()` method must exist
-- Must include all fields: id, run_id, attempt_number, status, conclusion, created_at, duration_seconds
-- `from_dict()` class method must exist
-- Must reconstruct object with all fields matching original
-- Round-trip via dict preserves id, run_id, attempt_number, created_at, etc.
+---
 
-## Ambiguities and Assumptions
+## How to Query Associated Attempts from AttemptService
 
-### 1. Enum Types for status and conclusion
-**Ambiguity**: Test uses strings ("completed", "success") but doesn't show if these should be Enum types like WorkflowStatus/WorkflowConclusion.
+### AttemptService Interface
+```python
+class AttemptService:
+    def get_by_run_id(self, run_id: int) -> List[WorkflowRunAttempt]:
+        """
+        Returns all attempts for a run_id, sorted by attempt_number ascending.
+        Returns empty list if no attempts found.
+        """
+```
 
-**Working assumption**: Since tests use plain strings and don't import any status/conclusion enums, treat as plain str fields. If enums are intended, they would be imported and tested like WorkflowRun does. However, it's possible the architect/programmer may introduce enums later.
+### Key Observations
+1. **ID type mismatch**: `WorkflowRun.id` is `str`, but `AttemptService.get_by_run_id()` expects `int`
+   - This is a **critical impedance mismatch** that needs resolution
+   - Two options:
+     - Convert `run.id` to int when querying (assumes id is numeric string)
+     - Query by string id and have AttemptService handle conversion
+     - Accept that some runs may have non-numeric ids and skip attempt filtering
 
-**Decision for analysis**: Fields can be plain str or Enum; implementation should accept plain strings in tests (no type coercion needed).
+2. **Semantic check for has_attempts**:
+   ```python
+   attempts = attempt_service.get_by_run_id(run_id)
+   has_attempts = len(attempts) >= 1  # or: has_attempts = bool(attempts)
+   ```
 
-### 2. duration_seconds Default Value
-**Ambiguity**: Test checks `assert attempt.duration_seconds is None or attempt.duration_seconds == 0.0` — either is acceptable.
+3. **No persistence**: AttemptService is in-memory only. At initialization of WorkflowRunService, attempts may not be loaded yet.
 
-**Working assumption**: Default to None (more idiomatic for optional), but 0.0 is also valid. Implementation will use None to match "optional" semantics.
+### Proposed Integration Code Pattern
+```python
+def query(
+    self,
+    ...,
+    has_attempts: Optional[bool] = None,
+    attempt_service: Optional[AttemptService] = None,
+) -> List[WorkflowRun]:
+    
+    results = list(self._runs)  # Start with all runs
+    
+    # Apply filters...
+    
+    # Attempt presence filter (last, since it requires external service)
+    if has_attempts is not None:
+        if attempt_service is None:
+            raise ValueError("attempt_service required when filtering by has_attempts")
+        
+        filtered = []
+        for run in results:
+            try:
+                attempts = attempt_service.get_by_run_id(int(run.id))
+                run_has_attempts = len(attempts) >= 1
+                if run_has_attempts == has_attempts:
+                    filtered.append(run)
+            except (ValueError, TypeError):
+                # If run.id cannot convert to int, skip this run
+                # (or include/exclude based on interpretation of has_attempts)
+                pass
+        results = filtered
+    
+    return results
+```
 
-**Decision**: Use `Optional[float] = None` with optional parameter handling in from_dict().
+---
 
-### 3. Integer Types for IDs
-**Ambiguity**: WorkflowRun uses `id: str`, but test uses `id=1` (int). WorkflowRunAttempt may use integers for IDs.
+## Edge Cases and Considerations
 
-**Working assumption**: Use int for id and run_id based on test's dict assertion structure and int literals in _attempt().
+### Timezone Handling
+**Current state of created_at in WorkflowRun**:
+- Type: `datetime` (may or may not be timezone-aware)
+- Serialized: Via `.isoformat()` in `to_dict()` and `datetime.fromisoformat()` in `from_dict()`
+- **Problem**: No guarantee that loaded datetimes are timezone-aware
 
-### 4. CEST Timezone Handling in from_dict()
-**Ambiguity**: How to handle datetime deserialization when source might not have tzinfo.
+**Issues**:
+1. Comparisons with timezone-aware arguments will fail if `created_at` is naive (no tzinfo)
+2. Test fixtures use `datetime.now(timezone.utc)` (aware), but JSON roundtrip may lose tzinfo
 
-**Working assumption**: fromisoformat() will preserve tzinfo if present in ISO string. For validation, must check/convert to CEST before returning from from_dict().
+**Handling strategy**:
+- Document requirement that `created_at` must be timezone-aware
+- Validate input datetime arguments are timezone-aware
+- If `created_at` is naive, either:
+  - Raise `TypeError` (strict interpretation)
+  - Assume UTC and proceed (lenient, may cause bugs)
+  - Filter such runs out (conservative)
 
-## Scope: What's In, Out, and Borderline
+**Recommendation**: Raise `TypeError` if comparison is attempted with naive datetime.
 
-### Explicitly In Scope
-- Create `/src/models/workflow_run_attempt.py`
-- Implement WorkflowRunAttempt dataclass
-- Implement `__post_init__()` with validation
-- Implement `to_dict()` serialization
-- Implement `from_dict()` deserialization
-- Import in `/src/models/__init__.py`
-- All 8 test cases must pass
+### Duration Range Filtering
+**Edge cases**:
+- `min_duration=0, max_duration=0`: Should match runs with exactly 0 seconds
+- `min_duration=10.5, max_duration=10.5`: Should match runs with exactly 10.5 seconds
+- `min_duration=None, max_duration=5.0`: All runs with duration ≤ 5.0
+- Negative durations: `WorkflowRun.__post_init__()` already rejects these, so not a concern
 
-### Explicitly Out of Scope
-- No changes to baseline/
-- No changes to services/, storage/, or cli/ (these can reference the new model but don't need modification for the model itself)
-- No new tests (test file provided, not to be modified)
-- No enum definitions for status/conclusion (use str)
+**Handling**:
+```python
+if min_duration is not None and run.duration_seconds < min_duration:
+    continue
+if max_duration is not None and run.duration_seconds > max_duration:
+    continue
+```
 
-### Borderline: Not Explicitly Required but Inferred
-- Should `duration_seconds` be validated (non-negative like WorkflowRun)? Not tested, but pattern suggests YES.
-- Should type hints match WorkflowRun patterns? Yes, for consistency.
-- Should docstrings be added? No requirement shown, but good practice.
+### Timestamp Range Filtering
+**Edge cases**:
+- Both `created_after` and `created_before` specified: Verify range is valid (after < before)
+- `created_after` only: Match all runs created after this point
+- `created_before` only: Match all runs created before this point
+- `created_after == created_before`: Should match zero runs (exclusive bounds)
 
-## Suggested Implementation Priorities
+**Inclusive vs exclusive bounds**:
+- Task says "timestamp range" but doesn't specify inclusive/exclusive
+- Typical interpretation: `created_after < created_at < created_before` (exclusive on both ends)
+- More intuitive for users: `created_after <= created_at <= created_before` (inclusive)
+- **Assumption**: Use **exclusive bounds** (`<` and `>`) to align with common query patterns
 
-### Priority 1: Field Definition (Load-Bearing)
-- Dataclass with exact 7 fields as specified
-- Correct type hints: id (int), run_id (int), attempt_number (int), status (str), conclusion (str), created_at (datetime), duration_seconds (Optional[float])
-- Default for duration_seconds critical for tests
+**Validation**:
+```python
+if created_after is not None and created_before is not None:
+    if created_after >= created_before:
+        raise ValueError("created_after must be strictly before created_before")
+```
 
-### Priority 2: Validation in __post_init__ (Test Blocker)
-- Check attempt_number > 0, raise ValueError if not
-- Check created_at.tzinfo equals CEST (timedelta(hours=2)), raise ValueError if not
-- Check duration_seconds is None or >= 0 (pattern consistency)
+### Attempt Presence with ID Conversion
+**Problem**: `WorkflowRun.id` is `str`, `get_by_run_id()` expects `int`
 
-### Priority 3: Serialization/Deserialization (Test Blocker)
-- to_dict() must convert datetime to isoformat() string, handle None values
-- from_dict() must use datetime.fromisoformat() AND ensure timezone is CEST
-- Both must roundtrip all 7 fields correctly
+**Known scenarios**:
+1. Run ID is numeric string (e.g., "123") → `int(run.id)` succeeds
+2. Run ID is non-numeric (e.g., "abc") → `int(run.id)` raises `ValueError`
+3. Attempting to match based on string vs int IDs
 
-### Priority 4: Import Export (Integration)
-- Add to `/src/models/__init__.py`
-- Ensure test can `from src.models.workflow_run_attempt import WorkflowRunAttempt`
+**Options for handling**:
+1. **Strict**: Reject any non-numeric run IDs with clear error message
+2. **Lenient**: Catch `ValueError` during conversion, exclude that run from attempt filtering
+3. **Hybrid**: Log warning and exclude run
 
-## Related Objects and Dependencies
+**Recommendation**: Option 2 (lenient with silent exclusion), because:
+- Prevents task failure due to malformed data
+- Run is still returned; just not filtered by attempt presence
+- Aligns with defensive programming in service layer
 
-### Direct Dependencies (in test imports)
-- datetime, timezone, timedelta (Python stdlib)
-- CEST constant definition (local to test as timezone(timedelta(hours=2)))
+### Empty Results
+- If no runs match all criteria, return empty list `[]` (not an error)
+- Callers must handle empty results naturally
 
-### Related Models (same package)
-- WorkflowRun: Use as pattern reference for structure
-- WorkflowStatus, WorkflowConclusion: Do NOT use (tests don't show dependency)
+### Parameter Validation
 
-### No Service/Storage Changes Needed
-- Tests only instantiate and serialize the model directly
-- No service layer integration required for this task
-- WorkflowRunAttempt may be used by services later, but that's outside this task scope
+**Validation order** (fail fast):
+1. Check that datetime arguments are timezone-aware (if provided)
+2. Check that `created_after < created_before` (if both provided)
+3. Check that `min_duration <= max_duration` (if both provided)
+4. Check that `has_attempts` filter has required `attempt_service`
+5. Apply filters
 
-## Summary of What Must Be Created
+---
 
-**Single file**: `/src/models/workflow_run_attempt.py`
+## Implementation Checklist
 
-**Must contain**:
-1. Import statements: dataclass, field, datetime, timezone, timedelta, Optional
-2. CEST timezone constant (or define inline)
-3. WorkflowRunAttempt dataclass with:
-   - 7 fields as specified
-   - `__post_init__()` for 2 validations (attempt_number > 0, created_at in CEST)
-   - `to_dict()` method
-   - `from_dict()` class method
-4. Update `/src/models/__init__.py` to export WorkflowRunAttempt
+### Core Functionality
+- [ ] Single `query()` method with all filter parameters
+- [ ] Duration filtering: `min_duration` and `max_duration` (inclusive)
+- [ ] Timestamp filtering: `created_after` and `created_before` (exclusive)
+- [ ] Attempt presence filtering: `has_attempts` with `attempt_service` integration
+- [ ] AND logic: All filters applied together
 
-**Test File** (already provided, read-only):
-- `tests/test_workflow_run_attempt.py` (assumed location based on test suite provided)
+### Error Handling
+- [ ] Raise `ValueError` if `has_attempts` is not None but `attempt_service` is None
+- [ ] Raise `ValueError` if `created_after >= created_before`
+- [ ] Raise `ValueError` if `min_duration > max_duration`
+- [ ] Raise `TypeError` if datetime arguments are not timezone-aware
+- [ ] Raise `TypeError` if `created_at` in WorkflowRun is naive and comparison is attempted
+
+### Edge Cases
+- [ ] Handle non-numeric run IDs gracefully (exclude from attempt filtering, don't crash)
+- [ ] Return empty list if no matches found
+- [ ] All filters optional (None = no filtering on that dimension)
+- [ ] Duration range boundary cases (0.0, equal min/max)
+- [ ] Timestamp boundary cases (exclusive bounds, equal timestamps)
+
+### Integration
+- [ ] No changes to existing filter methods
+- [ ] No changes to storage or persistence layer
+- [ ] Accepts `AttemptService` as optional parameter (dependency injection)
+- [ ] Returns `List[WorkflowRun]` (consistent with existing methods)
+
+### Testing (Assumed)
+- Calls to `query()` with each filter individually
+- Calls to `query()` with multiple filters combined
+- Boundary conditions (min=max, exclusive bounds)
+- Empty result sets
+- Invalid parameter combinations (should raise)
+- Non-numeric run IDs with attempt filtering
+- Timezone-aware datetime requirement
+
+---
+
+## Related Code References
+
+### WorkflowRun Model
+**File**: `/src/models/workflow_run.py`
+
+Key fields for filtering:
+- `created_at: datetime` (line 16)
+- `duration_seconds: float` (line 20)
+
+### AttemptService Interface
+**File**: `/src/services/attempt_service.py`
+
+```python
+def get_by_run_id(self, run_id: int) -> List[WorkflowRunAttempt]:
+    """Returns all attempts for a run_id, sorted by attempt_number."""
+```
+
+### Existing Filter Pattern
+**File**: `/src/services/workflow_run_service.py` (lines 30-37)
+
+```python
+def filter_by_branch(self, branch: str) -> List[WorkflowRun]:
+    return [r for r in self._runs if r.branch == branch]
+```
+
+All existing filters use list comprehension; `query()` should follow similar pattern.
+
+---
+
+## Summary
+
+**What needs to be added**:
+- Single `query()` method in `WorkflowRunService` class
+- Takes 6 optional parameters: `min_duration`, `max_duration`, `created_after`, `created_before`, `has_attempts`, `attempt_service`
+- Returns filtered list of `WorkflowRun` objects
+- Applies AND logic across all filters
+- Validates inputs (datetime timezone-aware, date range validity, attempt_service presence)
+- Handles edge cases gracefully (non-numeric IDs, naive datetimes, empty results)
+
+**Critical integration points**:
+- Must work with `AttemptService.get_by_run_id()` despite ID type mismatch
+- Requires caller to pass `AttemptService` instance for attempt filtering
+- Should not modify existing methods or storage layer
+
+**Key ambiguity requiring assumption**:
+- Timestamp range bounds: Using **exclusive bounds** (`created_after < created_at < created_before`)
+- ID mismatch handling: Using **lenient exclusion** (skip non-numeric IDs from attempt filtering)

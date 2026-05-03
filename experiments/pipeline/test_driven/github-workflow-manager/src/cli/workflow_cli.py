@@ -6,6 +6,7 @@ from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
 from ..services.workflow_run_service import WorkflowRunService
+from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 
 
@@ -72,10 +73,25 @@ def build_parser() -> argparse.ArgumentParser:
     detail_p = sub.add_parser("detail", help="Show details for a single run")
     detail_p.add_argument("run_id", help="Run ID")
 
+    # query
+    query_p = sub.add_parser("query", help="Query runs by duration, timestamps, and attempts")
+    query_p.add_argument("--min-duration", type=float, default=None, help="Minimum duration in seconds")
+    query_p.add_argument("--max-duration", type=float, default=None, help="Maximum duration in seconds")
+    query_p.add_argument("--created-after", default=None, help="Created after (ISO 8601 timezone-aware datetime)")
+    query_p.add_argument("--created-before", default=None, help="Created before (ISO 8601 timezone-aware datetime)")
+    query_p.add_argument(
+        "--has-attempts",
+        default=None,
+        choices=["true", "false"],
+        help="Filter by attempt presence (true=has attempts, false=no attempts)",
+    )
+
     return parser
 
 
-def run_cli(service: WorkflowRunService, args=None) -> None:
+def run_cli(service: WorkflowRunService, attempt_service: AttemptService = None, args=None) -> None:
+    if attempt_service is None:
+        attempt_service = AttemptService()
     parser = build_parser()
     ns = parser.parse_args(args)
     tracker = WorkflowRunTracker(service)
@@ -113,3 +129,45 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_run(run))
+
+    elif ns.command == "query":
+        created_after = None
+        created_before = None
+        has_attempts_val = None
+
+        if ns.created_after:
+            try:
+                created_after = datetime.fromisoformat(ns.created_after)
+            except ValueError:
+                print(f"Invalid created_after datetime: {ns.created_after}", file=sys.stderr)
+                sys.exit(1)
+
+        if ns.created_before:
+            try:
+                created_before = datetime.fromisoformat(ns.created_before)
+            except ValueError:
+                print(f"Invalid created_before datetime: {ns.created_before}", file=sys.stderr)
+                sys.exit(1)
+
+        if ns.has_attempts:
+            has_attempts_val = ns.has_attempts.lower() == "true"
+
+        try:
+            runs = service.query(
+                min_duration=ns.min_duration,
+                max_duration=ns.max_duration,
+                created_after=created_after,
+                created_before=created_before,
+                has_attempts=has_attempts_val,
+                attempt_service=attempt_service if has_attempts_val is not None else None,
+            )
+        except (TypeError, ValueError) as e:
+            print(f"Query error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        if not runs:
+            print("No runs match the query criteria.")
+            return
+        print(f"Found {len(runs)} matching run(s):")
+        for run in runs:
+            print(_fmt_run(run))
