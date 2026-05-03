@@ -324,3 +324,53 @@ python -m src
 ```
 
 Duration: 410.3s | Cost: $0.772971 USD | Turns: 15
+
+---
+
+# Task 07: Export and Import Workflow Runs
+
+## Summary
+Successfully implemented export/import functionality for workflow runs to JSON files with validation, duplicate handling, and dry-run support. Users can now archive and transfer run data between environments via both CLI commands and interactive menu options.
+
+## Files Changed
+- `src/models/validation_error.py` — New custom exception for validation failures
+- `src/models/import_result.py` — New dataclass for import operation results
+- `src/models/workflow_run.py` — Added validate_dict() classmethod
+- `src/models/workflow_run_attempt.py` — Added validate_dict() classmethod
+- `src/storage/workflow_json_storage.py` — Added export_to_file() and import_from_file() methods
+- `src/services/workflow_run_service.py` — Added export_runs() and import_runs() methods
+- `src/cli/workflow_cli.py` — Added export and import subcommands with CLI arguments
+- `src/cli/interactive_menu.py` — Added _export_runs() and _import_runs() menu functions
+- `src/models/__init__.py` — Updated exports for new classes
+- `artifacts/class_diagram.puml` — Updated to show new classes and methods
+- `artifacts/use_case_diagram.puml` — Added export/import use cases for both CLI and interactive modes
+- `artifacts/activity_diagram_interactive.puml` — Added export/import flows to menu
+
+## Test Results
+- **Total tests**: 206
+- **Passed**: 206 ✓
+- **Failed**: 0
+- **Command**: `pytest tests/ -q`
+
+## Acceptance Criteria Met
+✓ All workflow runs can be exported to a JSON file
+✓ Workflow runs can be imported from a JSON file
+✓ Imported data is validated before being applied; invalid structure is rejected
+✓ Importing does not overwrite existing data unless explicitly intended
+✓ Invalid or duplicate entries during import are skipped individually, not treated as a full failure
+✓ Only JSON format is supported
+✓ The GitHub adapter layer is the only component allowed to perform external API calls (no external calls used)
+✓ All new functionality is accessible via `python -m src` — both as interactive menu options and one-shot CLI flags
+
+## Feature Coverage
+- **Export functionality**: All runs exported to JSON with optional filtering by branch, status, conclusion
+- **Import functionality**: Runs imported from JSON with validation, duplicate detection, and dry-run mode
+- **Validation layer**: Comprehensive validation of required fields, enum values, datetime formats, and nested data
+- **Error handling**: Individual error collection per item; partial imports continue on validation failures
+- **Duplicate detection**: Skip mode (default) or replace/force mode for runs with existing IDs
+- **Dry-run mode**: Validate and report what would be imported without persisting changes
+- **CLI exposure**: `python -m src export --output <path> [--branch/--status/--conclusion]` and `python -m src import --input <path> [--dry-run] [--skip-duplicates|--force]`
+- **Interactive menu**: Export/import options with filtering, dry-run, and duplicate handling prompts
+- **Serialization**: Proper ISO 8601 datetime handling, enum value serialization, null value support
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

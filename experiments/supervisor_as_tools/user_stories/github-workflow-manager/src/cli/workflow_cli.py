@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 from datetime import datetime, timezone
 
@@ -7,6 +8,8 @@ from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_attempt_status import WorkflowAttemptStatus
 from ..models.workflow_attempt_conclusion import WorkflowAttemptConclusion
 from ..models.workflow_run import WorkflowRun
+from ..models.import_result import ImportResult
+from ..models.validation_error import ValidationError
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
@@ -214,6 +217,30 @@ def build_parser() -> argparse.ArgumentParser:
         help="Filter by conclusion",
     )
 
+    # export
+    export_p = sub.add_parser("export", help="Export workflow runs to a file")
+    export_p.add_argument("--output", required=True, help="Output file path")
+    export_p.add_argument("--branch", default=None, help="Filter by branch")
+    export_p.add_argument(
+        "--status",
+        default=None,
+        choices=[s.value for s in WorkflowStatus],
+        help="Filter by status",
+    )
+    export_p.add_argument(
+        "--conclusion",
+        default=None,
+        choices=[c.value for c in WorkflowConclusion],
+        help="Filter by conclusion",
+    )
+
+    # import
+    import_p = sub.add_parser("import", help="Import workflow runs from a file")
+    import_p.add_argument("--input", required=True, help="Input file path")
+    import_p.add_argument("--dry-run", action="store_true", help="Validate without persisting")
+    import_p.add_argument("--skip-duplicates", action="store_true", default=True, help="Skip duplicate run IDs")
+    import_p.add_argument("--force", action="store_true", help="Replace duplicate run IDs (overrides --skip-duplicates)")
+
     return parser
 
 
@@ -358,3 +385,41 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
         report = stats_service.compute_statistics(filtered_runs)
         formatted_report = stats_service.format_statistics_for_terminal(report)
         print(formatted_report)
+
+    elif ns.command == "export":
+        try:
+            filter_kwargs = {}
+            if ns.branch is not None:
+                filter_kwargs["branch"] = ns.branch
+            if ns.status is not None:
+                filter_kwargs["status"] = WorkflowStatus(ns.status)
+            if ns.conclusion is not None:
+                filter_kwargs["conclusion"] = WorkflowConclusion(ns.conclusion)
+
+            service.export_runs(ns.output, **filter_kwargs)
+            filtered_runs = service.filter_runs(**filter_kwargs)
+            print(f"Exported {len(filtered_runs)} runs to {ns.output}")
+        except IOError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "import":
+        try:
+            skip_dups = not ns.force
+            result = service.import_runs(ns.input, dry_run=ns.dry_run, skip_duplicates=skip_dups)
+            print(result.summary())
+            if result.errors:
+                print("Errors:", file=sys.stderr)
+                for error in result.errors:
+                    print(f"  {error}", file=sys.stderr)
+            if ns.dry_run:
+                print("(Dry-run mode: no changes made)")
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except json.JSONDecodeError as e:
+            print(f"Error: Invalid JSON: {e}", file=sys.stderr)
+            sys.exit(1)
+        except ValidationError as e:
+            print(f"Error: Validation failed: {e}", file=sys.stderr)
+            sys.exit(1)

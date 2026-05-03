@@ -5,6 +5,8 @@ from .workflow_run_attempt import WorkflowRunAttempt
 from .workflow_attempt_status import WorkflowAttemptStatus
 from .workflow_attempt_conclusion import WorkflowAttemptConclusion
 from .statistics_report import StatisticsReport
+from .validation_error import ValidationError
+from .import_result import ImportResult
 
 __all__ = [
     "WorkflowRun",
@@ -14,4 +16,6 @@ __all__ = [
     "WorkflowAttemptStatus",
     "WorkflowAttemptConclusion",
     "StatisticsReport",
+    "ValidationError",
+    "ImportResult",
 ]

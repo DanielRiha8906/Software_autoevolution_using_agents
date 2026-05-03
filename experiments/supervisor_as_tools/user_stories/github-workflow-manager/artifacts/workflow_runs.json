@@ -56,5 +56,31 @@
     "commit_sha": null,
     "duration_seconds": 45.0,
     "attempts": []
+  },
+  {
+    "id": "e01cc57c-6dee-495d-87be-c9a2cafbb416",
+    "workflow_name": "test-workflow",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T21:08:04.313638+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 100.0,
+    "attempts": []
+  },
+  {
+    "id": "600f020d-868c-4688-97de-b24c1580e997",
+    "workflow_name": "test-workflow2",
+    "branch": "dev",
+    "status": "in_progress",
+    "conclusion": null,
+    "created_at": "2026-05-03T21:08:05.644927+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 50.0,
+    "attempts": []
   }
 ]
