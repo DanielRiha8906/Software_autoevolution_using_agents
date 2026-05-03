@@ -118,4 +118,4 @@ Duration: 279.6s | Cost: $0.533964 USD | Turns: 13
 - Relationship to Task represented in class diagram as: TaskComment --> Task (task_id references Task.id)
 - No service layer or CLI integration in this task (future work)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 153.9s | Cost: $0.284884 USD | Turns: 22
