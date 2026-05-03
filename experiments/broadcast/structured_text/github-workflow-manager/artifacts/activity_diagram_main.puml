@@ -98,6 +98,16 @@ if (CLI arguments provided?) then (yes)
       else (no)
       endif
 
+    case (github-fetch)
+      :Read --owner argument;
+      :Read --repo argument;
+      :Read --workflow-id (optional);
+      :Read --token (optional);
+      :Read --skip-duplicates flag;
+      :GitHubFetchService.fetch_workflow_runs();
+      :Import fetched runs to WorkflowRunService;
+      :Print "Fetched <count> runs from GitHub";
+
   endswitch
   stop
 
