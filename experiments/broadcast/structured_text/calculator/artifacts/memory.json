@@ -18,5 +18,25 @@
     "error_message": null,
     "execution_timestamp": "2026-05-03T15:53:01.357857",
     "execution_time_ms": 0.007041999992907222
+  },
+  {
+    "operation_name": "add",
+    "operand_a": 1.0,
+    "operand_b": 2.0,
+    "result": 3.0,
+    "success": true,
+    "error_message": null,
+    "execution_timestamp": "2026-05-03T19:14:50.427416",
+    "execution_time_ms": 0.008406000006289105
+  },
+  {
+    "operation_name": "divide",
+    "operand_a": 10.0,
+    "operand_b": 0.0,
+    "result": null,
+    "success": false,
+    "error_message": "Division by zero is not allowed",
+    "execution_timestamp": "2026-05-03T19:14:55.037489",
+    "execution_time_ms": 0.010780000025079062
   }
 ]
