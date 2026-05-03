@@ -5,6 +5,8 @@ from pathlib import Path
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
+from .services.memory_service import MemoryService
+from .services.statistics_service import StatisticsService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
@@ -24,14 +26,19 @@ def _as_number(value: str) -> float:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
-        description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B]",
+        description="OOP Calculator — run interactively or pass --operation or --statistics",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--statistics]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
         choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
         help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+    )
+    parser.add_argument(
+        "--statistics",
+        action="store_true",
+        help="Display statistics from memory entries",
     )
     parser.add_argument(
         "operands",
@@ -42,9 +49,24 @@ def main() -> None:
 
     args = parser.parse_args()
     service = _build_service()
+    memory_service = MemoryService()
     cli = CalculatorCLI(service)
 
-    if args.operation:
+    if args.statistics:
+        stats_service = StatisticsService(memory_service)
+        report = stats_service.compute()
+
+        if not memory_service.retrieve():
+            print("No entries to analyze yet.")
+        else:
+            print("=== Statistics ===")
+            print(f"Operations count:")
+            for operation, count in sorted(report.count_per_operation.items()):
+                print(f"  {operation}: {count}")
+            print(f"Total errors: {report.total_errors}")
+            print(f"Error rate: {report.error_rate:.2f}%")
+            print(f"Average execution time: {report.avg_execution_time_ms:.2f}ms")
+    elif args.operation:
         if len(args.operands) != 2:
             parser.error("Exactly two operands are required when using --operation")
         try:

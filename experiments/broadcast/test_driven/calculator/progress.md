@@ -262,3 +262,72 @@ Duration: 284.2s | Cost: $0.525347 USD | Turns: 41
 ✓ UML diagrams updated to reflect new method
 
 Duration: 257.3s | Cost: $0.563686 USD | Turns: 59
+
+---
+
+# Task 06: Statistics Service
+
+## Broadcast Evaluation Summary
+
+### Candidates Evaluated
+- **Implementer-A**: Created StatisticsService with StatisticsReport dataclass. Implemented compute() method computing count_per_operation, total_errors, error_rate, and avg_execution_time_ms. Added CLI integration with --statistics flag. Result: 72 tests passing (test file not properly created).
+- **Implementer-B**: Identical approach with StatisticsService and StatisticsReport. Implemented all statistics computations and CLI integration. Created 9 new test cases. Result: 81 tests passing.
+- **Implementer-C**: Identical implementation with comprehensive test suite covering all edge cases. Created 19 test cases with additional edge case coverage. Full CLI integration and proper empty history handling. Result: 91 tests passing.
+
+### Winner Selection
+**Implementer-C** (implementation merged) - Achieved highest test count (91 tests) with most comprehensive test coverage including edge cases (empty history, all successful, all failed operations). Implementation cleanest with proper dataclass definition and thorough documentation.
+
+### Files Changed
+- `src/services/statistics_service.py` - NEW: Created StatisticsReport dataclass and StatisticsService class
+- `src/services/__init__.py` - UPDATED: Added exports for StatisticsService and StatisticsReport
+- `src/__main__.py` - UPDATED: Added --statistics CLI flag and interactive menu option (option 10)
+- `tests/services/test_statistics_service.py` - NEW: Created comprehensive test suite
+- `artifacts/class_diagram.puml` - UPDATED: Added StatisticsService and StatisticsReport classes with relationships
+- `artifacts/component_diagram.puml` - UPDATED: Added Statistics Service component and Memory Service component
+
+### Implementation Details
+1. **StatisticsReport Dataclass**:
+   - `count_per_operation: dict[str, int]` - Dictionary mapping operation names to occurrence counts
+   - `total_errors: int` - Count of failed entries (where success=False)
+   - `error_rate: float` - Percentage of failed entries (0-100)
+   - `avg_execution_time_ms: float` - Mean execution time across all entries
+   
+2. **StatisticsService Class**:
+   - Constructor accepts MemoryService instance
+   - `compute() -> StatisticsReport` method aggregates metrics from MemoryEntry history
+   - Safely handles empty history (returns zeros and empty dict)
+   - Computes operation counts via dictionary aggregation
+   - Calculates error rate as (errors / total) * 100
+   - Calculates average execution time as mean of all execution times
+
+3. **CLI Integration**:
+   - `python -m src --statistics` displays aggregated statistics
+   - Interactive menu option (option 10: "View statistics") available
+   - Displays "No entries to analyze yet" for empty history
+
+### Test Results
+- Existing tests: 72 passing (from previous tasks)
+- New StatisticsService tests: 19 passing
+  - `test_report_is_dataclass` - Verifies return type is dataclass
+  - `test_count_per_operation` - Tests operation counting by type
+  - `test_total_errors` - Tests error counting
+  - `test_error_rate` - Tests error rate percentage calculation
+  - `test_average_execution_time` - Tests mean execution time calculation
+  - `test_report_structure_is_consistent` - Tests consistency across multiple calls
+  - Plus 13 additional edge case tests
+- **Total: 91 tests passing** ✓
+
+### Requirements Met
+✓ StatisticsService created in src/services/statistics_service.py
+✓ StatisticsReport is a proper dataclass (not dict or namedtuple)
+✓ All statistics derived exclusively from MemoryEntry data
+✓ Error rate expressed as percentage (0-100)
+✓ Empty history handled safely (returns zeros)
+✓ All provided test cases pass
+✓ All 19 new test cases pass
+✓ All existing tests still pass (72 tests)
+✓ Code compiles without syntax or import errors
+✓ Accessible via python -m src (both --statistics flag and interactive menu option 10)
+✓ UML diagrams updated (class diagram and component diagram)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

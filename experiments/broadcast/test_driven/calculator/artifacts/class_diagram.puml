@@ -75,6 +75,22 @@ package "services" #DDFFD4 {
         +retrieve() : List[MemoryEntry]
         +query(operation: String [0..1], success: Boolean [0..1]) : List[MemoryEntry]
     }
+
+    class StatisticsService {
+        -memory_service : MemoryService
+        --
+        +StatisticsService(memory_service: MemoryService)
+        +compute() : StatisticsReport
+    }
+}
+
+package "reports" #E5F3FF {
+    class StatisticsReport {
+        +count_per_operation : Dict[String, int]
+        +total_errors : int
+        +error_rate : float
+        +avg_execution_time_ms : float
+    }
 }
 
 package "storage" #FFF3CC {
@@ -108,6 +124,8 @@ CalculatorCLI --> CalculatorService : service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 MemoryService --> MemoryEntry : manages
+StatisticsService --> MemoryService : analyzes
+StatisticsService ..> StatisticsReport : creates
 
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> Operation
