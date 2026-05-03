@@ -10,11 +10,19 @@ rectangle "Calculator Application" {
     usecase "Perform calculation" as UC_Calc
     usecase "View calculation history" as UC_History
     usecase "Exit application" as UC_Exit
+    usecase "Square a number" as UC_Square
+    usecase "Take square root" as UC_Sqrt
+    usecase "Raise to power" as UC_Power
+    usecase "Perform modulo" as UC_Modulo
 
 }
 
 User --> UC_Calc
 User --> UC_History
 User --> UC_Exit
+User --> UC_Square
+User --> UC_Sqrt
+User --> UC_Power
+User --> UC_Modulo
 
 @enduml
