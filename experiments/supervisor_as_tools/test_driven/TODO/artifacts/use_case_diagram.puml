@@ -34,10 +34,17 @@ rectangle "TODO Manager" {
     usecase "List comments" as C_COMMENT_LIST
     usecase "Delete comment" as C_COMMENT_DEL
   }
+
+  package "Import/Export mode" {
+    usecase "Export tasks and comments" as C_EXPORT
+    usecase "Import tasks and comments" as C_IMPORT
+  }
 }
 
 User --> UI
 User --> CLI
+User --> C_EXPORT
+User --> C_IMPORT
 
 UI ..> I_ADD    : <<exclude>>
 UI ..> I_LIST   : <<exclude>>
@@ -61,5 +68,12 @@ CLI ..> C_DELETE : <<exclude>>
 CLI ..> C_COMMENT_ADD  : <<exclude>>
 CLI ..> C_COMMENT_LIST : <<exclude>>
 CLI ..> C_COMMENT_DEL  : <<exclude>>
+
+C_EXPORT ..> (List Tasks) : retrieves all
+C_EXPORT ..> (List Comments) : retrieves per-task
+C_IMPORT ..> (Validate JSON) : validates structure
+C_IMPORT ..> (Detect Duplicates) : avoids overwrites
+C_IMPORT ..> (Restore Tasks) : recreates objects
+C_IMPORT ..> (Restore Comments) : recreates objects
 
 @enduml

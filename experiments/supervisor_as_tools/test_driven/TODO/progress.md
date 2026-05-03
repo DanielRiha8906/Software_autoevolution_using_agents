@@ -297,3 +297,88 @@ Successfully implemented TaskStatisticsService with a TaskStatistics dataclass t
 - Overdue handling: uses existing Task.is_overdue() method
 
 Duration: 397.7s | Cost: $0.877788 USD | Turns: 19
+
+## Task 07: Implement TaskImportExportService for bulk import/export
+
+### Summary
+Successfully implemented TaskImportExportService with export() and import_from() methods to bundle tasks and comments into a single JSON file. Added comprehensive validation, duplicate detection, and orphaned comment filtering. Integrated with CLI (export/import subcommands) and interactive menu (options 8/9).
+
+### Files Changed
+- `src/services/import_export_service.py` - New TaskImportExportService class with export() and import_from() methods
+- `src/services/__init__.py` - Added TaskImportExportService to exports
+- `src/cli/todo_cli.py` - Added export and import subcommands with handlers
+- `src/cli/interactive_menu.py` - Added menu options 8 and 9 with export/import dialogs
+- `tests/test_import_export_service.py` - New test suite with 6 test functions
+- `artifacts/class_diagram.puml` - Added TaskImportExportService class and relationships
+- `artifacts/component_diagram.puml` - Added Import/Export Service component
+- `artifacts/use_case_diagram.puml` - Added export and import use cases
+
+### Test Results
+- **All 103 tests passing** ✅ (6 new import/export tests + 97 existing tests)
+- New tests:
+  - test_export_creates_json_file - File creation and validity
+  - test_export_contains_tasks_and_comments - JSON structure and content verification
+  - test_import_restores_tasks - Task restoration with ID preservation
+  - test_import_validates_structure - Schema validation with proper error messages
+  - test_import_restores_comments - Comment restoration and association
+  - test_import_skips_duplicates - Duplicate detection and skipping
+- Existing tests all pass (no regressions)
+
+### Implementation Details
+
+**TaskImportExportService** (src/services/import_export_service.py):
+- Constructor: __init__(todo_service: TodoService, comments_service: CommentsService)
+- Method: export(filepath: str) → None
+  * Retrieves all tasks via TodoService.list_tasks()
+  * Retrieves comments per task via CommentsService.list_comments(task_id)
+  * Converts to dicts using Task.to_dict() and TaskComment.to_dict()
+  * Writes JSON structure: {"tasks": [...], "comments": [...]}
+  * Uses json.dump with indent=2, ensure_ascii=False for formatting
+- Method: import_from(filepath: str) → Tuple[List[Task], List[TaskComment]]
+  * Validates JSON syntax (raises ValueError: "Invalid JSON format")
+  * Validates root is dict (raises ValueError: "JSON root must be an object")
+  * Validates "tasks" key exists (raises ValueError: "JSON must contain 'tasks' key")
+  * Validates "comments" key exists (raises ValueError: "JSON must contain 'comments' key")
+  * Validates "tasks" is array (raises ValueError: "'tasks' must be an array")
+  * Validates "comments" is array (raises ValueError: "'comments' must be an array")
+  * Deserializes tasks via Task.from_dict() with duplicate detection
+  * Deserializes comments via TaskComment.from_dict() with duplicate detection
+  * Filters orphaned comments (only keeps comments for imported task IDs)
+  * Skips individual entries on from_dict() ValueError
+  * Persists imported data to storage via service add methods
+  * Returns tuple of (imported_tasks, imported_comments)
+
+**CLI Integration**:
+- New subcommand: `export <filepath>` - Exports all tasks and comments to JSON file
+- New subcommand: `import <filepath>` - Imports tasks and comments from JSON file with validation
+- Handlers print success/error messages and return 0/1 exit codes
+
+**Interactive Menu Integration**:
+- Menu option 8: "Export tasks and comments to file"
+  * Prompts user for output filepath
+  * Displays success message with export counts
+  * Handles errors gracefully
+- Menu option 9: "Import tasks and comments from file"
+  * Prompts user for input filepath
+  * Displays import results with counts
+  * Handles validation errors and file not found
+
+**Diagrams Updated**:
+- class_diagram.puml: Added TaskImportExportService class with constructor and methods
+- class_diagram.puml: Added dependencies between service and TodoService/CommentsService
+- class_diagram.puml: Updated CLI classes to show new service references
+- component_diagram.puml: Added Import/Export Service component with dependencies
+- use_case_diagram.puml: Added "Export tasks and comments" and "Import tasks and comments" use cases
+- use_case_diagram.puml: Detailed operation flows for both import and export
+
+**Edge Cases Handled**:
+- Invalid JSON syntax: Raises ValueError with clear message
+- Missing required keys: Raises ValueError with specific key names
+- Wrong type for tasks/comments (not array): Raises ValueError
+- Duplicate task/comment IDs: Skipped during import
+- Orphaned comments (task_id not in imported tasks): Filtered out
+- Individual deserialization failures: Entry skipped, processing continues
+- Empty import files: Successfully imports 0 tasks and 0 comments
+- File not found: FileNotFoundError propagates uncaught
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

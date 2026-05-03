@@ -9,6 +9,8 @@ from ..models.task_statistics import TaskStatistics
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..services.statistics_service import TaskStatisticsService
+from ..services.comments_service import CommentsService
+from ..services.import_export_service import TaskImportExportService
 from ..storage.json_storage import JsonStorage
 
 _STATUS_SYMBOLS = {
@@ -22,6 +24,8 @@ class TodoCLI:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._comments_service = CommentsService(self._service)
+        self._import_export = TaskImportExportService(self._service, self._comments_service)
 
     def run(self, argv: Optional[list[str]] = None) -> int:
         parser = self._build_parser()
@@ -115,6 +119,16 @@ class TodoCLI:
         # stats
         p_stats = sub.add_parser("stats", help="View task statistics")
         p_stats.set_defaults(func=self._cmd_stats)
+
+        # export
+        p_export = sub.add_parser("export", help="Export tasks and comments to JSON")
+        p_export.add_argument("filepath", help="Path to export file")
+        p_export.set_defaults(func=self._cmd_export)
+
+        # import
+        p_import = sub.add_parser("import", help="Import tasks and comments from JSON")
+        p_import.add_argument("filepath", help="Path to import file")
+        p_import.set_defaults(func=self._cmd_import)
 
         return parser
 
@@ -224,3 +238,21 @@ class TodoCLI:
         print(f"Overdue:               {report.overdue_count}")
         print(f"With due date:         {report.with_due_date_count}")
         print(f"Completion rate:       {report.completion_rate:.1f}%")
+
+    def _cmd_export(self, args: argparse.Namespace) -> int:
+        try:
+            self._import_export.export(args.filepath)
+            print(f"Exported to {args.filepath}")
+            return 0
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
+    def _cmd_import(self, args: argparse.Namespace) -> int:
+        try:
+            imported_tasks, imported_comments = self._import_export.import_from(args.filepath)
+            print(f"Imported {len(imported_tasks)} tasks and {len(imported_comments)} comments")
+            return 0
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1

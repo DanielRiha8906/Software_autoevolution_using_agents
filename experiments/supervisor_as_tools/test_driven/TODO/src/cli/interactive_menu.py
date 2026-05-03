@@ -6,6 +6,8 @@ from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..services.statistics_service import TaskStatisticsService
+from ..services.comments_service import CommentsService
+from ..services.import_export_service import TaskImportExportService
 from ..storage.json_storage import JsonStorage
 
 _STATUS_LABEL = {
@@ -54,6 +56,8 @@ class InteractiveMenu:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._comments_service = CommentsService(self._service)
+        self._import_export = TaskImportExportService(self._service, self._comments_service)
 
     def run(self) -> None:
         while True:
@@ -82,6 +86,10 @@ class InteractiveMenu:
                 self._do_delete(tasks)
             elif choice == "7":
                 self._do_stats()
+            elif choice == "8":
+                self._do_export()
+            elif choice == "9":
+                self._do_import()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -109,6 +117,8 @@ class InteractiveMenu:
         print("  5. Update task    (title / description)")
         print("  6. Delete task")
         print("  7. View statistics")
+        print("  8. Export tasks and comments")
+        print("  9. Import tasks and comments")
         print("  0. Quit")
         print()
 
@@ -261,4 +271,34 @@ class InteractiveMenu:
         print(f"  With due date:         {report.with_due_date_count}")
         print(f"  Completion rate:       {report.completion_rate:.1f}%")
         print()
+        input("  Press Enter to continue...")
+
+    def _do_export(self) -> None:
+        _clear()
+        print("  Export tasks and comments\n")
+        filepath = _prompt("Export file path")
+        if not filepath:
+            print("  Cancelled.")
+            input("  Press Enter to continue...")
+            return
+        try:
+            self._import_export.export(filepath)
+            print(f"\n  Exported to {filepath}")
+        except Exception as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_import(self) -> None:
+        _clear()
+        print("  Import tasks and comments\n")
+        filepath = _prompt("Import file path")
+        if not filepath:
+            print("  Cancelled.")
+            input("  Press Enter to continue...")
+            return
+        try:
+            imported_tasks, imported_comments = self._import_export.import_from(filepath)
+            print(f"\n  Imported {len(imported_tasks)} tasks and {len(imported_comments)} comments")
+        except Exception as e:
+            print(f"\n  Error: {e}")
         input("  Press Enter to continue...")
