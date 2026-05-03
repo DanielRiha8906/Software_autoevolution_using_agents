@@ -115,3 +115,78 @@ All 3 implementer candidates successfully completed the task identically:
 - ✓ All state-checking methods return correct booleans
 
 Duration: 339.5s | Cost: $0.807552 USD | Turns: 55
+
+---
+
+## Task 03: Create TaskComment domain class
+
+### Objective
+Create a `TaskComment` domain class with `id`, `task_id`, `content`, and `created_at`, plus optional `author` and `updated_at`, with full serialisation support and content validation.
+
+### Broadcast Architecture Evaluation
+
+All 3 implementer candidates successfully completed the task identically:
+
+| Candidate | Approach | Tests Passed |
+|-----------|----------|--------------|
+| A | Dataclass with field validation in `__post_init__`, CEST timezone enforcement, UUID generation, ISO 8601 serialization | 19/19 ✓ |
+| B | Dataclass with field validation in `__post_init__`, CEST timezone enforcement, UUID generation, ISO 8601 serialization | 19/19 ✓ |
+| C | Dataclass with field validation in `__post_init__`, CEST timezone enforcement, UUID generation, ISO 8601 serialization | 19/19 ✓ |
+
+**Winner: Candidate A** — selected as baseline implementation (all candidates produced identical, converging implementations).
+
+### Files Changed
+- `src/models/task_comment.py` — New TaskComment dataclass with full validation and serialization
+- `src/models/__init__.py` — Added TaskComment export
+- `tests/test_task_comment.py` — 19 test cases for TaskComment functionality
+
+### Implementation Details
+
+**TaskComment dataclass fields:**
+- `id: str` — Auto-generated UUID string via `uuid.uuid4()`
+- `task_id: str` — Required string identifier for parent task
+- `content: str` — Required non-empty string (whitespace-only rejected)
+- `created_at: datetime` — Auto-set to current time in CEST (UTC+2) on construction
+- `author: Optional[str]` — Optional string for comment author, defaults to None
+- `updated_at: Optional[datetime]` — Optional CEST datetime, must be CEST if set
+
+**Validation in `__post_init__()`:**
+- Rejects empty or whitespace-only content strings
+- Enforces `created_at` is datetime and timezone-aware with CEST timezone
+- Enforces `updated_at` (if present) is datetime, timezone-aware, and uses CEST timezone
+- Type validation for all datetime fields
+
+**Serialization:**
+- `to_dict()`: Returns dict with ISO 8601 serialized datetimes, conditionally includes optional fields
+- `from_dict()`: Classmethod to reconstruct TaskComment from dict, handles optional fields
+- Full round-trip serialization/deserialization support
+
+### Test Results
+- **Total tests**: 87 passed (19 new + 68 existing)
+- **New tests**: All 19 TaskComment tests passing
+  - ✓ Required fields (task_id, content) validation
+  - ✓ Empty/whitespace content rejection
+  - ✓ UUID auto-generation and uniqueness
+  - ✓ CEST timezone auto-set on created_at
+  - ✓ ISO 8601 serialization of datetimes
+  - ✓ Optional author field handling
+  - ✓ Optional updated_at field with CEST enforcement
+  - ✓ to_dict() serialization with selective field inclusion
+  - ✓ from_dict() deserialization
+  - ✓ Round-trip serialization consistency
+- **Existing tests**: All 68 tests remain passing (backward compatible)
+
+### Requirements Met
+- ✓ TaskComment domain class created with all required fields
+- ✓ `id` is UUID string, auto-generated, unique per instance
+- ✓ `task_id` is required string
+- ✓ `content` is required, non-empty string (rejects whitespace-only)
+- ✓ `created_at` is timezone-aware CEST datetime, auto-set on construction
+- ✓ `author` is optional string, defaults to None
+- ✓ `updated_at` is optional CEST datetime, must enforce CEST if provided
+- ✓ ISO 8601 serialization for all datetime fields
+- ✓ Full serialization (to_dict) and deserialization (from_dict) support
+- ✓ Follows existing Task model patterns for consistency
+- ✓ No external dependencies
+
+Duration: 265.2s | Cost: $0.614835 USD | Turns: 52
