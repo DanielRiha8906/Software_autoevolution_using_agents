@@ -66,5 +66,13 @@
     "result": 4.0,
     "timestamp": "2026-05-03T17:29:07.641487",
     "execution_time_ms": 0.0062020000086704385
+  },
+  {
+    "operation": "add",
+    "operand_a": 5.0,
+    "operand_b": 3.0,
+    "result": 8.0,
+    "timestamp": "2026-05-03T20:33:32.068078",
+    "execution_time_ms": 0.006281000025865069
   }
 ]

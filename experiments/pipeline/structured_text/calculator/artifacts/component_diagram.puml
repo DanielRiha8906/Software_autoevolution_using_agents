@@ -36,8 +36,17 @@ package "Calculator Application" {
 
 database "calculations.json" as DB
 database "memory_entries.json" as MemDB
+database "User Files\n(import/export)" as UserFiles
 
 Store --> DB : read/write
 MemStore --> MemDB : read/write
+MemStore --> UserFiles : import/export JSON
+MemService --> UserFiles : import/export JSON
+
+note on link MemService, UserFiles
+  Export: serialize memory entries to JSON
+  Import: load and validate JSON array
+  Support --export, --import, --skip-invalid flags
+end note
 
 @enduml

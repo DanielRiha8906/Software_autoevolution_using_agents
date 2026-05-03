@@ -36,7 +36,9 @@ class CalculatorCLI:
             filter_op_opt = len(self._MENU) + 3
             filter_status_opt = len(self._MENU) + 4
             statistics_opt = len(self._MENU) + 5
-            exit_opt    = len(self._MENU) + 6
+            export_opt = len(self._MENU) + 6
+            import_opt = len(self._MENU) + 7
+            exit_opt    = len(self._MENU) + 8
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -60,6 +62,14 @@ class CalculatorCLI:
 
             if choice == str(statistics_opt):
                 self._show_statistics()
+                continue
+
+            if choice == str(export_opt):
+                self.export_memory()
+                continue
+
+            if choice == str(import_opt):
+                self.import_memory()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -102,7 +112,9 @@ class CalculatorCLI:
         print(f"  {len(self._MENU) + 3}. Filter memory by operation")
         print(f"  {len(self._MENU) + 4}. Filter memory by status")
         print(f"  {len(self._MENU) + 5}. View statistics")
-        print(f"  {len(self._MENU) + 6}. Exit")
+        print(f"  {len(self._MENU) + 6}. Export memory to file")
+        print(f"  {len(self._MENU) + 7}. Import memory from file")
+        print(f"  {len(self._MENU) + 8}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -144,6 +156,68 @@ class CalculatorCLI:
             print("Memory service not available.")
             return
         self._show_statistics()
+
+    def export_memory(self, filepath: str | None = None) -> None:
+        """
+        Export all memory entries to a JSON file.
+
+        If filepath is not provided, prompts the user for one.
+
+        Args:
+            filepath: Optional file path. If None, user is prompted.
+        """
+        if self.memory_service is None:
+            print("Memory service not available.")
+            return
+
+        if filepath is None:
+            filepath = input("\n  Enter file path to export to: ").strip()
+            if not filepath:
+                print("  Export cancelled.\n")
+                return
+
+        try:
+            count = self.memory_service.export_to_file(filepath)
+            print(f"\n  Successfully exported {count} entries to {filepath}\n")
+        except Exception as exc:
+            print(f"\n  Error exporting memory: {exc}\n")
+
+    def import_memory(self, filepath: str | None = None, skip_invalid: bool = False) -> None:
+        """
+        Import memory entries from a JSON file and append to storage.
+
+        If filepath is not provided, prompts the user for one.
+
+        Args:
+            filepath: Optional file path. If None, user is prompted.
+            skip_invalid: If True, skip malformed entries instead of failing.
+        """
+        if self.memory_service is None:
+            print("Memory service not available.")
+            return
+
+        if filepath is None:
+            filepath = input("\n  Enter file path to import from: ").strip()
+            if not filepath:
+                print("  Import cancelled.\n")
+                return
+
+        try:
+            imported_count, skipped = self.memory_service.import_from_file(
+                filepath, skip_invalid=skip_invalid
+            )
+            print(f"\n  Successfully imported {imported_count} entries from {filepath}")
+            if skipped:
+                print(f"  Skipped {len(skipped)} invalid entries:")
+                for skip_entry in skipped:
+                    print(f"    - {skip_entry['error']}")
+            print()
+        except FileNotFoundError as exc:
+            print(f"\n  Error: File not found - {exc}\n")
+        except ValueError as exc:
+            print(f"\n  Error: {exc}\n")
+        except Exception as exc:
+            print(f"\n  Error importing memory: {exc}\n")
 
     def _show_memory(self) -> None:
         """Display all memory entries (internal method for interactive menu)."""

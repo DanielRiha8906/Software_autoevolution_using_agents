@@ -12,12 +12,16 @@ Menu --> Feedback : history selected
 Menu --> FilterOperation : filter by operation selected
 Menu --> FilterStatus : filter by status selected
 Menu --> Statistics : statistics selected
+Menu --> Export : export selected
+Menu --> Import : import selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
 FilterOperation --> Feedback : filtering complete
 FilterStatus --> Feedback : filtering complete
 Statistics --> Feedback : statistics displayed
+Export --> Feedback : export complete
+Import --> Feedback : import complete
 
 FirstOperand --> SecondOperand : valid number
 FirstOperand --> Feedback : invalid number

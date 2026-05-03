@@ -97,6 +97,8 @@ package "services" #DDFFD4 {
         +filter_by_success(success: bool) : List<MemoryEntry>
         +filter_by_execution_time(min_ms: float, max_ms: float) : List<MemoryEntry>
         +compute_statistics() : CalculationStatistics
+        +export_to_file(filepath: Path | str) : int
+        +import_from_file(filepath: Path | str, skip_invalid: bool) : tuple[int, list]
     }
 }
 
@@ -133,6 +135,8 @@ package "cli" #FFE5E5 {
         +run_command(operation: String, a: float, b: float) : void
         +show_memory() : void
         +show_statistics() : void
+        +export_memory(filepath: str | None) : void
+        +import_memory(filepath: str | None, skip_invalid: bool) : void
         -_print_menu() : void
         -_resolve_menu_choice(choice: String) : Operation [0..1]
         -_prompt_number(prompt: String) : float [0..1]

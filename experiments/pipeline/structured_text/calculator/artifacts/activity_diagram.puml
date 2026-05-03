@@ -6,6 +6,25 @@ skinparam activityDiamondBackgroundColor #FFF3CC
 
 start
 
+if (--export flag provided?) then (yes)
+  :Prompt for filepath if not provided;
+  :Load all memory entries;
+  :Export to JSON file;
+  :Report count exported;
+  stop
+else (no)
+endif
+
+if (--import flag provided?) then (yes)
+  :Prompt for filepath if not provided;
+  :Load JSON file;
+  :Validate entries;
+  :Append to storage (skip invalid if --skip-invalid);
+  :Report count imported and skipped;
+  stop
+else (no)
+endif
+
 if (CLI operation provided?) then (yes)
 
   :Validate operation and operands;
@@ -56,6 +75,17 @@ else (no)
       case (View statistics)
         :Compute statistics from memory entries;
         :Show statistics report;
+
+      case (Export memory)
+        :Prompt for file path;
+        :Export memory entries to JSON file;
+        :Show success and count;
+
+      case (Import memory)
+        :Prompt for file path;
+        :Import and validate entries;
+        :Append to storage;
+        :Report count and skipped entries;
 
       case (Operation)
         :Read operands;
