@@ -541,4 +541,4 @@ Duration: 835.0s | Cost: $1.889681 USD | Turns: 18
 ✓ Project name validation (non-empty, whitespace trimmed)
 ✓ ID prefix matching supported for both tasks and projects
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 862.0s | Cost: $1.886830 USD | Turns: 21
