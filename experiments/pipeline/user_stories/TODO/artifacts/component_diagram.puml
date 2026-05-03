@@ -20,6 +20,8 @@ package "TODO Application" {
         component "Comment Management\n(add, view, edit, delete)" as CMT
         component "Date Filtering\n(week, month, year, range)" as DateFilter
         component "Report Generation\n(summary statistics)" as Report
+        component "Import Validator\n(validate JSON files)" as ImportVal
+        component "Export / Import\n(JSON serialization)" as ExportImport
     }
 
     package "Domain Model" {
@@ -45,6 +47,9 @@ SVC --> MGR
 SVC --> CMT
 SVC --> DateFilter
 SVC --> Report
+SVC --> ExportImport
+ExportImport --> ImportVal
+ExportImport --> MGR
 DateFilter --> MGR
 Report --> MGR
 MGR --> Storage

@@ -138,7 +138,7 @@ class Task:
     def from_dict(cls, data: dict) -> Task:
         due_date_str = data.get("due_date")
         due_date = datetime.fromisoformat(due_date_str) if due_date_str else None
-        comments_data = data.get("comments", [])
+        comments_data = data.get("comments") or []
         comments = [TaskComment.from_dict(c) for c in comments_data]
         return cls(
             id=data["id"],

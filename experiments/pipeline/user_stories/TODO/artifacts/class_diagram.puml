@@ -70,6 +70,12 @@ package "storage" #FFF3CC {
 package "services" #DDFFD4 {
     exception TaskNotFoundError
 
+    class ImportValidator {
+        --
+        +validate_file(file_path: String) : Tuple<List<Dictionary>, List<Dictionary>>
+        +{static} validate_task_dict(task_dict: Dictionary, index: Integer) : String [0..1]
+    }
+
     class TaskManager {
         -storage : JsonStorage
         -tasks : Dictionary<String, Task>
@@ -116,6 +122,8 @@ package "services" #DDFFD4 {
         +delete_comment(task_id: String, comment_id: String) : void
         +edit_comment(task_id: String, comment_id: String, content: String) : TaskComment
         +generate_report() : TaskSummaryReport
+        +export_tasks(file_path: String [0..1]) : Integer
+        +import_tasks(file_path: String, duplicate_strategy: String) : Dictionary
     }
 }
 
@@ -129,6 +137,8 @@ package "cli" #FFE5E5 {
         -_parse_and_list_by_month(month: String, status: TaskStatus [0..1]) : List<Task>
         -_parse_and_list_by_year(year: String, status: TaskStatus [0..1]) : List<Task>
         -_cmd_report(args: Namespace) : Integer
+        -_cmd_export(args: Namespace) : Integer
+        -_cmd_import(args: Namespace) : Integer
     }
 
     class InteractiveMenu {
@@ -143,6 +153,8 @@ package "cli" #FFE5E5 {
         -_do_pick_year(status: TaskStatus [0..1]) : List<Task> [0..1]
         -_display_task_list_with_summary(tasks: List<Task>, status: TaskStatus [0..1], before: DateTime [0..1], after: DateTime [0..1], overdue_only: Boolean) : void
         -_do_report() : void
+        -_do_export() : void
+        -_do_import() : void
     }
 }
 
@@ -152,6 +164,7 @@ TodoService --> TaskSummaryReport : generates
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
+TodoService --> ImportValidator : uses
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 
