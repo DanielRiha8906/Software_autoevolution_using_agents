@@ -28,3 +28,41 @@ Implemented execution time tracking for calculation results while preserving exi
 - No new dependencies (Python standard library only)
 
 Duration: 198.6s | Cost: $0.364763 USD | Turns: 22
+
+## Task 02: Extended Calculator Operations (square, sqrt, power, modulo)
+
+### Summary
+Implemented four new mathematical operations for the Calculator class following test-driven development principles. All new functionality is accessible via both interactive menu and CLI flags.
+
+### Files Changed
+- `src/services/calculator.py` - Added square(), sqrt(), power(), modulo() methods
+- `src/models/operation.py` - Added SQUARE, SQRT, POWER, MODULO enum values
+- `src/cli/calculator_cli.py` - Extended _MENU with new operations
+- `src/__main__.py` - Updated argparse to support new operations
+- `tests/test_calculator.py` - Added 11 new test cases (+ 1 regression test)
+- `tests/test_cli.py` - Updated menu indices to account for expanded menu
+- `artifacts/class_diagram.puml` - Updated Calculator and Operation definitions
+
+### Test Results
+- All 48 tests passed
+- New tests: 11 test cases covering square, sqrt, power, modulo operations
+- Existing tests: All 12 original tests still pass
+- CLI tests: 26 tests (updated for expanded menu structure)
+- Service tests: All service integration tests pass
+
+### Implementation Details
+- square(x) returns x² using Python's ** operator
+- sqrt(x) returns √x using math.sqrt(), raises ValueError for negative input
+- power(x, y) returns x^y, supports fractional and negative exponents
+- modulo(x, y) returns x % y, raises ValueError when y == 0
+- All operations follow same method signature style as existing operations
+- Error handling via raised exceptions (no sentinel values)
+- Dispatch mechanism updated to handle unary/binary operations uniformly
+
+### Accessibility
+- Interactive mode: New operations appear as menu options 5-8 (Square Root, Power, Modulo, Square)
+- CLI mode: `python -m src --operation square 4 0` → 16
+- Error handling: `python -m src --operation sqrt -- -1` → Error (negative sqrt)
+- All operations support both integer and floating-point operands
+
+Duration: 278.4s | Cost: $0.567642 USD | Turns: 32
