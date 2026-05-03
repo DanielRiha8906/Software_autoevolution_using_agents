@@ -1,6 +1,7 @@
 from typing import List, Optional
 
 from ..models.workflow_run import WorkflowRun
+from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..storage.workflow_json_storage import WorkflowJsonStorage
@@ -35,3 +36,44 @@ class WorkflowRunService:
 
     def filter_by_conclusion(self, conclusion: WorkflowConclusion) -> List[WorkflowRun]:
         return [r for r in self._runs if r.conclusion == conclusion]
+
+    def validate_attempt_uniqueness(self, attempts: List[WorkflowRunAttempt]) -> bool:
+        """Validate that all attempt numbers in the list are unique.
+
+        Args:
+            attempts: List of WorkflowRunAttempt objects to validate
+
+        Returns:
+            True if all attempt numbers are unique
+
+        Raises:
+            ValueError: If duplicate attempt numbers are found
+        """
+        attempt_numbers = [attempt.attempt_number for attempt in attempts]
+        if len(attempt_numbers) != len(set(attempt_numbers)):
+            raise ValueError("Attempt numbers must be unique within a workflow run")
+        return True
+
+    def add_workflow_run_attempt(self, run_id: str, attempt: WorkflowRunAttempt) -> WorkflowRunAttempt:
+        """Add a workflow run attempt to a specific run.
+
+        Args:
+            run_id: The ID of the workflow run
+            attempt: The WorkflowRunAttempt to add
+
+        Returns:
+            The added WorkflowRunAttempt
+
+        Raises:
+            ValueError: If run not found or attempt number already exists in the run
+        """
+        run = self.get_run_detail(run_id)
+        if run is None:
+            raise ValueError(f"Run with id '{run_id}' not found.")
+        if any(a.attempt_number == attempt.attempt_number for a in run.attempts):
+            raise ValueError(
+                f"Attempt number {attempt.attempt_number} already exists in run '{run_id}'."
+            )
+        run.attempts.append(attempt)
+        self._persist()
+        return attempt

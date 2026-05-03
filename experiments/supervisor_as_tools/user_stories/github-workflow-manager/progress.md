@@ -81,3 +81,51 @@ Successfully implemented five state-checking methods for the WorkflowRun class t
 - **Diagrams**: Class, activity, and use case diagrams updated
 
 Duration: 297.8s | Cost: $0.581765 USD | Turns: 21
+
+---
+
+# Task 03: WorkflowRunAttempt Model for Retry Tracking
+
+## Summary
+Successfully implemented the `WorkflowRunAttempt` model as a first-class object to track individual attempts of workflow runs with their own status, conclusion, and execution metrics.
+
+## Files Changed
+- `src/models/workflow_attempt_status.py` — New enum with values: QUEUED, IN_PROGRESS, COMPLETED, WAITING, REQUESTED, PENDING
+- `src/models/workflow_attempt_conclusion.py` — New enum with values: SUCCESS, FAILURE, CANCELLED, SKIPPED, TIMED_OUT, ACTION_REQUIRED, NEUTRAL, STALE
+- `src/models/workflow_run_attempt.py` — New dataclass with id, run_id, attempt_number, status, conclusion, created_at, duration_seconds
+- `src/models/__init__.py` — Added imports and exports for new models
+- `src/models/workflow_run.py` — Added attempts list field with backward compatibility
+- `src/services/workflow_run_service.py` — Added service methods for attempt management
+- `artifacts/class_diagram.puml` — Updated to show WorkflowRunAttempt relationships
+
+## Test Results
+- **Total tests**: 154
+- **Passed**: 154 ✓
+- **Failed**: 0
+- **Command**: `pytest tests/ -q`
+
+## Acceptance Criteria Met
+✓ WorkflowRunAttempt has: id, run_id, attempt_number, status, conclusion, created_at, duration_seconds
+✓ (run_id, attempt_number) tuple uniqueness enforced via service validation
+✓ attempt_number is positive integer starting from 1
+✓ Associated with parent WorkflowRun via attempts list
+✓ JSON serialization/deserialization with ISO 8601 datetime format
+✓ Optional duration_seconds attribute for tracking execution time
+✓ Enum-based status and conclusion with consistent serialization
+✓ Backward compatibility: WorkflowRun loads without attempts field as empty list
+
+## Feature Coverage
+- **Model layer**: WorkflowRunAttempt dataclass with validation in __post_init__
+- **Enums**: WorkflowAttemptStatus and WorkflowAttemptConclusion for type safety
+- **Serialization**: to_dict() and from_dict() methods with ISO datetime handling
+- **Parent-child relationship**: WorkflowRun.attempts list with composition relationship
+- **Service layer**: add_workflow_run_attempt() and validate_attempt_uniqueness() methods
+- **Diagrams**: Class diagram updated with new model and relationships
+
+## Implementation Details
+- Validation: attempt_number >= 1, duration_seconds >= 0 if not None
+- Datetime format: ISO 8601 (UTC) matching existing WorkflowRun pattern
+- Uniqueness check: (run_id, attempt_number) pairs validated at service level
+- Backward compatibility: Missing attempts field defaults to empty list on load
+
+Duration: 230.8s | Cost: $0.427512 USD | Turns: 19
