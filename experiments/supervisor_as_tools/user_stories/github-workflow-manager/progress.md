@@ -248,4 +248,40 @@ Successfully implemented a comprehensive filtering interface for workflow runs s
 5. **Optional parameters with None defaults**: Makes each filter truly optional and composable
 6. **Interactive menu loop**: Allows building complex queries without returning to main menu
 
+## Follow-up: CLI Flag Enhancement (Supervisor-based iteration)
+
+During supervisor review, identified one gap in the CLI interface:
+- **Gap**: The `--has-attempts` flag only supported filtering for runs WITH attempts (boolean flag, action="store_true")
+- **Gap**: No CLI flag mechanism to filter for runs WITHOUT attempts (interactive menu supported it)
+- **Fix**: Converted `--has-attempts` from boolean flag to choice argument accepting "yes" or "no"
+
+### Changes Made to Close Gap
+- `src/cli/workflow_cli.py` — Changed `--has-attempts` argument definition to use `choices=['yes', 'no']` with `default=None`, updated handler logic to map string to boolean value
+- `artifacts/activity_diagram_main.puml` — Updated to reflect the choice argument semantics
+
+### Verification
+- All 188 tests still passing
+- CLI now supports: `--has-attempts=yes` (runs with attempts), `--has-attempts=no` (runs without attempts), omitted (no filter)
+- Invalid values are automatically rejected with clear error messages
+
 Duration: 411.4s | Cost: $0.787644 USD | Turns: 21
+
+---
+
+# Task 05 Completion (supervisor iteration)
+
+## Final Summary
+The filtering interface was fully implemented and tested. During supervisor review, one CLI interface gap was identified and fixed:
+- Fixed `--has-attempts` flag to support filtering for runs without attempts via `--has-attempts=no`
+
+## Files Changed (Final)
+- `src/cli/workflow_cli.py` — Enhanced --has-attempts argument for complete filter coverage
+- `artifacts/activity_diagram_main.puml` — Updated to show choice argument semantics
+
+## Final Test Results
+- **Total tests**: 188
+- **Passed**: 188 ✓
+- **Failed**: 0
+- **Execution time**: 0.25s
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

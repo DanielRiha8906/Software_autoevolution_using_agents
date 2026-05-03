@@ -157,8 +157,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     list_p.add_argument(
         "--has-attempts",
-        action="store_true",
-        help="Filter to only show runs with attempts",
+        choices=["yes", "no"],
+        default=None,
+        help="Filter by attempts: 'yes' for runs with attempts, 'no' for runs without attempts, omit for no filtering",
     )
 
     # detail
@@ -265,8 +266,8 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
                 print(f"Error: {e}", file=sys.stderr)
                 sys.exit(1)
 
-        if ns.has_attempts:
-            filter_kwargs["has_attempts"] = True
+        if ns.has_attempts is not None:
+            filter_kwargs["has_attempts"] = ns.has_attempts == "yes"
 
         runs = service.filter_runs(**filter_kwargs)
 

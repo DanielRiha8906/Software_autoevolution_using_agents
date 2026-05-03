@@ -25,6 +25,8 @@ if (CLI arguments provided?) then (yes)
         :filter_by_status();
       elseif (--conclusion?) then (yes)
         :filter_by_conclusion();
+      elseif (--has-attempts?) then (yes)
+        :filter by has_attempts\n(yes = with attempts,\nno = without attempts);
       endif
       if (no runs?) then (yes)
         :Print "No runs found.";
