@@ -761,4 +761,4 @@ print(f"Success rate: {stats.count_by_conclusion.get('success', 0)}")
 print(f"Avg duration: {stats.average_duration_seconds:.2f}s")
 ```
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 554.3s | Cost: $1.343459 USD | Turns: 53
