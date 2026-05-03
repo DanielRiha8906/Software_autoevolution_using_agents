@@ -195,3 +195,57 @@ Successfully implemented the `AttemptService` to centralize attempt management a
 - **State**: Stateless service operations, no side effects beyond persistence
 
 Duration: 406.4s | Cost: $0.770313 USD | Turns: 18
+
+---
+
+# Task 05: Programmatic Filtering Interface for Workflow Runs
+
+## Summary
+Successfully implemented a comprehensive filtering interface for workflow runs supporting duration range, timestamp (before/after), and attempt presence filters. All filters can be combined in a single query call and are accessible via both CLI flags and interactive menu.
+
+## Files Changed
+- `src/services/workflow_run_service.py` — Added filter_runs() method with 10 optional filter parameters
+- `src/cli/workflow_cli.py` — Added _parse_iso8601() helper and new CLI arguments (--duration-min, --duration-max, --created-after, --created-before, --updated-after, --updated-before, --has-attempts), updated run_cli() to use filter_runs()
+- `src/cli/interactive_menu.py` — Added _advanced_filter_menu() function for multi-filter selection, added "Advanced filter runs" menu option
+- `tests/test_workflow_run_service.py` — Added 18 comprehensive test functions covering single filters, multi-filter combinations, edge cases, and ISO 8601 parsing
+- `artifacts/class_diagram.puml` — Updated WorkflowRunService with filter_runs() method, added _parse_iso8601() and _advanced_filter_menu() functions
+
+## Test Results
+- **Total tests**: 188
+- **Passed**: 188 ✓
+- **Failed**: 0
+- **Command**: `pytest tests/ -q`
+
+## Acceptance Criteria Met
+✓ Programmatic query interface available over workflow runs via filter_runs()
+✓ Filtering by duration range (duration_min, duration_max) with inclusive boundaries
+✓ Filtering by timestamp (created_after, created_before, updated_after, updated_before) with exclusive boundaries
+✓ Filtering by attempt presence (has_attempts=True/False)
+✓ Multiple filters can be combined in a single query call (AND logic)
+✓ Results returned as collection of WorkflowRun objects
+✓ No database or external index used — all filtering done in-memory on service._runs
+✓ Accessible via python -m src:
+  - Interactive menu: "Advanced filter runs" option with multi-filter selection loop
+  - CLI flags: `python -m src list --duration-min X --duration-max Y --created-after T1 --created-before T2 --updated-after T3 --updated-before T4 --has-attempts`
+
+## Feature Coverage
+- **Service layer**: Generic filter_runs() method with 10 optional parameters supporting all required filter types
+- **CLI layer**: Seven new arguments with ISO 8601 timestamp parsing, error handling for invalid input
+- **Interactive menu**: Advanced filter menu with loop-based multi-filter selection, validation of inputs, proper date range checking
+- **Filtering logic**: 
+  - Duration filters use >= and <= (inclusive boundaries)
+  - Timestamp filters use > and < (exclusive boundaries)
+  - updated_at filters skip None values
+  - has_attempts filters by presence (len > 0) or absence (len == 0)
+- **Date parsing**: ISO 8601 support for both 'Z' suffix and '+00:00' UTC format
+- **Test coverage**: 18 new tests covering single filters, combinations, boundaries, edge cases, and error handling
+
+## Implementation Decisions
+1. **Generic filter_runs() method**: Avoids method explosion and supports arbitrary filter combinations
+2. **AND logic for multi-filters**: Most intuitive for CLI users (all filters must match)
+3. **ISO 8601 timestamps**: Standard, unambiguous format for CLI input
+4. **Exclusive boundaries for timestamps**: Follows convention (after > not >=, before < not <=)
+5. **Optional parameters with None defaults**: Makes each filter truly optional and composable
+6. **Interactive menu loop**: Allows building complex queries without returning to main menu
+
+Duration: 411.4s | Cost: $0.787644 USD | Turns: 21

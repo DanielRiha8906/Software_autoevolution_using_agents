@@ -11,6 +11,7 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
+from .workflow_cli import _parse_iso8601
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -155,6 +156,152 @@ def _filter_menu(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
+def _advanced_filter_menu(service: WorkflowRunService) -> None:
+    """Multi-filter interactive menu for complex query scenarios."""
+    filter_kwargs = {}
+
+    while True:
+        filter_choices = [
+            "branch",
+            "status",
+            "conclusion",
+            "duration",
+            "created date range",
+            "updated date range",
+            "attempts",
+            "Done filtering",
+        ]
+        filter_type = _choose("Select filter to add", filter_choices)
+
+        if filter_type == "Done filtering":
+            break
+
+        if filter_type == "branch":
+            branch = _prompt("Branch name")
+            if branch:
+                filter_kwargs["branch"] = branch
+
+        elif filter_type == "status":
+            status_val = _choose("Status", [s.value for s in WorkflowStatus])
+            filter_kwargs["status"] = WorkflowStatus(status_val)
+
+        elif filter_type == "conclusion":
+            conclusion_val = _choose("Conclusion", [c.value for c in WorkflowConclusion])
+            filter_kwargs["conclusion"] = WorkflowConclusion(conclusion_val)
+
+        elif filter_type == "duration":
+            while True:
+                duration_min_str = _prompt("Minimum duration in seconds (leave blank for no minimum)", "")
+                if not duration_min_str:
+                    duration_min = None
+                    break
+                try:
+                    duration_min = float(duration_min_str)
+                    if duration_min < 0:
+                        print("Duration cannot be negative. Please try again.")
+                        continue
+                    break
+                except ValueError:
+                    print("Invalid number. Please try again.")
+
+            while True:
+                duration_max_str = _prompt("Maximum duration in seconds (leave blank for no maximum)", "")
+                if not duration_max_str:
+                    duration_max = None
+                    break
+                try:
+                    duration_max = float(duration_max_str)
+                    if duration_max < 0:
+                        print("Duration cannot be negative. Please try again.")
+                        continue
+                    if duration_min is not None and duration_max < duration_min:
+                        print("Maximum must be >= minimum. Please try again.")
+                        continue
+                    break
+                except ValueError:
+                    print("Invalid number. Please try again.")
+
+            if duration_min is not None:
+                filter_kwargs["duration_min"] = duration_min
+            if duration_max is not None:
+                filter_kwargs["duration_max"] = duration_max
+
+        elif filter_type == "created date range":
+            while True:
+                created_after_str = _prompt("Created after (ISO 8601, leave blank for no minimum)", "")
+                if not created_after_str:
+                    created_after = None
+                    break
+                try:
+                    created_after = _parse_iso8601(created_after_str)
+                    break
+                except ValueError as e:
+                    print(f"Invalid date: {e}. Please try again.")
+
+            while True:
+                created_before_str = _prompt("Created before (ISO 8601, leave blank for no maximum)", "")
+                if not created_before_str:
+                    created_before = None
+                    break
+                try:
+                    created_before = _parse_iso8601(created_before_str)
+                    if created_after is not None and created_before <= created_after:
+                        print("Created before must be after created_after. Please try again.")
+                        continue
+                    break
+                except ValueError as e:
+                    print(f"Invalid date: {e}. Please try again.")
+
+            if created_after is not None:
+                filter_kwargs["created_after"] = created_after
+            if created_before is not None:
+                filter_kwargs["created_before"] = created_before
+
+        elif filter_type == "updated date range":
+            while True:
+                updated_after_str = _prompt("Updated after (ISO 8601, leave blank for no minimum)", "")
+                if not updated_after_str:
+                    updated_after = None
+                    break
+                try:
+                    updated_after = _parse_iso8601(updated_after_str)
+                    break
+                except ValueError as e:
+                    print(f"Invalid date: {e}. Please try again.")
+
+            while True:
+                updated_before_str = _prompt("Updated before (ISO 8601, leave blank for no maximum)", "")
+                if not updated_before_str:
+                    updated_before = None
+                    break
+                try:
+                    updated_before = _parse_iso8601(updated_before_str)
+                    if updated_after is not None and updated_before <= updated_after:
+                        print("Updated before must be after updated_after. Please try again.")
+                        continue
+                    break
+                except ValueError as e:
+                    print(f"Invalid date: {e}. Please try again.")
+
+            if updated_after is not None:
+                filter_kwargs["updated_after"] = updated_after
+            if updated_before is not None:
+                filter_kwargs["updated_before"] = updated_before
+
+        elif filter_type == "attempts":
+            has_attempts_choice = _choose("Show runs with attempts?", ["Yes", "No"])
+            filter_kwargs["has_attempts"] = has_attempts_choice == "Yes"
+
+    runs = service.filter_runs(**filter_kwargs)
+
+    if not runs:
+        print("\nNo matching runs.")
+        return
+    print(f"\n--- {len(runs)} matching run(s) ---")
+    for run in runs:
+        print(_fmt_run(run))
+
+
 def _add_attempt(service: WorkflowRunService) -> None:
     attempt_service = AttemptService(service)
     print("\n--- Add Workflow Attempt ---")
@@ -236,6 +383,7 @@ MENU = [
     ("Get run detail", _detail_run),
     ("Check run status", _check_run_status),
     ("Filter runs", _filter_menu),
+    ("Advanced filter runs", _advanced_filter_menu),
     ("Add attempt", _add_attempt),
     ("List attempts", _list_attempts),
     ("Exit", None),

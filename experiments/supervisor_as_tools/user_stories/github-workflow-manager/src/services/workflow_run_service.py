@@ -1,4 +1,5 @@
 from typing import List, Optional
+from datetime import datetime
 
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_run_attempt import WorkflowRunAttempt
@@ -53,6 +54,73 @@ class WorkflowRunService:
         if len(attempt_numbers) != len(set(attempt_numbers)):
             raise ValueError("Attempt numbers must be unique within a workflow run")
         return True
+
+    def filter_runs(
+        self,
+        branch: Optional[str] = None,
+        status: Optional[WorkflowStatus] = None,
+        conclusion: Optional[WorkflowConclusion] = None,
+        duration_min: Optional[float] = None,
+        duration_max: Optional[float] = None,
+        created_after: Optional[datetime] = None,
+        created_before: Optional[datetime] = None,
+        updated_after: Optional[datetime] = None,
+        updated_before: Optional[datetime] = None,
+        has_attempts: Optional[bool] = None,
+    ) -> List[WorkflowRun]:
+        """Filter runs by multiple criteria.
+
+        Args:
+            branch: Filter by branch name
+            status: Filter by workflow status
+            conclusion: Filter by workflow conclusion
+            duration_min: Minimum duration in seconds (inclusive)
+            duration_max: Maximum duration in seconds (inclusive)
+            created_after: Filter runs created after this datetime (exclusive)
+            created_before: Filter runs created before this datetime (exclusive)
+            updated_after: Filter runs updated after this datetime (exclusive), only applies if updated_at is not None
+            updated_before: Filter runs updated before this datetime (exclusive), only applies if updated_at is not None
+            has_attempts: If True, filter by runs with attempts (len > 0); if False, filter by runs without attempts (len == 0)
+
+        Returns:
+            List of filtered WorkflowRun objects
+        """
+        result = list(self._runs)
+
+        if branch is not None:
+            result = [r for r in result if r.branch == branch]
+
+        if status is not None:
+            result = [r for r in result if r.status == status]
+
+        if conclusion is not None:
+            result = [r for r in result if r.conclusion == conclusion]
+
+        if duration_min is not None:
+            result = [r for r in result if r.duration_seconds >= duration_min]
+
+        if duration_max is not None:
+            result = [r for r in result if r.duration_seconds <= duration_max]
+
+        if created_after is not None:
+            result = [r for r in result if r.created_at > created_after]
+
+        if created_before is not None:
+            result = [r for r in result if r.created_at < created_before]
+
+        if updated_after is not None:
+            result = [r for r in result if r.updated_at is not None and r.updated_at > updated_after]
+
+        if updated_before is not None:
+            result = [r for r in result if r.updated_at is not None and r.updated_at < updated_before]
+
+        if has_attempts is not None:
+            if has_attempts:
+                result = [r for r in result if len(r.attempts) > 0]
+            else:
+                result = [r for r in result if len(r.attempts) == 0]
+
+        return result
 
     def add_workflow_run_attempt(self, run_id: str, attempt: WorkflowRunAttempt) -> WorkflowRunAttempt:
         """Add a workflow run attempt to a specific run.

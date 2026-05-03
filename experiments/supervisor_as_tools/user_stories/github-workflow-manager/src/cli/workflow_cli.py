@@ -12,6 +12,28 @@ from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
 
 
+def _parse_iso8601(timestamp_str: str) -> datetime:
+    """Parse ISO 8601 timestamp string to datetime with UTC timezone.
+
+    Args:
+        timestamp_str: ISO 8601 formatted string (e.g., "2024-06-01T00:00:00Z")
+
+    Returns:
+        datetime object in UTC timezone
+
+    Raises:
+        ValueError: If timestamp format is invalid
+    """
+    # Handle 'Z' suffix by replacing with '+00:00'
+    if timestamp_str.endswith('Z'):
+        timestamp_str = timestamp_str[:-1] + '+00:00'
+
+    try:
+        return datetime.fromisoformat(timestamp_str)
+    except ValueError as e:
+        raise ValueError(f"Invalid ISO 8601 timestamp: {timestamp_str}") from e
+
+
 def _fmt_run(run: WorkflowRun) -> str:
     conclusion = run.conclusion.value if run.conclusion else "—"
     updated = run.updated_at.isoformat() if run.updated_at else "—"
@@ -97,6 +119,47 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[c.value for c in WorkflowConclusion],
         help="Filter by conclusion",
     )
+    list_p.add_argument(
+        "--duration-min",
+        type=float,
+        default=None,
+        help="Minimum duration in seconds (inclusive)",
+    )
+    list_p.add_argument(
+        "--duration-max",
+        type=float,
+        default=None,
+        help="Maximum duration in seconds (inclusive)",
+    )
+    list_p.add_argument(
+        "--created-after",
+        type=str,
+        default=None,
+        help="Filter runs created after this ISO 8601 timestamp",
+    )
+    list_p.add_argument(
+        "--created-before",
+        type=str,
+        default=None,
+        help="Filter runs created before this ISO 8601 timestamp",
+    )
+    list_p.add_argument(
+        "--updated-after",
+        type=str,
+        default=None,
+        help="Filter runs updated after this ISO 8601 timestamp",
+    )
+    list_p.add_argument(
+        "--updated-before",
+        type=str,
+        default=None,
+        help="Filter runs updated before this ISO 8601 timestamp",
+    )
+    list_p.add_argument(
+        "--has-attempts",
+        action="store_true",
+        help="Filter to only show runs with attempts",
+    )
 
     # detail
     detail_p = sub.add_parser("detail", help="Show details for a single run")
@@ -156,13 +219,56 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
         print(f"Added run {run.id}")
 
     elif ns.command == "list":
-        runs = service.list_runs()
-        if ns.branch:
-            runs = service.filter_by_branch(ns.branch)
-        elif ns.status:
-            runs = service.filter_by_status(WorkflowStatus(ns.status))
-        elif ns.conclusion:
-            runs = service.filter_by_conclusion(WorkflowConclusion(ns.conclusion))
+        # Build kwargs dict for filter_runs()
+        filter_kwargs = {}
+
+        if ns.branch is not None:
+            filter_kwargs["branch"] = ns.branch
+
+        if ns.status is not None:
+            filter_kwargs["status"] = WorkflowStatus(ns.status)
+
+        if ns.conclusion is not None:
+            filter_kwargs["conclusion"] = WorkflowConclusion(ns.conclusion)
+
+        if ns.duration_min is not None:
+            filter_kwargs["duration_min"] = ns.duration_min
+
+        if ns.duration_max is not None:
+            filter_kwargs["duration_max"] = ns.duration_max
+
+        if ns.created_after is not None:
+            try:
+                filter_kwargs["created_after"] = _parse_iso8601(ns.created_after)
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        if ns.created_before is not None:
+            try:
+                filter_kwargs["created_before"] = _parse_iso8601(ns.created_before)
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        if ns.updated_after is not None:
+            try:
+                filter_kwargs["updated_after"] = _parse_iso8601(ns.updated_after)
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        if ns.updated_before is not None:
+            try:
+                filter_kwargs["updated_before"] = _parse_iso8601(ns.updated_before)
+            except ValueError as e:
+                print(f"Error: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        if ns.has_attempts:
+            filter_kwargs["has_attempts"] = True
+
+        runs = service.filter_runs(**filter_kwargs)
 
         if not runs:
             print("No runs found.")
