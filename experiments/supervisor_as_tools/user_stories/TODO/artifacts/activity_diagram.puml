@@ -24,9 +24,11 @@ repeat
       :Run check status flow;
     case (8 — Manage comments)
       :Run comment management flow;
-    case (9 — Summary report)
+    case (9 — Manage projects)
+      :Run project management flow;
+    case (10 — Summary report)
       :Run summary report flow;
-    case (10 — Import/Export)
+    case (11 — Import/Export)
       :Run import/export flow;
     case (0/q — Quit)
       :Clear screen;
@@ -38,6 +40,14 @@ repeat
 repeat while (user continues)
 
 partition "List/Filter Flow" {
+  :Select project filter (all / specific project);
+  if (Specific project?) then (yes)
+    :Load and display all projects;
+    :Pick project by ID;
+    :Set project_id filter;
+  else (all)
+    :Set project_id filter to None;
+  endif
   :Select status filter (pending / in progress / done / all);
   :Select date filter option;
   switch (date_filter_choice)
@@ -76,7 +86,7 @@ partition "List/Filter Flow" {
     case (no date filter)
       :Skip date filtering;
   endswitch
-  :Call list_tasks(status, due_before, due_after, overdue_only);
+  :Call list_tasks(status, due_before, due_after, overdue_only, project_id);
   :Display filtered results;
 }
 
@@ -94,7 +104,15 @@ partition "Add/Update Task Flow" {
   else (no)
     :Leave due_date as None;
   endif
-  :Create/update task with due_date;
+  :Ask to assign project (yes/no);
+  if (Assign to project?) then (yes)
+    :Load and display all projects;
+    :Pick project by ID;
+    :Set project_id for task;
+  else (no)
+    :Leave project_id as None;
+  endif
+  :Create/update task with due_date and project_id;
   :Persist to storage;
 }
 
@@ -157,6 +175,54 @@ partition "Comment Management Flow" {
         :Pick comment to delete;
         :Remove from storage;
         :Persist changes;
+      endif
+    endif
+  endif
+}
+
+partition "Project Management Flow" {
+  :Pick action (create/list/update/delete/assign task);
+  if (Action == create?) then (yes)
+    :Input project name;
+    :Input optional description;
+    if (Name empty?) then (yes)
+      :Show error: name required;
+      :Return to input;
+    else (no)
+      :Create project;
+      :Persist to storage;
+      :Show success with project ID;
+    endif
+  else
+    if (Action == list?) then (yes)
+      :Load all projects;
+      :Display project list with IDs and descriptions;
+    else
+      if (Action == update?) then (yes)
+        :Pick project from list (by ID);
+        :Input new name and/or description;
+        :Update project;
+        :Persist to storage;
+        :Show success;
+      else
+        if (Action == delete?) then (yes)
+          :Pick project from list (by ID);
+          :Confirm deletion;
+          if (Confirmed?) then (yes)
+            :Delete project;
+            :Cascade: unassign all tasks from project;
+            :Persist changes;
+            :Show success;
+          else (no)
+            :Cancel deletion;
+          endif
+        else
+          :Pick project from list;
+          :Pick task to assign/reassign;
+          :Set task.project_id to selected project;
+          :Persist changes;
+          :Show success;
+        endif
       endif
     endif
   endif

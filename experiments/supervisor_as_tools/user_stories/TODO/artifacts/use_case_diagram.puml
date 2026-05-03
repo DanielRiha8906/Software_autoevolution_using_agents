@@ -6,6 +6,16 @@ actor User
 
 rectangle "TODO Manager" {
 
+  package "Project Management" {
+    usecase "Create project" as CREATE_PROJECT
+    usecase "Read project" as READ_PROJECT
+    usecase "List projects" as LIST_PROJECTS
+    usecase "Update project" as UPDATE_PROJECT
+    usecase "Delete project" as DELETE_PROJECT
+    usecase "Assign task to project" as ASSIGN_TASK_PROJECT
+    usecase "Unassign task from project" as UNASSIGN_TASK_PROJECT
+  }
+
   package "Comment Management" {
     usecase "Add comment to task" as ADD_COMMENT
     usecase "View task comments" as VIEW_COMMENTS
@@ -29,9 +39,11 @@ rectangle "TODO Manager" {
     usecase "Delete task" as I_DELETE
     usecase "Check task status" as I_CHECK
     usecase "Manage comments" as I_MANAGE_COMMENTS
+    usecase "Manage projects" as I_MANAGE_PROJECTS
     usecase "View summary report" as I_SUMMARY
     usecase "Set task due date" as I_DUEDATE
     usecase "View task due date" as I_VIEWDUE
+    usecase "Assign task to project" as I_ASSIGN_PROJECT
     usecase "Quit application" as I_QUIT
   }
 
@@ -51,6 +63,10 @@ rectangle "TODO Manager" {
     usecase "Check if in-progress" as C_IS_IN_PROG
     usecase "Check if completed" as C_IS_COMPLETED
     usecase "Check if overdue" as C_IS_OVERDUE
+    usecase "Create project" as C_CREATE_PROJECT
+    usecase "List projects" as C_LIST_PROJECTS
+    usecase "Update project" as C_UPDATE_PROJECT
+    usecase "Delete project" as C_DELETE_PROJECT
     usecase "View summary report" as C_SUMMARY
     usecase "Set task due date" as C_DUEDATE
   }
@@ -58,6 +74,13 @@ rectangle "TODO Manager" {
 
 User --> UI
 User --> CLI
+User --> CREATE_PROJECT
+User --> READ_PROJECT
+User --> LIST_PROJECTS
+User --> UPDATE_PROJECT
+User --> DELETE_PROJECT
+User --> ASSIGN_TASK_PROJECT
+User --> UNASSIGN_TASK_PROJECT
 User --> ADD_COMMENT
 User --> VIEW_COMMENTS
 User --> VIEW_COMMENT
@@ -65,6 +88,9 @@ User --> UPDATE_COMMENT
 User --> DELETE_COMMENT
 User --> EXPORT
 User --> IMPORT
+
+CREATE_PROJECT --> DELETE_PROJECT : cascades unassign on
+DELETE_PROJECT --> UNASSIGN_TASK_PROJECT : cascades
 
 ADD_COMMENT --> I_SHOW : relates to
 VIEW_COMMENTS --> I_SHOW : relates to
@@ -80,14 +106,24 @@ UI ..> I_UPDATE : <<exclude>>
 UI ..> I_DELETE : <<exclude>>
 UI ..> I_CHECK  : <<exclude>>
 UI ..> I_MANAGE_COMMENTS : <<exclude>>
+UI ..> I_MANAGE_PROJECTS : <<exclude>>
 UI ..> I_SUMMARY : <<exclude>>
 UI ..> I_DUEDATE : <<exclude>>
 UI ..> I_VIEWDUE : <<exclude>>
+UI ..> I_ASSIGN_PROJECT : <<exclude>>
 UI ..> I_QUIT   : <<exclude>>
 
 I_ADD ..> I_DUEDATE : <<include>>
+I_ADD ..> I_ASSIGN_PROJECT : <<include>>
 I_UPDATE ..> I_DUEDATE : <<include>>
+I_UPDATE ..> I_ASSIGN_PROJECT : <<include>>
 I_SHOW ..> I_VIEWDUE : <<include>>
+I_LIST ..> I_ASSIGN_PROJECT : <<include>>
+I_MANAGE_PROJECTS ..> CREATE_PROJECT : <<include>>
+I_MANAGE_PROJECTS ..> READ_PROJECT : <<include>>
+I_MANAGE_PROJECTS ..> LIST_PROJECTS : <<include>>
+I_MANAGE_PROJECTS ..> UPDATE_PROJECT : <<include>>
+I_MANAGE_PROJECTS ..> DELETE_PROJECT : <<include>>
 
 CLI ..> C_ADD    : <<exclude>>
 CLI ..> C_LIST   : <<exclude>>
@@ -103,6 +139,10 @@ CLI ..> C_IS_PENDING : <<exclude>>
 CLI ..> C_IS_IN_PROG : <<exclude>>
 CLI ..> C_IS_COMPLETED : <<exclude>>
 CLI ..> C_IS_OVERDUE : <<exclude>>
+CLI ..> C_CREATE_PROJECT : <<exclude>>
+CLI ..> C_LIST_PROJECTS : <<exclude>>
+CLI ..> C_UPDATE_PROJECT : <<exclude>>
+CLI ..> C_DELETE_PROJECT : <<exclude>>
 CLI ..> C_SUMMARY : <<exclude>>
 CLI ..> C_DUEDATE : <<exclude>>
 
