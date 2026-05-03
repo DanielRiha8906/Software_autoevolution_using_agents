@@ -200,3 +200,103 @@ No test regressions. All existing tests continue to pass. The 15 MemoryEntry-spe
 - Various operation types and edge cases
 
 Duration: 310.5s | Cost: $0.615759 USD | Turns: 47
+
+## Task 04: Add MemoryService for managing MemoryEntry
+
+### Broadcast Evaluation
+
+Three independent implementers were spawned on separate branches to solve this task:
+
+**Candidate-A** — Integrated MemoryService with generic JsonStorage
+- Modified 7 files: `src/services/memory_service.py`, `src/services/calculator_service.py`, `src/storage/json_storage.py`, `src/cli/calculator_cli.py`, `src/__main__.py`, `src/services/__init__.py`, `tests/test_cli.py`
+- Implemented MemoryService with store() and retrieve() methods delegating to JsonStorage
+- Made JsonStorage generic (TypeVar, Generic) to support both CalculationResult and MemoryEntry
+- Added "View memory" menu option (item 10) and --memory-show CLI flag
+- CalculatorService auto-stores successful calculations as MemoryEntry objects
+- Fixed CLI tests to account for new menu option (6 tests updated)
+- **Test result: 81/81 passed**
+
+**Candidate-B** — Identical implementation to Candidate-A
+- Modified 7 files: identical scope
+- Implemented MemoryService with store() and retrieve() methods
+- Made JsonStorage generic with TypeVar and Generic base
+- Added "View memory" menu option and --memory-show flag
+- CalculatorService integration: auto-storage on successful calculations
+- Fixed CLI tests for new menu structure
+- **Test result: 81/81 passed**
+
+**Candidate-C** — Identical implementation to Candidates A and B
+- Modified 7 files: identical scope
+- Clean MemoryService class with proper docstrings
+- Generic JsonStorage supporting both model types
+- Full CLI integration with both interactive and one-shot modes
+- All CLI tests updated and passing
+- **Test result: 81/81 passed**
+
+### Winner Selection: Candidate-A
+
+**Rationale**:
+1. **All tests passing** — 81/81 tests pass (equal with B and C)
+2. **Clean separation of concerns** — Service manages objects, JsonStorage handles persistence
+3. **Backward compatibility** — memory_service parameters optional, defaults to None
+4. **Generic storage pattern** — JsonStorage TypeVar approach enables polymorphism for future model types
+5. **Complete CLI integration** — Both interactive menu option and one-shot --memory-show flag
+6. **No over-engineering** — Minimal, focused implementation addressing all must-have requirements
+
+### Files Changed
+
+- `src/services/memory_service.py` (new) — MemoryService class with store() and retrieve() methods
+- `src/services/calculator_service.py` — Added optional memory_service parameter, auto-stores successful calculations
+- `src/storage/json_storage.py` — Made generic with TypeVar `T` and Generic base to support CalculationResult and MemoryEntry
+- `src/cli/calculator_cli.py` — Added "View memory" menu option (item 10), run_memory_show() for --memory-show flag
+- `src/__main__.py` — Added _build_memory_service() function, wired services together with dependency injection
+- `src/services/__init__.py` — Exported MemoryService class
+- `tests/test_cli.py` — Updated 6 tests to use new menu option numbering (exit moved from 10 to 11)
+- `artifacts/class_diagram.puml` — Added MemoryService class and relationships
+- `artifacts/component_diagram.puml` — Added MemoryService to Service Layer, memory.json to Data Layer
+- `artifacts/sequence_diagram.puml` — Updated to show memory storage flow
+- `artifacts/memory_service_sequence.puml` (new) — Detailed sequence diagram for memory operations
+- `artifacts/deployment_diagram.puml` (new) — File structure mapping showing memory.json
+- `artifacts/data_model_diagram.puml` (new) — Serialization contracts for MemoryEntry
+- `artifacts/architecture_diagram.puml` (new) — Layered architecture including MemoryService
+
+### Test Results
+
+**Before**: 75 tests passing (38 original + 37 from previous tasks)  
+**After**: 81 tests passing  
+
+All 81 tests pass, including:
+- 15 MemoryEntry model tests (to_dict, from_dict, timestamp, etc.)
+- 31 core tests (memory operations, calculator service, storage)
+- 30+ CLI tests (interactive menu, one-shot flags, error handling, history)
+- 5+ JSON storage tests with generic type handling
+
+### Implementation Details
+
+- **MemoryService** manages MemoryEntry lifecycle without I/O logic
+  - `store(entry: MemoryEntry)` — Delegates to JsonStorage.save()
+  - `retrieve() -> list[MemoryEntry]` — Delegates to JsonStorage.load_all()
+  
+- **JsonStorage generification** enables polymorphic persistence
+  - `T = TypeVar('T')` with `to_dict()` and `from_dict()` protocol
+  - Backward compatible: defaults to CalculationResult
+  - Accepts `model_class` parameter for MemoryEntry
+  
+- **CalculatorService integration** auto-stores on success
+  - Creates MemoryEntry with operation details and timing
+  - Calls `memory_service.store()` after successful calculation
+  - memory_service parameter optional for backward compatibility
+  
+- **CLI exposure** via both modes
+  - Interactive: Menu option 10 — "View memory"
+  - One-shot: `python -m src --memory-show` displays all entries
+  - Memory entries persisted to `artifacts/memory.json`
+  - CalculationResult persists to `artifacts/calculations.json` (unchanged)
+
+- **Architecture**:
+  - Clear separation: MemoryService (lifecycle) → JsonStorage (persistence)
+  - No file I/O inside service class
+  - Dependency injection wiring in __main__.py
+  - Both models implement serialization protocol (to_dict/from_dict)
+
+Duration: 561.6s | Cost: $1.018192 USD | Turns: 29

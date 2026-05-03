@@ -1,0 +1,85 @@
+@startuml
+!theme plain
+skinparam classBackgroundColor #FAFAFA
+skinparam classBorderColor #333333
+skinparam arrowColor #333333
+skinparam fontName Courier
+
+package "Domain Models" {
+  class CalculationResult {
+    +operation: str
+    +operand_a: float
+    +operand_b: float
+    +result: float
+    +timestamp: str
+    +execution_time_ms: float
+    --
+    {method} +to_dict(): dict
+    {method} +from_dict(data: dict): CalculationResult
+  }
+
+  class MemoryEntry {
+    +operation_name: str
+    +operand_a: float
+    +operand_b: float
+    +result: Optional[float]
+    +success: bool
+    +error_message: Optional[str]
+    +execution_timestamp: str
+    +execution_time_ms: float
+    --
+    {method} +to_dict(): dict
+    {method} +from_dict(data: dict): MemoryEntry
+  }
+
+  interface Serializable <<interface>> {
+    {method} +to_dict(): dict
+    {method} +from_dict(data: dict): Self
+  }
+}
+
+package "Storage Contracts" {
+  database "calculations.json" as CalcDB {
+    List[CalculationResult.to_dict()]
+  }
+
+  database "memory.json" as MemDB {
+    List[MemoryEntry.to_dict()]
+  }
+}
+
+CalculationResult ..|> Serializable
+MemoryEntry ..|> Serializable
+
+CalculationResult --> CalcDB: serializes to / from
+MemoryEntry --> MemDB: serializes to / from
+
+note right of CalcDB
+  [
+    {
+      "operation": "add",
+      "operand_a": 5.0,
+      "operand_b": 3.0,
+      "result": 8.0,
+      "timestamp": "2026-05-03T...",
+      "execution_time_ms": 0.001
+    }
+  ]
+end note
+
+note right of MemDB
+  [
+    {
+      "operation_name": "add",
+      "operand_a": 5.0,
+      "operand_b": 3.0,
+      "result": 8.0,
+      "success": true,
+      "error_message": null,
+      "execution_timestamp": "2026-05-03T...",
+      "execution_time_ms": 0.001
+    }
+  ]
+end note
+
+@enduml

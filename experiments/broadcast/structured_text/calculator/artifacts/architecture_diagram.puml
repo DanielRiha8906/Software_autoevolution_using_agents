@@ -1,0 +1,66 @@
+@startuml
+!theme plain
+skinparam boxBackgroundColor #FAFAFA
+skinparam boxBorderColor #333333
+skinparam arrowColor #333333
+skinparam fontName Courier
+
+package "Presentation Layer" as Presentation {
+  component "CalculatorCLI"
+}
+
+package "Service Layer" as Services {
+  component "CalculatorService"
+  component "MemoryService"
+  component "Calculator"
+}
+
+package "Domain Models" as Models {
+  component "Operation"
+  component "CalculationResult"
+  component "MemoryEntry"
+}
+
+package "Storage/Persistence" as Persistence {
+  component "JsonStorage"
+  database "calculations.json"
+  database "memory.json"
+}
+
+' Dependencies
+Presentation --> CalculatorService: depends on
+Presentation -.-> MemoryService: depends on (future)
+
+CalculatorService --> Calculator: uses
+CalculatorService --> CalculationResult: uses
+CalculatorService --> JsonStorage: uses for persistence
+
+MemoryService --> MemoryEntry: manages
+MemoryService --> JsonStorage: uses for persistence
+
+JsonStorage --> CalculationResult: serializes
+JsonStorage --> MemoryEntry: serializes
+JsonStorage --> calculations.json: reads/writes
+JsonStorage --> memory.json: reads/writes
+
+note right of Presentation
+  CLI provides interactive menu
+  and one-shot command mode
+end note
+
+note right of Services
+  Business logic separated
+  from persistence and I/O
+end note
+
+note right of Models
+  Pure domain objects
+  implementing to_dict()/from_dict()
+end note
+
+note right of Persistence
+  Generic storage abstraction
+  supports multiple models
+end note
+
+@enduml

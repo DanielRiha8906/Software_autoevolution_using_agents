@@ -1,0 +1,47 @@
+@startuml
+!theme plain
+skinparam nodeBackgroundColor #FAFAFA
+skinparam nodeBorderColor #333333
+skinparam arrowColor #333333
+skinparam fontName Courier
+
+node "Application" as App {
+  component "src/" as SRC {
+    component "cli/" as CLI {
+      component "calculator_cli.py" as CLIFile
+    }
+    component "services/" as Services {
+      component "calculator_service.py" as CalcServiceFile
+      component "memory_service.py" as MemServiceFile
+      component "calculator.py" as CalcFile
+    }
+    component "models/" as Models {
+      component "calculation_result.py" as CalcResultFile
+      component "memory_entry.py" as MemEntryFile
+      component "operation.py" as OpFile
+    }
+    component "storage/" as Storage {
+      component "json_storage.py" as StorageFile
+    }
+  }
+}
+
+node "Artifacts (Persistent)" as Artifacts {
+  file "calculations.json" as CalcJSON
+  file "memory.json" as MemJSON
+}
+
+CLIFile --> CalcServiceFile: uses
+CLIFile -.-> MemServiceFile: uses (future)
+
+CalcServiceFile --> CalcFile: uses
+CalcServiceFile --> StorageFile: uses
+CalcServiceFile --> CalcResultFile: uses
+
+MemServiceFile --> StorageFile: uses
+MemServiceFile --> MemEntryFile: uses
+
+StorageFile --> CalcJSON: persists CalculationResult
+StorageFile --> MemJSON: persists MemoryEntry
+
+@enduml

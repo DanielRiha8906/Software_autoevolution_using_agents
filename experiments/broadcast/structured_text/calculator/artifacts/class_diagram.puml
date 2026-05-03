@@ -1,109 +1,110 @@
-@startuml class_diagram
+@startuml
+!theme plain
+skinparam classBackgroundColor #FAFAFA
+skinparam classBorderColor #333333
+skinparam arrowColor #333333
+skinparam fontName Courier
 
-skinparam classAttributeIconSize 0
-skinparam classFontStyle bold
+package "models" {
+  enum Operation {
+    ADD
+    SUBTRACT
+    MULTIPLY
+    DIVIDE
+    SQUARE
+    SQRT
+    POWER
+    MODULO
+    --
+    +from_string(value: str): Operation
+    +display_name(): str
+  }
 
-package "models" #DDEEFF {
-    enum Operation {
-        ADD
-        SUBTRACT
-        MULTIPLY
-        DIVIDE
-        SQUARE
-        SQRT
-        POWER
-        MODULO
-        --
-        +fromString(value: String) : Operation
-        +displayName() : String
-    }
+  class CalculationResult {
+    +operation: str
+    +operand_a: float
+    +operand_b: float
+    +result: float
+    +timestamp: str
+    +execution_time_ms: float
+    --
+    +to_dict(): dict
+    +from_dict(data: dict): CalculationResult
+    +__str__(): str
+  }
 
-    class CalculationResult {
-        +operation : Operation
-        +operandA : float
-        +operandB : float
-        +result : float
-        +timestamp : String
-        +executionTimeMs : float
-        --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : CalculationResult
-        +toString() : String
-    }
-
-    class MemoryEntry {
-        +operationName : String
-        +operandA : float
-        +operandB : float
-        +result : float [0..1]
-        +success : bool
-        +errorMessage : String [0..1]
-        +executionTimestamp : String
-        +executionTimeMs : float
-        --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : MemoryEntry
-    }
+  class MemoryEntry {
+    +operation_name: str
+    +operand_a: float
+    +operand_b: float
+    +result: Optional[float]
+    +success: bool
+    +error_message: Optional[str]
+    +execution_timestamp: str
+    +execution_time_ms: float
+    --
+    +to_dict(): dict
+    +from_dict(data: dict): MemoryEntry
+  }
 }
 
-package "services" #DDFFD4 {
-    class Calculator {
-        +add(a: float, b: float) : float
-        +subtract(a: float, b: float) : float
-        +multiply(a: float, b: float) : float
-        +divide(a: float, b: float) : float
-        +square(a: float, b: float) : float
-        +sqrt(a: float, b: float) : float
-        +power(a: float, b: float) : float
-        +modulo(a: float, b: float) : float
-        +calculate(op: Operation, a: float, b: float) : float
-    }
+package "services" {
+  class Calculator {
+    +calculate(op: Operation, a: float, b: float): float
+  }
 
-    class CalculatorService {
-        -calculator : Calculator
-        -storage : JsonStorage
-        --
-        +CalculatorService(calculator: Calculator, storage: JsonStorage)
-        +perform(operation: Operation, a: float, b: float) : CalculationResult
-        +getHistory() : List<CalculationResult>
-    }
+  class CalculatorService {
+    -calculator: Calculator
+    -storage: JsonStorage
+    --
+    +perform(op: Operation, a: float, b: float): CalculationResult
+    +get_history(): list[CalculationResult]
+  }
+
+  class MemoryService {
+    -storage: JsonStorage
+    --
+    +store(entry: MemoryEntry): None
+    +retrieve(): list[MemoryEntry]
+  }
 }
 
-package "storage" #FFF3CC {
-    class JsonStorage {
-        -filepath : String
-        --
-        +JsonStorage(filepath: String)
-        +save(result: CalculationResult) : void
-        +loadAll() : List<CalculationResult>
-        -readRaw() : List<Dictionary>
-        -writeRaw(records: List<Dictionary>) : void
-    }
+package "storage" {
+  class JsonStorage {
+    -filepath: Path
+    --
+    +save(result: CalculationResult): None
+    +load_all(): list[CalculationResult]
+    -_read_raw(): list
+    -_write_raw(records: list): None
+  }
 }
 
-package "cli" #FFE5E5 {
-    class CalculatorCLI {
-        -MENU : List<Tuple<Operation, String>>
-        -service : CalculatorService
-        --
-        +CalculatorCLI(service: CalculatorService)
-        +runInteractive() : void
-        +runCommand(operation: String, a: float, b: float) : void
-        -printMenu() : void
-        -resolveMenuChoice(choice: String) : Operation [0..1]
-        -promptNumber(prompt: String) : float [0..1]
-        -showHistory() : void
-    }
+package "cli" {
+  class CalculatorCLI {
+    -service: CalculatorService
+    --
+    +run_interactive(): None
+    +run_command(op_str: str, a: float, b: float): None
+    -_print_menu(): None
+    -_resolve_menu_choice(choice: str): Operation
+    -_prompt_number(prompt: str): float
+    -_show_history(): None
+  }
 }
 
-CalculatorCLI --> CalculatorService : service
-CalculatorService --> Calculator : calculator
-CalculatorService --> JsonStorage : storage
+' Relationships
+CalculatorService --> Calculator
+CalculatorService --> JsonStorage
+CalculatorService --> Operation
 
-CalculatorService ..> CalculationResult : create
-CalculatorService ..> Operation
-CalculatorCLI ..> Operation
-Calculator ..> Operation
-JsonStorage ..> CalculationResult : stores
+MemoryService --> JsonStorage
+MemoryService --> MemoryEntry
+
+CalculatorCLI --> CalculatorService
+CalculatorCLI --> Operation
+
+JsonStorage --> CalculationResult
+JsonStorage --> MemoryEntry
 
 @enduml

@@ -1,0 +1,63 @@
+@startuml
+!theme plain
+skinparam sequenceActorBackgroundColor #FAFAFA
+skinparam sequenceActorBorderColor #333333
+skinparam sequenceParticipantBackgroundColor #FAFAFA
+skinparam sequenceParticipantBorderColor #333333
+skinparam arrowColor #333333
+skinparam fontName Courier
+
+actor Client
+participant MemService as "MemoryService"
+participant Storage as "JsonStorage"
+participant MemFile as "memory.json"
+
+== Store MemoryEntry ==
+Client -> MemService: store(entry: MemoryEntry)
+activate MemService
+
+  MemService -> Storage: save(entry)
+  activate Storage
+
+    Storage -> Storage: _read_raw()
+    activate Storage
+    Storage -> MemFile: read
+    Storage --> Storage: deserialize JSON
+    deactivate Storage
+
+    Storage -> Storage: append entry.to_dict()
+    activate Storage
+
+    Storage -> Storage: _write_raw(records)
+    activate Storage
+    Storage -> MemFile: write serialized JSON
+    deactivate Storage
+
+  deactivate Storage
+deactivate MemService
+
+== Retrieve MemoryEntry ==
+Client -> MemService: retrieve()
+activate MemService
+
+  MemService -> Storage: load_all()
+  activate Storage
+
+    Storage -> Storage: _read_raw()
+    activate Storage
+    Storage -> MemFile: read
+    Storage --> Storage: deserialize JSON
+    deactivate Storage
+
+    Storage -> Storage: MemoryEntry.from_dict() for each record
+    activate Storage
+    Storage --> Storage: list[MemoryEntry]
+    deactivate Storage
+
+  Storage --> MemService: list[MemoryEntry]
+  deactivate Storage
+
+  MemService --> Client: list[MemoryEntry]
+deactivate MemService
+
+@enduml

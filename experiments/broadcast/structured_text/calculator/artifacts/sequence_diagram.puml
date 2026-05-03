@@ -1,0 +1,61 @@
+@startuml
+!theme plain
+skinparam sequenceActorBackgroundColor #FAFAFA
+skinparam sequenceActorBorderColor #333333
+skinparam sequenceParticipantBackgroundColor #FAFAFA
+skinparam sequenceParticipantBorderColor #333333
+skinparam arrowColor #333333
+skinparam fontName Courier
+
+actor User
+participant CLI as "CalculatorCLI"
+participant CalcService as "CalculatorService"
+participant Calculator as "Calculator"
+participant Storage as "JsonStorage"
+participant MemService as "MemoryService"
+
+User -> CLI: run_interactive()
+activate CLI
+
+loop While not exiting
+  CLI -> User: display menu
+  User -> CLI: choose operation + numbers
+
+  CLI -> CalcService: perform(operation, a, b)
+  activate CalcService
+
+    CalcService -> Calculator: calculate(op, a, b)
+    activate Calculator
+    Calculator --> CalcService: result
+    deactivate Calculator
+
+    CalcService -> Storage: save(CalculationResult)
+    activate Storage
+    Storage -> Storage: _write_raw(records)
+    deactivate Storage
+
+  CalcService --> CLI: CalculationResult
+  deactivate CalcService
+
+  CLI -> User: display result
+end
+
+User -> CLI: choose "View history"
+activate CLI
+
+  CLI -> CalcService: get_history()
+  activate CalcService
+
+    CalcService -> Storage: load_all()
+    activate Storage
+    Storage -> Storage: _read_raw()
+    Storage --> CalcService: list[CalculationResult]
+    deactivate Storage
+
+  CalcService --> CLI: history
+  deactivate CalcService
+
+  CLI -> User: display history
+deactivate CLI
+
+@enduml
