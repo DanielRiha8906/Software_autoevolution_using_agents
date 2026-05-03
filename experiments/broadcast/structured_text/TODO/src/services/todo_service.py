@@ -2,14 +2,18 @@ from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
+from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
+from .comments_service import CommentsService
 
 
 class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
-        self._manager = TaskManager(storage)
+        self._storage = storage or JsonStorage()
+        self._manager = TaskManager(self._storage)
+        self._comments = CommentsService(self._storage)
 
     def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if not title or not title.strip():
@@ -39,4 +43,82 @@ class TodoService:
         return self._manager.update(task_id, title=title, description=description, due_date=due_date)
 
     def delete_task(self, task_id: str) -> None:
-        self._manager.delete(task_id)
+        # Get the full task ID (in case a prefix was provided)
+        task = self.get_task(task_id)
+        # Cascade delete: remove comments for this task
+        self._comments.delete_comments_by_task(task.id)
+        # Delete the task
+        self._manager.delete(task.id)
+
+    # Comment management methods
+    def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
+        """Add a comment to a task.
+
+        Args:
+            task_id: The ID of the task
+            content: The comment content
+            author: Optional author name
+
+        Returns:
+            The created TaskComment
+
+        Raises:
+            ValueError: If the task doesn't exist or content is empty
+        """
+        # Validate that task exists and get the full ID (in case a prefix was provided)
+        task = self.get_task(task_id)
+        return self._comments.add_comment(task.id, content, author)
+
+    def list_comments(self, task_id: str) -> list[TaskComment]:
+        """List all comments for a task, ordered by created_at ascending.
+
+        Args:
+            task_id: The ID of the task
+
+        Returns:
+            List of TaskComment objects ordered by created_at
+        """
+        # Validate that task exists and get the full ID (in case a prefix was provided)
+        task = self.get_task(task_id)
+        return self._comments.list_comments_by_task(task.id)
+
+    def get_comment(self, comment_id: str) -> TaskComment:
+        """Get a comment by ID.
+
+        Args:
+            comment_id: The ID of the comment
+
+        Returns:
+            The TaskComment object
+
+        Raises:
+            CommentNotFoundError: If the comment is not found
+        """
+        return self._comments.get_comment(comment_id)
+
+    def delete_comment(self, comment_id: str) -> None:
+        """Delete a comment by ID.
+
+        Args:
+            comment_id: The ID of the comment to delete
+
+        Raises:
+            CommentNotFoundError: If the comment is not found
+        """
+        self._comments.delete_comment(comment_id)
+
+    def update_comment(self, comment_id: str, content: str) -> TaskComment:
+        """Update a comment's content.
+
+        Args:
+            comment_id: The ID of the comment
+            content: The new comment content
+
+        Returns:
+            The updated TaskComment
+
+        Raises:
+            CommentNotFoundError: If the comment is not found
+            ValueError: If content is empty
+        """
+        return self._comments.update_comment(comment_id, content)
