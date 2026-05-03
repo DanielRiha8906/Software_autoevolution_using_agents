@@ -1,10 +1,13 @@
 import sys
+from datetime import datetime, timezone
 from typing import Optional
 
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
+from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
+from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 
 
@@ -42,6 +45,18 @@ def _fmt_run(run: WorkflowRun) -> str:
         f"  duration_seconds : {run.duration_seconds}\n"
         f"  created_at       : {run.created_at.isoformat()}\n"
         f"  updated_at       : {run.updated_at.isoformat() if run.updated_at else '—'}\n"
+    )
+
+
+def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
+    return (
+        f"  id               : {attempt.id}\n"
+        f"  run_id           : {attempt.run_id}\n"
+        f"  attempt_number   : {attempt.attempt_number}\n"
+        f"  status           : {attempt.status}\n"
+        f"  conclusion       : {attempt.conclusion or '—'}\n"
+        f"  duration_seconds : {attempt.duration_seconds}\n"
+        f"  created_at       : {attempt.created_at.isoformat()}\n"
     )
 
 
@@ -127,17 +142,95 @@ def _check_run_state(service: WorkflowRunService) -> None:
     print(f"  is_cancelled     : {run.is_cancelled()}")
 
 
+def _add_attempt(attempt_service: WorkflowRunAttemptService) -> None:
+    print("\n--- Add Workflow Run Attempt ---")
+    attempt_id_raw = _prompt("Attempt ID (integer)")
+    run_id_raw = _prompt("Parent run ID (integer)")
+    attempt_number_raw = _prompt("Attempt number (positive integer)")
+    status = _prompt("Status")
+    conclusion = _prompt("Conclusion (leave blank to skip)", "") or None
+    duration_raw = _prompt("Duration in seconds", "0.0")
+
+    try:
+        attempt_id = int(attempt_id_raw)
+        run_id = int(run_id_raw)
+        attempt_number = int(attempt_number_raw)
+        duration_seconds = float(duration_raw) if duration_raw else 0.0
+    except ValueError:
+        print("Invalid input: ID and attempt number must be integers, duration must be numeric.")
+        return
+
+    attempt = WorkflowRunAttempt(
+        id=attempt_id,
+        run_id=run_id,
+        attempt_number=attempt_number,
+        status=status,
+        conclusion=conclusion,
+        created_at=datetime.now(timezone.utc),
+        duration_seconds=duration_seconds,
+    )
+    attempt_service.add_attempt(attempt)
+    print(f"\nAdded attempt {attempt.id}")
+
+
+def _list_attempts(attempt_service: WorkflowRunAttemptService) -> None:
+    attempts = attempt_service.list_attempts()
+    if not attempts:
+        print("\nNo attempts recorded.")
+        return
+    print(f"\n--- {len(attempts)} attempt(s) ---")
+    for attempt in attempts:
+        print(_fmt_attempt(attempt))
+
+
+def _detail_attempt(attempt_service: WorkflowRunAttemptService) -> None:
+    attempt_id_raw = _prompt("\nEnter attempt ID")
+    try:
+        attempt_id = int(attempt_id_raw)
+    except ValueError:
+        print("Invalid attempt ID: must be an integer.")
+        return
+    attempt = attempt_service.get_attempt(attempt_id)
+    if attempt is None:
+        print(f"No attempt found with id {attempt_id}.")
+    else:
+        print(_fmt_attempt(attempt))
+
+
+def _list_attempts_for_run(attempt_service: WorkflowRunAttemptService) -> None:
+    run_id_raw = _prompt("\nEnter parent run ID")
+    try:
+        run_id = int(run_id_raw)
+    except ValueError:
+        print("Invalid run ID: must be an integer.")
+        return
+    attempts = attempt_service.get_attempts_for_run(run_id)
+    if not attempts:
+        print(f"\nNo attempts found for run {run_id}.")
+        return
+    print(f"\n--- {len(attempts)} attempt(s) for run {run_id} ---")
+    for attempt in attempts:
+        print(_fmt_attempt(attempt))
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
     ("Get run detail", _detail_run),
     ("Check run state", _check_run_state),
     ("Filter runs", _filter_menu),
+    ("Add workflow run attempt", _add_attempt),
+    ("List all attempts", _list_attempts),
+    ("Get attempt detail", _detail_attempt),
+    ("List attempts for run", _list_attempts_for_run),
     ("Exit", None),
 ]
 
 
-def run_interactive(service: WorkflowRunService) -> None:
+def run_interactive(
+    service: WorkflowRunService,
+    attempt_service: WorkflowRunAttemptService,
+) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
         print("\n" + "=" * 44)
@@ -152,6 +245,10 @@ def run_interactive(service: WorkflowRunService) -> None:
             print("Goodbye.")
             sys.exit(0)
         try:
-            handler(service)
+            # Determine which service(s) to pass based on handler name
+            if handler.__name__.startswith("_add_attempt") or handler.__name__.startswith("_list_attempt") or handler.__name__.startswith("_detail_attempt"):
+                handler(attempt_service)
+            else:
+                handler(service)
         except KeyboardInterrupt:
             print()
