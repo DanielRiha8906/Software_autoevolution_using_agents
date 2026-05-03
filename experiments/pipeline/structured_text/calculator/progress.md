@@ -403,4 +403,4 @@ The memory filtering is now fully accessible via:
 4. **Order preservation:** Filtered results maintain insertion order from retrieve_all()
 5. **Menu structure update:** Exit moved from option 10 to 13 to accommodate new filter options
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 585.3s | Cost: $1.061077 USD | Turns: 14
