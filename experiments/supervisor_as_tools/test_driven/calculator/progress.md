@@ -147,3 +147,52 @@ Implemented `MemoryService` to manage the lifecycle of `MemoryEntry` objects. Th
 - In-memory implementation: State persists for the lifetime of the service instance
 
 Duration: 92.8s | Cost: $0.249394 USD | Turns: 29
+
+## Task 05: Query Filtering for MemoryService
+
+### Summary
+Extended `MemoryService` with a `query()` method that supports filtering memory entries by operation type, success state, or a combination of both. The feature is fully integrated into the CLI with both interactive menu and one-shot flag support.
+
+### Files Changed
+- `src/services/memory_service.py` - Added query(operation: Optional[str], success: Optional[bool]) method with AND-logic filtering
+- `src/cli/calculator_cli.py` - Added interactive query menu option, query handler, and filter prompting logic
+- `src/__main__.py` - Added argparse support for --query flag and --success boolean parameter
+- `tests/test_cli.py` - Updated menu option numbers (exit moved from 10 to 11)
+- `artifacts/class_diagram.puml` - Updated MemoryService to show new query method
+
+### Test Results
+- All 62 tests passed
+- 6 new query filtering tests pass:
+  - test_filter_by_operation ✓
+  - test_filter_by_success_state ✓
+  - test_filter_by_error_state ✓
+  - test_combined_filters ✓
+  - test_query_returns_list ✓
+  - test_query_no_match_returns_empty_list ✓
+- No regressions: all existing tests still pass
+
+### Implementation Details
+- `query()` method signature: `query(operation: Optional[str] = None, success: Optional[bool] = None) -> List[MemoryEntry]`
+- Filtering logic uses AND-logic: both filters must match if both are provided
+- With no arguments, returns all stored entries
+- With no matches, returns empty list
+- Returns new list (does not mutate internal _entries)
+- CLI integration:
+  - Interactive mode: Menu option 10 "Query memory" prompts for optional filters
+  - One-shot mode: `python -m src --query [--operation OP] [--success true|false]`
+  - Boolean parser accepts: true/false/1/0/yes/no/y/n
+
+### Accessibility
+- Interactive mode: Option 10 in main menu prompts for optional operation and success filters
+- CLI mode: `python -m src --query --operation add` returns all "add" operations
+- CLI mode: `python -m src --query --success false` returns all failed operations
+- CLI mode: `python -m src --query --operation divide --success false` returns failed divisions
+- All results displayed in same format as history view
+
+### Design Principles
+- Immutability: Query does not modify internal state
+- Composability: Optional filters can be used independently or together
+- Simplicity: AND-logic filtering (no complex query syntax)
+- CLI-first: Integrated into both interactive and command-line interfaces
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

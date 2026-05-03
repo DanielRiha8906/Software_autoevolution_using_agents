@@ -1,10 +1,12 @@
 import argparse
 import sys
 from pathlib import Path
+from typing import Optional
 
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
+from .services.memory_service import MemoryService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
@@ -21,17 +23,39 @@ def _as_number(value: str) -> float:
         raise argparse.ArgumentTypeError(f"'{value}' is not a valid number")
 
 
+def _as_bool(value: str) -> bool:
+    """Parse a string to boolean."""
+    normalized = value.lower()
+    if normalized in ("true", "1", "yes", "y"):
+        return True
+    elif normalized in ("false", "0", "no", "n"):
+        return False
+    else:
+        raise argparse.ArgumentTypeError(f"'{value}' is not a valid boolean (use: true/false)")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
-        description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B]",
+        description="OOP Calculator — run interactively, perform calculations, or query memory",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B | --query [--operation OP] [--success true|false]]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
         choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
         help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+    )
+    parser.add_argument(
+        "--query",
+        action="store_true",
+        help="Query memory entries instead of running calculations",
+    )
+    parser.add_argument(
+        "--success",
+        metavar="true|false",
+        type=_as_bool,
+        help="Filter query results by success state (true for successful, false for failed)",
     )
     parser.add_argument(
         "operands",
@@ -42,9 +66,15 @@ def main() -> None:
 
     args = parser.parse_args()
     service = _build_service()
-    cli = CalculatorCLI(service)
+    memory_service = MemoryService()
+    cli = CalculatorCLI(service, memory_service)
 
-    if args.operation:
+    if args.query:
+        # Query mode
+        operation_filter: Optional[str] = getattr(args, 'operation', None)
+        cli.run_query(operation=operation_filter, success=args.success)
+    elif args.operation:
+        # Calculate mode
         if len(args.operands) != 2:
             parser.error("Exactly two operands are required when using --operation")
         try:
@@ -54,6 +84,7 @@ def main() -> None:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)
     else:
+        # Interactive mode
         cli.run_interactive()
 
 

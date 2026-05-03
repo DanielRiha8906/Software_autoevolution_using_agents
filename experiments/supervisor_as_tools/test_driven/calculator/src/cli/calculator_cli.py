@@ -1,7 +1,9 @@
 import sys
+from typing import Optional
 
 from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
+from ..services.memory_service import MemoryService
 
 
 class CalculatorCLI:
@@ -16,8 +18,9 @@ class CalculatorCLI:
         (Operation.MODULO,   "Modulo"),
     ]
 
-    def __init__(self, service: CalculatorService) -> None:
+    def __init__(self, service: CalculatorService, memory_service: Optional[MemoryService] = None) -> None:
         self.service = service
+        self.memory_service = memory_service or MemoryService()
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -30,7 +33,8 @@ class CalculatorCLI:
             choice = input("Choose option: ").strip()
 
             history_opt = len(self._MENU) + 1
-            exit_opt    = len(self._MENU) + 2
+            query_opt   = len(self._MENU) + 2
+            exit_opt    = len(self._MENU) + 3
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -38,6 +42,10 @@ class CalculatorCLI:
 
             if choice == str(history_opt):
                 self._show_history()
+                continue
+
+            if choice == str(query_opt):
+                self._query_history()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -76,7 +84,8 @@ class CalculatorCLI:
         for i, (_, label) in enumerate(self._MENU, 1):
             print(f"  {i}. {label}")
         print(f"  {len(self._MENU) + 1}. View history")
-        print(f"  {len(self._MENU) + 2}. Exit")
+        print(f"  {len(self._MENU) + 2}. Query memory")
+        print(f"  {len(self._MENU) + 3}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -104,3 +113,43 @@ class CalculatorCLI:
         for i, entry in enumerate(history, 1):
             print(f"  {i}. {entry}  [{entry.timestamp}]")
         print()
+
+    def _query_history(self) -> None:
+        """Interactive query interface for memory entries."""
+        operation_filter = self._prompt_optional_filter("Enter operation to filter by (or press Enter to skip): ")
+        success_filter = self._prompt_success_filter("Filter by success state? (y/n/skip): ")
+
+        results = self.memory_service.query(operation=operation_filter, success=success_filter)
+        if not results:
+            print("\n  No matching entries found.\n")
+            return
+
+        print()
+        for i, entry in enumerate(results, 1):
+            print(f"  {i}. {entry.operation} {entry.operands} = {entry.result} (success: {entry.success})  [{entry.timestamp}]")
+        print()
+
+    def _prompt_optional_filter(self, prompt: str) -> Optional[str]:
+        """Prompt for an optional string filter, return None if empty."""
+        raw = input(prompt).strip()
+        return raw if raw else None
+
+    def _prompt_success_filter(self, prompt: str) -> Optional[bool]:
+        """Prompt for optional success state filter."""
+        raw = input(prompt).strip().lower()
+        if raw == "y":
+            return True
+        elif raw == "n":
+            return False
+        else:
+            return None
+
+    def run_query(self, operation: Optional[str] = None, success: Optional[bool] = None) -> None:
+        """One-shot query interface for memory entries."""
+        results = self.memory_service.query(operation=operation, success=success)
+        if not results:
+            print("No matching entries found.")
+            return
+
+        for entry in results:
+            print(f"{entry.operation} {entry.operands} = {entry.result} (success: {entry.success}) [{entry.timestamp}]")
