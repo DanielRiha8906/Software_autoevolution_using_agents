@@ -65,4 +65,4 @@ Implemented four new mathematical operations for the Calculator class following 
 - Error handling: `python -m src --operation sqrt -- -1` → Error (negative sqrt)
 - All operations support both integer and floating-point operands
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 278.4s | Cost: $0.567642 USD | Turns: 32
