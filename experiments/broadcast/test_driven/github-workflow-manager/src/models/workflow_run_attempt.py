@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from datetime import datetime, timezone, timedelta
-from typing import Optional
+from typing import Optional, Union
 
 
 CEST = timezone(timedelta(hours=2))
@@ -9,7 +9,7 @@ CEST = timezone(timedelta(hours=2))
 @dataclass
 class WorkflowRunAttempt:
     id: int
-    run_id: int
+    run_id: Union[int, str]
     attempt_number: int
     status: str
     conclusion: str
