@@ -24,6 +24,8 @@ repeat
       :Run check completed flow;
     case (8 — Check if overdue)
       :Run check overdue flow;
+    case (9 — Manage comments)
+      :Run manage comments flow;
     case (0/q — Quit)
       :Clear screen;
       stop
