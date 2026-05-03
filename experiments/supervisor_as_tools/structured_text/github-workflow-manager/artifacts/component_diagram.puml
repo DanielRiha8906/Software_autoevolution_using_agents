@@ -15,38 +15,61 @@ package "GitHub Workflow Manager" {
     component "interactive_menu" as IM
   }
 
+  package "Filtering subsystem" {
+    component "Basic Filters" as BASIC_FILTER
+    component "Advanced Filters" as ADV_FILTER
+    component "Compound Filter" as COMP_FILTER
+  }
+
   package "Service layer" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
+    component "AttemptService" as ATTEMPT_SVC
   }
 
   package "Persistence layer" {
     component "WorkflowJsonStorage" as STOR
+    component "AttemptJsonStorage" as ATTEMPT_STOR
     artifact "workflow_runs.json" as JSON_FILE
+    artifact "workflow_attempts.json" as ATTEMPT_FILE
   }
 
   package "Domain model" {
     component "WorkflowRun" as RUN
     component "WorkflowStatus" as STATUS
     component "WorkflowConclusion" as CONCLUSION
+    component "WorkflowRunAttempt" as ATTEMPT
   }
 }
 
 MAIN --> CLI
 MAIN --> IM
 
+CLI --> BASIC_FILTER
+CLI --> ADV_FILTER
+CLI --> COMP_FILTER
+IM --> BASIC_FILTER
+IM --> ADV_FILTER
+IM --> COMP_FILTER
+
+BASIC_FILTER --> SVC
+ADV_FILTER --> SVC
+COMP_FILTER --> SVC
+
 CLI --> TRACKER
 IM --> TRACKER
 
-CLI --> SVC
-IM --> SVC
-
 TRACKER --> SVC
 SVC --> STOR
+SVC --> ATTEMPT_SVC
 STOR --> JSON_FILE
+
+ATTEMPT_SVC --> ATTEMPT_STOR
+ATTEMPT_STOR --> ATTEMPT_FILE
 
 SVC ..> RUN
 RUN --> STATUS
 RUN --> CONCLUSION
+SVC ..> ATTEMPT
 
 @enduml

@@ -138,6 +138,30 @@ def _check_run_state(service: WorkflowRunService, attempt_service: AttemptServic
     print(f"    is_cancelled: {run.is_cancelled()}")
 
 
+def _prompt_datetime(label: str, default: Optional[str] = None) -> Optional[datetime]:
+    """Prompt for datetime in ISO 8601 format.
+
+    Args:
+        label: Prompt label.
+        default: Default value string (not used if user presses enter).
+
+    Returns:
+        Parsed datetime object, or None if user enters blank.
+
+    Raises:
+        ValueError: If format is invalid (will be caught and re-prompted).
+    """
+    suffix = f" [{default}]" if default is not None else ""
+    while True:
+        value = input(f"{label}{suffix}: ").strip()
+        if not value:
+            return None
+        try:
+            return datetime.fromisoformat(value)
+        except ValueError:
+            print("Invalid format. Use ISO 8601 format (e.g., 2026-05-03T12:00:00 or 2026-05-03).")
+
+
 def _filter_menu(service: WorkflowRunService, attempt_service: AttemptService) -> None:
     filter_by = _choose("Filter by", ["branch", "status", "conclusion"])
     if filter_by == "branch":
@@ -156,6 +180,188 @@ def _filter_menu(service: WorkflowRunService, attempt_service: AttemptService) -
     print(f"\n--- {len(runs)} matching run(s) ---")
     for run in runs:
         print(_fmt_run(run))
+
+
+def _filter_by_duration_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    """Interactive duration range filter."""
+    print("\n--- Filter by Duration Range ---")
+    min_duration = _prompt_float("Minimum duration (seconds)", 0.0)
+    max_duration_raw = input("Maximum duration (seconds, leave blank for unlimited): ").strip()
+    max_duration = None
+    if max_duration_raw:
+        try:
+            max_duration = float(max_duration_raw)
+            if max_duration < 0:
+                print("Value must be non-negative.")
+                return
+        except ValueError:
+            print("Invalid float value.")
+            return
+
+    try:
+        runs = service.filter_by_duration_range(min_duration, max_duration)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+
+    if not runs:
+        print("\nNo matching runs.")
+        return
+    print(f"\n--- {len(runs)} matching run(s) ---")
+    for run in runs:
+        print(_fmt_run(run))
+
+
+def _filter_by_created_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    """Interactive created date range filter."""
+    print("\n--- Filter by Created Date Range ---")
+    created_after = _prompt_datetime("Created after (ISO 8601, leave blank to skip)")
+    created_before = _prompt_datetime("Created before (ISO 8601, leave blank to skip)")
+
+    try:
+        runs = service.filter_runs(
+            created_after=created_after,
+            created_before=created_before,
+        )
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+
+    if not runs:
+        print("\nNo matching runs.")
+        return
+    print(f"\n--- {len(runs)} matching run(s) ---")
+    for run in runs:
+        print(_fmt_run(run))
+
+
+def _filter_by_updated_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    """Interactive updated date range filter."""
+    print("\n--- Filter by Updated Date Range ---")
+    updated_after = _prompt_datetime("Updated after (ISO 8601, leave blank to skip)")
+    updated_before = _prompt_datetime("Updated before (ISO 8601, leave blank to skip)")
+
+    try:
+        runs = service.filter_runs(
+            updated_after=updated_after,
+            updated_before=updated_before,
+        )
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+
+    if not runs:
+        print("\nNo matching runs.")
+        return
+    print(f"\n--- {len(runs)} matching run(s) ---")
+    for run in runs:
+        print(_fmt_run(run))
+
+
+def _filter_by_attempts_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    """Interactive filter by attempt presence."""
+    choice = _choose("Show runs with attempts?", ["Yes", "No"])
+    has_attempts = choice == "Yes"
+
+    try:
+        runs = service.filter_by_has_attempts(attempt_service, has_attempts)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+
+    if not runs:
+        print("\nNo matching runs.")
+        return
+    print(f"\n--- {len(runs)} matching run(s) ---")
+    for run in runs:
+        print(_fmt_run(run))
+
+
+def _filter_compound_interactive(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    """Interactive compound filter builder."""
+    print("\n--- Combine Filters ---")
+    filters = {}
+
+    # Ask which filters to apply
+    apply_duration = input("Apply duration range filter? (y/n): ").strip().lower() == "y"
+    if apply_duration:
+        min_dur = _prompt_float("Minimum duration (seconds)", 0.0)
+        max_dur_raw = input("Maximum duration (seconds, leave blank for unlimited): ").strip()
+        max_dur = None
+        if max_dur_raw:
+            try:
+                max_dur = float(max_dur_raw)
+            except ValueError:
+                print("Invalid float value.")
+                return
+        filters["min_duration_seconds"] = min_dur
+        filters["max_duration_seconds"] = max_dur
+
+    apply_branch = input("Apply branch filter? (y/n): ").strip().lower() == "y"
+    if apply_branch:
+        branch = _prompt("Branch name")
+        filters["branch"] = branch
+
+    apply_status = input("Apply status filter? (y/n): ").strip().lower() == "y"
+    if apply_status:
+        status_val = _choose("Status", [s.value for s in WorkflowStatus])
+        filters["status"] = WorkflowStatus(status_val)
+
+    apply_created = input("Apply created date filter? (y/n): ").strip().lower() == "y"
+    if apply_created:
+        created_after = _prompt_datetime("Created after (ISO 8601, leave blank to skip)")
+        created_before = _prompt_datetime("Created before (ISO 8601, leave blank to skip)")
+        filters["created_after"] = created_after
+        filters["created_before"] = created_before
+
+    apply_attempts = input("Apply attempts filter? (y/n): ").strip().lower() == "y"
+    if apply_attempts:
+        has_attempts_choice = _choose("Show runs with attempts?", ["Yes", "No"])
+        filters["has_attempts"] = has_attempts_choice == "Yes"
+        filters["attempt_service"] = attempt_service
+
+    try:
+        runs = service.filter_runs(**filters)
+    except ValueError as e:
+        print(f"Error: {e}")
+        return
+
+    if not runs:
+        print("\nNo matching runs.")
+        return
+    print(f"\n--- {len(runs)} matching run(s) ---")
+    for run in runs:
+        print(_fmt_run(run))
+
+
+def _advanced_filter_menu(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    """Advanced filter sub-menu."""
+    while True:
+        print("\n" + "=" * 44)
+        choice = _choose(
+            "Advanced Filters",
+            [
+                "Duration range",
+                "Created date range",
+                "Updated date range",
+                "Has attempts",
+                "Combine filters",
+                "Back to main menu",
+            ],
+        )
+
+        if choice == "Duration range":
+            _filter_by_duration_interactive(service, attempt_service)
+        elif choice == "Created date range":
+            _filter_by_created_interactive(service, attempt_service)
+        elif choice == "Updated date range":
+            _filter_by_updated_interactive(service, attempt_service)
+        elif choice == "Has attempts":
+            _filter_by_attempts_interactive(service, attempt_service)
+        elif choice == "Combine filters":
+            _filter_compound_interactive(service, attempt_service)
+        elif choice == "Back to main menu":
+            return
 
 
 def _add_attempt(service: WorkflowRunService, attempt_service: AttemptService) -> None:
@@ -202,6 +408,7 @@ MENU = [
     ("Get run detail", _detail_run),
     ("Check run state", _check_run_state),
     ("Filter runs", _filter_menu),
+    ("Advanced Filter", _advanced_filter_menu),
     ("Add attempt", _add_attempt),
     ("List attempts", _list_attempts_menu),
     ("Get attempt detail", _detail_attempt),

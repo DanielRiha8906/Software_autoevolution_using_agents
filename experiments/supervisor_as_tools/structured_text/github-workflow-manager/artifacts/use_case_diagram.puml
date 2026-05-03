@@ -11,21 +11,39 @@ rectangle "GitHub Workflow Manager" {
     usecase "Add workflow run"         as I_ADD
     usecase "List all runs"            as I_LIST
     usecase "Get run detail"           as I_DETAIL
+    usecase "Check run state"          as I_STATE
     usecase "Filter runs"              as I_FILTER
     usecase "Filter by branch"         as I_FBRANCH
     usecase "Filter by status"         as I_FSTATUS
     usecase "Filter by conclusion"     as I_FCONCL
+    usecase "Advanced Filter"          as I_ADV_FILTER
+    usecase "Filter by duration"       as I_FDURATION
+    usecase "Filter by created date"   as I_FCREATED
+    usecase "Filter by updated date"   as I_FUPDATED
+    usecase "Filter by attempts"       as I_FATTEMPTS
+    usecase "Combine filters"          as I_FCOMPOUND
+    usecase "Add attempt"              as I_ADD_ATT
+    usecase "List attempts"            as I_LIST_ATT
+    usecase "Get attempt detail"       as I_DETAIL_ATT
     usecase "Exit application"         as I_EXIT
   }
 
   package "Command-line Mode" {
     usecase "Run one-shot CLI command" as CLI
     usecase "Add workflow run"         as C_ADD
-    usecase "List runs"                as C_LIST
+    usecase "List runs with filters"   as C_LIST
     usecase "Filter by branch"         as C_FBRANCH
     usecase "Filter by status"         as C_FSTATUS
     usecase "Filter by conclusion"     as C_FCONCL
+    usecase "Filter by duration"       as C_FDURATION
+    usecase "Filter by created date"   as C_FCREATED
+    usecase "Filter by updated date"   as C_FUPDATED
+    usecase "Filter by attempts"       as C_FATTEMPTS
     usecase "Get run detail"           as C_DETAIL
+    usecase "Check run state"          as C_STATE
+    usecase "Add attempt"              as C_ADD_ATT
+    usecase "List attempts"            as C_LIST_ATT
+    usecase "Get attempt detail"       as C_DETAIL_ATT
   }
 }
 
@@ -35,19 +53,38 @@ User --> CLI
 UI --> I_ADD
 UI --> I_LIST
 UI --> I_DETAIL
+UI --> I_STATE
 UI --> I_FILTER
+UI --> I_ADV_FILTER
+UI --> I_ADD_ATT
+UI --> I_LIST_ATT
+UI --> I_DETAIL_ATT
 UI --> I_EXIT
 
 I_FILTER --> I_FBRANCH  : <<extend>>
 I_FILTER --> I_FSTATUS  : <<extend>>
 I_FILTER --> I_FCONCL   : <<extend>>
 
+I_ADV_FILTER --> I_FDURATION  : <<extend>>
+I_ADV_FILTER --> I_FCREATED   : <<extend>>
+I_ADV_FILTER --> I_FUPDATED   : <<extend>>
+I_ADV_FILTER --> I_FATTEMPTS  : <<extend>>
+I_ADV_FILTER --> I_FCOMPOUND  : <<extend>>
+
 CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
+CLI --> C_STATE
+CLI --> C_ADD_ATT
+CLI --> C_LIST_ATT
+CLI --> C_DETAIL_ATT
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>
 C_LIST --> C_FCONCL   : <<extend>>
+C_LIST --> C_FDURATION  : <<extend>>
+C_LIST --> C_FCREATED   : <<extend>>
+C_LIST --> C_FUPDATED   : <<extend>>
+C_LIST --> C_FATTEMPTS  : <<extend>>
 
 @enduml

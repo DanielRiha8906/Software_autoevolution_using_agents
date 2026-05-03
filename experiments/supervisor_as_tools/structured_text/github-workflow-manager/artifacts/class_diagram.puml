@@ -91,7 +91,15 @@ package "services" #DDFFD4 {
         +get_run_detail(run_id: str) : Optional[WorkflowRun]
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
-        +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowConclusion]
+        +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        +filter_by_duration_range(min: Optional[float],\n  max: Optional[float]) : List[WorkflowRun]
+        +filter_by_created_after(cutoff: datetime) : List[WorkflowRun]
+        +filter_by_created_before(cutoff: datetime) : List[WorkflowRun]
+        +filter_by_updated_after(cutoff: datetime) : List[WorkflowRun]
+        +filter_by_updated_before(cutoff: datetime) : List[WorkflowRun]
+        +filter_by_has_attempts(attempt_service: AttemptService,\n  has_attempts: bool) : List[WorkflowRun]
+        +filter_runs(attempt_service: Optional[AttemptService],\n  branch: Optional[str],\n  status: Optional[WorkflowStatus],\n  conclusion: Optional[WorkflowConclusion],\n  min_duration_seconds: Optional[float],\n  max_duration_seconds: Optional[float],\n  created_after: Optional[datetime],\n  created_before: Optional[datetime],\n  updated_after: Optional[datetime],\n  updated_before: Optional[datetime],\n  has_attempts: Optional[bool]) : List[WorkflowRun]
+        -{static} _normalize_datetime(dt: datetime) : datetime
         -_persist() : None
     }
 
@@ -99,7 +107,7 @@ package "services" #DDFFD4 {
         -_service : WorkflowRunService
         --
         +__init__(service: WorkflowRunService)
-        +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str]) : WorkflowRun
+        +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  duration_seconds: float,\n  run_id: Optional[str]) : WorkflowRun
     }
 
     class AttemptService {
@@ -118,17 +126,24 @@ package "services" #DDFFD4 {
 package "cli" #FFE5E5 {
     class "workflow_cli" <<module>> {
         +build_parser() : ArgumentParser
-        +run_cli(service: WorkflowRunService, args) : None
+        +run_cli(service: WorkflowRunService,\n  attempt_service: AttemptService, args) : None
         -_fmt_run(run: WorkflowRun) : str
+        -_fmt_attempt(attempt: WorkflowRunAttempt) : str
     }
 
     class "interactive_menu" <<module>> {
         +run_interactive(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
-        -_add_run(service: WorkflowRunService) : None
-        -_list_runs(service: WorkflowRunService) : None
-        -_detail_run(service: WorkflowRunService) : None
-        -_filter_menu(service: WorkflowRunService) : None
-        -_list_attempts(attempt_service: AttemptService) : None
+        -_add_run(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
+        -_list_runs(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
+        -_detail_run(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
+        -_filter_menu(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
+        -_filter_by_duration_interactive(...) : None
+        -_filter_by_created_interactive(...) : None
+        -_filter_by_updated_interactive(...) : None
+        -_filter_by_attempts_interactive(...) : None
+        -_filter_compound_interactive(...) : None
+        -_advanced_filter_menu(...) : None
+        -_list_attempts_menu(attempt_service: AttemptService) : None
     }
 }
 
@@ -139,15 +154,14 @@ WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
+WorkflowRunService         ..>  AttemptService        : uses for has_attempts filter
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 AttemptService       "1" --> "1" AttemptJsonStorage  : -_storage
 AttemptService            ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunService
-"workflow_cli"             ..>  WorkflowRunTracker
 "workflow_cli"             ..>  AttemptService
 "interactive_menu"         ..>  WorkflowRunService
-"interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  AttemptService
 
 @enduml
