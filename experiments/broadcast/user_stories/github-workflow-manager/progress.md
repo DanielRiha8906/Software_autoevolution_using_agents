@@ -265,3 +265,150 @@ pytest tests/ -q
 All 40 tests pass (31 new + 9 existing). No regressions in existing tests.
 
 Duration: 391.4s | Cost: $0.816080 USD | Turns: 58
+
+---
+
+## Task 04: Create AttemptService for managing WorkflowRunAttempt objects
+
+**Broadcast Architecture - 3 Candidates Evaluated**
+
+### Candidate Implementations
+
+All three candidates produced identical, high-quality implementations with all 52 tests passing (40 existing + 12 new).
+
+#### Candidate A (SELECTED)
+- **Approach**: Standard service pattern with JSON storage, CLI/menu integration
+- **Test Score**: 52/52 ✓
+- **Key Features**:
+  - `AttemptService` with `create_attempt()`, `get_attempts_for_run()`, `list_all_attempts()`
+  - Duplicate prevention on (run_id, attempt_number) composite key
+  - Automatic sorting by attempt_number (bonus)
+  - `AttemptJsonStorage` for JSON persistence
+  - CLI commands: `attempt-create`, `attempt-list`
+  - Interactive menu options: "Create attempt", "List attempts for run"
+  - Full integration with existing CLI and interactive menu patterns
+
+#### Candidate B
+- **Approach**: Identical to Candidate A
+- **Test Score**: 52/52 ✓
+- **Implementation**: Identical to Candidate A
+
+#### Candidate C
+- **Approach**: Identical to Candidate A
+- **Test Score**: 52/52 ✓
+- **Implementation**: Identical to Candidate A
+
+### Selection Rationale
+
+**Winner: Candidate A**
+
+All three candidates produced functionally identical implementations with identical code quality. The implementation follows the established pattern from `WorkflowRunService`, providing a clean, maintainable, and testable service layer for attempt management.
+
+### Changes Made
+
+**Files Created:**
+1. `src/services/attempt_service.py`
+   - `AttemptService` class managing WorkflowRunAttempt objects
+   - `create_attempt()`: Creates attempts with (run_id, attempt_number) uniqueness validation
+   - `get_attempts_for_run()`: Retrieves attempts sorted by attempt_number
+   - `list_all_attempts()`: Lists all attempts across all runs
+   - `_persist()`: Internal method to save to storage
+
+2. `src/storage/attempt_json_storage.py`
+   - `AttemptJsonStorage` class for JSON persistence
+   - Persists to `artifacts/workflow_attempts.json`
+   - Follows same pattern as `WorkflowJsonStorage`
+
+3. `tests/test_attempt_service.py`
+   - 12 comprehensive tests covering:
+     - Attempt creation and duplicate prevention (4 tests)
+     - Retrieval and sorting (5 tests)
+     - Persistence behavior (2 tests)
+
+**Files Modified:**
+1. `src/__main__.py`
+   - Added `AttemptJsonStorage` and `AttemptService` initialization
+   - Passes both services to CLI and interactive menu functions
+
+2. `src/cli/workflow_cli.py`
+   - Added `_fmt_attempt()` formatting function
+   - Added `attempt-create` command with arguments: `--run-id`, `--attempt-id`, `--attempt-number`, `--status`, `--conclusion` (optional), `--duration` (optional)
+   - Added `attempt-list` command with `--run-id` filter
+   - Updated `run_cli()` signature to accept both services
+   - Added error handling for duplicate attempts
+
+3. `src/cli/interactive_menu.py`
+   - Added `_fmt_attempt()` formatting function
+   - Added `_create_attempt()` handler with form prompts
+   - Added `_list_attempts()` handler with filtering
+   - Updated menu structure with 2 new options (options 6 and 7)
+   - Updated `run_interactive()` signature to accept both services
+
+4. `src/services/__init__.py`
+   - Added `AttemptService` to exports
+
+5. `src/storage/__init__.py`
+   - Added `AttemptJsonStorage` to exports
+
+**Diagrams Updated:**
+1. `artifacts/class_diagram.puml`
+   - Added `AttemptJsonStorage` class in storage package
+   - Added `AttemptService` class in services package
+   - Updated CLI module signatures
+   - Added relationships: `AttemptService` → `AttemptJsonStorage`, CLI modules → `AttemptService`
+
+2. `artifacts/component_diagram.puml`
+   - Added `AttemptService` component
+   - Added `AttemptJsonStorage` component
+   - Added `workflow_attempts.json` artifact
+   - Updated connections from CLI/interactive menu to services
+
+3. `artifacts/activity_diagram_interactive.puml`
+   - Added case for "Create attempt" (option 6)
+   - Added case for "List attempts for run" (option 7)
+   - Updated menu option count to 8
+
+4. `artifacts/use_case_diagram.puml`
+   - Added "Create attempt" use case for both interactive and CLI modes
+   - Added "List attempts for run" use case for both modes
+   - Added relationships to new use cases
+
+### Acceptance Criteria - All Met ✓
+
+- ✓ `AttemptService` supports creating an attempt
+- ✓ `AttemptService` supports retrieving all attempts for a given `run_id`
+- ✓ The service integrates with JSON storage mechanism
+- ✓ Duplicate attempt numbers per run are prevented (ValueError on duplicate)
+- ✓ Attempts are returned sorted by attempt number (bonus feature implemented)
+- ✓ No caching layer added (simple in-memory list with storage)
+- ✓ All functionality accessible via `python -m src`:
+  - Interactive menu: "Create attempt" and "List attempts for run" options
+  - One-shot CLI: `attempt-create` and `attempt-list` commands
+  - Help text: `python -m src --help` lists both commands
+
+### CLI Access
+
+**Interactive Mode:**
+```
+python -m src
+  → Option 6: Create attempt (prompts for run_id, attempt_id, attempt_number, status, conclusion, duration)
+  → Option 7: List attempts for run (prompts for run_id, displays sorted attempts)
+```
+
+**One-shot Commands:**
+```bash
+python -m src attempt-create --run-id 100 --attempt-id 1 --attempt-number 1 --status "completed" --conclusion "success" --duration 45.5
+python -m src attempt-list --run-id 100
+```
+
+### Test Results
+
+```
+pytest tests/ -q
+....................................................                     [100%]
+52 passed in 0.08s
+```
+
+All 52 tests pass (12 new + 40 existing). No regressions in existing tests.
+
+Duration: 631.3s | Cost: $1.700784 USD | Turns: 92

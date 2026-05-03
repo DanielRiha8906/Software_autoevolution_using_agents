@@ -66,6 +66,14 @@ package "storage" #FFF3CC {
         +save(runs: List[WorkflowRun]) : None
         +load() : List[WorkflowRun]
     }
+
+    class AttemptJsonStorage {
+        +filepath : str
+        --
+        +__init__(filepath: str)
+        +save(attempts: List[WorkflowRunAttempt]) : None
+        +load() : List[WorkflowRunAttempt]
+    }
 }
 
 package "services" #DDFFD4 {
@@ -89,22 +97,36 @@ package "services" #DDFFD4 {
         +__init__(service: WorkflowRunService)
         +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str]) : WorkflowRun
     }
+
+    class AttemptService {
+        -_storage   : AttemptJsonStorage
+        -_attempts  : List[WorkflowRunAttempt]
+        --
+        +__init__(storage: AttemptJsonStorage)
+        +create_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
+        +get_attempts_for_run(run_id: int) : List[WorkflowRunAttempt]
+        +list_all_attempts() : List[WorkflowRunAttempt]
+        -_persist() : None
+    }
 }
 
 package "cli" #FFE5E5 {
     class "workflow_cli" <<module>> {
         +build_parser() : ArgumentParser
-        +run_cli(service: WorkflowRunService, args) : None
+        +run_cli(workflow_service: WorkflowRunService, attempt_service: AttemptService, args) : None
         -_fmt_run(run: WorkflowRun) : str
+        -_fmt_attempt(attempt: WorkflowRunAttempt) : str
     }
 
     class "interactive_menu" <<module>> {
-        +run_interactive(service: WorkflowRunService) : None
+        +run_interactive(workflow_service: WorkflowRunService, attempt_service: AttemptService) : None
         -_add_run(service: WorkflowRunService) : None
         -_list_runs(service: WorkflowRunService) : None
         -_detail_run(service: WorkflowRunService) : None
         -_check_state(service: WorkflowRunService) : None
         -_filter_menu(service: WorkflowRunService) : None
+        -_create_attempt(attempt_service: AttemptService) : None
+        -_list_attempts(attempt_service: AttemptService) : None
     }
 }
 
@@ -117,9 +139,13 @@ WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
+AttemptService       "1" --> "1" AttemptJsonStorage   : -_storage
+AttemptService            ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunService
+"workflow_cli"             ..>  AttemptService
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService
+"interactive_menu"         ..>  AttemptService
 "interactive_menu"         ..>  WorkflowRunTracker
 
 @enduml

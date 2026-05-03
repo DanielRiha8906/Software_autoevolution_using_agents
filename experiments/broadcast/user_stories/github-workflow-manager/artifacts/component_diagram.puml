@@ -18,11 +18,14 @@ package "GitHub Workflow Manager" {
   package "Service layer" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
+    component "AttemptService" as ASVC
   }
 
   package "Persistence layer" {
     component "WorkflowJsonStorage" as STOR
+    component "AttemptJsonStorage" as ASTOR
     artifact "workflow_runs.json" as JSON_FILE
+    artifact "workflow_attempts.json" as ATTEMPT_FILE
   }
 
   package "Domain model" {
@@ -37,7 +40,9 @@ MAIN --> CLI
 MAIN --> IM
 
 CLI --> TRACKER
+CLI --> ASVC
 IM --> TRACKER
+IM --> ASVC
 
 CLI --> SVC
 IM --> SVC
@@ -46,7 +51,11 @@ TRACKER --> SVC
 SVC --> STOR
 STOR --> JSON_FILE
 
+ASVC --> ASTOR
+ASTOR --> ATTEMPT_FILE
+
 SVC ..> RUN
+ASVC ..> ATTEMPT
 RUN --> ATTEMPT
 RUN --> STATUS
 RUN --> CONCLUSION
