@@ -405,4 +405,4 @@ All tests pass including:
 - Duplicate ID (when skip_duplicates=False) → ValueError
 - Graceful degradation: With skip_duplicates=True, import continues and reports skipped/failed counts
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 714.4s | Cost: $1.675553 USD | Turns: 14
