@@ -158,4 +158,4 @@ All new tests pass successfully:
 - [x] UML diagrams updated with new method signatures
 - [x] progress.md updated with this summary
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 253.8s | Cost: $0.429106 USD | Turns: 17
