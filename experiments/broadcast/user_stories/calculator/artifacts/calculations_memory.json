@@ -1,0 +1,38 @@
+[
+  {
+    "type": "result",
+    "entry_id": 1,
+    "operation": "add",
+    "operands": [
+      5,
+      3
+    ],
+    "result": 8,
+    "timestamp": "2026-05-03T15:49:20.077472",
+    "execution_time_ms": 0.008556000011594733
+  },
+  {
+    "type": "result",
+    "entry_id": 2,
+    "operation": "subtract",
+    "operands": [
+      10,
+      3
+    ],
+    "result": 7,
+    "timestamp": "2026-05-03T15:49:20.077854",
+    "execution_time_ms": 0.0
+  },
+  {
+    "type": "error",
+    "entry_id": 3,
+    "operation": "divide",
+    "operands": [
+      10,
+      0
+    ],
+    "error_message": "Division by zero",
+    "timestamp": "2026-05-03T15:49:20.078098",
+    "execution_time_ms": 0.0
+  }
+]

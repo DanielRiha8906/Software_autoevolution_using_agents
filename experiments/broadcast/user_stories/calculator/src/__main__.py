@@ -5,6 +5,7 @@ from pathlib import Path
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
+from .services.memory_service import MemoryService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
@@ -12,6 +13,11 @@ from .cli.calculator_cli import CalculatorCLI
 def _build_service() -> CalculatorService:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
     return CalculatorService(Calculator(), JsonStorage(storage_path))
+
+
+def _build_memory_service() -> MemoryService:
+    storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
+    return MemoryService(JsonStorage(storage_path))
 
 
 def _as_number(value: str) -> float:
@@ -25,7 +31,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass flags for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory-history] [--history]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory-history] [--history] [--memory-retrieve] [--memory-store OP OPERANDS... [--result R] | [--error MSG]]",
     )
     parser.add_argument(
         "--operation",
@@ -44,15 +50,36 @@ def main() -> None:
         help="Display calculation history",
     )
     parser.add_argument(
+        "--memory-retrieve",
+        action="store_true",
+        help="Retrieve and display all stored memory entries",
+    )
+    parser.add_argument(
+        "--memory-store",
+        metavar="OP",
+        help="Store a memory entry with given operation",
+    )
+    parser.add_argument(
+        "--result",
+        type=float,
+        help="Result value for a successful memory entry (use with --memory-store)",
+    )
+    parser.add_argument(
+        "--error",
+        type=str,
+        help="Error message for a failed memory entry (use with --memory-store)",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
-        help="Two operands (required when --operation is given)",
+        help="Two operands (required when --operation is given) or operands for --memory-store",
     )
 
     args = parser.parse_args()
     service = _build_service()
-    cli = CalculatorCLI(service)
+    memory_service = _build_memory_service()
+    cli = CalculatorCLI(service, memory_service)
 
     if args.operation:
         if len(args.operands) != 2:
@@ -63,6 +90,16 @@ def main() -> None:
         except argparse.ArgumentTypeError as exc:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)
+    elif args.memory_retrieve:
+        cli.memory_retrieve_command()
+    elif args.memory_store:
+        if len(args.operands) == 0:
+            parser.error("--memory-store requires at least one operand")
+        try:
+            operands = [_as_number(op) for op in args.operands]
+        except argparse.ArgumentTypeError as exc:
+            parser.error(str(exc))
+        cli.memory_store_command(args.memory_store, operands, result=args.result, error=args.error)
     elif args.memory_history:
         cli.show_memory_history_command()
     elif args.history:

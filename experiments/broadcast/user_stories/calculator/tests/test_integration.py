@@ -137,3 +137,74 @@ class TestIntegration:
         memory = service2.get_memory_history()
         assert len(memory) == 1
         assert memory[0].result == 3
+
+
+class TestMemoryServiceIntegration:
+    @pytest.fixture
+    def memory_service(self, tmp_path):
+        _reset_id_counter()
+        storage_path = tmp_path / "memory.json"
+        storage = JsonStorage(storage_path)
+        from src.services.memory_service import MemoryService
+        return MemoryService(storage)
+
+    def test_store_and_retrieve(self, memory_service):
+        """Test storing and retrieving memory entries."""
+        entry = ResultEntry(operation="add", operands=[1, 2], result=3)
+        memory_service.store(entry)
+        
+        retrieved = memory_service.retrieve()
+        assert len(retrieved) == 1
+        assert retrieved[0].operation == "add"
+        assert retrieved[0].result == 3
+
+    def test_store_multiple_entries(self, memory_service):
+        """Test storing and retrieving multiple entries."""
+        _reset_id_counter()
+        e1 = ResultEntry(operation="add", operands=[1, 2], result=3)
+        e2 = ErrorEntry(operation="divide", operands=[5, 0], error_message="error")
+        e3 = ResultEntry(operation="multiply", operands=[2, 3], result=6)
+        
+        memory_service.store(e1)
+        memory_service.store(e2)
+        memory_service.store(e3)
+        
+        retrieved = memory_service.retrieve()
+        assert len(retrieved) == 3
+        assert retrieved[0].operation == "add"
+        assert retrieved[1].operation == "divide"
+        assert retrieved[2].operation == "multiply"
+
+    def test_persistence_across_instances(self, tmp_path):
+        """Verify memory entries persist across service instances."""
+        _reset_id_counter()
+        path = tmp_path / "memory.json"
+        storage1 = JsonStorage(path)
+        from src.services.memory_service import MemoryService
+        
+        service1 = MemoryService(storage1)
+        entry1 = ResultEntry(operation="add", operands=[1, 2], result=3)
+        service1.store(entry1)
+        
+        # Create a new service instance with the same storage
+        service2 = MemoryService(storage1)
+        retrieved = service2.retrieve()
+        assert len(retrieved) == 1
+        assert retrieved[0].operation == "add"
+        assert retrieved[0].result == 3
+
+    def test_retrieve_preserves_entry_types(self, memory_service):
+        """Verify that retrieved entries maintain their types."""
+        _reset_id_counter()
+        result_entry = ResultEntry(operation="add", operands=[1, 2], result=3)
+        error_entry = ErrorEntry(operation="divide", operands=[5, 0], error_message="error")
+        
+        memory_service.store(result_entry)
+        memory_service.store(error_entry)
+        
+        retrieved = memory_service.retrieve()
+        assert len(retrieved) == 2
+        assert isinstance(retrieved[0], ResultEntry)
+        assert isinstance(retrieved[1], ErrorEntry)
+        assert not retrieved[0].is_error()
+        assert retrieved[1].is_error()

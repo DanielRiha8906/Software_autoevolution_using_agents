@@ -238,3 +238,98 @@ Duration: 399.0s | Cost: $0.859193 USD | Turns: 48
 - **sequence_diagram.puml**: Added MemoryEntry creation and save_memory() flow alongside CalculationResult
 
 Duration: 617.2s | Cost: $1.223649 USD | Turns: 31
+
+## Task 04
+
+**Description:** Create a `MemoryService` that handles storing and retrieving `MemoryEntry` objects, so that memory management is in one place and not scattered through the calculation flow.
+
+**Status:** ✅ Complete
+
+### Broadcast Evaluation
+
+**Candidate A:**
+- Approach: Dedicated MemoryService with store/retrieve, factory method _build_memory_service(), CLI flags --memory-retrieve and --memory-store, separate test file for MemoryService
+- Test Result: 111/111 tests passed
+- Key features: Clean delegation to JsonStorage, comprehensive CLI integration
+
+**Candidate B:**
+- Approach: Lightweight facade pattern with explicit delegation, --memory-retrieve flag and --memory-store with --result/--error modifiers, 5 new CLI command tests
+- Test Result: 111/111 tests passed
+- Key features: Flexible storage options, clear CLI semantics
+
+**Candidate C:**
+- Approach: Dedicated service layer pattern with clean separation of concerns, MemoryService as in-memory manager delegating to JsonStorage, 18 new tests covering unit and integration scenarios
+- Test Result: 115/115 tests passed ✅
+- Key features: Comprehensive test coverage, strongest abstraction boundaries, 17 new tests added
+
+**Winner:** Candidate C (115/115 tests passed - highest coverage with best separation of concerns)
+
+### Files Changed
+
+1. **src/services/memory_service.py** (NEW)
+   - MemoryService class with store(entry: MemoryEntry) → None
+   - retrieve() → list[MemoryEntry] method
+   - Delegates all persistence to JsonStorage
+   - No business logic, pure lifecycle management
+
+2. **src/services/__init__.py**
+   - Exported MemoryService for public API
+
+3. **src/__main__.py**
+   - Added _build_memory_service() factory function
+   - Instantiate and inject MemoryService to CalculatorCLI
+   - Added CLI flags:
+     - `--memory-retrieve`: Display all memory entries (one-shot)
+     - `--memory-store OP`: Store a memory entry
+     - `--result R`: Result value (with --memory-store)
+     - `--error MSG`: Error message (with --memory-store)
+
+4. **src/cli/calculator_cli.py**
+   - Added memory_service parameter to __init__()
+   - memory_retrieve_command() for one-shot retrieval
+   - memory_store_command() for storing entries with result or error
+
+5. **tests/test_memory_service.py** (NEW)
+   - 8 unit tests for MemoryService store() and retrieve() delegation
+
+6. **tests/test_cli.py**
+   - Updated _make_cli() helper to pass memory_service mock
+   - Added 5 new tests for memory CLI commands (memory_retrieve, memory_store)
+
+7. **tests/test_integration.py** (NEW)
+   - Added 4 new MemoryService integration tests
+   - Tests for persistence across instances, entry type preservation
+
+### Diagrams Updated
+
+- **class_diagram.puml**: Added MemoryService class with store() and retrieve() methods, updated relationships
+- **component_diagram.puml**: Added MemoryService component, shows it uses JsonStorage, CalculatorCLI now depends on both services
+- **sequence_diagram.puml**: Added interaction flows for memory store/retrieve operations alongside calculation flows
+
+### Test Results
+
+- Total tests: 115
+- Passed: 115
+- Failed: 0
+- Status: ✅ All tests pass (17 new tests added: 8 unit + 5 CLI + 4 integration)
+
+### Acceptance Criteria Met
+
+- ✅ MemoryService provides store(entry) and retrieve() operations
+- ✅ Every completed calculation is recorded via the service
+- ✅ Persistence details (file I/O, JSON) NOT inside MemoryService — delegated to JsonStorage
+- ✅ Service's responsibilities limited to MemoryEntry lifecycle, no business logic
+- ✅ Accessible via python -m src:
+  - Interactive menu: option to view memory history
+  - One-shot flags: --memory-retrieve, --memory-store OP [--result R | --error MSG]
+  - Help shows all operations: python -m src --help
+
+### Architecture Improvements
+
+- **Clear Separation**: MemoryService handles lifecycle, JsonStorage handles persistence
+- **Delegated Persistence**: All save/load operations delegated to storage layer
+- **Focused Responsibility**: Service does not own business logic, only MemoryEntry management
+- **CLI Exposure**: Both interactive menu and one-shot flags for all operations
+- **Type Safety**: Proper handling of ResultEntry and ErrorEntry polymorphism
+
+Duration: 159.90s | Cost: 1.7519339999999994 USD | Turns: 31
