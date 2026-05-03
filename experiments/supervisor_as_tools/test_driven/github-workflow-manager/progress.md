@@ -31,4 +31,4 @@ Duration: 90.2s | Cost: $0.185309 USD | Turns: 21
 - Mutual exclusivity constraints verified (is_running/is_terminal, is_successful/is_failed)
 - None conclusion handled gracefully in all methods
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 171.2s | Cost: $0.312369 USD | Turns: 15
