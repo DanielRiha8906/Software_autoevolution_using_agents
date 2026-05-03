@@ -671,4 +671,4 @@ Avg days to done: X.XX (or "—" if no done tasks)
 - `component_diagram.puml` — Added Task Summary Report component in Domain Model layer
 - `activity_diagram.puml` — Extended main menu flow (case 9) to include summary report generation and display
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 493.6s | Cost: $1.086843 USD | Turns: 18
