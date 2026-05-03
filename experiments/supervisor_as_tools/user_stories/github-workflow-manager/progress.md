@@ -80,4 +80,4 @@ Successfully implemented five state-checking methods for the WorkflowRun class t
 - **Test coverage**: All status/conclusion combinations, mutual exclusivity constraints, edge cases
 - **Diagrams**: Class, activity, and use case diagrams updated
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 297.8s | Cost: $0.581765 USD | Turns: 21
