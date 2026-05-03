@@ -26,5 +26,69 @@
     "operand_b": 2.0,
     "result": 3.0,
     "timestamp": "2026-04-29T13:49:21.896125"
+  },
+  {
+    "operation": "square",
+    "operand_a": 4.0,
+    "operand_b": 0.0,
+    "result": 16.0,
+    "timestamp": "2026-05-03T12:16:40.394027",
+    "execution_time_ms": 0.01142100001061408
+  },
+  {
+    "operation": "sqrt",
+    "operand_a": 9.0,
+    "operand_b": 0.0,
+    "result": 3.0,
+    "timestamp": "2026-05-03T12:16:41.851741",
+    "execution_time_ms": 0.011642000004030706
+  },
+  {
+    "operation": "power",
+    "operand_a": 2.0,
+    "operand_b": 3.0,
+    "result": 8.0,
+    "timestamp": "2026-05-03T12:16:43.057243",
+    "execution_time_ms": 0.013996000006955
+  },
+  {
+    "operation": "modulo",
+    "operand_a": 10.0,
+    "operand_b": 3.0,
+    "result": 1.0,
+    "timestamp": "2026-05-03T12:16:44.212601",
+    "execution_time_ms": 0.007925000033992546
+  },
+  {
+    "operation": "power",
+    "operand_a": 2.0,
+    "operand_b": -1.0,
+    "result": 0.5,
+    "timestamp": "2026-05-03T12:16:54.575238",
+    "execution_time_ms": 0.01249299998562492
+  },
+  {
+    "operation": "power",
+    "operand_a": 4.0,
+    "operand_b": 0.5,
+    "result": 2.0,
+    "timestamp": "2026-05-03T12:16:55.860479",
+    "execution_time_ms": 0.008785999966676172
+  },
+  {
+    "operation": "sqrt",
+    "operand_a": 0.0,
+    "operand_b": 0.0,
+    "result": 0.0,
+    "timestamp": "2026-05-03T12:16:57.145049",
+    "execution_time_ms": 0.008816999979899265
+  },
+  {
+    "operation": "square",
+    "operand_a": -5.0,
+    "operand_b": 0.0,
+    "result": 25.0,
+    "timestamp": "2026-05-03T12:16:58.290857",
+    "execution_time_ms": 0.012894000008145667
   }
 ]
