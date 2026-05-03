@@ -320,4 +320,4 @@ All tests pass including:
 - Private calculation methods encapsulate each statistic computation
 - Dataclass.to_dict() handles None → "incomplete" mapping and datetime → ISO format
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 660.3s | Cost: $1.423226 USD | Turns: 25
