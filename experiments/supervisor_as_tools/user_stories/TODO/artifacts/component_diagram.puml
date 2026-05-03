@@ -18,6 +18,7 @@ package "TODO Application" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
         component "Comments Service" as CMT
+        component "Import/Export Service" as IMPEXP
     }
 
     package "Domain Model" {
@@ -45,7 +46,11 @@ CLI --> SVC
 
 SVC --> MGR
 SVC --> CMT
+SVC --> IMPEXP : export/import
 SVC ..> SummaryModel : generates
+
+IMPEXP --> MGR : read/write tasks
+IMPEXP --> CMT : read/write comments
 
 MGR --> Storage
 MGR --> DTUtils : validate & filter dates

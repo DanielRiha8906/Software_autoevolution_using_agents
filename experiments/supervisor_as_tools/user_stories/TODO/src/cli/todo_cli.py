@@ -178,6 +178,18 @@ class TodoCLI:
         p_report = sub.add_parser("report", help="View task summary report")
         p_report.set_defaults(func=self._cmd_report)
 
+        # export command
+        p_export = sub.add_parser("export", help="Export all tasks and comments to JSON file")
+        p_export.add_argument("-o", "--output", required=True, help="Output file path")
+        p_export.set_defaults(func=self._cmd_export)
+
+        # import command
+        p_import = sub.add_parser("import", help="Import tasks and comments from JSON file")
+        p_import.add_argument("-i", "--input", required=True, help="Input file path")
+        p_import.add_argument("--merge-mode", choices=["skip", "overwrite"], default="skip",
+                             help="How to handle duplicate IDs (default: skip)")
+        p_import.set_defaults(func=self._cmd_import)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -360,3 +372,27 @@ class TodoCLI:
             print(f"  {line}")
         print()
         return 0
+
+    def _cmd_export(self, args: argparse.Namespace) -> int:
+        """Handle export command."""
+        try:
+            count = self._service.export_to_json(args.output)
+            print(f"Exported {count} tasks to {args.output}")
+            return 0
+        except (FileNotFoundError, ValueError, OSError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
+    def _cmd_import(self, args: argparse.Namespace) -> int:
+        """Handle import command."""
+        try:
+            tasks_imp, tasks_skip, comments_imp, comments_skip = self._service.import_from_json(
+                args.input, args.merge_mode
+            )
+            print(f"Imported {tasks_imp} tasks, {comments_imp} comments")
+            if tasks_skip > 0 or comments_skip > 0:
+                print(f"Skipped {tasks_skip} tasks, {comments_skip} comments")
+            return 0
+        except (FileNotFoundError, ValueError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1

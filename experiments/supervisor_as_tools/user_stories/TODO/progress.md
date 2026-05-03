@@ -672,3 +672,150 @@ Avg days to done: X.XX (or "—" if no done tasks)
 - `activity_diagram.puml` — Extended main menu flow (case 9) to include summary report generation and display
 
 Duration: 493.6s | Cost: $1.086843 USD | Turns: 18
+
+## Task 07: Export/Import Tasks and Comments to/from JSON
+
+### Task Number
+07
+
+### Summary
+Implemented comprehensive import/export functionality that allows users to back up and migrate tasks with comments to a JSON file. Exported data includes all task fields (ID, status, due dates, timestamps) and comments, with validation and graceful handling of invalid records during import.
+
+### Files Changed
+
+#### New Files
+- `src/services/import_export_service.py` — ImportExportService class with export_to_json() and import_from_json() methods
+- `tests/test_import_export_service.py` — 23 comprehensive test cases for import/export functionality
+
+#### Modified Files
+- `src/services/todo_service.py` — Added export_to_json() and import_from_json() delegation methods
+- `src/services/__init__.py` — Exported ImportExportService
+- `src/cli/todo_cli.py` — Added "export" and "import" subcommands with proper argument parsing
+- `src/cli/interactive_menu.py` — Added menu option 10 "Import/Export" with submenu for export/import operations
+- `README.md` — Added comprehensive documentation for import/export feature with examples and schema
+- `artifacts/class_diagram.puml` — Added ImportExportService class, updated TodoService/TodoCLI/InteractiveMenu with new methods
+- `artifacts/component_diagram.puml` — Added Import/Export Service component
+- `artifacts/use_case_diagram.puml` — Added import/export use cases
+- `artifacts/activity_diagram.puml` — Added "Import/Export Flow" partition
+
+### Acceptance Criteria Status
+
+✅ **All tasks and their comments can be exported to a JSON file**
+- `export_to_json(file_path)` exports all tasks from TaskManager
+- Exports all comments from CommentsService
+- Both are included in a single JSON file with metadata
+
+✅ **Tasks and comments can be imported from a JSON file**
+- `import_from_json(file_path, merge_mode)` reads JSON and deserializes into Task and TaskComment objects
+- Supports "skip" (default) and "overwrite" merge modes
+- Returns tuple: (tasks_imported, tasks_skipped, comments_imported, comments_skipped)
+
+✅ **Task IDs, statuses, due dates, and comments are preserved on import**
+- All Task fields serialized with `Task.to_dict()` and deserialized with `Task.from_dict()`
+- All TaskComment fields serialized with `TaskComment.to_dict()` and deserialized with `TaskComment.from_dict()`
+- Round-trip serialization/deserialization verified in tests
+
+✅ **Imported data is validated before being applied; invalid structure is rejected**
+- File existence checked: raises FileNotFoundError for missing file
+- JSON syntax validated: raises ValueError for malformed JSON
+- Required top-level keys checked: raises ValueError if "tasks" or "comments" missing
+- Invalid records skipped individually (no full failure)
+
+✅ **Importing does not overwrite existing data unless explicitly intended**
+- Default merge_mode="skip" skips duplicate task/comment IDs
+- Existing tasks and comments remain untouched
+- CLI and menu both default to "skip" mode
+- "overwrite" mode available as CLI flag for explicit user choice
+
+✅ **JSON schema matches Task.to_dict() and TaskComment.to_dict() serialization formats**
+- Export structure: `{"version": 1, "export_date": ISO8601Z, "tasks": [...], "comments": [...]}`
+- Each task matches TaskStatus enum strings ("pending", "in_progress", "done")
+- Datetimes serialized as ISO 8601 strings with UTC offset
+- Optional fields (description, due_date, author) serialized as null when absent
+
+✅ **Invalid or duplicate entries during import are skipped individually, not treated as full failure**
+- Task with invalid status enum → skipped (import continues)
+- Comment with invalid content → skipped (import continues)
+- Comment referencing non-existent task → skipped (import continues)
+- Duplicate task ID (merge_mode="skip") → skipped (import continues)
+- Duplicate comment ID → skipped (import continues)
+- Each skip logged with informational message
+- Return counts reflect what was actually imported
+
+✅ **Only JSON format is supported; CSV and XML are out of scope**
+- Single JSON export/import format implemented
+- No CSV or XML support
+
+✅ **JSON format is described in documentation (README.md)**
+- README section "Import / Export" documents feature
+- Export JSON schema documented with field descriptions
+- Examples provided for both CLI and interactive menu usage
+- Merge mode options documented
+
+✅ **All new functionality accessible via python -m src**
+- **CLI commands**: `python -m src export --output <path>` and `python -m src import --input <path> [--merge-mode skip|overwrite]`
+- **Interactive menu**: Option 10 "Import/Export" with submenu for export/import
+- Help text: `python -m src --help` lists export and import commands
+- All functionality accessible without unhandled exceptions
+
+### Implementation Details
+
+#### Export Process
+1. Retrieve all tasks via `TaskManager.list_all()`
+2. Retrieve all comments via `CommentsService._comments.values()`
+3. Serialize each to dict using `to_dict()` method
+4. Create export envelope: `{"version": 1, "export_date": "...", "tasks": [...], "comments": [...]}`
+5. Write to file using `json.dump()` with indentation
+6. Return count of tasks exported
+
+#### Import Process
+1. Validate file exists; raise FileNotFoundError if not
+2. Parse JSON from file; raise ValueError if invalid JSON or missing required keys
+3. Iterate tasks array:
+   - Deserialize using `Task.from_dict()`
+   - Check if ID already exists (if merge_mode="skip", skip; if "overwrite", delete old)
+   - Persist to TaskManager._tasks and call _persist()
+4. Iterate comments array:
+   - Deserialize using `TaskComment.from_dict()`
+   - Validate task_id references an existing task (skip if not found)
+   - Check if ID already exists (skip if merge_mode="skip")
+   - Persist to CommentsService._comments and call _persist()
+5. Count imported/skipped for each type
+6. Return tuple: (tasks_imported, tasks_skipped, comments_imported, comments_skipped)
+
+#### Error Handling
+- File not found → FileNotFoundError with clear message
+- Invalid JSON → ValueError("Invalid JSON format")
+- Missing top-level keys → ValueError("Missing 'tasks' or 'comments' key in JSON file")
+- Invalid task record → skipped, informational message printed
+- Invalid comment record → skipped, informational message printed
+- Duplicate ID (skip mode) → skipped, informational message printed
+- Orphan comment (missing task) → skipped, informational message printed
+
+#### CLI Integration
+- `export` subcommand: `-o/--output <path>` (required)
+- `import` subcommand: `-i/--input <path>` (required), `--merge-mode skip|overwrite` (optional, default skip)
+- Both commands integrated into argparse parser in TodoCLI
+- Proper exit codes: 0 for success, 1 for error
+
+#### Interactive Menu Integration
+- New menu option 10: "Import/Export"
+- Submenu: "1. Export tasks and comments to file", "2. Import tasks and comments from file", "0. Back"
+- Export path: prompts for output file path, displays confirmation
+- Import path: prompts for input file path, displays summary (imported/skipped counts)
+- All errors caught and displayed to user with option to continue
+
+### Test Results
+✅ **All 236 tests passed** (23 new + 213 existing)
+- 6 export tests (empty list, single task, multiple tasks+comments, field preservation, file overwrite, structure validation)
+- 13 import tests (valid file, error cases, duplicate handling, invalid record handling, idempotence)
+- 4 integration tests (export/import round-trip, large datasets, field preservation)
+- All existing task, status, comment, filtering, and report tests continue passing
+
+### Diagrams Updated
+- `class_diagram.puml` — Added ImportExportService class, updated TodoService/TodoCLI/InteractiveMenu with new methods and relationships
+- `component_diagram.puml` — Added Import/Export Service component with dependencies
+- `use_case_diagram.puml` — Added export/import use cases linked to User actor
+- `activity_diagram.puml` — Added "Import/Export Flow" partition showing both export and import workflows with error handling
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

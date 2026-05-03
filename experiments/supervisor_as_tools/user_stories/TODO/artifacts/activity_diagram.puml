@@ -26,6 +26,8 @@ repeat
       :Run comment management flow;
     case (9 — Summary report)
       :Run summary report flow;
+    case (10 — Import/Export)
+      :Run import/export flow;
     case (0/q — Quit)
       :Clear screen;
       stop
@@ -172,6 +174,72 @@ partition "Summary Report Flow" {
   :- completion_rate_percent;
   :- average_days_to_completion;
   :Format and display report;
+}
+
+partition "Import/Export Flow" {
+  :Display import/export menu;
+  switch (action)
+    case (Export)
+      :Input output file path;
+      if (Path empty?) then (yes)
+        :Show error: path required;
+        :Return to menu;
+      else (no)
+        :Call export_to_json(file_path);
+        :Get all tasks from TaskManager;
+        :Get all comments from CommentsService;
+        :Create export data with version and timestamp;
+        :Serialize to JSON;
+        if (File write succeeds?) then (yes)
+          :Display: Exported N tasks;
+        else (error)
+          :Display error message;
+        endif
+      endif
+    case (Import)
+      :Input input file path;
+      if (Path empty?) then (yes)
+        :Show error: path required;
+        :Return to menu;
+      else (no)
+        :Call import_from_json(file_path, merge_mode);
+        if (File exists?) then (yes)
+          :Parse JSON;
+          if (Valid JSON?) then (yes)
+            if (Has 'tasks' and 'comments' keys?) then (yes)
+              :Initialize counters;
+              :For each task in JSON;
+              :Check if task ID exists;
+              if (Exists & skip mode?) then (yes)
+                :Increment tasks_skipped;
+              else
+                :Add/overwrite task;
+                :Increment tasks_imported;
+              endif
+              :For each comment in JSON;
+              :Validate referenced task exists;
+              if (Task not found?) then (yes)
+                :Increment comments_skipped;
+              else
+                if (Comment ID exists & skip mode?) then (yes)
+                  :Increment comments_skipped;
+                else
+                  :Add/overwrite comment;
+                  :Increment comments_imported;
+                endif
+              endif
+              :Display summary: imported X tasks, skipped Y;
+            else (missing keys)
+              :Display error: missing keys;
+            endif
+          else (invalid JSON)
+            :Display error: invalid JSON;
+          endif
+        else (file not found)
+          :Display error: file not found;
+        endif
+      endif
+  endswitch
 }
 
 @enduml

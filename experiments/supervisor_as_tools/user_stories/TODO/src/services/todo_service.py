@@ -1,6 +1,6 @@
 from datetime import datetime
 from statistics import mean
-from typing import Optional, Union
+from typing import Optional, Tuple, Union
 
 from ..models.task import Task
 from ..models.task_comment import TaskComment
@@ -9,6 +9,7 @@ from ..models.task_summary_report import TaskSummaryReport
 from ..storage.json_storage import JsonStorage
 from ..utils.datetime_utils import parse_datetime_or_iso_string
 from .comments_service import CommentsService
+from .import_export_service import ImportExportService
 from .task_manager import TaskManager
 
 
@@ -174,3 +175,34 @@ class TodoService:
             completion_rate_percent=completion_rate_percent,
             average_days_to_completion=average_days_to_completion,
         )
+
+    # ── Import/Export ─────────────────────────────────────────────────
+
+    def export_to_json(self, file_path: str) -> int:
+        """
+        Export all tasks and comments to JSON file.
+
+        Args:
+            file_path: Path to the JSON file to write
+
+        Returns:
+            int: Number of tasks exported
+        """
+        service = ImportExportService(self._manager, self._comments_service)
+        return service.export_to_json(file_path)
+
+    def import_from_json(
+        self, file_path: str, merge_mode: str = "skip"
+    ) -> Tuple[int, int, int, int]:
+        """
+        Import tasks and comments from JSON file.
+
+        Args:
+            file_path: Path to the JSON file to read
+            merge_mode: "skip" (default) or "overwrite"
+
+        Returns:
+            Tuple: (tasks_imported, tasks_skipped, comments_imported, comments_skipped)
+        """
+        service = ImportExportService(self._manager, self._comments_service)
+        return service.import_from_json(file_path, merge_mode)
