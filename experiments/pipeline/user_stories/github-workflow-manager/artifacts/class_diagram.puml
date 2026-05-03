@@ -68,6 +68,17 @@ package "models" #DDEEFF {
         +max_duration_seconds       : Optional[float]
         +duration_by_status         : dict[str, float]
     }
+
+    class ImportResult {
+        +filepath              : str
+        +total_records         : int
+        +imported_runs         : int
+        +skipped_runs          : int
+        +imported_attempts     : int
+        +skipped_attempts      : int
+        +errors                : List[str]
+        +had_overwrite         : bool
+    }
 }
 
 package "storage" #FFF3CC {
@@ -126,6 +137,14 @@ package "services" #DDFFD4 {
     class StatisticsService {
         +calculate_statistics(runs: List[WorkflowRun],\n  attempt_service: Optional[WorkflowRunAttemptService]) : StatisticsReport
     }
+
+    class WorkflowRunExportImportService {
+        --
+        +export_to_file(filepath: str, service: WorkflowRunService,\n  attempt_service: Optional[WorkflowRunAttemptService],\n  include_attempts: bool) : None
+        +import_from_file(filepath: str, service: WorkflowRunService,\n  attempt_service: Optional[WorkflowRunAttemptService],\n  overwrite: bool, dry_run: bool) : ImportResult
+        -_validate_and_build_run(data: dict, record_index: int) : WorkflowRun
+        -_validate_and_build_attempt(data: dict, record_index: int) : WorkflowRunAttempt
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -165,13 +184,21 @@ WorkflowRunTracker           ..>  WorkflowRun
 StatisticsService            ..>  WorkflowRun
 StatisticsService            ..>  StatisticsReport
 StatisticsService            ..>  WorkflowRunAttemptService
+WorkflowRunExportImportService   ..>  WorkflowRunService
+WorkflowRunExportImportService   ..>  WorkflowRunAttemptService
+WorkflowRunExportImportService   ..>  WorkflowRun
+WorkflowRunExportImportService   ..>  WorkflowRunAttempt
+WorkflowRunExportImportService   ..>  ImportResult
 "workflow_cli"               ..>  WorkflowRunService
 "workflow_cli"               ..>  WorkflowRunAttemptService
 "workflow_cli"               ..>  WorkflowRunTracker
 "workflow_cli"               ..>  StatisticsService
+"workflow_cli"               ..>  WorkflowRunExportImportService
+"workflow_cli"               ..>  ImportResult
 "interactive_menu"           ..>  WorkflowRunService
 "interactive_menu"           ..>  WorkflowRunAttemptService
 "interactive_menu"           ..>  WorkflowRunTracker
 "interactive_menu"           ..>  StatisticsService
+"interactive_menu"           ..>  WorkflowRunExportImportService
 
 @enduml
