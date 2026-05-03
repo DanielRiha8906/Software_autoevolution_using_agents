@@ -20,6 +20,27 @@ repeat
       :Run update task flow;
     case (6 — Delete task)
       :Run delete task flow;
+    case (7 — Manage projects)
+      :Show project submenu;
+      repeat
+        :Display projects + project menu;
+        :Wait for project command;
+        switch (project_choice)
+          case (1 — Create project)
+            :Run create project flow;
+          case (2 — List projects)
+            :Run list projects flow;
+          case (3 — Assign task)
+            :Run assign task to project flow;
+          case (4 — View project tasks)
+            :Run view project tasks flow;
+          case (0/b — Back)
+            :Return to main menu;
+            break
+          case (other)
+            :Show unknown option;
+        endswitch
+      repeat while (in project menu)
     case (8 — Manage comments)
       :Run manage comments flow;
     case (9 — Filter by date)

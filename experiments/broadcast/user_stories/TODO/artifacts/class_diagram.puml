@@ -18,6 +18,7 @@ package "models" #DDEEFF {
         +created_at : DateTime
         +updated_at : DateTime
         +due_date : DateTime [0..1]
+        +project_id : String [0..1]
         --
         +__post_init__() : void
         +to_dict() : Dictionary
@@ -29,6 +30,16 @@ package "models" #DDEEFF {
         +is_in_progress() : Boolean
         +is_completed() : Boolean
         +is_overdue() : Boolean
+    }
+
+    class Project {
+        +id : String
+        +name : String
+        +created_at : DateTime
+        --
+        +__post_init__() : void
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : Project
     }
 
     class TaskComment {
@@ -65,25 +76,29 @@ package "models" #DDEEFF {
     }
 
     Task "1" --> "*" TaskComment : has
+    Task "*" --> "0..1" Project : belongs_to
 }
 
 package "storage" #FFF3CC {
     class JsonStorage {
         -path : String
         -cached_comments : List<Dictionary>
+        -cached_projects : List<Dictionary>
         --
         +JsonStorage(path: String [0..1])
         +load() : List<Dictionary>
         +save(tasks: List<Dictionary>) : void
         +load_comments() : List<Dictionary>
         +save_all(tasks: List<Dictionary>, comments: List<Dictionary>) : void
-        +save_comments(comments: List<Dictionary>) : void
+        +load_projects() : List<Dictionary>
+        +save_projects(projects: List<Dictionary>) : void
     }
 }
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
     exception CommentNotFoundError
+    exception ProjectNotFoundError
 
     class CommentsService {
         -task_manager : TaskManager
@@ -113,6 +128,9 @@ package "services" #DDFFD4 {
         +listByStatus(status: TaskStatus) : List<Task>
         +list_by_date_range(before: DateTime [0..1], after: DateTime [0..1]) : List<Task>
         +list_overdue() : List<Task>
+        +list_by_project(project_id: String) : List<Task>
+        +list_unassigned() : List<Task>
+        +set_project(task_id: String, project_id: String [0..1]) : Task
         +apply_filters(options: FilterOptions) : List<Task>
         +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
@@ -121,6 +139,20 @@ package "services" #DDFFD4 {
         +markInProgress(taskId: String) : Task
         +markDone(taskId: String) : Task
         +reopen(taskId: String) : Task
+        -load() : void
+        -persist() : void
+    }
+
+    class ProjectManager {
+        -storage : JsonStorage
+        -projects : Dictionary<String, Project>
+        --
+        +ProjectManager(storage: JsonStorage [0..1])
+        +add(name: String) : Project
+        +get(project_id: String) : Project
+        +list_all() : List<Project>
+        +update(project_id: String, name: String [0..1]) : Project
+        +delete(project_id: String) : void
         -load() : void
         -persist() : void
     }
@@ -146,6 +178,7 @@ package "services" #DDFFD4 {
     class TodoService {
         -manager : TaskManager
         -comments_service : CommentsService
+        -project_manager : ProjectManager
         --
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1]) : Task
@@ -165,6 +198,15 @@ package "services" #DDFFD4 {
         +get_comment(commentId: String) : TaskComment
         +delete_comment(commentId: String) : void
         +edit_comment(commentId: String, content: String) : TaskComment
+        +create_project(name: String) : Project
+        +get_project(project_id: String) : Project
+        +list_projects() : List<Project>
+        +update_project(project_id: String, name: String) : Project
+        +delete_project(project_id: String) : void
+        +list_tasks_by_project(project_id: String) : List<Task>
+        +list_unassigned_tasks() : List<Task>
+        +assign_task_to_project(task_id: String, project_id: String) : Task
+        +unassign_task_from_project(task_id: String) : Task
         +generate_report() : TaskSummary
     }
 }
@@ -193,11 +235,14 @@ CommentsService --> TaskManager : task_manager
 CommentsService --> JsonStorage : storage
 CommentsService ..> TaskNotFoundError : raises
 CommentsService ..> CommentNotFoundError : raises
+ProjectManager --> JsonStorage : storage
+ProjectManager ..> ProjectNotFoundError : raises
 ImportExportService --> TaskManager : task_manager
 ImportExportService --> CommentsService : comments_service
 ImportExportService --> ImportSummary : returns
 TodoService --> TaskManager : manager
 TodoService --> CommentsService : comments_service
+TodoService --> ProjectManager : project_manager
 TodoService --> TaskSummary : generates
 TodoCLI --> TodoService : service
 TodoCLI --> ImportExportService : import_export

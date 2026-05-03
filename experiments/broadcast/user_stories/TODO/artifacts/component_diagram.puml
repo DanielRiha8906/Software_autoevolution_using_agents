@@ -18,11 +18,12 @@ package "TODO Application" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
         component "Comments Service" as CSVC
+        component "Project Manager" as PMGR
         component "Import/Export Service" as IES
     }
 
     package "Domain Model" {
-        component "Task Model\n(Task, TaskStatus, TaskComment)" as Model
+        component "Task & Project Models\n(Task, Project, TaskStatus, TaskComment)" as Model
     }
 
     package "Persistence Layer" {
@@ -42,12 +43,15 @@ CLI --> IES
 
 SVC --> MGR
 SVC --> CSVC
+SVC --> PMGR
 IES --> MGR
 IES --> CSVC
 MGR --> Storage
 CSVC --> Storage
+PMGR --> Storage
 MGR ..> Model
 CSVC ..> Model
+PMGR ..> Model
 Storage ..> Model
 
 Storage --> DB : read/write

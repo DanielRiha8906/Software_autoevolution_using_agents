@@ -19,6 +19,11 @@ rectangle "TODO Manager" {
     usecase "List comments" as I_COMMENT_LIST
     usecase "Edit comment" as I_COMMENT_EDIT
     usecase "Delete comment" as I_COMMENT_DELETE
+    usecase "Manage projects" as I_PROJECTS
+    usecase "Create project" as I_PROJECT_CREATE
+    usecase "List projects" as I_PROJECT_LIST
+    usecase "Assign task to project" as I_PROJECT_ASSIGN
+    usecase "View project tasks" as I_PROJECT_TASKS
     usecase "View task summary report" as I_REPORT
     usecase "Export tasks and comments" as I_EXPORT
     usecase "Import tasks and comments" as I_IMPORT
@@ -39,6 +44,13 @@ rectangle "TODO Manager" {
     usecase "List comments" as C_COMMENT_LIST
     usecase "Edit comment" as C_COMMENT_EDIT
     usecase "Delete comment" as C_COMMENT_DELETE
+    usecase "Create project" as C_PROJECT_CREATE
+    usecase "List projects" as C_PROJECT_LIST
+    usecase "Update project" as C_PROJECT_UPDATE
+    usecase "Delete project" as C_PROJECT_DELETE
+    usecase "Assign task to project" as C_PROJECT_ASSIGN
+    usecase "Unassign task from project" as C_PROJECT_UNASSIGN
+    usecase "List tasks by project" as C_PROJECT_TASKS
     usecase "Display task summary report" as C_REPORT
     usecase "Export tasks and comments" as C_EXPORT
     usecase "Import tasks and comments" as C_IMPORT
@@ -59,6 +71,11 @@ I_COMMENTS ..> I_COMMENT_ADD : <<exclude>>
 I_COMMENTS ..> I_COMMENT_LIST : <<exclude>>
 I_COMMENTS ..> I_COMMENT_EDIT : <<exclude>>
 I_COMMENTS ..> I_COMMENT_DELETE : <<exclude>>
+UI ..> I_PROJECTS : <<exclude>>
+I_PROJECTS ..> I_PROJECT_CREATE : <<exclude>>
+I_PROJECTS ..> I_PROJECT_LIST : <<exclude>>
+I_PROJECTS ..> I_PROJECT_ASSIGN : <<exclude>>
+I_PROJECTS ..> I_PROJECT_TASKS : <<exclude>>
 UI ..> I_REPORT : <<exclude>>
 UI ..> I_EXPORT : <<exclude>>
 UI ..> I_IMPORT : <<exclude>>
@@ -76,6 +93,13 @@ CLI ..> C_COMMENT_ADD : <<exclude>>
 CLI ..> C_COMMENT_LIST : <<exclude>>
 CLI ..> C_COMMENT_EDIT : <<exclude>>
 CLI ..> C_COMMENT_DELETE : <<exclude>>
+CLI ..> C_PROJECT_CREATE : <<exclude>>
+CLI ..> C_PROJECT_LIST : <<exclude>>
+CLI ..> C_PROJECT_UPDATE : <<exclude>>
+CLI ..> C_PROJECT_DELETE : <<exclude>>
+CLI ..> C_PROJECT_ASSIGN : <<exclude>>
+CLI ..> C_PROJECT_UNASSIGN : <<exclude>>
+CLI ..> C_PROJECT_TASKS : <<exclude>>
 CLI ..> C_REPORT : <<exclude>>
 CLI ..> C_EXPORT : <<exclude>>
 CLI ..> C_IMPORT : <<exclude>>

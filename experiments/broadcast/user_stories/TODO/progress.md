@@ -982,3 +982,125 @@ No new dependencies added. Implementation uses Python standard library:
 - `dataclasses` for ImportSummary definition
 
 Duration: 577.4s | Cost: $1.435432 USD | Turns: 40
+
+---
+
+# Task 08: Project Grouping
+
+## Task Overview
+
+**User Story:** As a user managing multiple areas of work, I want to group tasks into projects, so that I can organise and filter my workload by topic or goal.
+
+**Acceptance Criteria:**
+- ✅ A `Project` domain class exists with `id` (UUID) and `name`.
+- ✅ `Task` has an optional `project_id` attribute for assignment to a project.
+- ✅ Projects can be created and listed.
+- ✅ Tasks can be listed filtered by project.
+- ✅ Tasks without a `project_id` continue to work as before.
+- ✅ Existing stored tasks that lack `project_id` load without error.
+- ✅ Project names cannot be empty.
+- ✅ Moving a task from one project to another is supported.
+- ✅ Deleting a project leaves its tasks unassigned (not deleted) as a bonus.
+- ✅ No drag-and-drop UI or per-project access control is introduced.
+- ✅ All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
+
+## Implementation Results
+
+### Candidate Evaluation
+
+| Candidate | Approach | Tests Passing | Selection |
+|-----------|----------|---------------|-----------|
+| A (broadcast-candidate-a) | Complete project management with ProjectManager service | 205/205 | **SELECTED** |
+| B (broadcast-candidate-b) | Complete project management with ProjectManager service | 205/205 | Equivalent |
+| C (broadcast-candidate-c) | Incomplete implementation | 134/205 | Not selected |
+
+**Winner:** Candidate A (identical to B, both scored 205/205 tests passing)
+
+### Files Changed
+
+**Domain Models:**
+- `src/models/project.py` (NEW) — Project dataclass with id (UUID), name, created_at
+- `src/models/task.py` — Added optional `project_id` attribute
+- `src/models/__init__.py` — Exported Project class
+
+**Services:**
+- `src/services/project_manager.py` (NEW) — ProjectManager service for CRUD operations
+- `src/services/todo_service.py` — Added 8 project management methods
+- `src/services/task_manager.py` — Added project filtering helpers
+
+**Persistence:**
+- `src/storage/json_storage.py` — Added `load_projects()` and `save_projects()` methods
+
+**CLI:**
+- `src/cli/todo_cli.py` — Added 8 new project commands:
+  - `create-project <name>`
+  - `list-projects`
+  - `show-project <id>`
+  - `update-project <id> <name>`
+  - `delete-project <id>`
+  - `list-tasks-by-project <project_id>`
+  - `assign-task-to-project <task_id> <project_id>`
+  - `unassign-task-from-project <task_id>`
+
+**Interactive Menu:**
+- `src/cli/interactive_menu.py` — Added option 13 for comprehensive project management submenu
+
+**Diagrams:**
+- `artifacts/class_diagram.puml` — Added Project class and ProjectManager
+- `artifacts/component_diagram.puml` — Added Project Manager component
+- `artifacts/use_case_diagram.puml` — Added project management use cases
+- `artifacts/activity_diagram.puml` — Added project submenu flow
+
+### Test Results
+
+```
+........................................................................ [ 35%]
+........................................................................ [ 70%]
+.............................................................            [100%]
+205 passed in 0.42s
+```
+
+All 51 new tests pass covering:
+- Project domain class creation and validation
+- ProjectManager CRUD operations
+- Task-project associations
+- Task filtering by project
+- Backward compatibility (tasks without project_id)
+- Data persistence and loading
+- Serialization/deserialization roundtrips
+- All 10 acceptance criteria
+
+### Design Decisions
+
+1. **Project Manager Service:** Separate `ProjectManager` class following existing patterns, handles all project CRUD operations delegating persistence to `JsonStorage`.
+
+2. **Optional Project ID:** Task.project_id is optional (None by default), maintaining backward compatibility with existing tasks and allowing unassigned tasks.
+
+3. **Validation:** Project names cannot be empty, validated in `__post_init__()`.
+
+4. **Safe Deletion:** Deleting a project unassigns (not deletes) its tasks, preserving task data.
+
+5. **Storage Format:** Projects stored separately from tasks in JSON, with methods to preserve both collections during updates.
+
+6. **CLI Commands:** 8 new commands accessible via `python -m src <command>`, matching existing command patterns.
+
+7. **Interactive Menu:** Full project management submenu with CRUD operations, task assignment, and filtering.
+
+### Architecture Integration
+
+- `ProjectManager` integrates with `TodoService` for high-level operations
+- `JsonStorage` handles unified persistence of both tasks and projects
+- `TaskManager` provides project-aware filtering methods
+- No changes required to `Task` business logic beyond optional `project_id` attribute
+- All existing functionality remains unchanged and working
+
+### Dependencies
+
+No new dependencies added. Implementation uses Python standard library:
+- `uuid` module for project IDs
+- `datetime` and `timezone` for created_at timestamps
+- Existing `dataclasses` and serialization patterns
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
+
+Duration: 577.4s | Cost: $1.435432 USD | Turns: 40
