@@ -219,4 +219,4 @@ Duration: 412.8s | Cost: $0.739845 USD | Turns: 13
   - CLI flags: add-comment, list-comments, delete-comment, edit-comment subcommands
   - Both modes fully functional and tested
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 723.5s | Cost: $1.516267 USD | Turns: 33
