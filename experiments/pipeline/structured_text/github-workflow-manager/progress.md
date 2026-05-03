@@ -498,4 +498,4 @@ All tests pass including:
 **Dependencies Added:**
 - `requests` library (2.33.1) — Already a standard HTTP library, imported in github_integration_service.py
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 833.2s | Cost: $1.736629 USD | Turns: 15
