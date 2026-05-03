@@ -18,6 +18,7 @@ package "GitHub Workflow Manager" {
   package "Service layer" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
+    component "GitHubFetchService" as FETCH
   }
 
   package "Persistence layer" {
@@ -29,6 +30,10 @@ package "GitHub Workflow Manager" {
     component "WorkflowRun" as RUN
     component "WorkflowStatus" as STATUS
     component "WorkflowConclusion" as CONCLUSION
+  }
+
+  package "External integrations" {
+    component "GitHub CLI" as GH_CLI
   }
 }
 
@@ -48,5 +53,8 @@ STOR --> JSON_FILE
 SVC ..> RUN
 RUN --> STATUS
 RUN --> CONCLUSION
+
+FETCH --> GH_CLI
+FETCH ..> RUN
 
 @enduml

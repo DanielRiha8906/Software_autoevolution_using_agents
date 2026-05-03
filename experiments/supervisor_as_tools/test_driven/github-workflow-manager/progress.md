@@ -139,3 +139,28 @@ Duration: 351.0s | Cost: $0.614922 USD | Turns: 19
 - Serialization and deserialization preserves all model data and datetime information
 
 Duration: 354.9s | Cost: $0.694199 USD | Turns: 23
+
+## Task 08: Implement GitHubFetchService for external workflow data
+
+**Status:** ✅ Completed
+
+**Files Changed:**
+- `src/services/github_fetch_service.py` — Created new service class with `__init__(secrets_path: Optional[str])` constructor, `resolve_token() -> str` method implementing priority-based token resolution (env → file → user input without persistence), and `fetch(owner: str, repo: str) -> List[WorkflowRun]` method using subprocess to invoke GitHub CLI and convert JSON output to WorkflowRun domain objects. Includes private helpers for file parsing and object conversion.
+- `tests/test_github_fetch_service.py` — Created comprehensive test suite with 8 tests covering service instantiation, token resolution from environment variable, token resolution from .env file, user prompt fallback, non-persistence of user-provided tokens, gh CLI invocation with JSON parsing and WorkflowRun conversion, exception raising on CLI failure, and verification that requests library is not used
+- `src/services/__init__.py` — Added GitHubFetchService to imports and exports
+- `artifacts/class_diagram.puml` — Added GitHubFetchService class to services package with methods, dependencies on WorkflowRun, and field mapping details
+- `artifacts/component_diagram.puml` — Added GitHubFetchService to service layer and created External integrations package showing GitHub CLI as dependency
+
+**Test Results:**
+- All 102 tests pass (8 new GitHubFetchService tests + 94 existing tests)
+- Token resolution priority verified (env → file → input fallback)
+- User-provided tokens confirmed not persisted to disk
+- GitHub CLI invocation via subprocess.run properly mocked and validated
+- Field mapping correct: id → string, name → workflow_name, headBranch → branch, createdAt → created_at, headSha → commit_sha
+- ISO8601 timestamp parsing with Z suffix handled correctly
+- Exception properly raised on non-zero gh CLI return code
+- No requests library usage verified via source inspection
+- No attempt data fetched or handled (as per requirements)
+- No OAuth or token refresh logic implemented
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
