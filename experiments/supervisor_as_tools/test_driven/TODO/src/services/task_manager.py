@@ -23,8 +23,8 @@ class TaskManager:
     def _persist(self) -> None:
         self._storage.save([t.to_dict() for t in self._tasks.values()])
 
-    def add(self, title: str, description: Optional[str] = None) -> Task:
-        task = Task(title=title, description=description)
+    def add(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
+        task = Task(title=title, description=description, due_date=due_date)
         self._tasks[task.id] = task
         self._persist()
         return task

@@ -22,10 +22,12 @@ class TodoService:
         if dt.tzinfo != CEST:
             raise ValueError(f"{name} must be in CEST timezone, got {dt.tzinfo}")
 
-    def add_task(self, title: str, description: Optional[str] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description)
+        if due_date is not None:
+            self._validate_datetime_cest(due_date, "due_date")
+        return self._manager.add(title.strip(), description, due_date)
 
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)

@@ -52,6 +52,11 @@ class TodoCLI:
         p_add = sub.add_parser("add", help="Add a new task")
         p_add.add_argument("title", help="Task title")
         p_add.add_argument("-d", "--description", help="Optional description")
+        p_add.add_argument(
+            "--due-date",
+            type=str,
+            help="Due date for the task (ISO 8601 format with CEST timezone, e.g., 2025-12-31T23:59:59+02:00)",
+        )
         p_add.set_defaults(func=self._cmd_add)
 
         # list
@@ -127,7 +132,10 @@ class TodoCLI:
         return dt
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
-        task = self._service.add_task(args.title, args.description)
+        due_date = None
+        if args.due_date:
+            due_date = self._parse_datetime_cest(args.due_date)
+        task = self._service.add_task(args.title, args.description, due_date)
         print(f"Added task {task.id[:8]}  {task.title}")
         return 0
 
