@@ -59,4 +59,4 @@ Duration: 272.5s | Cost: $0.421845 USD | Turns: 15
 - ✅ No existing operations duplicated or renamed
 - ✅ All new operations accessible via python -m src with interactive menu and CLI flags (--operation square/sqrt/power/modulo)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 592.2s | Cost: $1.021847 USD | Turns: 19
