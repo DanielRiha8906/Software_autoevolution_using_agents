@@ -86,6 +86,27 @@ package "services" #DDFFD4 {
         +deleteTask(taskId: String) : void
     }
 
+    class CommentsService {
+        -todo_service : TodoService [0..1]
+        -comments : Dictionary<String, List<TaskComment>>
+        --
+        +CommentsService(todo_service: TodoService [0..1])
+        +addComment(task_id: String, content: String, author: String [0..1]) : TaskComment
+        +listComments(task_id: String) : List<TaskComment>
+        +getAllComments() : List<TaskComment>
+        +toDict() : Dictionary
+        +fromDict(data: Dictionary) : void
+    }
+
+    class TaskImportExportService {
+        -todo_service : TodoService
+        -comments_service : CommentsService
+        --
+        +TaskImportExportService(todo_service: TodoService, comments_service: CommentsService)
+        +export(path: String) : void
+        +importFrom(path: String) : void
+    }
+
     class TaskStatisticsReport {
         +total : int
         +count_per_status : Dictionary<TaskStatus, int>
@@ -119,12 +140,21 @@ package "cli" #FFE5E5 {
 }
 
 Task --> TaskStatus : status
+TaskComment --> Task : references (task_id)
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TodoService --> TaskManager : manager
+CommentsService --> TaskComment : manages
+CommentsService --> TodoService : optional ref
+TaskImportExportService --> TodoService : uses
+TaskImportExportService --> CommentsService : uses
 TaskStatisticsService --> TodoService : todo_service
 TaskStatisticsService --> TaskStatisticsReport : returns
 TodoCLI --> TodoService : service
+TodoCLI --> CommentsService : service
+TodoCLI --> TaskImportExportService : service
 InteractiveMenu --> TodoService : service
+InteractiveMenu --> CommentsService : service
+InteractiveMenu --> TaskImportExportService : service
 
 @enduml
