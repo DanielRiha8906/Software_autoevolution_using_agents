@@ -411,4 +411,4 @@ Implemented CommentsService as a centralized service for managing TaskComment li
 - `component_diagram.puml` — Component labeled "Comments Service"
 - `use_case_diagram.puml` — Added "Manage comments" interactive use case
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 443.7s | Cost: $0.890117 USD | Turns: 17
