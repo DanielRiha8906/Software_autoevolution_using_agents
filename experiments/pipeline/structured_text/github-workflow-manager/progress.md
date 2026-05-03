@@ -190,4 +190,4 @@ All tests pass including:
 **Won't Have (Not Applicable):**
 - Caching layer — out of scope
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 421.9s | Cost: $0.829924 USD | Turns: 21
