@@ -17,6 +17,9 @@ class WorkflowAttemptService:
     def add_attempt(self, attempt: WorkflowRunAttempt) -> WorkflowRunAttempt:
         if any(a.id == attempt.id for a in self._attempts):
             raise ValueError(f"Attempt with id '{attempt.id}' already exists.")
+        if any(a.run_id == attempt.run_id and a.attempt_number == attempt.attempt_number
+               for a in self._attempts):
+            raise ValueError(f"Attempt number {attempt.attempt_number} already exists for run '{attempt.run_id}'.")
         self._attempts.append(attempt)
         self._persist()
         return attempt
@@ -28,7 +31,10 @@ class WorkflowAttemptService:
         return next((a for a in self._attempts if a.id == attempt_id), None)
 
     def filter_by_run_id(self, run_id: str) -> List[WorkflowRunAttempt]:
-        return [a for a in self._attempts if a.run_id == run_id]
+        return sorted(
+            [a for a in self._attempts if a.run_id == run_id],
+            key=lambda a: a.attempt_number
+        )
 
     def filter_by_status(self, status: WorkflowStatus) -> List[WorkflowRunAttempt]:
         return [a for a in self._attempts if a.status == status]

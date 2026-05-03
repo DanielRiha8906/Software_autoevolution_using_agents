@@ -151,3 +151,43 @@ All tests pass including:
 - Performance optimization — out of scope
 
 Duration: 654.8s | Cost: $1.246197 USD | Turns: 13
+
+## Task 04: Attempt Management Service
+
+### Task Summary
+Enhanced `AttemptService` with duplicate validation and sorting. The system now ensures no duplicate attempt numbers per run via composite key validation on (run_id, attempt_number), and returns filtered attempts sorted by attempt number. All functionality is already accessible via both CLI and interactive menu.
+
+### Files Changed
+- `src/services/workflow_attempt_service.py` — Modified 2 methods: `add_attempt()` (added duplicate (run_id, attempt_number) validation), `filter_by_run_id()` (added sorting by attempt_number)
+- `tests/test_workflow_attempt_service.py` — Added 18 new tests (7 for duplicate validation, 11 for sorting behavior) and fixed 11 existing tests to respect new validation
+- `artifacts/class_diagram.puml` — Updated WorkflowAttemptService note to document validation and sorting behavior
+- `artifacts/activity_diagram_main.puml` — Enhanced create-attempt and list-attempts flows with validation error paths and sorting documentation
+- `artifacts/activity_diagram_interactive.puml` — Enhanced Create workflow attempt and List attempts by run flows
+
+### Test Result
+✓ **43 tests passed** (0.38s)
+
+All tests pass including:
+- 7 duplicate (run_id, attempt_number) validation tests
+- 11 sorting by attempt_number tests
+- 25 existing tests (all updated to work with new validation)
+
+### Implementation Details
+
+**Must Have (All Completed):**
+- ✓ Implemented `AttemptService` with create and retrieve by run_id
+- ✓ Integrated with existing JSON storage mechanism
+- ✓ Duplicate attempt numbers per run prevented via composite key validation
+- ✓ All functionality accessible via `python -m src` (both CLI and interactive menu)
+
+**Should Have (All Completed):**
+- ✓ Ensure no duplicate attempt numbers per run (validated in add_attempt)
+- ✓ All edge cases covered (same run_id + different attempt_numbers allowed, same attempt_number + different run_ids allowed)
+
+**Could Have (Completed):**
+- ✓ Sorting by attempt number (filter_by_run_id now returns sorted results)
+
+**Won't Have (Not Applicable):**
+- Caching layer — out of scope
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
