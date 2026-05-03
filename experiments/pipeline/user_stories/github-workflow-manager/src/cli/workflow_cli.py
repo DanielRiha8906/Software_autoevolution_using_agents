@@ -74,6 +74,15 @@ def build_parser() -> argparse.ArgumentParser:
     detail_p = sub.add_parser("detail", help="Show details for a single run")
     detail_p.add_argument("run_id", help="Run ID")
 
+    # check
+    check_p = sub.add_parser("check", help="Check run state")
+    check_p.add_argument("run_id", help="Run ID")
+    check_p.add_argument("--is-terminal", action="store_true", help="Check if run is terminal")
+    check_p.add_argument("--is-successful", action="store_true", help="Check if run succeeded")
+    check_p.add_argument("--is-failed", action="store_true", help="Check if run failed")
+    check_p.add_argument("--is-running", action="store_true", help="Check if run is active")
+    check_p.add_argument("--is-cancelled", action="store_true", help="Check if run was cancelled")
+
     return parser
 
 
@@ -116,3 +125,30 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_run(run))
+
+    elif ns.command == "check":
+        run = service.get_run_detail(ns.run_id)
+        if run is None:
+            print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
+            sys.exit(1)
+
+        # If no flag specified, show all states
+        if not any([ns.is_terminal, ns.is_successful, ns.is_failed, ns.is_running, ns.is_cancelled]):
+            print(f"id               : {run.id}")
+            print(f"is_terminal      : {run.is_terminal()}")
+            print(f"is_successful    : {run.is_successful()}")
+            print(f"is_failed        : {run.is_failed()}")
+            print(f"is_running       : {run.is_running()}")
+            print(f"is_cancelled     : {run.is_cancelled()}")
+        else:
+            # Check only requested flags
+            if ns.is_terminal:
+                print(f"{run.id}: is_terminal = {run.is_terminal()}")
+            if ns.is_successful:
+                print(f"{run.id}: is_successful = {run.is_successful()}")
+            if ns.is_failed:
+                print(f"{run.id}: is_failed = {run.is_failed()}")
+            if ns.is_running:
+                print(f"{run.id}: is_running = {run.is_running()}")
+            if ns.is_cancelled:
+                print(f"{run.id}: is_cancelled = {run.is_cancelled()}")

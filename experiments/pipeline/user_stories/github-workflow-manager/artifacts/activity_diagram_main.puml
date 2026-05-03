@@ -41,6 +41,19 @@ if (CLI arguments provided?) then (yes)
         :Exit code 1;
       endif
 
+    case (check)
+      :WorkflowRunService.get_run_detail(run_id);
+      if (run found?) then (yes)
+        if (state flag specified?) then (yes)
+          :Print queried state\n(is_terminal / is_successful /\nis_failed / is_running / is_cancelled);
+        else (no)
+          :Print all states;
+        endif
+      else (no)
+        :Print error to stderr;
+        :Exit code 1;
+      endif
+
   endswitch
   stop
 

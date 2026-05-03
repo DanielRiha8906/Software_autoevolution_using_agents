@@ -37,6 +37,50 @@ class WorkflowRun:
             "duration_seconds": self.duration_seconds,
         }
 
+    def is_terminal(self) -> bool:
+        """
+        Returns True if the workflow run has reached a terminal state.
+        Terminal = COMPLETED status AND conclusion is set (not None).
+        Mutually exclusive with: is_running()
+        """
+        return self.status == WorkflowStatus.COMPLETED and self.conclusion is not None
+
+    def is_successful(self) -> bool:
+        """
+        Returns True if the workflow completed successfully.
+        Success = COMPLETED status AND conclusion is SUCCESS.
+        Mutually exclusive with: is_failed(), is_cancelled()
+        """
+        return self.status == WorkflowStatus.COMPLETED and self.conclusion == WorkflowConclusion.SUCCESS
+
+    def is_failed(self) -> bool:
+        """
+        Returns True if the workflow completed with failure.
+        Failure = COMPLETED status AND conclusion is FAILURE.
+        Mutually exclusive with: is_successful(), is_cancelled()
+        """
+        return self.status == WorkflowStatus.COMPLETED and self.conclusion == WorkflowConclusion.FAILURE
+
+    def is_running(self) -> bool:
+        """
+        Returns True if the workflow is actively executing.
+        Running = status is IN_PROGRESS, REQUESTED, or PENDING.
+        Mutually exclusive with: is_terminal()
+        """
+        return self.status in (
+            WorkflowStatus.IN_PROGRESS,
+            WorkflowStatus.REQUESTED,
+            WorkflowStatus.PENDING
+        )
+
+    def is_cancelled(self) -> bool:
+        """
+        Returns True if the workflow was cancelled.
+        Cancelled = COMPLETED status AND conclusion is CANCELLED.
+        Mutually exclusive with: is_successful(), is_failed()
+        """
+        return self.status == WorkflowStatus.COMPLETED and self.conclusion == WorkflowConclusion.CANCELLED
+
     @classmethod
     def from_dict(cls, data: dict) -> "WorkflowRun":
         return cls(
