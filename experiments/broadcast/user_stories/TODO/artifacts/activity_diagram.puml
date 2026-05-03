@@ -26,6 +26,10 @@ repeat
       :Run filter by date flow;
     case (10 — View report)
       :Generate and display report;
+    case (11 — Export)
+      :Run export flow;
+    case (12 — Import)
+      :Run import flow;
     case (0/q — Quit)
       :Clear screen;
       stop

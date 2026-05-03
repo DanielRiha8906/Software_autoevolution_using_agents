@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from ..models.task_status import TaskStatus
 from ..services.comments_service import CommentNotFoundError
+from ..services.import_export_service import ImportExportService
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -21,6 +22,7 @@ class TodoCLI:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._import_export = ImportExportService(self._service._manager, self._service._comments_service)
 
     def run(self, argv: Optional[list[str]] = None) -> int:
         parser = self._build_parser()
@@ -33,7 +35,7 @@ class TodoCLI:
         except (TaskNotFoundError, CommentNotFoundError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
-        except ValueError as e:
+        except (ValueError, FileNotFoundError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
@@ -155,6 +157,17 @@ class TodoCLI:
         # report
         p_report = sub.add_parser("report", help="Display task summary report")
         p_report.set_defaults(func=self._cmd_report)
+
+        # export
+        p_export = sub.add_parser("export", help="Export tasks and comments to JSON file")
+        p_export.add_argument("filepath", help="Path to export JSON file")
+        p_export.set_defaults(func=self._cmd_export)
+
+        # import
+        p_import = sub.add_parser("import", help="Import tasks and comments from JSON file")
+        p_import.add_argument("filepath", help="Path to import JSON file")
+        p_import.add_argument("--merge", action="store_true", default=True, help="Merge with existing data (default)")
+        p_import.set_defaults(func=self._cmd_import)
 
         return parser
 
@@ -297,4 +310,15 @@ class TodoCLI:
         print(f"Completion rate: {report.completion_rate:.1f}%")
         if report.avg_days_to_completion is not None:
             print(f"Avg days to completion: {report.avg_days_to_completion:.2f}")
+        return 0
+
+    def _cmd_export(self, args: argparse.Namespace) -> int:
+        count = self._import_export.export_to_file(args.filepath)
+        print(f"Exported {count} items to {args.filepath}")
+        return 0
+
+    def _cmd_import(self, args: argparse.Namespace) -> int:
+        summary = self._import_export.import_from_file(args.filepath, merge=args.merge)
+        print(f"Import Summary:")
+        print(summary)
         return 0
