@@ -98,4 +98,4 @@ Candidates B and C produced identical implementations with 8/8 test passes. Cand
 ## Test Result
 ✅ All 36 tests passing (8 new WorkflowRunAttempt tests + 28 existing tests)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 215.5s | Cost: $0.493351 USD | Turns: 49
