@@ -504,4 +504,4 @@ All COULD requirements met:
 - ✓ Min/max execution_time_ms
 - ✓ Per-operation error breakdown (error_frequency dict)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 573.9s | Cost: $1.303382 USD | Turns: 57
