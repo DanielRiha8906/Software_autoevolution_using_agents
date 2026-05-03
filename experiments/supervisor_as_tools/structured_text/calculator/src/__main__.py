@@ -5,13 +5,21 @@ from pathlib import Path
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
+from .services.memory_service import MemoryService
 from .storage.json_storage import JsonStorage
+from .storage.memory_json_storage import MemoryJsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
 
-def _build_service() -> CalculatorService:
+def _build_service() -> tuple[CalculatorService, MemoryService]:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
-    return CalculatorService(Calculator(), JsonStorage(storage_path))
+    memory_storage_path = Path(__file__).parent.parent / "artifacts" / "memory.json"
+    memory_storage = MemoryJsonStorage(memory_storage_path)
+    memory_service = MemoryService(memory_storage)
+    calc_service = CalculatorService(
+        Calculator(), JsonStorage(storage_path), memory_service
+    )
+    return calc_service, memory_service
 
 
 def _as_number(value: str) -> float:
@@ -25,7 +33,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A [B]]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A [B]] [--memory {list,detail,failures,summary,clear} [ID]]",
     )
     parser.add_argument(
         "--operation",
@@ -34,15 +42,37 @@ def main() -> None:
         help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
     )
     parser.add_argument(
+        "--memory",
+        metavar="ACTION",
+        choices=["list", "detail", "failures", "summary", "clear"],
+        help="Memory action (list | detail | failures | summary | clear)",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
-        metavar="NUMBER",
-        help="Operands (one for unary ops, two for binary ops)",
+        metavar="ARG",
+        help="Operands for operation or memory ID for detail action",
     )
 
     args = parser.parse_args()
-    service = _build_service()
-    cli = CalculatorCLI(service)
+    service, memory_service = _build_service()
+    cli = CalculatorCLI(service, memory_service)
+
+    # Handle memory commands
+    if args.memory:
+        if args.memory == "list":
+            cli.show_memory_list()
+        elif args.memory == "detail":
+            if not args.operands:
+                parser.error("Memory detail requires an entry ID")
+            cli.show_memory_detail(args.operands[0])
+        elif args.memory == "failures":
+            cli.show_memory_failures()
+        elif args.memory == "summary":
+            cli.show_memory_summary()
+        elif args.memory == "clear":
+            cli.clear_memory_confirm()
+        return
 
     if args.operation:
         # Unary operations need 1 operand, binary operations need 2

@@ -1,0 +1,35 @@
+[
+  {
+    "operation": "add",
+    "operand_a": 2.0,
+    "operand_b": 3.0,
+    "success": true,
+    "timestamp": "2026-05-03T16:08:07.234692",
+    "execution_time_ms": 0.0060110000390523055,
+    "result": 5.0,
+    "error_message": null,
+    "id": "96721420-71e2-424a-a46a-c5dd0bf67cae"
+  },
+  {
+    "operation": "divide",
+    "operand_a": 10.0,
+    "operand_b": 0.0,
+    "success": false,
+    "timestamp": "2026-05-03T16:08:07.368298",
+    "execution_time_ms": 0.010478999968199787,
+    "result": null,
+    "error_message": "Division by zero is not allowed",
+    "id": "6ce1cb2f-bb16-4744-92a3-312c03caf3ef"
+  },
+  {
+    "operation": "divide",
+    "operand_a": 1.0,
+    "operand_b": 0.0,
+    "success": false,
+    "timestamp": "2026-05-03T16:08:07.693039",
+    "execution_time_ms": 0.010970000005272595,
+    "result": null,
+    "error_message": "Division by zero is not allowed",
+    "id": "e270dbdc-34dc-4505-a5ed-3931121c2cc9"
+  }
+]
