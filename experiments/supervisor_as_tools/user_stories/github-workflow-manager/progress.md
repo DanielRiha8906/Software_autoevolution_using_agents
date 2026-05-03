@@ -248,4 +248,4 @@ Successfully implemented a comprehensive filtering interface for workflow runs s
 5. **Optional parameters with None defaults**: Makes each filter truly optional and composable
 6. **Interactive menu loop**: Allows building complex queries without returning to main menu
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 411.4s | Cost: $0.787644 USD | Turns: 21
