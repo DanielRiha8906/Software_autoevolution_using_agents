@@ -110,4 +110,4 @@ Created a new `MemoryEntry` domain class to serve as the primary record for stor
 - Type-safe with Optional types for nullable fields
 - Serialization compatible with JSON storage layer
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 151.0s | Cost: $0.293341 USD | Turns: 24
