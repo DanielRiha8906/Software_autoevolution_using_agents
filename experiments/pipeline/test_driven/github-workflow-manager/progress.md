@@ -121,4 +121,4 @@ Introduced `WorkflowRunAttempt` as a first-class domain object representing indi
 4. Pytest-Tester — Created and ran test suite (8/8 pass)
 5. UML Designer — Updated class and component diagrams
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 290.5s | Cost: $0.464970 USD | Turns: 16
