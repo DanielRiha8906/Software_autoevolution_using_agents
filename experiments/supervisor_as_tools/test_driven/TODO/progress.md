@@ -221,4 +221,4 @@ Successfully extended TodoService.list_tasks() to support filtering by due date 
 - Tasks with None due_date excluded from range filters (due_before/due_after)
 - All validation happens before filtering for fail-fast semantics
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 279.7s | Cost: $0.499929 USD | Turns: 25
