@@ -299,4 +299,4 @@ Validated Task 05 filtering capabilities in the supervisor_as_tools/structured_t
 ### Pull Request
 Created PR #320: https://github.com/DanielRiha8906/Software_autoevolution_using_agents/pull/320
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 247.3s | Cost: $0.520527 USD | Turns: 27
