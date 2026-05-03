@@ -432,4 +432,4 @@ Successfully implemented task statistics functionality with comprehensive datacl
 - Use case diagram: Added View statistics use cases for both CLI and interactive modes
 - Component diagram: Added TaskStatistics Model component
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 545.4s | Cost: $1.058962 USD | Turns: 15
