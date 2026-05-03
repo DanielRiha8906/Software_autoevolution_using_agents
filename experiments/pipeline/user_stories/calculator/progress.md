@@ -205,3 +205,38 @@ Duration: 565.8s | Cost: $1.062949 USD | Turns: 21
 - ✅ Accessible via python -m src as interactive menu option (item 11 "Show statistics") and one-shot CLI flag (--statistics)
 
 Duration: 648.6s | Cost: $1.415466 USD | Turns: 31
+
+## Task 07: Export/Import Calculation History
+
+**Status**: ✅ Complete
+
+**Description**: Add export/import functionality to persist calculation history to JSON files and import it back later, enabling records to persist across sessions and move between environments. Import includes validation to reject invalid data, per-entry error handling, and duplicate detection.
+
+**Files Changed**:
+- `src/services/import_export_service.py` — NEW class with export_history(filepath, entries=None) and import_history(filepath, mode="merge") methods; full validation via _validate_entry() covering required fields, field types, operation names, timestamp format, UUID format; duplicate detection via _detect_duplicate() using UUID and (operation, operand_a, operand_b, timestamp) tuple; helper methods _is_valid_iso8601() and _is_valid_uuid() for format validation; _clear_history() for replace mode
+- `src/__main__.py` — Updated _build_services() to instantiate and return ImportExportService; added --export FILEPATH flag for one-shot export; added --import FILEPATH flag for one-shot import; added --import-mode {merge,replace} flag to control import behavior (defaults to "merge"); updated handlers with proper error handling and user-friendly messages; updated service unpacking and CLI instantiation
+- `src/cli/calculator_cli.py` — Updated __init__() to accept optional ImportExportService parameter; updated _print_menu() to show new options 13 and 14; updated run_interactive() to handle new menu choices; added _export_history() method for interactive export with filepath prompt; added _import_history() method for interactive import with filepath and mode selection; added _show_import_result() helper to display import results with counts and skipped entry details
+- `src/services/__init__.py` — Added ImportExportService to exports
+- `artifacts/class_diagram.puml` — Added ImportExportService class with all public/private methods; updated CalculatorCLI with import_export_service field and new methods; added relationships showing ImportExportService dependency on MemoryService
+- `artifacts/component_diagram.puml` — Added ImportExportService component; updated relationships showing ImportExport → Memory and CLI → ImportExport usage
+- `artifacts/use_case_diagram.puml` — Added "Export calculation history" and "Import calculation history" use cases; connected both to User actor
+- `artifacts/activity_diagram.puml` — Added export and import cases in interactive menu switch; detailed both export flow (filepath prompt, validation, write, success) and import flow (filepath prompt, mode selection, parse JSON, validate entries, detect duplicates, store valid entries, report results)
+
+**Test Results**:
+- Total tests: 485 (447 existing + 38 new for import_export_service + 21 new for CLI integration - 21 existing test updates for menu structure)
+- Passed: 485 ✅
+- Failed: 0
+- New test file: test_import_export_service.py (38 tests covering export, validation, duplicate detection, import modes), test_import_export_cli.py (21 tests for interactive and programmatic CLI integration)
+- Coverage: Export valid/empty history, import merge/replace modes, validation of all entry fields, duplicate detection (UUID and tuple-based), per-entry error handling (skipped individually), file I/O errors, JSON parsing errors, round-trip export/import verification, interactive menu prompts, CLI flags, backward compatibility
+
+**Acceptance Criteria Met**:
+- ✅ History can be exported to a JSON file (export_history method + --export CLI flag + interactive menu)
+- ✅ History can be imported from a JSON file (import_history method + --import CLI flag + interactive menu)
+- ✅ Imported data is validated before being applied; invalid structure is rejected (ValueError for non-array, OSError for missing file, JSONDecodeError for malformed JSON, ValueError for invalid extension)
+- ✅ Importing does not overwrite existing data unless explicitly intended (mode="merge" is default, mode="replace" explicitly clears history first)
+- ✅ The JSON schema matches the MemoryEntry serialization format (uses MemoryEntry.to_dict() for export, MemoryEntry.from_dict() for import)
+- ✅ Invalid or duplicate entries during import are skipped individually, not treated as a full failure (returned in result dict with counts and details)
+- ✅ Only JSON format is supported (file extension validation enforces .json; no CSV/XML support)
+- ✅ All new functionality accessible via python -m src — both as interactive menu options (items 13-14) and as one-shot CLI flags (--export, --import, --import-mode)
+
+Duration: 665.1s | Cost: $1.396620 USD | Turns: 16

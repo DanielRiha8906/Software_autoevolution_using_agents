@@ -1,476 +1,332 @@
-# Task 06 Analysis: Statistics Component for Calculation Metrics
+# Task 07 Analysis: Export/Import Calculation History
 
-## Task Summary
+## Current State
 
-Implement a statistics component/service that derives usage and error metrics exclusively from stored MemoryEntry data. The report must include:
-- Count per operation type
-- Total number of errors
-- Error rate as percentage
-- Average execution_time_ms
+### Existing Infrastructure
+The calculator application already has a well-architected system for persisting calculation history:
 
-Results must be accessible as a structured dataclass (not plain dict), with consistent structure across calls, and exposed via `python -m src` as both a menu option and CLI flag.
+- **MemoryEntry** (`src/models/memory_entry.py`): Dataclass representing a single calculation with:
+  - `operation`: str (operation name: add, subtract, etc.)
+  - `operand_a`, `operand_b`: float (input values)
+  - `result`: float | None (calculation result or None on error)
+  - `error`: str | None (error message if failed)
+  - `error_type`: str | None (exception class name)
+  - `execution_time_ms`: float (timing data)
+  - `timestamp`: str (ISO 8601 format, auto-generated)
+  - `uuid`: str (unique identifier, auto-generated)
+  - **Serialization**: `to_dict()` and `from_dict(data)` methods already exist and fully functional
 
----
+- **JsonStorage** (`src/storage/json_storage.py`): Handles low-level JSON persistence
+  - `save(entry)`: Appends a single MemoryEntry to `artifacts/calculations.json`
+  - `load_all()`: Reads entire history file and deserializes to MemoryEntry objects
+  - Raw methods: `_read_raw()` and `_write_raw(records)` for list-level I/O
+  - Error handling: Gracefully returns empty list on missing file or JSON decode errors
 
-## Current Structure Analysis
+- **MemoryService** (`src/services/memory_service.py`): Provides filtering and retrieval
+  - `store()`: Delegates to JsonStorage.save()
+  - `retrieve()`: Delegates to JsonStorage.load_all()
+  - `filter()`: Can filter by operation names and/or state (success/error/both)
 
-### 1. MemoryEntry Structure
+- **CalculatorService** (`src/services/calculator_service.py`): Orchestrates calculations
+  - `get_history()`: Returns all history via MemoryService
+  - `filter_history()`: Returns filtered history
 
-**Location**: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/calculator/src/models/memory_entry.py`
+- **CalculatorCLI** (`src/cli/calculator_cli.py`): Interactive and one-shot modes
+  - Menu options: View history, filter history, statistics, exit
+  - Already wired to display and filter data
+  - No export/import functionality currently
 
-**Current MemoryEntry Fields**:
+- **__main__.py** (`src/__main__.py`): Entry point with argparse support
+  - Existing flags: `--operation`, `--show-history`, `--filter-operation`, `--filter-state`, `--statistics`
+  - Well-structured service initialization
+
+### Current Storage Format
+`artifacts/calculations.json` is a JSON array of objects. Each object matches MemoryEntry.to_dict() format:
+```json
+{
+  "operation": "add",
+  "operand_a": 3.0,
+  "operand_b": 5.0,
+  "result": 8.0,
+  "error": null,
+  "error_type": null,
+  "execution_time_ms": 0.01,
+  "timestamp": "2026-05-03T13:11:43.011212",
+  "uuid": "c4ebe8ef-ada9-435b-8cca-b60c868586c6"
+}
 ```
-- operation: str (e.g., "add", "divide", "square")
-- operand_a: float
-- operand_b: float
-- result: float | None (None when error occurs)
-- error: str | None (error message or None)
-- error_type: str | None (exception type name or None)
-- timestamp: str (ISO format, auto-generated)
-- uuid: str (UUID v4, auto-generated)
-```
 
-**Note on execution_time_ms**:
-- The legacy CalculationResult class has `execution_time_ms: float = 0.0`
-- Some entries in calculations.json include `execution_time_ms` field (from Task 01 execution)
-- MemoryEntry.from_dict() strips `execution_time_ms` when loading (line 45: `data.pop("execution_time_ms", None)`)
-- This field is NOT currently part of MemoryEntry dataclass definition
-- **Ambiguity**: Acceptance criteria requests "average execution_time_ms", but MemoryEntry doesn't capture this. See Ambiguities section.
-
-**Error Determination**:
-- Success: `result is not None and error is None`
-- Error: `result is None and error is not None`
-
-### 2. Data Storage and Retrieval
-
-**JsonStorage** (`src/storage/json_storage.py`):
-- Persists MemoryEntry objects to `artifacts/calculations.json`
-- `save(entry: MemoryEntry)`: Appends single entry
-- `load_all() -> list[MemoryEntry]`: Returns all stored entries, converted from JSON dicts via MemoryEntry.from_dict()
-
-**MemoryService** (`src/services/memory_service.py`):
-- Wraps JsonStorage for lifecycle management
-- `retrieve() -> list[MemoryEntry]`: Delegates to storage.load_all()
-- Has existing filtering methods: `filter_by_operation()`, `filter_by_operations()`, `filter_by_state()`, `filter(operations, state)`
-- **Statistics would integrate naturally here** — adding a statistics method alongside filtering methods
-
-**CalculatorService** (`src/services/calculator_service.py`):
-- `get_history() -> list[MemoryEntry]`: Via memory_service.retrieve()
-- `filter_history(operations, state) -> list[MemoryEntry]`: Via memory_service.filter()
-- No direct knowledge of MemoryEntry structure, only delegates
-
-### 3. CLI and Module Execution
-
-**Entry Point**: `src/__main__.py`
-
-**Current argparse Arguments**:
-- `--operation {add|subtract|multiply|divide|square|sqrt|power|modulo} A B`: One-shot calculation
-- `--show-history`: Display all history (with optional --filter-operation and --filter-state)
-- `--filter-operation OPS`: Comma-separated operation names
-- `--filter-state {success|error|both}`: Filter by result state
-
-**Interactive Menu** (`src/cli/calculator_cli.py`):
-- Menu items 1-8: Perform operations
-- Menu item 9: "View history"
-- Menu item 10: "Filter history"
-- Menu item 11: "Exit"
-- Menu structure is in CalculatorCLI._MENU and _print_menu()
-
-**Pattern for New Features**:
-- Service layer (`CalculatorService` or new specialized service like `StatisticsService`)
-- CLI layer (`CalculatorCLI` method for interactive + flag in `__main__.py` for one-shot)
-- Structured dataclass result returned to caller
-
-### 4. Current Sample Data
-
-From `artifacts/calculations.json` (13 entries):
-- Entries 1-4: Old format (no uuid, no error, no execution_time_ms)
-- Entries 5-12: Have execution_time_ms (values range 0.007-0.014 ms)
-- Entries 13-14: New format (uuid, error fields, no execution_time_ms)
-
-**Operation counts in sample**:
-- add: 2
-- divide: 3
-- multiply: 1
-- square: 2
-- sqrt: 2
-- power: 3
-- modulo: 1
-
-**Error entries**: 1 (divide by zero)
-**Success entries**: 12
-**Error rate**: 7.7% (1/13)
+Fields: `error` and `error_type` may be absent in older entries (backward compatible via `from_dict()` defaults).
 
 ---
 
-## Key Findings
+## Task Requirements
 
-### 1. Architecture Pattern is Well-Established
+### Functional Requirements
+1. **Export**: Write calculation history to a user-specified JSON file
+2. **Import**: Read calculation history from a user-specified JSON file and merge it into current history
+3. **Validation**: Before applying imported data, validate structure and reject invalid entries
+4. **No Overwrite by Default**: Importing appends; does not replace existing data unless explicitly intended
+5. **Per-Entry Error Handling**: Invalid or duplicate entries are skipped individually, not treated as full failure
+6. **JSON Only**: No other formats supported
+7. **CLI Accessibility**: Both interactive menu option and one-shot CLI flags
 
-The codebase follows a clean separation:
-- **Models** (MemoryEntry): Data structure
-- **Storage** (JsonStorage): Persistence
-- **Services** (MemoryService, CalculatorService): Business logic and aggregation
-- **CLI** (CalculatorCLI, __main__.py): User interaction
+### Acceptance Criteria Mapping
 
-**Statistics component should follow this pattern**: New StatisticsService or method in existing MemoryService, new return dataclass in models, CLI integration in both interactive menu and argparse.
-
-### 2. MemoryEntry Filtering is Already Implemented
-
-MemoryService has four filtering methods that work with the full list:
-- `filter_by_operation(name)`: Single operation
-- `filter_by_operations(names)`: Multiple operations
-- `filter_by_state(state)`: "success", "error", or "both"
-- `filter(operations, state)`: Combined filters
-
-**Statistics component can reuse the retrieve() call** and build aggregations on top of the returned list.
-
-### 3. No External Dependencies Required
-
-All current filtering and history logic uses only:
-- Standard library (dataclasses, datetime, json, uuid)
-- Built-in Python operations (list comprehensions, for loops)
-
-**Statistics calculation requires only**: Basic arithmetic (count, sum, division for rate and average).
-
-### 4. Current Test Coverage
-
-Test files present:
-- test_calculator.py: Calculator methods
-- test_calculator_service.py: Service orchestration
-- test_memory_entry.py: Data structure and serialization
-- test_filtering.py: Filtering logic (45 tests)
-- test_cli.py: Interactive and one-shot modes
-- test_execution_time_feature.py: Timing integration
-- test_json_storage.py: Persistence layer
-
-**No existing statistics tests**, so new ones will be required.
-
-### 5. Menu Structure is Extensible
-
-Current menu shows:
-- Items 1-8: Operations
-- Item 9: View history
-- Item 10: Filter history
-- Item 11: Exit
-
-**Statistics can be item 12** (or renumbered 10, with others pushed down). The _print_menu() and menu dispatch logic in run_interactive() already handles arbitrary menu sizes.
+| Criterion | Current State | Required Implementation |
+|-----------|---------------|--------------------------|
+| History can be exported to a JSON file | No | Add export method & CLI |
+| History can be imported from a JSON file | No | Add import method & CLI |
+| Imported data is validated; invalid structure rejected | No | Add validation logic |
+| Importing does not overwrite unless explicitly intended | N/A | Default merge; add `--force` flag if overwrite needed |
+| JSON schema matches MemoryEntry serialization format | Partially | Ensure imported data uses exact format |
+| Invalid/duplicate entries skipped individually, not full failure | No | Add per-entry error handling |
+| Only JSON format supported | N/A | Only support .json; validate extension |
+| Accessible via `python -m src` (menu + CLI flag) | N/A | Add menu option & flags to argparse |
 
 ---
 
-## Ambiguities and Working Assumptions
+## What Needs to Change
 
-### Ambiguity 1: execution_time_ms in Statistics
+### New Components to Add
 
-**Issue**: Acceptance criteria asks for "average execution_time_ms", but:
-- MemoryEntry class does NOT have execution_time_ms field (it was removed in Task 03)
-- Only legacy CalculationResult and some JSON entries have it
-- MemoryEntry.from_dict() explicitly strips this field (line 45)
+#### 1. New Service Class: `ImportExportService` (`src/services/import_export_service.py`)
+**Responsibilities:**
+- Export history to a JSON file at a user-specified path
+- Import history from a JSON file with validation
+- Validate JSON structure before import (schema validation)
+- Handle duplicate detection (by UUID or timestamp+operation)
+- Report per-entry errors (invalid entries skipped, count reported)
+- Support merge (append) vs. force (replace) modes
 
-**Working Assumption**:
-- **Option A (Conservative)**: Statistics component reports "N/A" or 0.0 for execution_time_ms metrics, with a note that MemoryEntry does not track execution time
-- **Option B (Full Feature)**: Add execution_time_ms field to MemoryEntry dataclass (optional, default 0.0) and update CalculatorService.perform() to measure and set it (like Task 01 did with CalculationResult)
-- **Recommendation**: Pursue Option A for this task only if execution_time_ms integration is not in scope. If Task 06 scope includes adding execution_time_ms to MemoryEntry, that would be a prerequisite change. The architect should clarify this.
-
-### Ambiguity 2: Statistics on All Data or Filtered Subset
-
-**Issue**: Should `get_statistics()` return metrics for:
-- ALL stored calculations (full dataset)
-- A user-selected subset via operation/state filters
-
-**Working Assumption**:
-- **Primary**: Implement unfiltered statistics (all stored data), accessible via `--statistics` flag
-- **Secondary**: Consider filtering-aware variant (e.g., `--statistics --filter-operation add` shows stats for add operations only) if the architect requests it
-- Recommendation: Start with unfiltered; filtering can be added as enhancement
-
-### Ambiguity 3: Structured Return Type Details
-
-**Issue**: What fields should the statistics dataclass contain?
-
-**Working Assumption** (based on acceptance criteria):
+**Key Methods:**
 ```python
-@dataclass
-class CalculationStatistics:
-    total_calculations: int
-    total_errors: int
-    error_rate_percent: float
-    operations_count: dict[str, int]  # {"add": 3, "divide": 2, ...}
-    average_execution_time_ms: float  # 0.0 if not available
-```
-
-Alternative: Add more fields like success_count, error_details breakdown, operation-specific error rates, etc. The acceptance criteria are minimal; this is the baseline.
-
----
-
-## Scope: In vs. Out vs. Borderline
-
-### IN Scope (Explicit Acceptance Criteria)
-- Statistics component/service exists
-- Calculates and reports:
-  - Count per operation type
-  - Total number of errors
-  - Error rate as percentage
-  - Average execution_time_ms
-- Results as structured dataclass (not dict)
-- Consistent structure across calls
-- Accessible via `python -m src` menu option
-- Accessible via `python -m src` CLI flag
-- Derived exclusively from MemoryEntry data
-
-### OUT of Scope (Not Mentioned)
-- Filtering statistics (by date range, operand values, etc.)
-- Percentile analysis, standard deviation, or other statistical measures
-- Visualization or graphical output
-- Real-time statistics (statistics always computed from stored data, not streamed)
-- Persistent statistics cache (always recomputed from raw data)
-
-### Borderline (Clarification Needed from Architect)
-- Should execution_time_ms be added to MemoryEntry first? (ambiguity #1 above)
-- Should filtered statistics be supported? (ambiguity #2 above)
-- Should statistics include additional fields like success_count, min/max execution time, operation-specific error rates?
-
----
-
-## Components That Exist
-
-1. **MemoryEntry** (`src/models/memory_entry.py`): Data model for single calculation
-2. **JsonStorage** (`src/storage/json_storage.py`): Persistence layer
-3. **MemoryService** (`src/services/memory_service.py`): Retrieval and filtering facade
-4. **CalculatorService** (`src/services/calculator_service.py`): High-level orchestration
-5. **CalculatorCLI** (`src/cli/calculator_cli.py`): Interactive and one-shot CLI
-6. **Operation** enum (`src/models/operation.py`): 8 supported operations
-7. **__main__.py**: Entry point with argparse
-
----
-
-## Components That Need to be Added
-
-### 1. Statistics Data Model
-
-**File**: `src/models/statistics.py` (new)
-
-**Content**: Dataclass to hold statistics result:
-```python
-from dataclasses import dataclass
-
-@dataclass
-class CalculationStatistics:
-    total_calculations: int
-    total_errors: int
-    error_rate_percent: float
-    operations_count: dict[str, int]
-    average_execution_time_ms: float
-```
-
-**Rationale**: 
-- Structured output (not plain dict) per acceptance criteria
-- Reusable across CLI and service layers
-- Serializable if needed for future logging/export
-
-### 2. Statistics Service
-
-**File**: `src/services/statistics_service.py` (new)
-
-**Content**: Service class to compute statistics from MemoryEntry list:
-```python
-class StatisticsService:
-    def __init__(self, memory_service: MemoryService):
-        self.memory_service = memory_service
+class ImportExportService:
+    def __init__(self, memory_service: MemoryService)
     
-    def calculate_statistics(self) -> CalculationStatistics:
-        """Compute stats from all stored entries."""
-        entries = self.memory_service.retrieve()
-        # ... aggregation logic
-        return CalculationStatistics(...)
-```
-
-**Rationale**:
-- Follows existing pattern (Calculator → CalculatorService → MemoryService)
-- Separates statistics logic from CLI presentation
-- Reusable by tests and other code
-- Injected MemoryService enables testing via mocks
-
-### 3. CLI Integration
-
-**File Updates**:
-
-a. **`src/__main__.py`**:
-   - Add `--statistics` flag to argparse
-   - Add handler to call statistics and print result
-
-b. **`src/cli/calculator_cli.py`**:
-   - Add `_show_statistics()` method to display CalculationStatistics in human-readable format
-   - Update _print_menu() to include "Show statistics" item
-   - Update run_interactive() to handle new menu selection
-
-**Rationale**:
-- Maintains existing pattern for feature exposure
-- Both menu and CLI flag access points
-- One-shot and interactive modes supported
-
-### 4. Test File
-
-**File**: `tests/test_statistics.py` (new)
-
-**Coverage**:
-- StatisticsService.calculate_statistics() with various data:
-  - Empty history
-  - Single entry (success, error)
-  - Multiple entries with mixed operation types
-  - Mixed success/error entries
-  - Operation count accuracy
-  - Error count and rate calculation
-  - Average execution_time_ms (0.0 handling)
-- CalculationStatistics dataclass:
-  - Field presence and type
-  - Serialization (if needed)
-- CLI integration:
-  - --statistics flag parsing
-  - _show_statistics() formatting
-  - Interactive menu selection
-
----
-
-## Integration Points
-
-### 1. Service Layer Integration
-
-**CalculatorService** will instantiate and expose StatisticsService:
-
-**In `__main__.py` _build_service()**:
-```python
-def _build_service() -> CalculatorService:
-    storage = JsonStorage(storage_path)
-    memory_service = MemoryService(storage)
-    stats_service = StatisticsService(memory_service)  # NEW
-    return CalculatorService(Calculator(), memory_service)  # Keep as-is
-    # Note: Statistics accessed independently or added as property
-```
-
-Alternatively, add statistics as method to CalculatorService:
-```python
-class CalculatorService:
-    def __init__(self, calculator, memory_service, statistics_service):  # NEW param
-        ...
+    def export_history(
+        self, 
+        filepath: Path | str, 
+        entries: list[MemoryEntry] | None = None
+    ) -> dict[str, int]:
+        """Export entries to filepath.
+        
+        Args:
+            filepath: Destination JSON file path
+            entries: Entries to export (None = export all)
+            
+        Returns:
+            {"exported_count": int, "file_path": str}
+        """
     
-    def get_statistics(self) -> CalculationStatistics:
-        return self.statistics_service.calculate_statistics()
+    def import_history(
+        self,
+        filepath: Path | str,
+        mode: str = "merge"  # "merge" or "replace"
+    ) -> dict[str, int | list]:
+        """Import entries from filepath with validation.
+        
+        Args:
+            filepath: Source JSON file path
+            mode: "merge" (append) or "replace" (overwrite)
+            
+        Returns:
+            {
+                "imported_count": int,
+                "skipped_count": int,
+                "skipped_entries": list[dict] (invalid/duplicate entries),
+                "duplicates_count": int,
+                "invalid_count": int
+            }
+        """
+    
+    def _validate_entry(self, data: dict) -> tuple[bool, str | None]:
+        """Validate a single entry dict against MemoryEntry schema.
+        
+        Returns:
+            (is_valid, error_message_or_none)
+        """
+    
+    def _detect_duplicate(self, entry: MemoryEntry, existing: list[MemoryEntry]) -> bool:
+        """Check if entry already exists by UUID or (operation, operand_a, operand_b, timestamp)."""
 ```
 
-### 2. CLI Menu Integration
+#### 2. CLI Enhancements to `CalculatorCLI` (`src/cli/calculator_cli.py`)
+**New Methods:**
+```python
+def _export_history(self) -> None:
+    """Interactive menu option: prompt for export filepath, call service."""
 
-Current menu in CalculatorCLI._print_menu():
-```
-1-8: Operations
-9: View history
-10: Filter history
-11: Exit
-```
+def _import_history(self, filepath: str | None = None, mode: str = "merge") -> None:
+    """Interactive menu option: prompt for import filepath, call service, show results."""
 
-New menu:
-```
-1-8: Operations
-9: View history
-10: Filter history
-11: Show statistics  # NEW
-12: Exit
+def _show_import_result(self, result: dict) -> None:
+    """Display import operation results (counts, skipped entries, etc.)."""
 ```
 
-Or squeeze statistics into existing item, e.g., replace "View history" (9) with submenu that offers "View all", "Filter", or "Statistics".
+**Menu Changes:**
+- Add "Export history" option (new menu item)
+- Add "Import history" option (new menu item)
+- Update `_print_menu()` to include these options
+- Update `run_interactive()` to handle these new choices
 
-### 3. __main__.py Integration
+#### 3. Entry Point Changes to `__main__.py` (`src/__main__.py`)
+**New Argparse Arguments:**
+```python
+parser.add_argument(
+    "--export",
+    metavar="FILEPATH",
+    help="Export calculation history to a JSON file"
+)
 
-Current flow:
+parser.add_argument(
+    "--import",
+    metavar="FILEPATH",
+    help="Import calculation history from a JSON file (appends by default)"
+)
+
+parser.add_argument(
+    "--import-mode",
+    choices=["merge", "replace"],
+    default="merge",
+    help="When importing: 'merge' (append to existing) or 'replace' (overwrite all)"
+)
 ```
-argparse (--operation, --show-history, --filter-operation, --filter-state)
-  → CalculatorCLI.run_command() or run_interactive() or _show_history()
-```
 
-New flow:
-```
-argparse (--operation, --show-history, --filter-operation, --filter-state, --statistics)
-  → if --statistics: cli._show_statistics() then exit
-  → elif --show-history: cli._show_history() then exit
-  → elif --operation: cli.run_command() then exit
-  → else: cli.run_interactive()
-```
+**Handler Logic:**
+```python
+# In main(), after building services:
+if args.export:
+    # Call ImportExportService.export_history()
+    # Print status and exit
 
-### 4. Help Text Update
-
-**`src/__main__.py` argparse.description and usage**:
-- Add `[--statistics]` to usage string
-- Document --statistics flag in add_argument()
+if args.import:
+    # Call ImportExportService.import_history(mode=args.import_mode)
+    # Print results and exit
+```
 
 ---
 
-## Suggested Priorities
+## Implementation Scope
 
-### Priority 1 (Critical for Acceptance)
-1. Create `CalculationStatistics` dataclass in `src/models/statistics.py`
-2. Create `StatisticsService` in `src/services/statistics_service.py` with `calculate_statistics()` method
-3. Implement core logic:
-   - Count per operation type (dict from list comprehension)
-   - Total errors (count where error is not None)
-   - Error rate as percentage ((errors / total) * 100)
-   - Average execution_time_ms (sum / count or 0.0 if unavailable)
+### Files to Create
+- `src/services/import_export_service.py` (new service class)
 
-**Why**: These are the only items explicitly required by acceptance criteria. Minimal scope, maximum clarity.
+### Files to Modify
+- `src/__main__.py`: Add export/import argparse flags and handlers
+- `src/cli/calculator_cli.py`: Add interactive menu options and helper methods
+- `src/services/__init__.py`: Export ImportExportService if it uses __init__.py
 
-### Priority 2 (Required for CLI Access)
-4. Add `--statistics` flag to `src/__main__.py` argparse
-5. Add handler logic to compute and display statistics
-6. Add interactive menu option in `src/cli/calculator_cli.py`
+### Files Unchanged
+- `src/models/memory_entry.py`: Already has to_dict() and from_dict()
+- `src/storage/json_storage.py`: No changes needed (used internally by service)
+- `src/services/memory_service.py`: No changes needed (used by ImportExportService)
+- `src/services/calculator_service.py`: No changes needed
 
-**Why**: Without these, statistics are unreachable to users. Feature is incomplete without CLI exposure.
+### Testing Required
+- Unit tests for ImportExportService:
+  - Export with valid entries
+  - Import with valid entries (merge and replace modes)
+  - Import with invalid entries (per-entry skip, report)
+  - Duplicate detection and skipping
+  - File I/O error handling (missing file, permission denied, etc.)
+  - Schema validation (missing required fields, wrong types)
+- Integration tests:
+  - CLI flags: `--export`, `--import`, `--import-mode`
+  - Interactive menu: export and import options
+- Edge cases:
+  - Empty history export
+  - Empty import file
+  - Malformed JSON
+  - Entries with missing optional fields (error, error_type)
+  - UUID collision detection
+  - Timestamp collision detection
 
-### Priority 3 (Testing and Refinement)
-7. Write `tests/test_statistics.py` covering all calculation paths and edge cases
-8. Update existing test mocks and fixtures if CalculatorService constructor changes
-9. Update diagrams in `artifacts/` to reflect new StatisticsService component
+### Validation Rules
+1. **Required Fields** per entry: operation, operand_a, operand_b, result, error, error_type, execution_time_ms, timestamp, uuid
+2. **Type Validation**: 
+   - operation: str, must be valid operation name (add, subtract, multiply, divide, square, sqrt, power, modulo)
+   - operand_a, operand_b: must be float-convertible
+   - result: float | None
+   - error, error_type: str | None
+   - execution_time_ms: float >= 0
+   - timestamp: str, ISO 8601 format
+   - uuid: str, UUID format (or auto-generate if missing)
+3. **Duplicate Detection**: By UUID (if present), then by (operation, operand_a, operand_b, timestamp)
+4. **Graceful Skip**: Entries that fail validation are reported but don't block import
 
-**Why**: Ensures correctness, maintainability, and consistency with codebase standards.
-
-### Priority 4 (Nice-to-Have, Post-MVP)
-- Add filtered statistics (compute stats on filtered subset of entries)
-- Add execution_time_ms to MemoryEntry if not already present
-- Add statistics export (JSON, CSV)
-- Add statistics caching if performance becomes an issue
-
-**Why**: Not in acceptance criteria; can be added as enhancement after core feature is complete and tested.
+### Error Handling Strategy
+- Missing fields (except optional ones): reject entry, report in skipped list
+- Invalid operation name: reject entry
+- Non-numeric operands: reject entry
+- Invalid timestamp format: reject entry (or auto-generate?)
+- UUID collision: skip entry, increment duplicate counter
+- File not found: raise error (don't silently fail)
+- Permission denied: raise error
+- Malformed JSON: raise error (entire file rejected, not per-entry)
 
 ---
 
-## File Path Reference
+## Ambiguities & Assumptions
 
-**Read-Only Analysis Files** (for reference):
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/calculator/src/models/memory_entry.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/calculator/src/models/operation.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/calculator/src/services/memory_service.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/calculator/src/services/calculator_service.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/calculator/src/cli/calculator_cli.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/calculator/src/__main__.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/calculator/artifacts/calculations.json`
+1. **Duplicate Detection**:
+   - *Unclear*: Should we detect duplicates by UUID exact match, or by (operation, operands, timestamp)?
+   - *Assumption*: Prefer UUID if present; fall back to (operation, operand_a, operand_b, timestamp) tuple. Both trigger skip.
 
-**Files to be Created/Modified** (implementation phase):
-- `src/models/statistics.py` (NEW)
-- `src/services/statistics_service.py` (NEW)
-- `src/__main__.py` (MODIFY: add --statistics flag and handler)
-- `src/cli/calculator_cli.py` (MODIFY: add menu option and _show_statistics method)
-- `src/models/__init__.py` (MODIFY: export CalculationStatistics)
-- `src/services/__init__.py` (MODIFY: export StatisticsService)
-- `tests/test_statistics.py` (NEW: comprehensive test suite)
-- `artifacts/*.puml` (MODIFY: update diagrams)
+2. **Merge vs. Replace Mode**:
+   - *Unclear*: Should `--import-mode replace` delete all existing history first?
+   - *Assumption*: "merge" = append to existing (default); "replace" = clear all, then add imported entries. This matches acceptance criterion "not overwrite unless explicitly intended."
+
+3. **Optional Fields on Import**:
+   - *Unclear*: Should missing `error`, `error_type`, `execution_time_ms` be auto-filled or cause rejection?
+   - *Assumption*: Auto-fill with defaults (None, None, 0.0) to maintain backward compatibility with older JSON exports. MemoryEntry.from_dict() already does this.
+
+4. **File Extension Validation**:
+   - *Unclear*: Should we reject non-.json files?
+   - *Assumption*: Yes, validate that filepath ends with `.json`, reject otherwise with clear error.
+
+5. **Interactive vs. One-Shot**:
+   - *Unclear*: Should `--export` and `--import` work without interactive prompts?
+   - *Assumption*: Yes, they are pure CLI flags. Interactive options are separate menu items that prompt for filepath.
+
+6. **Import File Format**:
+   - *Unclear*: Must the imported file be exactly the same structure as MemoryEntry.to_dict()?
+   - *Assumption*: Yes, the JSON schema must match MemoryEntry serialization format exactly. MemoryEntry.from_dict() handles field defaults.
+
+---
+
+## Suggested Implementation Order
+
+1. **ImportExportService** (core logic)
+   - Implement validation
+   - Implement duplicate detection
+   - Implement export
+   - Implement import with merge and replace modes
+   - Unit tests
+
+2. **__main__.py** (CLI flags)
+   - Add argparse arguments
+   - Add handlers that call ImportExportService
+   - Test with `python -m src --export FILE`, `python -m src --import FILE`
+
+3. **CalculatorCLI** (interactive menu)
+   - Add export/import menu options
+   - Implement interactive prompts
+   - Wire to ImportExportService
+   - Test interactive menu flow
+
+4. **Full Integration Tests**
+   - Test all combinations (export, import, merge, replace, filter, statistics)
+   - Test error cases (missing files, malformed JSON, invalid entries)
 
 ---
 
 ## Summary
 
-The calculator application has a solid foundation with MemoryEntry-based history, MemoryService for retrieval and filtering, and a clean CLI interface. Adding a statistics component is straightforward:
-
-1. **New dataclass** for structured statistics result
-2. **New service** to compute aggregations from MemoryEntry lists
-3. **CLI wiring** in argparse and interactive menu
-4. **Tests** to verify correctness across edge cases
-
-The main ambiguity is whether execution_time_ms should be part of MemoryEntry (currently not); the analyst recommends clarifying this with the architect before implementation. All other requirements are clear and well-scoped.
-
+**What needs to exist after Task 07:**
+- New `ImportExportService` that exports/imports history with validation and per-entry error handling
+- Menu options in interactive mode for export/import
+- CLI flags `--export FILEPATH`, `--import FILEPATH`, `--import-mode {merge,replace}`
+- Full validation of imported entries; duplicates and invalid entries skipped (not full failure)
+- Clear error/success reporting to the user
+- All functionality wired through `python -m src` entry point

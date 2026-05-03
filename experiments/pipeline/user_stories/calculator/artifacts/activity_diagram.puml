@@ -57,6 +57,22 @@ else (no)
         :Show average execution time;
         :Show operation counts;
 
+      case (Export)
+        :Prompt for export filepath;
+        :Validate JSON extension;
+        :Serialize history to JSON;
+        :Write file;
+        :Show success message;
+
+      case (Import)
+        :Prompt for import filepath;
+        :Prompt for import mode (merge/replace);
+        :Read and parse JSON file;
+        :Validate entries;
+        :Detect duplicates;
+        :Store valid entries;
+        :Show import summary;
+
       case (Operation)
         :Read operands;
 

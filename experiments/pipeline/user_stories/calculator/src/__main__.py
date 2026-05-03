@@ -1,23 +1,26 @@
 import argparse
 import sys
 from pathlib import Path
+from json import JSONDecodeError
 
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
 from .services.statistics_service import StatisticsService
+from .services.import_export_service import ImportExportService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
 
-def _build_services() -> tuple[CalculatorService, StatisticsService]:
+def _build_services() -> tuple[CalculatorService, StatisticsService, ImportExportService]:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
     storage = JsonStorage(storage_path)
     memory_service = MemoryService(storage)
     calculator_service = CalculatorService(Calculator(), memory_service)
     statistics_service = StatisticsService(memory_service)
-    return calculator_service, statistics_service
+    import_export_service = ImportExportService(memory_service)
+    return calculator_service, statistics_service, import_export_service
 
 
 def _as_number(value: str) -> float:
@@ -61,6 +64,23 @@ def main() -> None:
         help="Display calculation statistics",
     )
     parser.add_argument(
+        "--export",
+        metavar="FILEPATH",
+        help="Export calculation history to a JSON file",
+    )
+    parser.add_argument(
+        "--import",
+        metavar="FILEPATH",
+        dest="import_file",
+        help="Import calculation history from a JSON file (appends by default)",
+    )
+    parser.add_argument(
+        "--import-mode",
+        choices=["merge", "replace"],
+        default="merge",
+        help="When importing: 'merge' (append to existing) or 'replace' (overwrite all)",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -68,10 +88,37 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    calculator_service, statistics_service = _build_services()
-    cli = CalculatorCLI(calculator_service, statistics_service)
+    calculator_service, statistics_service, import_export_service = _build_services()
+    cli = CalculatorCLI(calculator_service, statistics_service, import_export_service)
 
-    # Handle --statistics flag first
+    # Handle --export flag
+    if args.export:
+        try:
+            result = import_export_service.export_history(args.export)
+            print(f"Exported {result['exported_count']} entries to {result['file_path']}")
+            sys.exit(0)
+        except (ValueError, OSError) as e:
+            print(f"Export error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    # Handle --import flag
+    if args.import_file:
+        try:
+            result = import_export_service.import_history(
+                args.import_file,
+                mode=args.import_mode,
+            )
+            print(f"Imported {result['imported_count']} entries")
+            if result['skipped_count'] > 0:
+                print(f"Skipped {result['skipped_count']} entries:")
+                print(f"  - {result['duplicates_count']} duplicates")
+                print(f"  - {result['invalid_count']} invalid")
+            sys.exit(0)
+        except (ValueError, OSError, JSONDecodeError) as e:
+            print(f"Import error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    # Handle --statistics flag
     if args.statistics:
         cli._show_statistics()
         sys.exit(0)
