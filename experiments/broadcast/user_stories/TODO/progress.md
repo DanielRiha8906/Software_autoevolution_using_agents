@@ -595,3 +595,187 @@ No new dependencies added. Implementation uses Python standard library:
 - `dataclasses` for FilterOptions class
 
 Duration: 425.6s | Cost: $3.351619 USD | Turns: 55
+
+---
+
+# Task 06: Task Summary Report
+
+## Task Overview
+
+**User Story:** As a user wanting an overview of my task list, I want a summary report of task counts and completion rates, so that I can understand the state of my work at a glance.
+
+**Acceptance Criteria:**
+- ✅ The report includes: total task count, count per status (pending, in_progress, done), count of overdue tasks, and count of tasks with a due date set.
+- ✅ Completion rate is included as a percentage (done / total).
+- ✅ The report is returned as a structured object (dataclass), not a plain dictionary.
+- ✅ Output format is deterministic regardless of task ordering.
+- ✅ Average days from creation to completion for done tasks is included as a bonus.
+- ✅ No charts or visualisation output are produced.
+- ✅ All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
+
+## Implementation Results
+
+### Broadcast Architecture Evaluation
+
+| Candidate | Approach | Tests Passing | Method Used | Selection |
+|-----------|----------|---------------|------------|-----------|
+| A (broadcast-candidate-a) | List comprehensions, TaskSummary model | 107/117 | list_tasks() | Failed tests |
+| B (broadcast-candidate-b) | Clean implementation, list_all() | 117/117 | list_all() | **SELECTED** |
+| C (broadcast-candidate-c) | Enhanced output formatting, N/A display | 117/117 | list_tasks() | Slightly over-engineered |
+
+**Winner:** Candidate B — explicit use of `list_all()` for all tasks, clean imports, and correct method choice.
+
+### Files Changed
+
+1. **`src/models/task_summary.py`** (NEW)
+   - Created new `TaskSummary` dataclass with 8 attributes:
+     - `total_tasks: int` — Total number of tasks
+     - `pending_count: int` — Count of PENDING status tasks
+     - `in_progress_count: int` — Count of IN_PROGRESS status tasks
+     - `done_count: int` — Count of DONE status tasks
+     - `overdue_count: int` — Count of overdue tasks
+     - `with_due_date_count: int` — Count of tasks with due_date set
+     - `completion_rate: float` — Percentage (0-100) of done tasks
+     - `avg_days_to_completion: Optional[float]` — Average days from creation to completion for done tasks (bonus)
+
+2. **`src/models/__init__.py`**
+   - Added `TaskSummary` to imports and `__all__` list
+
+3. **`src/services/todo_service.py`**
+   - Added `generate_report() -> TaskSummary` method:
+     - Retrieves all tasks using `list_all()`
+     - Counts tasks by status using comprehensions
+     - Calculates overdue count using `Task.is_overdue()`
+     - Counts tasks with due dates
+     - Computes completion_rate as percentage (0-100), defaults to 0 if no tasks
+     - Calculates avg_days_to_completion for DONE tasks (rounded to 1 decimal place)
+     - Returns deterministic results regardless of task ordering
+
+4. **`src/cli/todo_cli.py`**
+   - Added `report` subcommand to argparse parser
+   - Implemented `_cmd_report()` method to display formatted report:
+     - Outputs structured key-value pairs with aligned formatting
+     - Shows completion rate as percentage with 1 decimal place
+     - Shows avg_days_to_completion with 2 decimal places (when available)
+
+5. **`src/cli/interactive_menu.py`**
+   - Added menu option "10. View task summary report"
+   - Implemented `_do_show_report()` method:
+     - Displays report in consistent menu format
+     - Aligns output for readability
+     - Only shows avg_days_to_completion if available
+
+6. **`tests/test_task_summary.py`** (NEW)
+   - Created comprehensive test suite with 11 new tests:
+     - `test_generate_report_empty` — Empty task list
+     - `test_generate_report_single_pending` — Single pending task
+     - `test_generate_report_mixed_statuses` — Tasks in different states
+     - `test_generate_report_completion_rate` — Percentage calculation accuracy
+     - `test_generate_report_with_due_dates` — Due date counting
+     - `test_generate_report_overdue_count` — Overdue task detection
+     - `test_generate_report_avg_days_to_completion` — Average days calculation
+     - `test_generate_report_no_avg_for_no_done_tasks` — None when no done tasks
+     - `test_generate_report_deterministic` — Identical output regardless of order
+     - `test_generate_report_complex_scenario` — Multi-task complex scenario
+     - Additional CLI integration tests in `test_todo_cli.py`
+
+7. **`artifacts/class_diagram.puml`**
+   - Added `TaskSummary` class to models package
+   - Added all 8 attributes to the class definition
+   - Added dependency: `TodoService --> TaskSummary : generates`
+   - Added `generate_report() : TaskSummary` method to TodoService
+
+8. **`artifacts/use_case_diagram.puml`**
+   - Added "View task summary report" use case (I_REPORT) to Interactive mode
+   - Added "Display task summary report" use case (C_REPORT) to Command-line mode
+   - Added relationships for both modes
+
+9. **`artifacts/activity_diagram.puml`**
+   - Updated menu switch statement to include:
+     - Option 9: Filter by date
+     - Option 10: View report (new)
+
+### Test Results
+
+```
+117 passed in 0.30s
+```
+
+All 117 tests pass, including 11 new tests for TaskSummary functionality and 3 existing CLI tests updated for the report feature.
+
+### CLI Usage
+
+**One-shot command:**
+```bash
+# Display task summary report
+python -m src report
+```
+
+**Interactive menu:**
+```
+Menu option 10: View task summary report
+```
+
+### Output Format
+
+The report displays in a structured, human-readable format:
+
+```
+Task Summary Report
+========================================
+Total tasks:              10
+Pending:                  3
+In progress:              2
+Done:                     5
+Overdue:                  1
+With due date:            7
+Completion rate:          50.0%
+Avg days to completion:   4.32
+```
+
+### Design Decisions
+
+1. **TaskSummary as Dataclass:** Use of dataclass (not dict) provides:
+   - Type safety and IDE autocompletion
+   - Clear contract for what metrics are available
+   - Easy validation and extension
+   - Serializable to JSON if needed
+
+2. **Method Choice:** `list_all()` explicitly retrieves all tasks without filtering, ensuring:
+   - Report always includes all tasks
+   - No hidden filtering logic
+   - Clear intent in the code
+
+3. **Completion Rate:** Calculated as `(done / total) * 100` with division-by-zero handling:
+   - Returns 0.0 if no tasks exist
+   - Provides intuitive percentage (0-100)
+   - Floating point for precision
+
+4. **Average Days Calculation:** Uses `(updated_at - created_at).total_seconds() / 86400`:
+   - Measures from task creation to completion
+   - Converts seconds to days
+   - Rounds to 1 decimal place for readability
+   - Returns None if no done tasks (optional field)
+
+5. **Deterministic Output:** All calculations are:
+   - Order-independent (use counting and summation, not position)
+   - Reproducible across runs
+   - Suitable for reporting and metrics
+
+### Dependencies
+
+No new dependencies added. Implementation uses Python standard library:
+- `datetime.timedelta` for time calculations
+- `typing.Optional` for optional fields
+- `dataclasses` for TaskSummary definition
+
+### Architecture Notes
+
+**Broadcast Pattern:** Three independent implementer candidates were spawned:
+- **Candidate A:** Failed (code not properly integrated into service)
+- **Candidate B:** 117/117 tests ✅ (Selected as winner)
+- **Candidate C:** 117/117 tests ✅ (Over-engineered output formatting)
+
+Winner was chosen for explicit method use, clean code, and correct implementation.
+
+Duration: 670.6s | Cost: $1.552663 USD | Turns: 40

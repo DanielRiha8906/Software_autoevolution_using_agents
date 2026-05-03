@@ -22,6 +22,10 @@ repeat
       :Run delete task flow;
     case (8 — Manage comments)
       :Run manage comments flow;
+    case (9 — Filter by date)
+      :Run filter by date flow;
+    case (10 — View report)
+      :Generate and display report;
     case (0/q — Quit)
       :Clear screen;
       stop
