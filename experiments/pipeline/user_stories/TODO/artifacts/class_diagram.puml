@@ -19,6 +19,7 @@ package "models" #DDEEFF {
         +updated_at : DateTime
         +due_date : DateTime [0..1]
         +comments : List<TaskComment>
+        +project_id : String [0..1]
         --
         +__post_init__() : void
         +is_pending() : boolean
@@ -45,6 +46,15 @@ package "models" #DDEEFF {
         +from_dict(data: Dictionary) : TaskComment
     }
 
+    class Project {
+        +id : String
+        +name : String
+        --
+        +__post_init__() : void
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : Project
+    }
+
     class TaskSummaryReport {
         +total_count : int
         +pending_count : int
@@ -69,6 +79,7 @@ package "storage" #FFF3CC {
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
+    exception ProjectNotFoundError
 
     class ImportValidator {
         --
@@ -85,11 +96,14 @@ package "services" #DDFFD4 {
         +get(task_id: String) : Task
         +list_all() : List<Task>
         +list_by_status(status: TaskStatus) : List<Task>
+        +list_by_project(project_id: String) : List<Task>
         +list_by_due_date_range(before: DateTime [0..1], after: DateTime [0..1], status: TaskStatus [0..1], overdue_only: Boolean) : List<Task>
         +update(task_id: String, title: String [0..1], description: String [0..1], due_date: DateTime [0..1]) : Task
         +set_status(task_id: String, status: TaskStatus) : Task
         +set_due_date(task_id: String, due_date: DateTime [0..1]) : Task
+        +set_project(task_id: String, project_id: String [0..1]) : Task
         +delete(task_id: String) : void
+        +orphan_project_tasks(project_id: String) : Integer
         +add_comment(task_id: String, content: String, author: String [0..1]) : TaskComment
         +get_comments(task_id: String) : List<TaskComment>
         +delete_comment(task_id: String, comment_id: String) : void
@@ -101,8 +115,22 @@ package "services" #DDFFD4 {
         -persist() : void
     }
 
+    class ProjectManager {
+        -storage : JsonStorage
+        -projects : Dictionary<String, Project>
+        --
+        +ProjectManager(storage: JsonStorage [0..1])
+        +add(name: String) : Project
+        +get(project_id: String) : Project
+        +list_all() : List<Project>
+        +delete(project_id: String) : void
+        -load() : void
+        -persist() : void
+    }
+
     class TodoService {
         -manager : TaskManager
+        -project_manager : ProjectManager
         --
         +TodoService(storage: JsonStorage [0..1])
         +add_task(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
@@ -111,6 +139,12 @@ package "services" #DDFFD4 {
         +list_tasks_by_week(year: Integer, week: Integer, status: TaskStatus [0..1]) : List<Task>
         +list_tasks_by_month(year: Integer, month: Integer, status: TaskStatus [0..1]) : List<Task>
         +list_tasks_by_year(year: Integer, status: TaskStatus [0..1]) : List<Task>
+        +list_tasks_by_project(project_id: String) : List<Task>
+        +create_project(name: String) : Project
+        +list_projects() : List<Project>
+        +get_project(project_id: String) : Project
+        +delete_project(project_id: String) : void
+        +move_task_to_project(task_id: String, project_id: String [0..1]) : Task
         +start_task(task_id: String) : Task
         +complete_task(task_id: String) : Task
         +reopen_task(task_id: String) : Task
@@ -160,10 +194,14 @@ package "cli" #FFE5E5 {
 
 Task --> TaskStatus : status
 Task *-- TaskComment : comments
+Task --> Project : project_id [0..1]
 TodoService --> TaskSummaryReport : generates
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
+ProjectManager --> JsonStorage : storage
+ProjectManager ..> ProjectNotFoundError : raises
 TodoService --> TaskManager : manager
+TodoService --> ProjectManager : project_manager
 TodoService --> ImportValidator : uses
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service

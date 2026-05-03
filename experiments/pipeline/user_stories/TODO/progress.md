@@ -474,3 +474,71 @@ Duration: 503.9s | Cost: $1.046996 USD | Turns: 14
   - Both modes fully functional and tested
 
 Duration: 835.0s | Cost: $1.889681 USD | Turns: 18
+
+---
+
+## Task 08: Group Tasks into Projects
+
+**Status:** COMPLETE ✓
+
+### Changes Made
+- **Project Model:** Created new `Project` domain class with `id` (UUID) and `name` (non-empty string validation) with `to_dict()` and `from_dict()` serialization
+- **Task Model:** Added optional `project_id: Optional[str] = None` field; updated serialization for backward compatibility
+- **ProjectManager:** New service class (following TaskManager pattern) with CRUD operations: `add()`, `get()` (with prefix support), `list_all()`, `delete()` with persistence via shared JsonStorage
+- **Storage Layer:** Modified JsonStorage to handle new dict format `{"tasks": [...], "projects": [...]}` with auto-migration from old list format
+- **TaskManager:** Updated `_load()` and `_persist()` to handle new storage format; added `list_by_project()`, `set_project()`, `orphan_project_tasks()` methods
+- **TodoService:** Instantiated ProjectManager; added project methods: `create_project()`, `list_projects()`, `get_project()`, `delete_project()`, `list_tasks_by_project()`, `move_task_to_project()`
+- **TodoCLI:** Added three project subcommands (`create-project`, `list-projects`, `delete-project`); added `--project` flag to `add`, `list`, `update` for task-project operations; updated exception handling for ProjectNotFoundError
+- **InteractiveMenu:** Added menu option 12 for "Manage projects" with full submenu: create, list, delete projects; manage tasks in projects; option to assign tasks during creation
+- **Diagrams:** Updated class_diagram.puml, component_diagram.puml, use_case_diagram.puml, activity_diagram.puml to reflect Project entity, ProjectManager service, and new CLI/menu options
+
+### Files Changed
+**New Files:**
+- src/models/project.py
+- src/services/project_manager.py
+- tests/test_project.py
+- tests/test_project_manager.py
+- tests/test_task_project_integration.py
+
+**Modified Files:**
+- src/models/task.py
+- src/models/__init__.py
+- src/storage/json_storage.py
+- src/services/task_manager.py
+- src/services/todo_service.py
+- src/cli/todo_cli.py
+- src/cli/interactive_menu.py
+- tests/test_task.py
+- tests/test_json_storage.py
+- artifacts/class_diagram.puml
+- artifacts/component_diagram.puml
+- artifacts/use_case_diagram.puml
+- artifacts/activity_diagram.puml
+
+### Test Results
+**519 tests total: ALL PASSED**
+- 7 new tests for Project model (creation, validation, serialization)
+- 14 new tests for ProjectManager (CRUD, prefix lookup, persistence, task preservation)
+- 18 new tests for Task-Project integration (backward compatibility, manager operations, service methods, storage migration, CLI commands)
+- 7 tests updated in test_task.py (project_id field presence and serialization)
+- 4 tests updated in test_json_storage.py (new dict format, auto-migration)
+- 469 existing tests all still passing (no regressions)
+
+### Acceptance Criteria Verification
+✓ Project domain class exists with id (UUID) and name
+✓ Task has optional project_id attribute for project assignment
+✓ Projects can be created and listed via CLI and interactive menu
+✓ Tasks can be listed filtered by project
+✓ Tasks without project_id continue to work (backward compatible)
+✓ Existing stored tasks without project_id load without error (auto-migration)
+✓ Project names cannot be empty (validation in __post_init__)
+✓ Moving tasks between projects supported (move_task_to_project)
+✓ Deleting project leaves tasks unassigned (orphan, not cascade delete)
+✓ All functionality accessible via:
+  - Interactive menu: Option 12 (Manage projects) with full submenu
+  - CLI: `create-project <name>`, `list-projects`, `delete-project <id>`
+  - Task commands: `add --project <id>`, `list --project <id>`, `update --project <id>`
+✓ Project name validation (non-empty, whitespace trimmed)
+✓ ID prefix matching supported for both tasks and projects
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

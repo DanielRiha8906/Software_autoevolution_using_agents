@@ -7,13 +7,13 @@ from src.storage.json_storage import JsonStorage
 
 def test_load_missing_file(tmp_path):
     storage = JsonStorage(str(tmp_path / "nonexistent.json"))
-    assert storage.load() == []
+    assert storage.load() == {"tasks": [], "projects": []}
 
 
 def test_save_and_load(tmp_path):
     path = tmp_path / "tasks.json"
     storage = JsonStorage(str(path))
-    data = [{"id": "1", "title": "hello"}]
+    data = {"tasks": [{"id": "1", "title": "hello"}], "projects": []}
     storage.save(data)
     assert storage.load() == data
 
@@ -28,9 +28,9 @@ def test_save_creates_parent_dirs(tmp_path):
 def test_overwrite(tmp_path):
     path = tmp_path / "tasks.json"
     storage = JsonStorage(str(path))
-    storage.save([{"id": "1"}])
-    storage.save([{"id": "2"}])
-    assert storage.load() == [{"id": "2"}]
+    storage.save({"tasks": [{"id": "1"}], "projects": []})
+    storage.save({"tasks": [{"id": "2"}], "projects": []})
+    assert storage.load() == {"tasks": [{"id": "2"}], "projects": []}
 
 
 # ─── Backward compatibility tests ───────────────────────────────────────────
@@ -82,11 +82,14 @@ def test_load_mixed_legacy_and_new_tasks(tmp_path):
         "due_date": "2026-05-15T14:30:00+00:00",
     }
 
-    storage.save([legacy, new])
+    storage.save({"tasks": [legacy, new], "projects": []})
     loaded = storage.load()
 
-    assert len(loaded) == 2
-    assert loaded[0]["id"] == "legacy-1"
-    assert "due_date" not in loaded[0]
-    assert loaded[1]["id"] == "new-1"
-    assert loaded[1]["due_date"] == "2026-05-15T14:30:00+00:00"
+    assert "tasks" in loaded
+    assert "projects" in loaded
+    tasks = loaded["tasks"]
+    assert len(tasks) == 2
+    assert tasks[0]["id"] == "legacy-1"
+    assert "due_date" not in tasks[0]
+    assert tasks[1]["id"] == "new-1"
+    assert tasks[1]["due_date"] == "2026-05-15T14:30:00+00:00"

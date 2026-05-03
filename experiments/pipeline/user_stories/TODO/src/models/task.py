@@ -19,6 +19,7 @@ class Task:
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     due_date: Optional[datetime] = None
     comments: list[TaskComment] = field(default_factory=list)
+    project_id: Optional[str] = None
 
     def __post_init__(self) -> None:
         """Validate timezone awareness of datetime fields."""
@@ -132,6 +133,7 @@ class Task:
             "updated_at": self.updated_at.isoformat(),
             "due_date": self.due_date.isoformat() if self.due_date else None,
             "comments": [c.to_dict() for c in self.comments],
+            "project_id": self.project_id,
         }
 
     @classmethod
@@ -149,4 +151,5 @@ class Task:
             updated_at=datetime.fromisoformat(data["updated_at"]),
             due_date=due_date,
             comments=comments,
+            project_id=data.get("project_id"),
         )

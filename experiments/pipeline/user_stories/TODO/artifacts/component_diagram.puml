@@ -17,8 +17,10 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Project Manager" as PMGR
         component "Comment Management\n(add, view, edit, delete)" as CMT
         component "Date Filtering\n(week, month, year, range)" as DateFilter
+        component "Project Assignment\n(assign, list by project)" as ProjectAssign
         component "Report Generation\n(summary statistics)" as Report
         component "Import Validator\n(validate JSON files)" as ImportVal
         component "Export / Import\n(JSON serialization)" as ExportImport
@@ -26,6 +28,7 @@ package "TODO Application" {
 
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus)" as Model
+        component "Project Model\n(Project)" as ProjectModel
         component "Task Comment Model\n(TaskComment)" as CommentModel
         component "Summary Report Model\n(TaskSummaryReport)" as ReportModel
     }
@@ -44,20 +47,27 @@ IM --> SVC
 CLI --> SVC
 
 SVC --> MGR
+SVC --> PMGR
 SVC --> CMT
 SVC --> DateFilter
+SVC --> ProjectAssign
 SVC --> Report
 SVC --> ExportImport
 ExportImport --> ImportVal
 ExportImport --> MGR
 DateFilter --> MGR
+ProjectAssign --> MGR
+ProjectAssign --> PMGR
 Report --> MGR
 MGR --> Storage
 MGR ..> Model
 MGR ..> CommentModel
+PMGR --> Storage
+PMGR ..> ProjectModel
 CMT ..> CommentModel
 Report ..> ReportModel
 Storage ..> Model
+Storage ..> ProjectModel
 Storage ..> CommentModel
 
 Storage --> DB : read/write

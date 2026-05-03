@@ -15,6 +15,11 @@ rectangle "TODO Manager" {
     usecase "Update task" as I_UPDATE
     usecase "Set due date" as I_DUEDATE
     usecase "Delete task" as I_DELETE
+    usecase "Create project" as I_PROJECT_CREATE
+    usecase "List projects" as I_PROJECT_LIST
+    usecase "Assign task to project" as I_PROJECT_ASSIGN
+    usecase "View tasks in project" as I_PROJECT_VIEW
+    usecase "Delete project" as I_PROJECT_DELETE
     usecase "Add comment" as I_COMMENT_ADD
     usecase "View comments" as I_COMMENT_VIEW
     usecase "Edit comment" as I_COMMENT_EDIT
@@ -36,6 +41,11 @@ rectangle "TODO Manager" {
     usecase "Update task" as C_UPDATE
     usecase "Set due date" as C_DUEDATE
     usecase "Delete task" as C_DELETE
+    usecase "Create project" as C_PROJECT_CREATE
+    usecase "List projects" as C_PROJECT_LIST
+    usecase "Assign task to project" as C_PROJECT_ASSIGN
+    usecase "List tasks in project" as C_PROJECT_VIEW
+    usecase "Delete project" as C_PROJECT_DELETE
     usecase "Add comment" as C_COMMENT_ADD
     usecase "View comments" as C_COMMENT_VIEW
     usecase "Edit comment" as C_COMMENT_EDIT
@@ -56,6 +66,11 @@ UI ..> I_STATUS   : <<exclude>>
 UI ..> I_UPDATE   : <<exclude>>
 UI ..> I_DUEDATE  : <<exclude>>
 UI ..> I_DELETE   : <<exclude>>
+UI ..> I_PROJECT_CREATE : <<exclude>>
+UI ..> I_PROJECT_LIST : <<exclude>>
+UI ..> I_PROJECT_ASSIGN : <<exclude>>
+UI ..> I_PROJECT_VIEW : <<exclude>>
+UI ..> I_PROJECT_DELETE : <<exclude>>
 UI ..> I_COMMENT_ADD : <<exclude>>
 UI ..> I_COMMENT_VIEW : <<exclude>>
 UI ..> I_COMMENT_EDIT : <<exclude>>
@@ -74,6 +89,11 @@ CLI ..> C_REOPEN  : <<exclude>>
 CLI ..> C_UPDATE  : <<exclude>>
 CLI ..> C_DUEDATE : <<exclude>>
 CLI ..> C_DELETE  : <<exclude>>
+CLI ..> C_PROJECT_CREATE : <<exclude>>
+CLI ..> C_PROJECT_LIST : <<exclude>>
+CLI ..> C_PROJECT_ASSIGN : <<exclude>>
+CLI ..> C_PROJECT_VIEW : <<exclude>>
+CLI ..> C_PROJECT_DELETE : <<exclude>>
 CLI ..> C_COMMENT_ADD : <<exclude>>
 CLI ..> C_COMMENT_VIEW : <<exclude>>
 CLI ..> C_COMMENT_EDIT : <<exclude>>
