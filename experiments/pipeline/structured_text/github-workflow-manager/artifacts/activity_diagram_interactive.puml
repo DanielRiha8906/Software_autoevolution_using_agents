@@ -34,7 +34,11 @@ repeat
       :Prompt duration in seconds (optional);
       :Prompt logs URL (optional);
       :WorkflowAttemptTracker.create_attempt();
-      :Print "Created attempt <id>";
+      if (validation error?\n(duplicate id or\n(run_id, attempt_number)?) then (yes)
+        :Print error message to stderr;
+      else (no)
+        :Print "Created attempt <id>";
+      endif
 
     case (3 — List all runs)
       :WorkflowRunService.list_runs();
@@ -56,10 +60,14 @@ repeat
     case (5 — List attempts by run)
       :Prompt run ID;
       :WorkflowAttemptService.filter_by_run_id(run_id);
+      note right
+        Returns attempts sorted by
+        attempt_number (ascending)
+      end note
       if (no attempts?) then (yes)
         :Print "No attempts for this run.";
       else (no)
-        :Print all attempts;
+        :Print all attempts\n(sorted by attempt_number);
       endif
 
     case (6 — Filter runs)
