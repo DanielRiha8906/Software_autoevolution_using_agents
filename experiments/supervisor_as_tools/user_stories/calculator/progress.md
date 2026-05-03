@@ -353,4 +353,4 @@ Duration: 454.1s | Cost: $0.940096 USD | Turns: 24
 - One-shot CLI support: `python -m src --operation sin/cos/tan/log/ln/exp A B`
 - Interactive menu support: Options 9-14 for new scientific operations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 508.4s | Cost: $1.067696 USD | Turns: 26
