@@ -458,4 +458,4 @@ python -m src --filter-op add --filter-state success  # Combined filter
 - **Flexibility**: Support for individual filters or combined queries
 - **No External Dependencies**: Pure in-memory filtering using Python list comprehensions
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 631.1s | Cost: $1.274107 USD | Turns: 31
