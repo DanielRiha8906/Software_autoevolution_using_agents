@@ -360,4 +360,4 @@ Duration: 530.7s | Cost: $1.059689 USD | Turns: 17
   - CLI: `python -m src report` subcommand
   - Both modes fully functional and tested
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 503.9s | Cost: $1.046996 USD | Turns: 14
