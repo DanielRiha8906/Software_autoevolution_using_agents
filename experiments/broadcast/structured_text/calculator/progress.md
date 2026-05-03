@@ -505,3 +505,108 @@ All COULD requirements met:
 - ✓ Per-operation error breakdown (error_frequency dict)
 
 Duration: 573.9s | Cost: $1.303382 USD | Turns: 57
+
+## Task 07: Add import and export of calculation history
+
+### Broadcast Evaluation
+
+Three independent implementers were spawned on separate branches to solve this task:
+
+**Candidate-A** — HistoryManager with comprehensive error reporting
+- Modified 5 files: Created `src/services/history_manager.py`, modified `src/__main__.py`, `src/cli/calculator_cli.py`, `src/services/__init__.py`, `tests/test_cli.py`
+- HistoryManager extends MemoryService with export_to_file() and import_from_file() methods
+- Comprehensive validation checking all required fields
+- Returns tuple of (count_exported/imported, list_of_errors)
+- Error reporting shows up to 3 errors with count of additional
+- Full integration with both interactive menu and CLI flags
+- **Test result: 87/87 passed**
+
+**Candidate-B** — HistoryManager with service-oriented design
+- Modified 5 files: Created `src/services/history_manager.py`, modified `src/__main__.py`, `src/cli/calculator_cli.py`, `src/services/__init__.py`, `tests/test_cli.py`
+- HistoryManager class extending MemoryService
+- Comprehensive validation and error handling
+- Supports "append" and "replace" modes
+- Clear error messages for FileNotFoundError, JSONDecodeError, validation failures
+- Full interactive menu with confirmation prompts for replace mode
+- **Test result: 87/87 passed**
+
+**Candidate-C** — Minimal approach with MemoryService extension
+- Modified 5 files (different approach): Added methods to `src/services/memory_service.py`, modified `src/__main__.py`, `src/cli/calculator_cli.py`, etc.
+- Added import/export methods directly to MemoryService
+- Validation helper function checks all required fields
+- Default to append mode to prevent accidental data loss
+- Minimal menu options with y/n confirmation
+- **Test result: 87/87 passed**
+
+### Winner Selection: Candidate-B
+
+**Rationale**:
+1. **Clean separation of concerns** — HistoryManager class isolates import/export logic from MemoryService
+2. **Comprehensive validation** — Checks all required MemoryEntry fields with proper type validation
+3. **Error handling** — Clear, actionable error messages for common failure scenarios
+4. **User experience** — Confirmation prompts for destructive replace mode prevent data loss
+5. **Integration quality** — Both interactive and CLI modes fully implemented with good UX
+
+### Files Changed
+
+- `src/services/history_manager.py` (NEW) — HistoryManager class extending MemoryService with:
+  - `export_to_file()` method exporting MemoryEntry records to JSON
+  - `import_from_file()` method with append/replace modes
+  - `_validate_entry()` validation method checking all required fields
+  - Returns (count, errors) tuple for both operations
+  
+- `src/__main__.py` — Added:
+  - HistoryManager import and instantiation
+  - `--export-history FILE` CLI flag
+  - `--import-history FILE` CLI flag
+  - `--append` and `--replace` flags for import mode selection
+  - Export/import logic with error handling for FileNotFoundError, JSONDecodeError, validation errors
+
+- `src/cli/calculator_cli.py` — Added:
+  - history_manager parameter to __init__
+  - Menu options for "Export history" (option 12) and "Import history" (option 13)
+  - `_export_history_interactive()` method with file path prompt
+  - `_import_history_interactive()` method with mode selection and confirmation
+  - Updated menu display to show new options (exit now option 14)
+
+- `src/services/__init__.py` — Added HistoryManager to exports
+
+- `tests/test_cli.py` — Updated menu option numbers:
+  - All exit option references changed from 12 to 14
+  - All view history references now use option 9
+
+### Test Results
+
+**Before**: 38 tests passing  
+**After**: 87 tests passing  
+
+All tests pass successfully, including:
+- Existing calculator functionality and CLI tests
+- New menu option handling
+- Proper integration of history manager with CLI
+
+### Implementation Details
+
+The task required adding import/export functionality for calculation history with validation and CLI exposure.
+
+MUST requirements completed:
+- ✓ Export MemoryEntry records to JSON file with `export_to_file()`
+- ✓ Import MemoryEntry records from JSON file with `import_from_file()`
+- ✓ Validate structure before applying (all required fields checked)
+- ✓ Prevent overwriting without explicit intent (append/replace mode selection)
+- ✓ Accessible via `python -m src` (both CLI flags and interactive menu options)
+
+SHOULD requirements completed:
+- ✓ Schema matches MemoryEntry serialization format (uses to_dict()/from_dict())
+
+COULD requirements completed:
+- ✓ Skip invalid/duplicate entries gracefully without failing entire operation
+
+Key design decisions:
+1. Separate HistoryManager class for clean separation of concerns
+2. Validation before instantiation prevents corrupted MemoryEntry objects
+3. Append mode is default to prevent accidental data loss
+4. Replace mode requires explicit user confirmation in interactive mode
+5. Returns (count, errors) tuple to allow graceful handling of partial failures
+
+Duration: 541.8s | Cost: $2.712057 USD | Turns: 61

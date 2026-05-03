@@ -80,6 +80,13 @@ package "services" {
     +retrieve(): list[MemoryEntry]
   }
 
+  class HistoryManager {
+    --
+    +export_to_file(filepath: str | Path): tuple[int, list[str]]
+    +import_from_file(filepath: str | Path, choice: str): tuple[int, list[str]]
+    -_validate_entry(entry_dict: dict): bool
+  }
+
   class QueryService {
     -memory_service: MemoryService
     --
@@ -112,16 +119,18 @@ package "cli" {
     -service: CalculatorService
     -query_service: Optional[QueryService]
     -statistics_service: Optional[StatisticsService]
+    -history_manager: Optional[HistoryManager]
     --
     +run_interactive(): None
     +run_command(op_str: str, a: float, b: float): None
-    +run_stats(): None
     -_print_menu(): None
     -_resolve_menu_choice(choice: str): Operation
     -_prompt_number(prompt: str): float
     -_show_history(): None
     -_query_interactive(): None
     -_show_statistics(): None
+    -_export_history_interactive(): None
+    -_import_history_interactive(): None
   }
 }
 
@@ -134,12 +143,16 @@ CalculatorService --> MemoryService : optional
 MemoryService --> JsonStorage
 MemoryService --> MemoryEntry
 
+HistoryManager --|> MemoryService
+HistoryManager --> MemoryEntry
+
 QueryService --> MemoryService
 QueryService --> MemoryEntry
 
 CalculatorCLI --> CalculatorService
 CalculatorCLI --> QueryService
 CalculatorCLI --> StatisticsService
+CalculatorCLI --> HistoryManager : optional
 CalculatorCLI --> Operation
 
 QueryService --> MemoryEntry
