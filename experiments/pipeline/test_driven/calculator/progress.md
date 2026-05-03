@@ -111,3 +111,32 @@ Duration: 402.7s | Cost: $0.690665 USD | Turns: 31
 - Verified by test_memory_service_does_not_contain_file_io that no "open(" or "json.dump" appears in source
 
 Duration: 359.9s | Cost: $0.556227 USD | Turns: 21
+
+## Task 05: MemoryService Query Method
+
+**Status:** Completed
+
+**Files Changed:**
+- src/services/memory_service.py — Added `query()` method to MemoryService class with Optional[str] and Optional[bool] parameters
+- tests/test_memory_service.py — Added 6 new test cases for query method functionality
+- artifacts/class_diagram.puml — Updated MemoryService class to show query method signature
+
+**Test Results:**
+- 6/6 new query method tests: PASSED
+- 11/11 total memory service tests: PASSED
+- All existing tests remain passing
+- No regressions in full test suite (140 total tests)
+
+**Implementation Summary:**
+- Added import: `from typing import Optional`
+- Implemented `query(operation: Optional[str] = None, success: Optional[bool] = None) -> list[MemoryEntry]`
+- Filters stored entries by operation type and/or success state with AND logic
+- Case-sensitive string matching for operation field (exact match)
+- Exact boolean matching for success field
+- Returns empty list if no entries match
+- Returns all entries if both parameters are None (same as retrieve())
+- Preserves insertion order from internal _entries list
+- Uses list comprehension for clean, idiomatic Python implementation
+- Full docstring with behavior specification and examples
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

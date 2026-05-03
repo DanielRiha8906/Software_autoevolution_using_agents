@@ -1,261 +1,120 @@
-# Task 04 Design: MemoryService Implementation
+# Task 05 Design: MemoryService Query Method
 
-## 1. Class Definition
-
-### MemoryService Structure
+## Method Signature
 
 ```python
-class MemoryService:
-    """Service for managing MemoryEntry domain objects in-memory.
+def query(self, operation: Optional[str] = None, success: Optional[bool] = None) -> list[MemoryEntry]:
+    """Filter stored entries by operation type and/or success state.
     
-    Provides store() and retrieve() methods for lifecycle management without
-    any persistence logic. All file I/O responsibilities are delegated to the
-    storage layer (JsonStorage).
-    
-    This is a stateful service that accumulates entries for the duration of
-    the application session.
-    """
-    
-    def __init__(self) -> None:
-        """Initialize MemoryService with an empty entry list.
-        
-        Constructor takes no arguments. Internal state is initialized here.
-        """
-        self._entries: list[MemoryEntry] = []
-```
-
-### Why this constructor design:
-
-- Takes NO arguments because the test requirements explicitly state constructor takes no required arguments
-- Aligns with the principle of separation of concerns: MemoryService does NOT instantiate or own storage; it only manages in-memory entries
-- Storage integration happens at a higher level (e.g., in CalculatorService or CLI layer), not within MemoryService
-- Simpler to test: no setup of dependencies needed; test can instantiate with `MemoryService()`
-
----
-
-## 2. Methods
-
-### Method Signatures and Specifications
-
-```python
-def store(self, entry: MemoryEntry) -> None:
-    """Store a MemoryEntry in memory.
+    Enables querying the in-memory entry collection using optional filters on
+    operation type and success state. Filters combine with AND logic: if both
+    parameters are provided, results must match both conditions.
     
     Args:
-        entry: A MemoryEntry domain object with auto-generated id and timestamp.
+        operation: Optional operation type filter (e.g., "add", "multiply").
+                   Performs case-sensitive exact string matching.
+                   None means no filter on operation.
+        success: Optional success state filter (True or False).
+                 Performs exact boolean matching.
+                 None means no filter on success state.
     
     Returns:
-        None
+        list[MemoryEntry]: List of entries matching ALL provided filters.
+                          Returns empty list if no matches found.
+                          Returns copy of all entries if both parameters are None.
+                          Preserves insertion order from internal _entries list.
     
-    Behavior:
-        - Accepts the entry as-is (does not modify id or timestamp)
-        - Appends entry to internal list
-        - Does NOT validate, serialize, or persist to any storage
-        - Does NOT raise exceptions on duplicate IDs (allows identical entries)
+    Filter Logic (AND Combination):
+    - Both parameters None → return all entries (same as retrieve())
+    - operation only → return entries where entry.operation == operation
+    - success only → return entries where entry.success == success
+    - both provided → return entries where BOTH conditions match
+    
+    Example:
+        service.query()                    # all entries
+        service.query(operation="add")     # entries with "add" operations
+        service.query(success=True)        # successful entries
+        service.query(operation="multiply", success=False)  # failed multiply ops
     """
 ```
 
+## Import Requirements
+
+File: `src/services/memory_service.py`
+
+Add to existing imports:
 ```python
-def retrieve(self) -> list[MemoryEntry]:
-    """Retrieve all stored MemoryEntry objects.
+from typing import Optional
+```
+
+## Filtering Algorithm
+
+**Pseudocode:**
+
+```
+function query(operation: Optional[str], success: Optional[bool]) -> list[MemoryEntry]:
+    result = []
     
-    Returns:
-        list[MemoryEntry]: A list of all entries in order of insertion.
-                          Returns empty list if no entries have been stored.
+    for each entry in self._entries:
+        matches = True
+        
+        // If operation filter is provided, check if entry.operation matches
+        if operation is not None:
+            if entry.operation != operation:
+                matches = False
+        
+        // If success filter is provided, check if entry.success matches
+        if success is not None:
+            if entry.success != success:
+                matches = False
+        
+        // Add to result if ALL active filters matched
+        if matches:
+            result.append(entry)
     
-    Behavior:
-        - Returns a reference to the internal list (not a copy)
-        - Preserves insertion order
-        - Preserves all fields (id, timestamp, operation, operands, result, success, execution_time_ms)
-        - Does NOT filter, sort, or transform entries
-    """
+    return result
 ```
 
-### No Helper Methods
-
-- The implementation is simple enough that no private or helper methods are needed
-- The internal `_entries` list requires no synchronization logic (single-threaded context)
-- No UUID generation, timestamp manipulation, or serialization helpers needed (MemoryEntry handles those)
-
----
-
-## 3. Type Hints
-
-### Imports Required
-
+**Implementation Approach (List Comprehension - Recommended):**
 ```python
-from ..models.memory_entry import MemoryEntry
+def query(self, operation: Optional[str] = None, success: Optional[bool] = None) -> list[MemoryEntry]:
+    return [
+        entry for entry in self._entries
+        if (operation is None or entry.operation == operation)
+        and (success is None or entry.success == success)
+    ]
 ```
 
-### Full Type Annotation Strategy
+## Edge Cases Handled
 
-- All method parameters and return types have explicit type hints
-- Use `MemoryEntry` (imported from models) for domain type
-- Use `list[MemoryEntry]` for return type (Python 3.9+ syntax, matching existing codebase)
-- Use `None` return type for store() method
-- No circular imports possible: MemoryService imports MemoryEntry, MemoryEntry does not import MemoryService
+1. **Both parameters None** → Return all entries
+2. **Empty service** → Return empty list
+3. **No matches for operation** → Return empty list
+4. **No matches for success** → Return empty list
+5. **No matches for combined filters** → Return empty list
+6. **Case sensitivity** → "Add" != "add" (exact string matching)
+7. **Partial matches rejected** → "ad" != "add" (exact match only)
 
----
+## Integration with Existing Code
 
-## 4. File Layout
+**Dependencies:**
+- Imports `MemoryEntry` from `src.models.memory_entry` (already imported in class)
+- Uses `self._entries` (existing private attribute)
+- Return type `list[MemoryEntry]` matches existing `retrieve()` return type
 
-### Create: `src/services/memory_service.py`
+**No changes needed to:**
+- MemoryEntry model (already has operation and success fields)
+- Any other service or class
+- Constructor or initialization logic
+- Existing store() and retrieve() methods
 
-Location: `src/services/memory_service.py`
+## Implementation Checklist for Programmer
 
-Content structure:
-1. Imports (only MemoryEntry from models)
-2. Class docstring
-3. Constructor with docstring and `_entries: list[MemoryEntry] = []` initialization
-4. `store(self, entry: MemoryEntry) -> None` method
-5. `retrieve(self) -> list[MemoryEntry]` method
-
-### Update: `src/services/__init__.py`
-
-Current content:
-```python
-from .calculator import Calculator
-from .calculator_service import CalculatorService
-
-__all__ = ["Calculator", "CalculatorService"]
-```
-
-Add MemoryService to imports and __all__:
-```python
-from .calculator import Calculator
-from .calculator_service import CalculatorService
-from .memory_service import MemoryService
-
-__all__ = ["Calculator", "CalculatorService", "MemoryService"]
-```
-
-### Create: `tests/test_memory_service.py`
-
-Location: `tests/test_memory_service.py`
-
-Content structure (tests are pre-written; this section documents where they go):
-1. Import MemoryService from src.services
-2. Import MemoryEntry from src.models
-3. Five test methods (provided in requirements):
-   - `test_memory_service_can_store_entry()`
-   - `test_memory_service_retrieve_returns_stored_entries()`
-   - `test_memory_service_stores_multiple_entries()`
-   - `test_memory_service_retrieve_returns_list()`
-   - `test_memory_service_does_not_contain_file_io()`
-
----
-
-## 5. Key Design Decisions
-
-### Decision 1: Why Use a Simple List for Storage?
-
-**Choice:** Use `list[MemoryEntry]` as the internal data structure.
-
-**Rationale:**
-- List preserves insertion order (predictable behavior for testing and user comprehension)
-- No index lookup or search requirements (tests only call retrieve() to get all entries)
-- Simple semantics: O(1) append, O(n) retrieve (acceptable for calculator session scope)
-- Matches the pattern of JsonStorage's internal representation: it also works with lists
-- No need for deduplication or uniqueness constraints (tests allow duplicates)
-
-### Decision 2: Why No Constructor Parameters?
-
-**Choice:** Constructor takes no arguments; initialize `_entries = []` directly in `__init__`.
-
-**Rationale:**
-- Test requirement explicitly states "Constructor takes no required arguments"
-- MemoryService is a pure domain service, not a configuration container
-- Separation of concerns: service manages entries, not storage configuration or dependencies
-- Storage integration happens at orchestration level
-- Simplifies instantiation: `MemoryService()` vs. `MemoryService(storage=...)`
-
-### Decision 3: Why No Storage Layer Integration in MemoryService?
-
-**Choice:** MemoryService contains ONLY store() and retrieve(). No save() or load_all() methods that call JsonStorage.
-
-**Rationale:**
-- Clean separation of layers: domain service ≠ persistence service
-- MemoryService is responsible for in-memory lifecycle ONLY
-- JsonStorage is responsible for file I/O ONLY
-- Orchestration layer (e.g., CalculatorService or CLI) composes these services
-- Test constraint: "No file I/O or JSON serialization in MemoryService source" enforces this boundary
-
-### Decision 4: How This Fits the Existing Architecture
-
-**Pattern:**
-- `Calculator` — pure function collection (no state, no I/O)
-- `CalculatorService` — orchestrates calculation + persistence
-- `JsonStorage` — handles file I/O and JSON serialization
-- `MemoryService` — stateful complement to Calculator, manages transient in-session entries
-
----
-
-## 6. Test Plan Summary
-
-The 5 test cases validate all requirements:
-
-### Test 1: `test_memory_service_can_store_entry()`
-- Verify method exists and accepts the correct type
-
-### Test 2: `test_memory_service_retrieve_returns_stored_entries()`
-- Verify entries are actually stored and can be retrieved
-
-### Test 3: `test_memory_service_stores_multiple_entries()`
-- Verify accumulation, no overwrite, multiple entries in insertion order
-
-### Test 4: `test_memory_service_retrieve_returns_list()`
-- Verify return type contract (not tuple, not custom iterable)
-
-### Test 5: `test_memory_service_does_not_contain_file_io()`
-- Verify implementation does not include persistence logic
-
----
-
-## 7. Implementation Checklist for Programmer
-
-1. Create `src/services/memory_service.py`
-   - Import MemoryEntry from `..models.memory_entry`
-   - Define MemoryService class
-   - Implement `__init__(self) -> None` with `self._entries: list[MemoryEntry] = []`
-   - Implement `store(self, entry: MemoryEntry) -> None` with `self._entries.append(entry)`
-   - Implement `retrieve(self) -> list[MemoryEntry]` with `return self._entries`
-
-2. Update `src/services/__init__.py`
-   - Add import: `from .memory_service import MemoryService`
-   - Add to __all__: `"MemoryService"`
-
-3. Create test file with provided test cases (tester will handle this)
-
----
-
-## 8. Code Skeleton
-
-```python
-# src/services/memory_service.py
-
-from ..models.memory_entry import MemoryEntry
-
-
-class MemoryService:
-    """Service for managing MemoryEntry domain objects in-memory."""
-
-    def __init__(self) -> None:
-        """Initialize MemoryService with an empty entry list."""
-        self._entries: list[MemoryEntry] = []
-
-    def store(self, entry: MemoryEntry) -> None:
-        """Store a MemoryEntry in memory.
-        
-        Args:
-            entry: A MemoryEntry domain object.
-        """
-        # Implementation: one line
-
-    def retrieve(self) -> list[MemoryEntry]:
-        """Retrieve all stored MemoryEntry objects.
-        
-        Returns:
-            list[MemoryEntry]: All entries in insertion order.
-        """
-        # Implementation: one line
-```
+1. Add import: `from typing import Optional`
+2. Add `query` method to MemoryService class with:
+   - Proper method signature with type hints
+   - Comprehensive docstring
+   - List comprehension implementation or explicit loop
+3. Verify no file I/O in method
+4. Ensure type hints are correct throughout
+5. No modification to existing methods
