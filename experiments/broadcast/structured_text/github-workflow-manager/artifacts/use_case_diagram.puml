@@ -15,6 +15,9 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by branch"         as I_FBRANCH
     usecase "Filter by status"         as I_FSTATUS
     usecase "Filter by conclusion"     as I_FCONCL
+    usecase "Filter by duration"       as I_FDURATION
+    usecase "Filter by timestamp"      as I_FTIMESTAMP
+    usecase "Filter by attempts"       as I_FATTEMPTS
     usecase "Check run state"          as I_CHECK
     usecase "Create attempt"           as I_CREATE_ATT
     usecase "List attempts"            as I_LIST_ATT
@@ -31,6 +34,10 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by conclusion"     as C_FCONCL
     usecase "Get run detail"           as C_DETAIL
     usecase "Check run state"          as C_CHECK
+    usecase "Filter runs"              as C_FILTER
+    usecase "Filter by duration"       as C_FDURATION
+    usecase "Filter by timestamp"      as C_FTIMESTAMP
+    usecase "Filter by attempts"       as C_FATTEMPTS
     usecase "Create attempt"           as C_CREATE_ATT
     usecase "List attempts"            as C_LIST_ATT
     usecase "List attempts by run"     as C_GET_ATT
@@ -50,9 +57,12 @@ UI --> I_LIST_ATT
 UI --> I_GET_ATT
 UI --> I_EXIT
 
-I_FILTER --> I_FBRANCH  : <<extend>>
-I_FILTER --> I_FSTATUS  : <<extend>>
-I_FILTER --> I_FCONCL   : <<extend>>
+I_FILTER --> I_FBRANCH     : <<extend>>
+I_FILTER --> I_FSTATUS     : <<extend>>
+I_FILTER --> I_FCONCL      : <<extend>>
+I_FILTER --> I_FDURATION   : <<extend>>
+I_FILTER --> I_FTIMESTAMP  : <<extend>>
+I_FILTER --> I_FATTEMPTS   : <<extend>>
 
 CLI --> C_ADD
 CLI --> C_LIST
@@ -62,8 +72,14 @@ CLI --> C_CREATE_ATT
 CLI --> C_LIST_ATT
 CLI --> C_GET_ATT
 
-C_LIST --> C_FBRANCH  : <<extend>>
-C_LIST --> C_FSTATUS  : <<extend>>
-C_LIST --> C_FCONCL   : <<extend>>
+C_LIST --> C_FBRANCH     : <<extend>>
+C_LIST --> C_FSTATUS     : <<extend>>
+C_LIST --> C_FCONCL      : <<extend>>
+
+C_FILTER --> C_FDURATION   : <<extend>>
+C_FILTER --> C_FTIMESTAMP  : <<extend>>
+C_FILTER --> C_FATTEMPTS   : <<extend>>
+
+CLI --> C_FILTER
 
 @enduml

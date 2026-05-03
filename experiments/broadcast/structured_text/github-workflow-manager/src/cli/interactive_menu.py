@@ -1,6 +1,9 @@
 import sys
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..services.attempt_service import AttemptService
 
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
@@ -103,17 +106,47 @@ def _detail_run(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
-def _filter_menu(service: WorkflowRunService) -> None:
-    filter_by = _choose("Filter by", ["branch", "status", "conclusion"])
+def _filter_menu(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    filter_by = _choose("Filter by", ["branch", "status", "conclusion", "duration", "timestamp", "attempts"])
     if filter_by == "branch":
         branch = _prompt("Branch name")
         runs = service.filter_by_branch(branch)
     elif filter_by == "status":
         status_val = _choose("Status", [s.value for s in WorkflowStatus])
         runs = service.filter_by_status(WorkflowStatus(status_val))
-    else:
+    elif filter_by == "conclusion":
         conclusion_val = _choose("Conclusion", [c.value for c in WorkflowConclusion])
         runs = service.filter_by_conclusion(WorkflowConclusion(conclusion_val))
+    elif filter_by == "duration":
+        min_dur = _prompt("Min duration in seconds (leave blank for none)", "")
+        max_dur = _prompt("Max duration in seconds (leave blank for none)", "")
+        min_val = float(min_dur) if min_dur else None
+        max_val = float(max_dur) if max_dur else None
+        runs = service.filter_by_duration_range(min_val, max_val)
+    elif filter_by == "timestamp":
+        ts_type = _choose("Timestamp filter", ["created_before", "created_after", "updated_before", "updated_after"])
+        ts_str = _prompt("Enter timestamp (ISO format, e.g., 2026-05-03T12:00:00)")
+        try:
+            ts = datetime.fromisoformat(ts_str)
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+        except ValueError:
+            print("Invalid timestamp format.")
+            return
+        if ts_type == "created_before":
+            runs = service.filter_by_created_before(ts)
+        elif ts_type == "created_after":
+            runs = service.filter_by_created_after(ts)
+        elif ts_type == "updated_before":
+            runs = service.filter_by_updated_before(ts)
+        else:
+            runs = service.filter_by_updated_after(ts)
+    else:  # attempts
+        attempt_type = _choose("Attempt filter", ["with_attempts", "without_attempts"])
+        if attempt_type == "with_attempts":
+            runs = service.filter_with_attempts(attempt_service)
+        else:
+            runs = service.filter_without_attempts(attempt_service)
 
     if not runs:
         print("\nNo matching runs.")
@@ -201,7 +234,7 @@ MENU = [
     ("Add workflow run", lambda s, a: _add_run(s)),
     ("List all runs", lambda s, a: _list_runs(s)),
     ("Get run detail", lambda s, a: _detail_run(s)),
-    ("Filter runs", lambda s, a: _filter_menu(s)),
+    ("Filter runs", lambda s, a: _filter_menu(s, a)),
     ("Check run state", lambda s, a: _check_state(s)),
     ("Add workflow attempt", lambda s, a: _add_attempt(a)),
     ("List all attempts", lambda s, a: _list_attempts(a)),
