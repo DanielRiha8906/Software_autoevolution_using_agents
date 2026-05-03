@@ -10,100 +10,127 @@ start
 
 repeat
 
+  :Display main menu:\n1. Workflow Runs\n2. Workflow Attempts\n3. Exit;
   :Wait for user selection;
 
-  switch (choice)
+  if (Exit?) then (yes)
+    :Print "Goodbye.";
+    stop
+  else (no)
+    if (Workflow Runs?) then (yes)
+      repeat
+        :Display runs submenu:\n1. Add run\n2. List all\n3. Get detail\n4. Filter runs\n5. Query state\n6. Back;
+        switch (runs choice)
+          case (1 — Add workflow run)
+            :Prompt workflow name;
+            :Prompt branch;
+            :Choose status;
+            :Choose conclusion (optional);
+            :Prompt run number (optional);
+            :Prompt commit SHA (optional);
+            :Prompt duration (optional);
+            :WorkflowRunTracker.track();
+            :Print "Added run <id>";
+          case (2 — List all runs)
+            :WorkflowRunService.list_runs();
+            if (no runs?) then (yes)
+              :Print "No runs recorded.";
+            else (no)
+              :Print all runs;
+            endif
+          case (3 — Get run detail)
+            :Prompt run ID;
+            :WorkflowRunService.get_run_detail();
+            if (found?) then (yes)
+              :Print run details;
+            else (no)
+              :Print "No run found";
+            endif
+          case (4 — Filter runs)
+            :Build filter criteria menu:\nbranch, status, conclusion,\nduration range, created/updated\ntimestamps, attempts presence;
+            if (timezone timestamps?) then (yes)
+              :Prompt timezone;
+              :parse_datetime_with_timezone();
+            endif
+            :WorkflowRunService.filter_runs()\n(composite filter with all criteria);
+            if (no matches?) then (yes)
+              :Print "No matching runs.";
+            else (no)
+              :Print matching runs;
+            endif
+          case (5 — Query workflow state)
+            :Prompt run ID;
+            :WorkflowRunService.get_run_detail();
+            if (found?) then (yes)
+              :Query state;
+              :Print run state;
+            else (no)
+              :Print "No run found";
+            endif
+          case (6 — Back)
+            break
+        endswitch
+      repeat while (user continues in runs menu)
+    else (Workflow Attempts)
+      repeat
+        :Display attempts submenu:\n1. Add attempt\n2. List all\n3. Get detail\n4. Filter attempts\n5. Query state\n6. Back;
+        switch (attempts choice)
+          case (1 — Add attempt)
+            :Prompt run ID, attempt number;
+            :Choose status;
+            :Choose conclusion (optional);
+            :Prompt completed-at (optional);
+            :Prompt duration (optional);
+            :Prompt logs URL (optional);
+            :WorkflowAttemptTracker.create_attempt();
+            if (validation error?) then (yes)
+              :Print error;
+            else (no)
+              :Print "Added attempt <id>";
+            endif
+          case (2 — List all)
+            :WorkflowAttemptService.list_attempts();
+            if (no attempts?) then (yes)
+              :Print "No attempts recorded.";
+            else (no)
+              :Print all attempts;
+            endif
+          case (3 — Get detail)
+            :Prompt attempt ID;
+            :WorkflowAttemptService.get_attempt_detail();
+            if (found?) then (yes)
+              :Print attempt details;
+            else (no)
+              :Print "No attempt found";
+            endif
+          case (4 — Filter attempts)
+            :Build attempt filter criteria menu:\nrun-id, status, conclusion,\nduration range, started/completed\ntimestamps;
+            if (timezone timestamps?) then (yes)
+              :Prompt timezone;
+              :parse_datetime_with_timezone();
+            endif
+            :WorkflowAttemptService.filter_attempts()\n(composite filter with all criteria);
+            if (no matches?) then (yes)
+              :Print "No matching attempts.";
+            else (no)
+              :Print matching attempts;
+            endif
+          case (5 — Query state)
+            :Prompt attempt ID;
+            :WorkflowAttemptService.get_attempt_detail();
+            if (found?) then (yes)
+              :Query state;
+              :Print attempt state;
+            else (no)
+              :Print "No attempt found";
+            endif
+          case (6 — Back)
+            break
+        endswitch
+      repeat while (user continues in attempts menu)
+    endif
+  endif
 
-    case (1 — Add workflow run)
-      :Prompt workflow name;
-      :Prompt branch;
-      :Choose status from list;
-      :Choose conclusion (optional, 0 to skip);
-      :Prompt run number (optional);
-      :Prompt commit SHA (optional);
-      :Prompt duration in seconds (optional);
-      :WorkflowRunTracker.track();
-      :Print "Added run <id>";
-
-    case (2 — Create workflow attempt)
-      :Prompt run ID;
-      :Prompt attempt number;
-      :Choose status from list;
-      :Choose conclusion (optional, 0 to skip);
-      :Prompt completion time (optional);
-      :Prompt duration in seconds (optional);
-      :Prompt logs URL (optional);
-      :WorkflowAttemptTracker.create_attempt();
-      if (validation error?\n(duplicate id or\n(run_id, attempt_number)?) then (yes)
-        :Print error message to stderr;
-      else (no)
-        :Print "Created attempt <id>";
-      endif
-
-    case (3 — List all runs)
-      :WorkflowRunService.list_runs();
-      if (no runs?) then (yes)
-        :Print "No runs recorded.";
-      else (no)
-        :Print all runs;
-      endif
-
-    case (4 — Get run detail)
-      :Prompt run ID;
-      :WorkflowRunService.get_run_detail(run_id);
-      if (found?) then (yes)
-        :Print run details;
-      else (no)
-        :Print "No run found with id '<id>'";
-      endif
-
-    case (5 — List attempts by run)
-      :Prompt run ID;
-      :WorkflowAttemptService.filter_by_run_id(run_id);
-      note right
-        Returns attempts sorted by
-        attempt_number (ascending)
-      end note
-      if (no attempts?) then (yes)
-        :Print "No attempts for this run.";
-      else (no)
-        :Print all attempts\n(sorted by attempt_number);
-      endif
-
-    case (6 — Filter runs)
-      :Choose filter type\n(branch / status / conclusion);
-      if (branch?) then (yes)
-        :Prompt branch name;
-        :filter_by_branch();
-      elseif (status?) then (yes)
-        :Choose status from list;
-        :filter_by_status();
-      else (conclusion)
-        :Choose conclusion from list;
-        :filter_by_conclusion();
-      endif
-      if (no matches?) then (yes)
-        :Print "No matching runs.";
-      else (no)
-        :Print matching runs;
-      endif
-
-    case (7 — Query workflow state)
-      :Prompt run ID;
-      :WorkflowRunService.get_run_detail(run_id);
-      if (found?) then (yes)
-        :Query state:\n  is_terminal()\n  is_running()\n  is_successful()\n  is_failed()\n  is_cancelled();
-        :Print run state;
-      else (no)
-        :Print "No run found with id '<id>'";
-      endif
-
-    case (8 — Exit)
-      :Print "Goodbye.";
-      stop
-
-  endswitch
-
-repeat while (user continues)
+repeat while (user continues in main menu)
 
 @enduml

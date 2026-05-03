@@ -15,6 +15,10 @@ package "GitHub Workflow Manager" {
     component "interactive_menu" as IM
   }
 
+  package "Utilities layer" {
+    component "timezone_converter" as TZ
+  }
+
   package "Service layer" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowAttemptTracker" as ATRACKER
@@ -39,6 +43,9 @@ package "GitHub Workflow Manager" {
 
 MAIN --> CLI
 MAIN --> IM
+
+CLI --> TZ
+IM --> TZ
 
 CLI --> TRACKER
 IM --> TRACKER

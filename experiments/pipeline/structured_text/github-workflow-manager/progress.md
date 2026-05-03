@@ -191,3 +191,63 @@ All tests pass including:
 - Caching layer — out of scope
 
 Duration: 421.9s | Cost: $0.829924 USD | Turns: 21
+
+## Task 05: Filtering Capabilities for Workflow Runs
+
+### Task Summary
+Implemented comprehensive filtering capabilities for workflow runs and attempts. The system now supports filtering by duration range (min/max seconds), timestamp range (created/updated before/after using CEST/UTC+2 timezone support), and attempts presence (with/without attempts). All filters can be combined using AND logic, and are accessible via both interactive menu and CLI flags.
+
+### Files Changed
+
+**New Files:**
+- `src/utils/timezone_converter.py` — Timezone conversion utility with parse_datetime_with_timezone(), datetime_to_utc(), format_datetime_for_display()
+- `tests/test_timezone_converter.py` — 25 tests for timezone conversion functionality
+- `tests/test_workflow_run_service_filters.py` — 41 tests for run filtering (duration, timestamps, attempts, composite)
+- `tests/test_workflow_attempt_service_filters.py` — 35 tests for attempt filtering (duration, timestamps, composite)
+- `tests/test_workflow_cli_filters.py` — 32 tests for CLI filter flag integration
+- `tests/test_workflow_interactive_menu_filters.py` — 22 tests for interactive menu filtering
+
+**Modified Files:**
+- `src/services/workflow_run_service.py` — Added filter_by_duration_range(), filter_by_created_at(), filter_by_updated_at(), filter_by_has_attempts(), filter_runs() (composite)
+- `src/services/workflow_attempt_service.py` — Added filter_by_duration_range(), filter_by_started_at(), filter_by_completed_at(), filter_attempts() (composite)
+- `src/cli/workflow_cli.py` — Added CLI flags for duration (--duration-min, --duration-max), timestamps (--created-before/after, --updated-before/after, --started-before/after, --completed-before/after), attempts (--with-attempts, --without-attempts), timezone (--timezone), and composite filtering logic
+- `src/cli/interactive_menu.py` — Added _build_filter_criteria_menu(), _build_attempt_filter_criteria_menu(), enhanced _filter_menu(), _filter_attempts_menu(), _run_menu(), _attempt_menu() with multi-filter support
+- `artifacts/class_diagram.puml` — Added timezone_converter module, new filter methods to services
+- `artifacts/component_diagram.puml` — Added utilities layer with timezone_converter component
+- `artifacts/activity_diagram_main.puml` — Enhanced list and attempt-list flows with composite filtering
+- `artifacts/activity_diagram_interactive.puml` — Enhanced filter menu flows with multi-filter selection
+- `artifacts/use_case_diagram.puml` — Added filter use cases and timezone utilities
+
+### Test Result
+✓ **313 tests passed** (1.02s)
+
+All tests pass including:
+- 25 timezone converter tests (UTC, CEST, UTC+2, error handling)
+- 41 run service filter tests (duration range, timestamp ranges, attempts presence, composite filters)
+- 35 attempt service filter tests (duration range, timestamp ranges, composite filters)
+- 32 CLI integration tests (all filter flags, timezone support, error conditions)
+- 22 interactive menu filter tests (multi-filter scenarios, edge cases)
+- Pre-existing tests (158 tests still passing)
+
+### Implementation Details
+
+**Must Have (All Completed):**
+- ✓ Duration range filtering (min/max duration_seconds) for runs and attempts
+- ✓ Timestamp filtering (created/updated before/after using CEST/UTC+2) for runs
+- ✓ Timestamp filtering (started/completed before/after) for attempts
+- ✓ Attempts presence filtering (runs with/without attempts)
+- ✓ Return filtered collections from service methods
+- ✓ All functionality accessible via `python -m src` (interactive menu + CLI flags)
+
+**Should Have (All Completed):**
+- ✓ Combine multiple filters in single query call with AND logic
+- ✓ Timezone conversion for CEST/UTC+2 support in timestamp inputs
+- ✓ All filters composable and chainable
+
+**Could Have (Not Completed):**
+- Partial string matching on string fields (not required for Task 05 scope)
+
+**Won't Have (Not Applicable):**
+- External database or indexing — all filtering in-memory on service collections
+
+Duration: 826.8s | Cost: $1.795939 USD | Turns: 13

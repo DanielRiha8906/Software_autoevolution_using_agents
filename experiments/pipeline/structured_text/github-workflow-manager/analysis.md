@@ -1,573 +1,496 @@
-# Task 04 - AttemptService Implementation: Analysis Report
+# Task 05 - Filtering Capabilities for Workflow Runs: Analysis Report
 
 ## Task Summary
 
-Implement `AttemptService` to manage workflow run attempts. The service must support creating attempts, retrieving attempts by `run_id`, preventing duplicate attempt numbers per run, and provide full CLI/menu access via `python -m src`.
+Implement advanced filtering capabilities for workflow runs and attempts. Users must be able to:
 
-**MoSCoW Breakdown:**
-- **Must Have:** Implement AttemptService, support create/retrieve operations, integrate with storage, expose via CLI/menu
-- **Should Have:** Ensure no duplicate attempt numbers per run
-- **Could Have:** Add sorting by attempt number
+1. **Duration range filtering** — by min/max `duration_seconds`
+2. **Timestamp filtering** — by `created_at`/`updated_at` before/after (CEST/UTC+2 timezone support)
+3. **Attempts presence filtering** — runs with/without attempts
+4. **Return filtered collections** (both CLI and interactive menu)
+5. **Combine multiple filters** simultaneously
+6. **Optional:** partial string matching on fields (e.g., workflow name, branch)
+
+All functionality must be accessible via `python -m src` (interactive menu + CLI flags).
 
 ---
 
 ## Current Architecture Overview
 
-### Three-Tier Architecture
+### Three-Tier Layered Architecture
 
 ```
-CLI Layer (workflow_cli.py, interactive_menu.py)
+Application Entrypoint (__main__.py)
+    ↓
+Interface Layer (workflow_cli.py, interactive_menu.py)
+    ├── CLI: argparse-driven one-shot commands
+    └── Interactive: multi-step menu-driven interface
     ↓
 Service Layer (WorkflowRunService, WorkflowAttemptService, Trackers)
+    ├── WorkflowRunService — CRUD + existing filters
+    ├── WorkflowAttemptService — CRUD + existing filters
+    ├── WorkflowRunTracker — high-level run facade
+    └── WorkflowAttemptTracker — high-level attempt facade
     ↓
 Storage Layer (WorkflowJsonStorage, WorkflowAttemptJsonStorage)
+    ├── JSON file persistence
+    └── Load/save operations
     ↓
 Domain Models (WorkflowRun, WorkflowRunAttempt, enums)
+    ├── Dataclasses with serialization
+    ├── State query methods
+    └── Type-safe enums
 ```
 
-### Component Diagram Location
-**File:** `artifacts/component_diagram.puml`
+### Artifacts Documentation
 
-Shows full architecture with:
-- Application entrypoint → Interface layer (CLI, interactive menu)
-- Interface → Service layer (Trackers, Services)
-- Service → Persistence (JsonStorage components)
-- Domain models (WorkflowRun, WorkflowRunAttempt, enums)
+- **class_diagram.puml** — Full domain model with relationships
+- **component_diagram.puml** — Layered architecture and dependencies
+- **activity_diagram_main.puml** — CLI workflow and command flow
+- **activity_diagram_interactive.puml** — Interactive menu navigation
+- **use_case_diagram.puml** — User interactions (runs and attempts)
 
 ---
 
-## Existing Attempt/Run Model Structure
+## Domain Model: Workflow Runs and Attempts
 
-### WorkflowRun Model
-**File:** `src/models/workflow_run.py` (10 attributes)
+### WorkflowRun (src/models/workflow_run.py)
 
-```python
-@dataclass
-class WorkflowRun:
-    id: str
-    workflow_name: str
-    branch: str
-    status: WorkflowStatus
-    conclusion: Optional[WorkflowConclusion]
-    created_at: datetime
-    updated_at: Optional[datetime]
-    run_number: Optional[int]
-    commit_sha: Optional[str]
-    duration_seconds: float = 0.0
-```
+**Current Fields (10):**
+- `id: str` — Unique identifier (UUID)
+- `workflow_name: str` — Workflow name
+- `branch: str` — Git branch name
+- `status: WorkflowStatus` — Enum (queued, in_progress, completed, waiting, requested, pending)
+- `conclusion: Optional[WorkflowConclusion]` — Enum or None (success, failure, cancelled, skipped, timed_out, action_required, neutral, stale)
+- `created_at: datetime` — UTC creation timestamp (required)
+- `updated_at: Optional[datetime]` — UTC update timestamp (can be None)
+- `run_number: Optional[int]` — GitHub run number
+- `commit_sha: Optional[str]` — Commit SHA
+- `duration_seconds: float` — Duration in seconds (default 0.0, non-negative)
 
 **Key Methods:**
-- `to_dict()` / `from_dict()` — JSON serialization/deserialization
-- `is_terminal()`, `is_running()`, `is_successful()`, `is_failed()`, `is_cancelled()` — state queries
+- `to_dict()` / `from_dict()` — JSON serialization
+- `is_terminal()`, `is_running()`, `is_successful()`, `is_failed()`, `is_cancelled()` — State queries
 
-### WorkflowRunAttempt Model
-**File:** `src/models/workflow_attempt.py` (9 attributes)
+**Timezone Notes:**
+- Stored as UTC (via `datetime.fromisoformat()` and `isoformat()`)
+- Deserialized from ISO 8601 strings (no explicit timezone handling in current code)
+- No timezone conversion logic exists yet
 
-```python
-@dataclass
-class WorkflowRunAttempt:
-    id: str
-    run_id: str
-    attempt_number: int
-    status: WorkflowStatus
-    conclusion: Optional[WorkflowConclusion]
-    started_at: datetime
-    completed_at: Optional[datetime]
-    duration_seconds: float = 0.0
-    logs_url: Optional[str] = None
-```
+### WorkflowRunAttempt (src/models/workflow_attempt.py)
+
+**Current Fields (9):**
+- `id: str` — Unique identifier (UUID)
+- `run_id: str` — Foreign key to WorkflowRun
+- `attempt_number: int` — Attempt sequence number (1, 2, 3...)
+- `status: WorkflowStatus` — Same enum as runs
+- `conclusion: Optional[WorkflowConclusion]` — Same enum as runs
+- `started_at: datetime` — UTC start timestamp (required)
+- `completed_at: Optional[datetime]` — UTC completion timestamp (can be None)
+- `duration_seconds: float` — Duration in seconds (default 0.0, non-negative)
+- `logs_url: Optional[str]` — URL to logs
 
 **Key Methods:**
-- `to_dict()` / `from_dict()` — JSON serialization/deserialization
+- `to_dict()` / `from_dict()` — JSON serialization
 - State query methods (identical to WorkflowRun)
 
-**Relationship:** Attempts reference a run via `run_id` (foreign key). One-to-many: 1 WorkflowRun → N WorkflowRunAttempts
+**Relationship:**
+- One-to-many: 1 WorkflowRun → N WorkflowRunAttempts
+- Linked via `run_id` foreign key
+- No back-reference in WorkflowRun model (data model is unidirectional)
 
-### Enums
-**Files:** `src/models/workflow_status.py`, `src/models/workflow_conclusion.py`
+### Enums (src/models/)
 
-**WorkflowStatus:** `queued`, `in_progress`, `completed`, `waiting`, `requested`, `pending`
-
-**WorkflowConclusion:** `success`, `failure`, `cancelled`, `skipped`, `timed_out`, `action_required`, `neutral`, `stale`
-
----
-
-## Storage Mechanism Details
-
-### WorkflowJsonStorage
-**File:** `src/storage/workflow_json_storage.py`
-
+**WorkflowStatus (workflow_status.py):**
 ```python
-class WorkflowJsonStorage:
-    def __init__(self, filepath: str = "artifacts/workflow_runs.json"):
-        self.filepath = Path(filepath)
-        self.filepath.parent.mkdir(parents=True, exist_ok=True)
-    
-    def save(self, runs: List[WorkflowRun]) -> None:
-        # Calls run.to_dict() for each run, writes JSON with indent=2
-    
-    def load(self) -> List[WorkflowRun]:
-        # Loads JSON, returns empty list if file missing
-        # Calls WorkflowRun.from_dict(item) for each item
+enum: queued, in_progress, completed, waiting, requested, pending
 ```
 
-**Behavior:**
-- File-based JSON persistence
-- Auto-creates parent directories
-- Returns empty list on missing file (safe for first run)
-- Serialization via dataclass `to_dict()` and `from_dict()` methods
-
-### WorkflowAttemptJsonStorage
-**File:** `src/storage/workflow_attempt_json_storage.py`
-
+**WorkflowConclusion (workflow_conclusion.py):**
 ```python
-class WorkflowAttemptJsonStorage:
-    def __init__(self, filepath: str = "artifacts/workflow_attempts.json"):
-        self.filepath = Path(filepath)
-        self.filepath.parent.mkdir(parents=True, exist_ok=True)
-    
-    def save(self, attempts: List[WorkflowRunAttempt]) -> None:
-        # Identical pattern to WorkflowJsonStorage
-    
-    def load(self) -> List[WorkflowRunAttempt]:
-        # Identical pattern to WorkflowJsonStorage
+enum: success, failure, cancelled, skipped, timed_out, action_required, neutral, stale
 ```
 
-**Currently Implemented:** Yes, fully functional storage layer exists.
+---
+
+## Service Layer: Current Filtering Capabilities
+
+### WorkflowRunService (src/services/workflow_run_service.py)
+
+**Existing Methods:**
+- `add_workflow_run(run: WorkflowRun) → WorkflowRun` — Add run (with id uniqueness validation)
+- `list_runs() → List[WorkflowRun]` — Get all runs
+- `get_run_detail(run_id: str) → Optional[WorkflowRun]` — Fetch single run by id
+- `filter_by_branch(branch: str) → List[WorkflowRun]` — Exact match on branch
+- `filter_by_status(status: WorkflowStatus) → List[WorkflowRun]` — Exact match on status
+- `filter_by_conclusion(conclusion: WorkflowConclusion) → List[WorkflowRun]` — Exact match on conclusion
+- `_persist() → None` — Sync to storage
+
+**Current Architecture:**
+- In-memory list `_runs` cached on init from storage
+- Filters return new lists (no mutation)
+- All operations call `_persist()` after modifications
+- No composite filtering (filters are mutually exclusive in CLI usage)
+
+### WorkflowAttemptService (src/services/workflow_attempt_service.py)
+
+**Existing Methods:**
+- `add_attempt(attempt: WorkflowRunAttempt) → WorkflowRunAttempt` — Add attempt (with dual uniqueness validation: id + (run_id, attempt_number) pair)
+- `list_attempts() → List[WorkflowRunAttempt]` — Get all attempts
+- `get_attempt_detail(attempt_id: str) → Optional[WorkflowRunAttempt]` — Fetch single attempt by id
+- `filter_by_run_id(run_id: str) → List[WorkflowRunAttempt]` — Get all attempts for a run (sorted by attempt_number ascending)
+- `filter_by_status(status: WorkflowStatus) → List[WorkflowRunAttempt]` — Exact match on status
+- `filter_by_conclusion(conclusion: WorkflowConclusion) → List[WorkflowRunAttempt]` — Exact match on conclusion
+- `_persist() → None` — Sync to storage
+
+**Current Architecture:**
+- Same pattern as WorkflowRunService: in-memory list, immutable filters, manual persistence
+
+### Tracker Classes
+
+**WorkflowRunTracker (src/services/workflow_run_tracker.py):**
+- High-level facade for creating runs with automatic UUID generation and UTC timestamping
+- `track(...)` — Creates WorkflowRun and delegates to service.add_workflow_run()
+- `create_attempt(...)` — Creates WorkflowRunAttempt and delegates to attempt_service.add_attempt()
+
+**WorkflowAttemptTracker (src/services/workflow_attempt_tracker.py):**
+- Similar facade for attempts (if separate file exists)
 
 ---
 
-## Existing Service Layer Implementation
+## CLI and Interactive Menu: Current Structure
 
-### WorkflowRunService
-**File:** `src/services/workflow_run_service.py` (7 methods)
+### CLI Interface (src/cli/workflow_cli.py)
 
+**Architecture:**
+- `build_parser()` — Creates argparse.ArgumentParser with subcommands
+- `run_cli(service, attempt_service, args)` — Dispatch handler
+
+**Current Subcommands (workflow runs):**
+1. `add` — Add new run (flags: --name, --branch, --status, --conclusion, --run-number, --commit-sha, --duration-seconds, --id)
+2. `list` — List runs with optional filters (flags: --branch, --status, --conclusion)
+   - Currently mutually exclusive: picks first non-None filter
+3. `detail <run_id>` — Fetch single run by id
+4. `query-state <run_id>` — Query state flags (terminal, running, successful, failed, cancelled)
+
+**Current Subcommands (attempts):**
+1. `attempt add` — Add new attempt
+2. `attempt list` — List attempts with optional filters (flags: --run-id, --status, --conclusion)
+3. `attempt detail <attempt_id>` — Fetch single attempt
+4. `attempt query-state <attempt_id>` — Query state flags
+
+**Filtering Logic (list command):**
 ```python
-class WorkflowRunService:
-    def __init__(self, storage: WorkflowJsonStorage):
-        self._storage = storage
-        self._runs: List[WorkflowRun] = storage.load()
-    
-    def add_workflow_run(self, run: WorkflowRun) -> WorkflowRun:
-        # Checks for duplicate IDs, appends, persists
-    
-    def list_runs(self) -> List[WorkflowRun]:
-    def get_run_detail(self, run_id: str) -> Optional[WorkflowRun]:
-    def filter_by_branch(self, branch: str) -> List[WorkflowRun]:
-    def filter_by_status(self, status: WorkflowStatus) -> List[WorkflowRun]:
-    def filter_by_conclusion(self, conclusion: WorkflowConclusion) -> List[WorkflowRun]:
-    def _persist(self) -> None:
-        # Calls storage.save(self._runs)
+# Current logic: mutually exclusive filters (elif chain)
+if ns.branch:
+    runs = service.filter_by_branch(ns.branch)
+elif ns.status:
+    runs = service.filter_by_status(WorkflowStatus(ns.status))
+elif ns.conclusion:
+    runs = service.filter_by_conclusion(WorkflowConclusion(ns.conclusion))
 ```
 
-**Pattern:** Load on init → cache in memory → persist on write
+**Output Format:**
+- `_fmt_run(run)` — Multi-line string representation
+- `_fmt_attempt(attempt)` — Multi-line string representation
 
-### WorkflowAttemptService
-**File:** `src/services/workflow_attempt_service.py` (7 methods)
+### Interactive Menu (src/cli/interactive_menu.py)
 
-```python
-class WorkflowAttemptService:
-    def __init__(self, storage: WorkflowAttemptJsonStorage):
-        self._storage = storage
-        self._attempts: List[WorkflowRunAttempt] = storage.load()
-    
-    def add_attempt(self, attempt: WorkflowRunAttempt) -> WorkflowRunAttempt:
-        # Checks for duplicate IDs, appends, persists
-    
-    def list_attempts(self) -> List[WorkflowRunAttempt]:
-    def get_attempt_detail(self, attempt_id: str) -> Optional[WorkflowRunAttempt]:
-    def filter_by_run_id(self, run_id: str) -> List[WorkflowRunAttempt]:
-    def filter_by_status(self, status: WorkflowStatus) -> List[WorkflowRunAttempt]:
-    def filter_by_conclusion(self, conclusion: WorkflowConclusion) -> List[WorkflowRunAttempt]:
-    def _persist(self) -> None:
-```
+**Architecture:**
+- `run_interactive(service, attempt_service)` — Main menu loop
+- `_run_menu(service)` — Submenu for workflow runs
+- `_attempt_menu(attempt_service)` — Submenu for workflow attempts
+- Menu options tied to handler functions via list of tuples
 
-**Currently Implemented:** Yes, fully mirrors WorkflowRunService pattern.
+**Current Run Menu Options:**
+1. Add workflow run → `_add_run()`
+2. List all runs → `_list_runs()`
+3. Get run detail → `_detail_run()`
+4. Filter runs → `_filter_menu()` (branch/status/conclusion)
+5. Query workflow state → `_query_run_state()`
+6. Back
 
-**Key Gap:** Does NOT validate duplicate attempt numbers per (run_id, attempt_number) tuple.
+**Current Attempt Menu Options:**
+1. Add workflow attempt → `_add_attempt()`
+2. List all attempts → `_list_attempts()`
+3. Get attempt detail → `_detail_attempt()`
+4. Filter attempts → `_filter_attempts_menu()` (run_id/status/conclusion)
+5. Query attempt state → `_query_attempt_state()`
+6. Back
 
----
+**Filtering Logic (interactive):**
+- `_filter_menu()` — Prompts user to choose filter type, then filters
+- Currently mutually exclusive: one filter per call
+- Uses `_choose()` helper to present enum values as numbered menu
 
-## Tracker/Facade Layer
-
-### WorkflowRunTracker
-**File:** `src/services/workflow_run_tracker.py`
-
-```python
-class WorkflowRunTracker:
-    def __init__(self, service: WorkflowRunService, 
-                 attempt_service: Optional[WorkflowAttemptService] = None):
-        self._service = service
-        self._attempt_service = attempt_service
-    
-    def track(self, workflow_name: str, branch: str, status: WorkflowStatus, ...) -> WorkflowRun:
-        # Creates WorkflowRun with defaults (id=UUID, created_at=now)
-        # Calls service.add_workflow_run()
-    
-    def create_attempt(self, run_id: str, attempt_number: int, ...) -> WorkflowRunAttempt:
-        # Creates WorkflowRunAttempt (id=UUID, started_at=now)
-        # Calls attempt_service.add_attempt()
-```
-
-**Currently Implemented:** Yes. Both `track()` and `create_attempt()` exist.
-
-### WorkflowAttemptTracker
-**File:** `src/services/workflow_attempt_tracker.py`
-
-```python
-class WorkflowAttemptTracker:
-    def __init__(self, service: WorkflowAttemptService):
-        self._service = service
-    
-    def create_attempt(...) -> WorkflowRunAttempt:
-        # Wrapper around service.add_attempt()
-```
-
-**Currently Implemented:** Yes, provides alternative entry point for attempt creation.
+**User Input Helpers:**
+- `_prompt(label, default)` — Text input with optional default
+- `_choose(label, options, allow_blank)` — Numbered menu selection
 
 ---
 
-## CLI/Menu Entry Points
+## Storage Layer
 
-### Application Entrypoint
-**File:** `src/__main__.py` (26 lines)
+### WorkflowJsonStorage (src/storage/workflow_json_storage.py)
 
-```python
-def main() -> None:
-    storage = WorkflowJsonStorage("artifacts/workflow_runs.json")
-    service = WorkflowRunService(storage)
-    
-    attempt_storage = WorkflowAttemptJsonStorage("artifacts/workflow_attempts.json")
-    attempt_service = WorkflowAttemptService(attempt_storage)
-    
-    if len(sys.argv) == 1:
-        run_interactive(service, attempt_service)
-    else:
-        run_cli(service, attempt_service)
-```
+- File path: typically `artifacts/workflow_runs.json`
+- `load()` → Reads JSON file, deserializes list of dicts to List[WorkflowRun]
+- `save(runs)` → Serializes List[WorkflowRun] to JSON dicts, writes to file
+- Error handling for missing/malformed JSON
 
-**Behavior:** No args → interactive menu. Args present → CLI mode.
+### WorkflowAttemptJsonStorage (src/storage/workflow_attempt_json_storage.py)
 
-### CLI Module: workflow_cli.py
-**File:** `src/cli/workflow_cli.py` (259 lines)
-
-**Build Parser:**
-- Top-level subcommands: `add`, `list`, `detail`, `query-state`, `attempt`
-- Attempt subcommands: `add`, `list`, `detail`, `query-state`
-
-**Run CLI Function Signature:**
-```python
-def run_cli(service: WorkflowRunService, 
-            attempt_service: WorkflowAttemptService = None, 
-            args=None) -> None:
-```
-
-**Attempt Commands Implemented:**
-- `attempt add` — Creates new attempt with run_id, attempt_number, status, etc.
-- `attempt list` — Lists all or filters by run_id/status/conclusion
-- `attempt detail` — Shows single attempt by ID
-- `attempt query-state` — Shows state flags (terminal, running, successful, etc.)
-
-**Currently Implemented:** Yes, all commands exist and are wired.
-
-### Interactive Menu Module: interactive_menu.py
-**File:** `src/cli/interactive_menu.py` (327 lines)
-
-**Main Menu:**
-1. Workflow Runs → submenu with 5 operations (add, list, detail, filter, query-state)
-2. Workflow Attempts → submenu with 5 operations (add, list, detail, filter, query-state)
-3. Exit
-
-**Attempt Operations:**
-- `_add_attempt()` — Prompts for run_id, attempt_number, status, conclusion, timestamps, duration, logs_url
-- `_list_attempts()` — Lists all or calls filter
-- `_detail_attempt()` — Shows single attempt
-- `_filter_attempts_menu()` — Filters by run_id, status, or conclusion
-- `_query_attempt_state()` — Shows state flags
-
-**Currently Implemented:** Yes, all operations exist and menu is fully integrated.
+- File path: typically `artifacts/workflow_attempts.json`
+- Same pattern as WorkflowJsonStorage but for WorkflowRunAttempt
 
 ---
 
-## What AttemptService Needs to Implement
+## Key Findings
 
-### Current Implementation Status
+### 1. Data Structures Support All Required Fields
 
-**IMPLEMENTED (Fully Functional):**
-1. ✓ `WorkflowAttemptService` class exists with 7 methods
-2. ✓ `add_attempt(attempt: WorkflowRunAttempt) -> WorkflowRunAttempt`
-3. ✓ `get_attempt_detail(attempt_id: str) -> Optional[WorkflowRunAttempt]`
-4. ✓ `filter_by_run_id(run_id: str) -> List[WorkflowRunAttempt]` — supports "retrieve by run_id"
-5. ✓ JSON persistence integrated (WorkflowAttemptJsonStorage)
-6. ✓ CLI commands for all operations
-7. ✓ Interactive menu for all operations
-8. ✓ WorkflowAttemptTracker facade for creation
+**For duration range filtering:**
+- Both WorkflowRun and WorkflowRunAttempt have `duration_seconds: float` field
+- Field is non-negative (validated in `from_dict()`)
+- Default is 0.0
 
-**GAP - Should Have (NOT IMPLEMENTED):**
-1. ✗ **Duplicate attempt number validation per run** — `add_attempt()` only checks duplicate IDs, not (run_id, attempt_number) pairs
+**For timestamp filtering:**
+- WorkflowRun has `created_at: datetime` (required) and `updated_at: Optional[datetime]`
+- WorkflowRunAttempt has `started_at: datetime` (required) and `completed_at: Optional[datetime]`
+- Stored as UTC via ISO 8601 strings
+- **Gap:** No explicit timezone conversion logic for CEST/UTC+2 support
 
-**GAP - Could Have (NOT IMPLEMENTED):**
-1. ✗ **Sorting by attempt number** — No sort method exists
+**For attempts presence filtering:**
+- WorkflowRunAttempt.run_id points to parent run (foreign key)
+- Attempts are stored separately in WorkflowAttemptService
+- **Gap:** WorkflowRun has no back-reference to attempts; must query attempt service
 
----
+### 2. Service Layer Needs Extension
 
-## Integration Points with CLI/Menu System
+**Current limitations:**
+- Filters are mutually exclusive in CLI (elif chain)
+- Filters do not support ranges (duration, timestamps)
+- Filters do not support presence checks (has attempts)
+- No composite filter support (combine multiple conditions)
+- Filters are specific to individual fields (no generic query builder)
 
-### CLI Wiring
-**File:** `src/cli/workflow_cli.py`
+**Required additions:**
+- `filter_by_duration_range(min_seconds, max_seconds)` on WorkflowRunService and WorkflowAttemptService
+- `filter_by_created_at(before, after)` on WorkflowRunService
+- `filter_by_updated_at(before, after)` on WorkflowRunService
+- `filter_by_started_at(before, after)` on WorkflowAttemptService
+- `filter_by_completed_at(before, after)` on WorkflowAttemptService
+- `filter_by_has_attempts(run_id)` on WorkflowRunService (requires cross-service lookup)
+- Composite filter support (method or builder pattern)
 
-**Current Implementation:**
-- `run_cli()` function receives both `service` and `attempt_service`
-- Parser has `attempt` subcommand with 4 sub-subcommands
-- All sub-subcommands are implemented in main `run_cli()` function body
+### 3. CLI/Menu Interface Needs Restructuring
 
-**No Changes Needed:** The CLI infrastructure for AttemptService is complete. Only validation logic needs to be added to the service layer.
+**Current behavior:**
+- `list` command uses mutually exclusive filters (elif chain)
+- Interactive `_filter_menu()` forces user to choose one filter type per call
+- User must call filter multiple times to apply multiple conditions
 
-### Interactive Menu Wiring
-**File:** `src/cli/interactive_menu.py`
+**Required changes:**
+- Support multiple filter flags simultaneously (e.g., `--duration-min 10 --duration-max 100 --branch main`)
+- Composite filtering logic in CLI handler
+- Interactive menu to support multi-step filter selection
+- Timezone input handling for timestamp filters (allow user to specify CEST or UTC+2)
 
-**Current Implementation:**
-- `run_interactive()` function receives both `service` and `attempt_service`
-- Main menu has "Workflow Attempts" option
-- `_attempt_menu()` function handles submenu with all 5 operations
+### 4. Timezone Handling Gap
 
-**No Changes Needed:** The menu infrastructure for AttemptService is complete. Only validation logic needs to be added to the service layer.
+**Current state:**
+- All timestamps stored as UTC (via Python datetime.fromisoformat)
+- No explicit timezone conversion in code
+- No timezone specification in CLI or menu prompts
 
-### Service Initialization
-**File:** `src/__main__.py`
+**Task requirement:** Support "CEST/UTC+2" timezone
+- **Ambiguity:** Should user input be in CEST and converted to UTC for storage?
+- **Assumption:** Yes — accept user input in CEST/UTC+2, convert to UTC for filtering/storage
 
-**Current Implementation:**
-- Both storage and service are created
-- Both are passed to CLI and menu functions
+### 5. Attempts Presence Filtering
 
-**No Changes Needed:** Initialization is complete.
+**Challenge:**
+- WorkflowRun and WorkflowRunAttempt are separate data structures
+- WorkflowRun has no back-reference to attempts
+- Must query WorkflowAttemptService to check if run has attempts
 
----
-
-## Constraints and Patterns to Follow
-
-### Validation Strategy
-
-**Current Pattern (WorkflowRunService):**
-```python
-def add_workflow_run(self, run: WorkflowRun) -> WorkflowRun:
-    if any(r.id == run.id for r in self._runs):
-        raise ValueError(f"Run with id '{run.id}' already exists.")
-    self._runs.append(run)
-    self._persist()
-    return run
-```
-
-**Required Pattern for Attempts:**
-```python
-def add_attempt(self, attempt: WorkflowRunAttempt) -> WorkflowRunAttempt:
-    # Existing check (keep)
-    if any(a.id == attempt.id for a in self._attempts):
-        raise ValueError(f"Attempt with id '{attempt.id}' already exists.")
-    
-    # NEW: Check for duplicate attempt number per run
-    if any(a.run_id == attempt.run_id and a.attempt_number == attempt.attempt_number 
-           for a in self._attempts):
-        raise ValueError(
-            f"Attempt number {attempt.attempt_number} already exists for run '{attempt.run_id}'."
-        )
-    
-    self._attempts.append(attempt)
-    self._persist()
-    return attempt
-```
-
-### Serialization Pattern
-
-Already implemented in WorkflowRunAttempt:
-```python
-def to_dict(self) -> dict:
-    return {
-        "id": self.id,
-        "run_id": self.run_id,
-        "attempt_number": self.attempt_number,
-        "status": self.status.value,
-        "conclusion": self.conclusion.value if self.conclusion else None,
-        "started_at": self.started_at.isoformat(),
-        "completed_at": self.completed_at.isoformat() if self.completed_at else None,
-        "duration_seconds": self.duration_seconds,
-        "logs_url": self.logs_url,
-    }
-```
-
-**No Changes Needed:** Serialization is correct.
-
-### In-Memory Cache Pattern
-
-**Current Pattern:** Load on init, cache in memory, persist on write.
-
-This is efficient for small datasets (typical for a CLI tool) and matches WorkflowRunService exactly.
-
-**No Changes Needed:** Pattern is sound.
+**Design choice:**
+- Add method to WorkflowRunService: `filter_by_has_attempts(has_attempts: bool, attempt_service: WorkflowAttemptService)`
+- Or: Add helper method on WorkflowRunTracker to enrich runs with attempt count/presence
 
 ---
 
-## Data Flow for Attempts
+## Ambiguities and Working Assumptions
 
-### Creation Flow
-1. **User input** (CLI args or interactive menu)
-2. **WorkflowRunTracker.create_attempt()** or **WorkflowAttemptTracker.create_attempt()**
-   - Creates WorkflowRunAttempt instance (id=UUID, started_at=now)
-   - Calls `attempt_service.add_attempt()`
-3. **WorkflowAttemptService.add_attempt()**
-   - ✓ Validates no duplicate ID
-   - ✗ **MISSING:** Validates no duplicate (run_id, attempt_number)
-   - Appends to `self._attempts`
-   - Calls `_persist()`
-4. **WorkflowAttemptJsonStorage.save()**
-   - Calls `attempt.to_dict()` for each attempt
-   - Writes JSON array to file
+### Timezone Handling
 
-### Reading Flow
-1. **WorkflowAttemptJsonStorage.load()**
-   - Loads JSON from file
-   - Calls `WorkflowRunAttempt.from_dict()` for each item
-2. **WorkflowAttemptService.__init__()**
-   - Loads via storage, caches in `self._attempts`
-3. **Service methods:**
-   - `get_attempt_detail()` — single attempt
-   - `filter_by_run_id()` — attempts for a run
-   - `list_attempts()` — all attempts
+**Ambiguity:** Task mentions "CEST/UTC+2" but doesn't clarify:
+- Should user input times in CEST and be converted to UTC?
+- Should filtering results be shown in CEST?
+- Are timestamps in stored JSON already UTC or CEST?
 
----
+**Working Assumption:**
+- All stored timestamps are UTC (current code pattern)
+- User input timestamps can be specified in CEST (UTC+2)
+- Convert user input CEST → UTC for filtering/storage
+- Display timestamps in ISO 8601 (currently UTC; could be enhanced to show CEST)
+- Pytz or zoneinfo library may be needed for timezone conversions
 
-## Summary: What Must Change
+### Filter Combination Semantics
 
-### Must Have (1 item)
-| Component | Change Type | Details |
-|-----------|------------|---------|
-| WorkflowAttemptService.add_attempt() | Add validation | Check for duplicate (run_id, attempt_number) pairs; raise ValueError if found |
+**Ambiguity:** How should multiple filters combine?
+- Should `--duration-min 10 --branch main` mean "AND" (duration >= 10 AND branch == 'main')?
+- Or "OR" (duration >= 10 OR branch == 'main')?
 
-**Impact:**
-- 1 method modification (add_attempt)
-- No new methods needed
-- No signature changes
-- No storage changes
-- No CLI changes
-- No menu changes
+**Working Assumption:**
+- Filters combine with AND logic (all conditions must be true)
+- Most user-friendly for narrowing results
 
-### Should Have (1 item)
-| Component | Change Type | Optional Details |
-|-----------|------------|---------|
-| WorkflowAttemptService | Add method (optional) | `get_attempts_by_run_id_sorted(run_id: str) -> List[WorkflowRunAttempt]` — returns sorted by attempt_number |
+### Partial String Matching
 
-**Impact:**
-- Optional: add 1 helper method for convenience
-- Could also add sorting to filter_by_run_id (breaking change?)
-- Could add standalone sort utility
+**Task note:** "Could support partial string matching on fields"
 
-### Could Have (1 item)
-| Component | Change Type | Optional Details |
-|-----------|------------|---------|
-| filter_by_run_id() | Enhanced | Return results sorted by attempt_number ascending |
+**Ambiguity:** Which fields? Which pattern syntax? Glob? Regex? Case-sensitive?
+
+**Working Assumption:**
+- Optional "could have" feature
+- If implemented: case-insensitive substring matching on `workflow_name` and `branch`
+- Can be deferred to later; not blocking for "must have" requirements
+
+### Attempts Presence Filter
+
+**Ambiguity:** Should filter be:
+1. "runs WITH attempts" (run_id exists in attempts list)?
+2. "runs WITHOUT attempts" (run_id not in attempts list)?
+3. Both (toggle)?
+
+**Working Assumption:**
+- Support both directions via boolean flag: `filter_by_has_attempts(has_attempts: bool)`
+- In CLI: `--with-attempts` and `--without-attempts` (mutually exclusive or combined)
+- In menu: user chooses "has attempts" or "has no attempts"
 
 ---
 
-## Files to Modify
+## Scope In/Out/Borderline
 
-**If implementing "Should Have" validation:**
-1. `src/services/workflow_attempt_service.py` — Modify `add_attempt()` method
+### IN: Must Implement
 
-**If implementing "Could Have" sorting:**
-1. `src/services/workflow_attempt_service.py` — Modify `filter_by_run_id()` (or add new method)
+1. Duration range filtering (min/max)
+2. Timestamp filtering (created/updated before/after for runs; started/completed for attempts)
+3. Presence of attempts filtering (with/without)
+4. Return filtered collections (both CLI and menu)
+5. Support combining multiple filters
+6. Timezone support (CEST/UTC+2)
+7. CLI flags and interactive menu entry points
+8. `python -m src` accessibility for all new features
 
-**If adding tests:**
-1. `tests/test_workflow_attempt_service.py` — Add tests for duplicate (run_id, attempt_number)
-2. Possibly add tests for sorting
+### OUT: Explicitly Excluded
 
----
+- GUI or graphical interface
+- Database back-end (JSON storage is requirement)
+- Real-time workflow integration (local tracking only)
+- Filtering by HTTP request (no API mode)
 
-## Edge Cases and Considerations
+### BORDERLINE: Could Have
 
-### Existing Data
-**Question:** If existing `workflow_attempts.json` has duplicate (run_id, attempt_number) pairs, will the validation break?
-
-**Answer:** Yes. The validation occurs in `add_attempt()`, which is called during tracker creation and CLI commands, not during load. Existing invalid data in JSON will load silently but won't allow new duplicates to be added.
-
-**Mitigation Options:**
-1. Add validation in `from_dict()` — catches during load
-2. Add cleanup method to remove/warn about duplicates
-3. Accept that existing data (if any) is legacy and new data is clean
-
-**Recommendation:** Add validation in `from_dict()` to catch corruption during deserialization (consistent with duration_seconds validation pattern).
-
-### Attempt Number Semantics
-**Question:** Is attempt_number just a counter (1, 2, 3, ...) or can it be arbitrary (1, 3, 5)?
-
-**Answer:** From GitHub Actions, it's sequential (1-indexed). But the model doesn't enforce this; it's just an int.
-
-**Implication:** Duplicate check is sufficient; no need to validate sequencing.
-
-### Sorting Stability
-**Question:** If we sort by attempt_number, what's the secondary sort key?
-
-**Answer:** In current code, no secondary sort is mentioned. Could use `started_at` if needed.
-
-**For now:** Simple sort by attempt_number is sufficient for "Could Have".
+- Partial string matching (task says "could support")
+- Additional export formats (XML, CSV)
+- Filter presets/saved filters
+- Regex pattern matching on fields
 
 ---
 
-## Testing Gaps
+## Suggested Implementation Priorities
 
-### Current Test Coverage
-- 105 tests pass (from progress.md)
-- Test files exist for models, storage, service, tracker, CLI, menu
+### Priority 1: Service Layer Foundation (Highest Impact)
 
-### Required Tests for Duplicate Validation
-1. Test that duplicate (run_id, attempt_number) raises ValueError
-2. Test that different attempts for same run with different numbers are allowed
-3. Test that same attempt_number in different runs is allowed
-4. Test error message clarity
+1. Extend `WorkflowRunService` with range and timestamp filters:
+   - `filter_by_duration_range(min_secs, max_secs)`
+   - `filter_by_created_at_before(dt) / after(dt)`
+   - `filter_by_updated_at_before(dt) / after(dt)`
+   - `filter_by_has_attempts(has_attempts, attempt_service)`
 
-### Optional Tests for Sorting
-1. Test that filter_by_run_id returns attempts in order by attempt_number
-2. Test with non-sequential attempt numbers (1, 3, 5)
+2. Extend `WorkflowAttemptService` with similar methods:
+   - `filter_by_duration_range(min_secs, max_secs)`
+   - `filter_by_started_at_before(dt) / after(dt)`
+   - `filter_by_completed_at_before(dt) / after(dt)`
+
+3. Implement composite filtering (optional builder pattern or multi-method chaining)
+
+**Rationale:** Services are the core logic; everything else depends on them. Range/timestamp logic is non-trivial and must be correct at this layer.
+
+### Priority 2: Timezone Support (Unblocks User Input)
+
+1. Add timezone conversion utility (accept CEST input, store UTC)
+2. Use Python `zoneinfo` or `pytz` for CEST ↔ UTC conversions
+3. Add helper functions for parsing user-supplied timestamps
+
+**Rationale:** Without timezone support, timestamp filters are unusable for users in CEST.
+
+### Priority 3: CLI Enhancement (User-Facing)
+
+1. Modify `workflow_cli.py` list command to accept all filter flags
+2. Update argparse parser to allow multiple simultaneous filters
+3. Implement AND-logic filtering in CLI handler
+4. Add timezone input support (prompt user for timezone or default to CEST)
+
+**Rationale:** CLI is the scripting interface; must support all combinations.
+
+### Priority 4: Interactive Menu Enhancement (User-Facing)
+
+1. Extend `_filter_menu()` to offer all new filter types
+2. Support multi-step filter construction (allow user to add multiple conditions)
+3. Add prompts for duration ranges, timestamp ranges, timezone
+4. Display filter summary before executing
+
+**Rationale:** Menu should match CLI capability; iterative filter building improves UX.
+
+### Priority 5: Attempts Presence Logic (Cross-Service)
+
+1. Implement logic to query attempt service and check presence
+2. Wire into both CLI and menu
+
+**Rationale:** Depends on service layer to be complete first.
+
+### Priority 6: Testing and Validation
+
+1. Unit tests for all new filter methods
+2. Integration tests for composite filters
+3. CLI tests for filter combinations
+4. Menu interaction tests (mock input)
+
+### Priority 7: Documentation Updates (Optional Polish)
+
+1. Update README with new filter examples
+2. Update class diagram if filter methods warrant it
+3. Add activity diagram for new filter flow
 
 ---
 
-## Summary Table
+## Code Locations Summary
 
-| Aspect | Status | Details |
-|--------|--------|---------|
-| **WorkflowAttemptService class** | ✓ Exists | 7 methods, mirrors WorkflowRunService |
-| **Create attempt** | ✓ Exists | add_attempt() method |
-| **Retrieve by run_id** | ✓ Exists | filter_by_run_id() method |
-| **Storage integration** | ✓ Exists | WorkflowAttemptJsonStorage wired |
-| **CLI accessibility** | ✓ Exists | 4 attempt subcommands implemented |
-| **Menu accessibility** | ✓ Exists | 5 attempt operations in menu |
-| **Duplicate ID validation** | ✓ Exists | Checked in add_attempt() |
-| **Duplicate attempt# per run** | ✗ Missing | Should validate (run_id, attempt_number) |
-| **Sorting by attempt#** | ✗ Missing | Could add sort logic |
+| Component | File | Key Classes/Functions |
+|-----------|------|----------------------|
+| **Domain Models** | `src/models/workflow_run.py` | WorkflowRun |
+| | `src/models/workflow_attempt.py` | WorkflowRunAttempt |
+| | `src/models/workflow_status.py` | WorkflowStatus enum |
+| | `src/models/workflow_conclusion.py` | WorkflowConclusion enum |
+| **Services** | `src/services/workflow_run_service.py` | WorkflowRunService (filter_by_*) |
+| | `src/services/workflow_attempt_service.py` | WorkflowAttemptService (filter_by_*) |
+| | `src/services/workflow_run_tracker.py` | WorkflowRunTracker |
+| | `src/services/workflow_attempt_tracker.py` | WorkflowAttemptTracker |
+| **Storage** | `src/storage/workflow_json_storage.py` | WorkflowJsonStorage |
+| | `src/storage/workflow_attempt_json_storage.py` | WorkflowAttemptJsonStorage |
+| **CLI** | `src/cli/workflow_cli.py` | build_parser(), run_cli() |
+| **Menu** | `src/cli/interactive_menu.py` | run_interactive(), _filter_menu() |
+| **Entry** | `src/__main__.py` | main() dispatcher |
 
 ---
 
-## Files Referenced
+## Next Steps for System Architect / Implementer
 
-### Key Implementation Files
-- `src/models/workflow_attempt.py` — WorkflowRunAttempt dataclass
-- `src/models/workflow_status.py` — WorkflowStatus enum
-- `src/models/workflow_conclusion.py` — WorkflowConclusion enum
-- `src/storage/workflow_attempt_json_storage.py` — JSON persistence
-- `src/services/workflow_attempt_service.py` — Core service (MODIFY HERE)
-- `src/services/workflow_attempt_tracker.py` — Facade for creation
-- `src/services/workflow_run_tracker.py` — Facade with create_attempt method
-- `src/cli/workflow_cli.py` — CLI commands (already complete)
-- `src/cli/interactive_menu.py` — Menu operations (already complete)
-- `src/__main__.py` — Entrypoint and initialization
-- `src/models/__init__.py` — Model exports
-
-### Test Files
-- `tests/test_workflow_attempt_service.py` — Service tests (extend for validation)
-- `tests/test_workflow_run_tracker_attempt.py` — Tracker tests (may extend)
-
-### Architecture Diagrams
-- `artifacts/class_diagram.puml` — Models and relationships
-- `artifacts/component_diagram.puml` — System components
-- `artifacts/activity_diagram_main.puml` — CLI flow
-- `artifacts/activity_diagram_interactive.puml` — Menu flow
-
+1. **Design filter composition pattern** — decide on method chaining, builder, or multi-filter method
+2. **Define timezone library** — zoneinfo (Python 3.9+) or pytz
+3. **Sketch CLI argument structure** — how to express duration ranges, timestamp ranges
+4. **Plan menu UX** — how to guide user through multi-filter selection
+5. **Mock test data** — create workflow runs and attempts with various duration/timestamp values for testing

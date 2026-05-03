@@ -96,6 +96,11 @@ package "services" #DDFFD4 {
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
         +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        +filter_by_duration_range(min_s: Optional[float], max_s: Optional[float]) : List[WorkflowRun]
+        +filter_by_created_at(before: Optional[datetime], after: Optional[datetime]) : List[WorkflowRun]
+        +filter_by_updated_at(before: Optional[datetime], after: Optional[datetime]) : List[WorkflowRun]
+        +filter_by_has_attempts(has_attempts: bool, attempt_service) : List[WorkflowRun]
+        +filter_runs(...) : List[WorkflowRun]
         -_persist() : None
     }
 
@@ -110,6 +115,10 @@ package "services" #DDFFD4 {
         +filter_by_run_id(run_id: str) : List[WorkflowRunAttempt]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRunAttempt]
         +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRunAttempt]
+        +filter_by_duration_range(min_s: Optional[float], max_s: Optional[float]) : List[WorkflowRunAttempt]
+        +filter_by_started_at(before: Optional[datetime], after: Optional[datetime]) : List[WorkflowRunAttempt]
+        +filter_by_completed_at(before: Optional[datetime], after: Optional[datetime]) : List[WorkflowRunAttempt]
+        +filter_attempts(...) : List[WorkflowRunAttempt]
         -_persist() : None
     }
 
@@ -142,19 +151,38 @@ package "services" #DDFFD4 {
     end note
 }
 
+package "utils" #FFFFCC {
+    class "timezone_converter" <<module>> {
+        +parse_datetime_with_timezone(dt_string: str, tz: str) : datetime
+        +datetime_to_utc(dt: datetime) : datetime
+        +format_datetime_for_display(dt: datetime, tz: str) : str
+    }
+}
+
 package "cli" #FFE5E5 {
     class "workflow_cli" <<module>> {
         +build_parser() : ArgumentParser
-        +run_cli(service: WorkflowRunService, args) : None
+        +run_cli(service: WorkflowRunService, attempt_service: WorkflowAttemptService, args) : None
         -_fmt_run(run: WorkflowRun) : str
+        -_fmt_attempt(attempt: WorkflowRunAttempt) : str
     }
 
     class "interactive_menu" <<module>> {
-        +run_interactive(service: WorkflowRunService) : None
+        +run_interactive(service: WorkflowRunService, attempt_service: Optional[WorkflowAttemptService]) : None
         -_add_run(service: WorkflowRunService) : None
         -_list_runs(service: WorkflowRunService) : None
         -_detail_run(service: WorkflowRunService) : None
-        -_filter_menu(service: WorkflowRunService) : None
+        -_build_filter_criteria_menu(attempt_service) : dict
+        -_filter_menu(service: WorkflowRunService, attempt_service) : None
+        -_query_run_state(service: WorkflowRunService) : None
+        -_add_attempt(attempt_service: WorkflowAttemptService) : None
+        -_list_attempts(attempt_service: WorkflowAttemptService) : None
+        -_detail_attempt(attempt_service: WorkflowAttemptService) : None
+        -_build_attempt_filter_criteria_menu() : dict
+        -_filter_attempts_menu(attempt_service: WorkflowAttemptService) : None
+        -_query_attempt_state(attempt_service: WorkflowAttemptService) : None
+        -_run_menu(service: WorkflowRunService, attempt_service) : None
+        -_attempt_menu(attempt_service: WorkflowAttemptService) : None
     }
 }
 
@@ -187,8 +215,12 @@ WorkflowAttemptTracker     ..>  WorkflowRunAttempt
 
 ' CLI relationships
 "workflow_cli"             ..>  WorkflowRunService
+"workflow_cli"             ..>  WorkflowAttemptService
 "workflow_cli"             ..>  WorkflowRunTracker
+"workflow_cli"             ..>  "timezone_converter"
 "interactive_menu"         ..>  WorkflowRunService
+"interactive_menu"         ..>  WorkflowAttemptService
 "interactive_menu"         ..>  WorkflowRunTracker
+"interactive_menu"         ..>  "timezone_converter"
 
 @enduml

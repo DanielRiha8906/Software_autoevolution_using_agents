@@ -9,6 +9,7 @@ from ..models.workflow_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_attempt_service import WorkflowAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..utils.timezone_converter import parse_datetime_with_timezone
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -111,17 +112,128 @@ def _detail_run(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
-def _filter_menu(service: WorkflowRunService) -> None:
-    filter_by = _choose("Filter by", ["branch", "status", "conclusion"])
-    if filter_by == "branch":
-        branch = _prompt("Branch name")
-        runs = service.filter_by_branch(branch)
-    elif filter_by == "status":
+def _build_filter_criteria_menu(attempt_service: Optional[WorkflowAttemptService] = None) -> dict:
+    """Build filter criteria through interactive prompts."""
+    criteria = {}
+
+    print("\n--- Build Filter Criteria (leave blank to skip any filter) ---")
+
+    # Branch filter
+    branch = _prompt("Branch (leave blank to skip)", "")
+    if branch:
+        criteria["branch"] = branch
+
+    # Status filter
+    use_status = input("Filter by status? (y/n, default n): ").strip().lower()
+    if use_status == "y":
         status_val = _choose("Status", [s.value for s in WorkflowStatus])
-        runs = service.filter_by_status(WorkflowStatus(status_val))
-    else:
+        criteria["status"] = WorkflowStatus(status_val)
+
+    # Conclusion filter
+    use_conclusion = input("Filter by conclusion? (y/n, default n): ").strip().lower()
+    if use_conclusion == "y":
         conclusion_val = _choose("Conclusion", [c.value for c in WorkflowConclusion])
-        runs = service.filter_by_conclusion(WorkflowConclusion(conclusion_val))
+        criteria["conclusion"] = WorkflowConclusion(conclusion_val)
+
+    # Duration range filter
+    use_duration = input("Filter by duration range? (y/n, default n): ").strip().lower()
+    if use_duration == "y":
+        duration_min_str = _prompt("Minimum duration in seconds (leave blank for no limit)", "")
+        if duration_min_str:
+            try:
+                criteria["duration_min_seconds"] = float(duration_min_str)
+            except ValueError:
+                print("Invalid duration value, skipping minimum.")
+        duration_max_str = _prompt("Maximum duration in seconds (leave blank for no limit)", "")
+        if duration_max_str:
+            try:
+                criteria["duration_max_seconds"] = float(duration_max_str)
+            except ValueError:
+                print("Invalid duration value, skipping maximum.")
+
+    # Timestamp filters
+    use_timestamps = input("Filter by creation timestamp? (y/n, default n): ").strip().lower()
+    if use_timestamps == "y":
+        timezone_str = _prompt("Timezone (e.g., UTC, Europe/Paris)", "UTC")
+        created_after_str = _prompt(
+            "Created after (ISO format, e.g., 2026-05-03T10:00:00, leave blank for no limit)",
+            ""
+        )
+        if created_after_str:
+            try:
+                criteria["created_after"] = parse_datetime_with_timezone(created_after_str, timezone_str)
+            except ValueError as e:
+                print(f"Error parsing timestamp: {e}")
+        created_before_str = _prompt(
+            "Created before (ISO format, e.g., 2026-05-03T10:00:00, leave blank for no limit)",
+            ""
+        )
+        if created_before_str:
+            try:
+                criteria["created_before"] = parse_datetime_with_timezone(created_before_str, timezone_str)
+            except ValueError as e:
+                print(f"Error parsing timestamp: {e}")
+
+    # Updated timestamp filters
+    use_updated = input("Filter by update timestamp? (y/n, default n): ").strip().lower()
+    if use_updated == "y":
+        timezone_str = _prompt("Timezone (e.g., UTC, Europe/Paris)", "UTC")
+        updated_after_str = _prompt(
+            "Updated after (ISO format, e.g., 2026-05-03T10:00:00, leave blank for no limit)",
+            ""
+        )
+        if updated_after_str:
+            try:
+                criteria["updated_after"] = parse_datetime_with_timezone(updated_after_str, timezone_str)
+            except ValueError as e:
+                print(f"Error parsing timestamp: {e}")
+        updated_before_str = _prompt(
+            "Updated before (ISO format, e.g., 2026-05-03T10:00:00, leave blank for no limit)",
+            ""
+        )
+        if updated_before_str:
+            try:
+                criteria["updated_before"] = parse_datetime_with_timezone(updated_before_str, timezone_str)
+            except ValueError as e:
+                print(f"Error parsing timestamp: {e}")
+
+    # Attempts filter
+    if attempt_service is not None:
+        use_attempts = input("Filter by attempts presence? (y/n, default n): ").strip().lower()
+        if use_attempts == "y":
+            attempts_choice = _choose("Show runs with or without attempts",
+                                     ["with attempts", "without attempts"])
+            if attempts_choice == "with attempts":
+                criteria["with_attempts"] = True
+            else:
+                criteria["with_attempts"] = False
+            criteria["attempt_service"] = attempt_service
+
+    return criteria
+
+
+def _filter_menu(service: WorkflowRunService, attempt_service: Optional[WorkflowAttemptService] = None) -> None:
+    """Advanced filter menu for runs."""
+    criteria = _build_filter_criteria_menu(attempt_service)
+
+    if not criteria:
+        print("\nNo filters selected.")
+        return
+
+    # Apply filters using composite filter
+    runs = service.filter_runs(
+        branch=criteria.get("branch"),
+        status=criteria.get("status"),
+        conclusion=criteria.get("conclusion"),
+        duration_min_seconds=criteria.get("duration_min_seconds"),
+        duration_max_seconds=criteria.get("duration_max_seconds"),
+        created_before=criteria.get("created_before"),
+        created_after=criteria.get("created_after"),
+        updated_before=criteria.get("updated_before"),
+        updated_after=criteria.get("updated_after"),
+        with_attempts=criteria.get("with_attempts"),
+        attempt_service=criteria.get("attempt_service"),
+    )
 
     if not runs:
         print("\nNo matching runs.")
@@ -196,17 +308,114 @@ def _detail_attempt(attempt_service: WorkflowAttemptService) -> None:
         print(_fmt_attempt(attempt))
 
 
-def _filter_attempts_menu(attempt_service: WorkflowAttemptService) -> None:
-    filter_by = _choose("Filter by", ["run_id", "status", "conclusion"])
-    if filter_by == "run_id":
-        run_id = _prompt("Run ID")
-        attempts = attempt_service.filter_by_run_id(run_id)
-    elif filter_by == "status":
+def _build_attempt_filter_criteria_menu() -> dict:
+    """Build attempt filter criteria through interactive prompts."""
+    criteria = {}
+
+    print("\n--- Build Attempt Filter Criteria (leave blank to skip any filter) ---")
+
+    # Run ID filter
+    run_id = _prompt("Run ID (leave blank to skip)", "")
+    if run_id:
+        criteria["run_id"] = run_id
+
+    # Status filter
+    use_status = input("Filter by status? (y/n, default n): ").strip().lower()
+    if use_status == "y":
         status_val = _choose("Status", [s.value for s in WorkflowStatus])
-        attempts = attempt_service.filter_by_status(WorkflowStatus(status_val))
-    else:
+        criteria["status"] = WorkflowStatus(status_val)
+
+    # Conclusion filter
+    use_conclusion = input("Filter by conclusion? (y/n, default n): ").strip().lower()
+    if use_conclusion == "y":
         conclusion_val = _choose("Conclusion", [c.value for c in WorkflowConclusion])
-        attempts = attempt_service.filter_by_conclusion(WorkflowConclusion(conclusion_val))
+        criteria["conclusion"] = WorkflowConclusion(conclusion_val)
+
+    # Duration range filter
+    use_duration = input("Filter by duration range? (y/n, default n): ").strip().lower()
+    if use_duration == "y":
+        duration_min_str = _prompt("Minimum duration in seconds (leave blank for no limit)", "")
+        if duration_min_str:
+            try:
+                criteria["duration_min_seconds"] = float(duration_min_str)
+            except ValueError:
+                print("Invalid duration value, skipping minimum.")
+        duration_max_str = _prompt("Maximum duration in seconds (leave blank for no limit)", "")
+        if duration_max_str:
+            try:
+                criteria["duration_max_seconds"] = float(duration_max_str)
+            except ValueError:
+                print("Invalid duration value, skipping maximum.")
+
+    # Started timestamp filters
+    use_started = input("Filter by start timestamp? (y/n, default n): ").strip().lower()
+    if use_started == "y":
+        timezone_str = _prompt("Timezone (e.g., UTC, Europe/Paris)", "UTC")
+        started_after_str = _prompt(
+            "Started after (ISO format, e.g., 2026-05-03T10:00:00, leave blank for no limit)",
+            ""
+        )
+        if started_after_str:
+            try:
+                criteria["started_after"] = parse_datetime_with_timezone(started_after_str, timezone_str)
+            except ValueError as e:
+                print(f"Error parsing timestamp: {e}")
+        started_before_str = _prompt(
+            "Started before (ISO format, e.g., 2026-05-03T10:00:00, leave blank for no limit)",
+            ""
+        )
+        if started_before_str:
+            try:
+                criteria["started_before"] = parse_datetime_with_timezone(started_before_str, timezone_str)
+            except ValueError as e:
+                print(f"Error parsing timestamp: {e}")
+
+    # Completed timestamp filters
+    use_completed = input("Filter by completion timestamp? (y/n, default n): ").strip().lower()
+    if use_completed == "y":
+        timezone_str = _prompt("Timezone (e.g., UTC, Europe/Paris)", "UTC")
+        completed_after_str = _prompt(
+            "Completed after (ISO format, e.g., 2026-05-03T10:00:00, leave blank for no limit)",
+            ""
+        )
+        if completed_after_str:
+            try:
+                criteria["completed_after"] = parse_datetime_with_timezone(completed_after_str, timezone_str)
+            except ValueError as e:
+                print(f"Error parsing timestamp: {e}")
+        completed_before_str = _prompt(
+            "Completed before (ISO format, e.g., 2026-05-03T10:00:00, leave blank for no limit)",
+            ""
+        )
+        if completed_before_str:
+            try:
+                criteria["completed_before"] = parse_datetime_with_timezone(completed_before_str, timezone_str)
+            except ValueError as e:
+                print(f"Error parsing timestamp: {e}")
+
+    return criteria
+
+
+def _filter_attempts_menu(attempt_service: WorkflowAttemptService) -> None:
+    """Advanced filter menu for attempts."""
+    criteria = _build_attempt_filter_criteria_menu()
+
+    if not criteria:
+        print("\nNo filters selected.")
+        return
+
+    # Apply filters using composite filter
+    attempts = attempt_service.filter_attempts(
+        run_id=criteria.get("run_id"),
+        status=criteria.get("status"),
+        conclusion=criteria.get("conclusion"),
+        duration_min_seconds=criteria.get("duration_min_seconds"),
+        duration_max_seconds=criteria.get("duration_max_seconds"),
+        started_before=criteria.get("started_before"),
+        started_after=criteria.get("started_after"),
+        completed_before=criteria.get("completed_before"),
+        completed_after=criteria.get("completed_after"),
+    )
 
     if not attempts:
         print("\nNo matching attempts.")
@@ -235,11 +444,15 @@ def _run_menu(
     service: WorkflowRunService,
     attempt_service: Optional[WorkflowAttemptService] = None,
 ) -> None:
+    # Create a wrapper for the filter menu to pass both service and attempt_service
+    def filter_handler(s: WorkflowRunService) -> None:
+        _filter_menu(s, attempt_service)
+
     run_menu = [
         ("Add workflow run", lambda s: _add_run(s)),
         ("List all runs", lambda s: _list_runs(s)),
         ("Get run detail", lambda s: _detail_run(s)),
-        ("Filter runs", lambda s: _filter_menu(s)),
+        ("Filter runs", filter_handler),
         ("Query workflow state", lambda s: _query_run_state(s)),
         ("Back", None),
     ]
