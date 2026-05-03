@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 
 from ..models.task_status import TaskStatus
 from ..services.comments_service import CommentNotFoundError
+from ..services.project_manager import ProjectNotFoundError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -47,7 +48,7 @@ class TodoCLI:
             return 0
         try:
             return args.func(args)
-        except (TaskNotFoundError, CommentNotFoundError) as e:
+        except (TaskNotFoundError, CommentNotFoundError, ProjectNotFoundError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
         except ValueError as e:
@@ -70,6 +71,7 @@ class TodoCLI:
         p_add = sub.add_parser("add", help="Add a new task")
         p_add.add_argument("title", help="Task title")
         p_add.add_argument("-d", "--description", help="Optional description")
+        p_add.add_argument("--project", help="Optional project ID")
         p_add.set_defaults(func=self._cmd_add)
 
         # list
@@ -91,6 +93,10 @@ class TodoCLI:
             "--overdue",
             action="store_true",
             help="Show only overdue tasks",
+        )
+        p_list.add_argument(
+            "--project",
+            help="Filter tasks by project ID",
         )
         p_list.set_defaults(func=self._cmd_list)
 
@@ -168,16 +174,33 @@ class TodoCLI:
         )
         p_import.set_defaults(func=self._cmd_import)
 
+        # project-add
+        p_project_add = sub.add_parser("project-add", help="Add a new project")
+        p_project_add.add_argument("name", help="Project name")
+        p_project_add.set_defaults(func=self._cmd_project_add)
+
+        # project-list
+        p_project_list = sub.add_parser("project-list", help="List all projects")
+        p_project_list.set_defaults(func=self._cmd_project_list)
+
+        # project-delete
+        p_project_delete = sub.add_parser("project-delete", help="Delete a project")
+        p_project_delete.add_argument("id", help="Project ID")
+        p_project_delete.set_defaults(func=self._cmd_project_delete)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
-        task = self._service.add_task(args.title, args.description)
-        print(f"Added task {task.id[:8]}  {task.title}")
+        project_id = getattr(args, "project", None)
+        task = self._service.add_task(args.title, args.description, project_id)
+        project_info = f" to project {project_id[:8]}" if project_id else ""
+        print(f"Added task {task.id[:8]}  {task.title}{project_info}")
         return 0
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
         status = TaskStatus(args.status) if args.status else None
         overdue = getattr(args, "overdue", False)
+        project_id = getattr(args, "project", None)
 
         # Parse due_before and due_after
         due_before = None
@@ -200,6 +223,7 @@ class TodoCLI:
             due_before=due_before,
             due_after=due_after,
             overdue=overdue,
+            project_id=project_id,
         )
         if not tasks:
             print("No tasks found.")
@@ -320,3 +344,23 @@ class TodoCLI:
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+
+    def _cmd_project_add(self, args: argparse.Namespace) -> int:
+        project = self._service.add_project(args.name)
+        print(f"Added project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_project_list(self, args: argparse.Namespace) -> int:
+        projects = self._service.list_projects()
+        if not projects:
+            print("No projects found.")
+            return 0
+        for project in projects:
+            print(f"{project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_project_delete(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        self._service.delete_project(args.id)
+        print(f"Deleted project {project.id[:8]}  {project.name}")
+        return 0

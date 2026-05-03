@@ -15,10 +15,12 @@ repeat
           :Apply status filter;
         case (By due date range)
           :Parse and apply date range filter;
+        case (By project)
+          :Apply project filter;
         case (Overdue only)
           :Apply overdue filter;
         case (Combined filters)
-          :Apply status + date + overdue filters;
+          :Apply status + date + project + overdue filters;
         case (All tasks)
           :Show all tasks;
       endswitch
@@ -33,7 +35,19 @@ repeat
       :Run update task flow;
     case (6 — Set due date)
       :Run set due date flow;
-    case (7 — View statistics)
+    case (7 — Manage projects)
+      :Show project options;
+      switch (project option)
+        case (Create)
+          :Prompt for project name;
+          :Create project;
+        case (List)
+          :Display all projects;
+        case (Delete)
+          :Prompt for project ID;
+          :Delete project and unassign tasks;
+      endswitch
+    case (8 — View statistics)
       :Get all tasks;
       :Count by status (pending, in-progress, done);
       :Count overdue tasks;
@@ -41,13 +55,13 @@ repeat
       :Calculate completion rate;
       :Calculate avg days to completion;
       :Display statistics;
-    case (8 — Manage comments)
+    case (9 — Manage comments)
       :Run comment management flow;
-    case (9 — Delete task)
+    case (10 — Delete task)
       :Run delete task flow;
-    case (10 — Export tasks)
+    case (11 — Export tasks)
       :Run export flow;
-    case (11 — Import tasks)
+    case (12 — Import tasks)
       :Run import flow;
     case (0/q — Quit)
       :Clear screen;

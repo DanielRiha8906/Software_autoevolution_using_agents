@@ -12,10 +12,15 @@ rectangle "TODO Manager" {
     usecase "List / filter tasks" as I_LIST
     usecase "Filter by due date range" as I_DUE_RANGE
     usecase "View overdue tasks" as I_OVERDUE
+    usecase "List by project" as I_LIST_PROJECT
     usecase "Show task details" as I_SHOW
     usecase "Change task status" as I_STATUS
     usecase "Update task" as I_UPDATE
     usecase "Delete task" as I_DELETE
+    usecase "Manage projects" as I_PROJECTS
+    usecase "Create project" as I_CREATE_PROJECT
+    usecase "List projects" as I_LIST_PROJECTS
+    usecase "Delete project" as I_DELETE_PROJECT
     usecase "Manage comments" as I_COMMENTS
     usecase "View comments" as I_VIEW_COMMENTS
     usecase "Add comment" as I_ADD_COMMENT
@@ -32,12 +37,16 @@ rectangle "TODO Manager" {
     usecase "List / filter tasks" as C_LIST
     usecase "Filter by due date range" as C_DUE_RANGE
     usecase "View overdue tasks" as C_OVERDUE
+    usecase "List by project" as C_LIST_PROJECT
     usecase "Show task details" as C_SHOW
     usecase "Start task" as C_START
     usecase "Complete task" as C_DONE
     usecase "Reopen task" as C_REOPEN
     usecase "Update task" as C_UPDATE
     usecase "Delete task" as C_DELETE
+    usecase "Create project" as C_CREATE_PROJECT
+    usecase "List projects" as C_LIST_PROJECTS
+    usecase "Delete project" as C_DELETE_PROJECT
     usecase "Add comment" as C_ADD_COMMENT
     usecase "List comments" as C_LIST_COMMENTS
     usecase "Delete comment" as C_DELETE_COMMENT
@@ -54,10 +63,15 @@ UI ..> I_ADD       : <<exclude>>
 UI ..> I_LIST      : <<exclude>>
 I_LIST ..> I_DUE_RANGE : <<include>>
 I_LIST ..> I_OVERDUE : <<include>>
+I_LIST ..> I_LIST_PROJECT : <<include>>
 UI ..> I_SHOW      : <<exclude>>
 UI ..> I_STATUS    : <<exclude>>
 UI ..> I_UPDATE    : <<exclude>>
 UI ..> I_DELETE    : <<exclude>>
+UI ..> I_PROJECTS  : <<exclude>>
+I_PROJECTS ..> I_CREATE_PROJECT : <<include>>
+I_PROJECTS ..> I_LIST_PROJECTS : <<include>>
+I_PROJECTS ..> I_DELETE_PROJECT : <<include>>
 UI ..> I_COMMENTS  : <<exclude>>
 I_COMMENTS ..> I_VIEW_COMMENTS    : <<include>>
 I_COMMENTS ..> I_ADD_COMMENT      : <<include>>
@@ -71,12 +85,16 @@ CLI ..> C_ADD            : <<exclude>>
 CLI ..> C_LIST           : <<exclude>>
 C_LIST ..> C_DUE_RANGE : <<include>>
 C_LIST ..> C_OVERDUE : <<include>>
+C_LIST ..> C_LIST_PROJECT : <<include>>
 CLI ..> C_SHOW           : <<exclude>>
 CLI ..> C_START          : <<exclude>>
 CLI ..> C_DONE           : <<exclude>>
 CLI ..> C_REOPEN         : <<exclude>>
 CLI ..> C_UPDATE         : <<exclude>>
 CLI ..> C_DELETE         : <<exclude>>
+CLI ..> C_CREATE_PROJECT : <<exclude>>
+CLI ..> C_LIST_PROJECTS  : <<exclude>>
+CLI ..> C_DELETE_PROJECT : <<exclude>>
 CLI ..> C_ADD_COMMENT    : <<exclude>>
 CLI ..> C_LIST_COMMENTS  : <<exclude>>
 CLI ..> C_DELETE_COMMENT : <<exclude>>

@@ -15,7 +15,10 @@ class JsonStorage:
         if not self._path.exists():
             return []
         with self._path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
+            content = f.read()
+            if not content.strip():
+                return []
+            data = json.loads(content)
             # Support backward compatibility: if data is a list, assume it's tasks
             if isinstance(data, list):
                 return data
@@ -26,9 +29,10 @@ class JsonStorage:
 
     def save(self, tasks: list[dict]) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        # Load existing comments to preserve them
+        # Load existing comments and projects to preserve them
         comments = self.load_comments()
-        data = {"tasks": tasks, "comments": comments}
+        projects = self.load_projects()
+        data = {"tasks": tasks, "comments": comments, "projects": projects}
         with self._path.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -36,7 +40,10 @@ class JsonStorage:
         if not self._path.exists():
             return []
         with self._path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
+            content = f.read()
+            if not content.strip():
+                return []
+            data = json.loads(content)
             # Support backward compatibility: if data is a list, no comments exist
             if isinstance(data, list):
                 return []
@@ -47,9 +54,35 @@ class JsonStorage:
 
     def save_comments(self, comments: list[dict]) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        # Load existing tasks to preserve them
+        # Load existing tasks and projects to preserve them
         tasks = self.load()
-        data = {"tasks": tasks, "comments": comments}
+        projects = self.load_projects()
+        data = {"tasks": tasks, "comments": comments, "projects": projects}
+        with self._path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+    def load_projects(self) -> list[dict]:
+        if not self._path.exists():
+            return []
+        with self._path.open("r", encoding="utf-8") as f:
+            content = f.read()
+            if not content.strip():
+                return []
+            data = json.loads(content)
+            # Support backward compatibility: if data is a list, no projects exist
+            if isinstance(data, list):
+                return []
+            # New format: {"tasks": [...], "comments": [...], "projects": [...]}
+            if isinstance(data, dict):
+                return data.get("projects", [])
+        return []
+
+    def save_projects(self, projects: list[dict]) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        # Load existing tasks and comments to preserve them
+        tasks = self.load()
+        comments = self.load_comments()
+        data = {"tasks": tasks, "comments": comments, "projects": projects}
         with self._path.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
@@ -61,6 +94,6 @@ class JsonStorage:
             comments: List of comment dictionaries.
         """
         self._path.parent.mkdir(parents=True, exist_ok=True)
-        data = {"tasks": tasks, "comments": comments}
+        data = {"tasks": tasks, "comments": comments, "projects": []}
         with self._path.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)

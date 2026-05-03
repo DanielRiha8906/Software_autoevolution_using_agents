@@ -3,12 +3,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from ..models.project import Project
 from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_statistics import TaskStatistics
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .comments_service import CommentsService
+from .project_manager import ProjectManager
 from .task_manager import TaskManager
 
 
@@ -17,13 +19,14 @@ class TodoService:
         storage = storage or JsonStorage()
         self._manager = TaskManager(storage)
         self._comments_service = CommentsService(storage, self._manager)
+        self._project_manager = ProjectManager(storage)
         # Now set the comments_service on the manager for cascade deletes
         self._manager._comments_service = self._comments_service
 
-    def add_task(self, title: str, description: Optional[str] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description)
+        return self._manager.add(title.strip(), description, project_id)
 
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
@@ -34,6 +37,7 @@ class TodoService:
         due_before: Optional[datetime] = None,
         due_after: Optional[datetime] = None,
         overdue: bool = False,
+        project_id: Optional[str] = None,
     ) -> list[Task]:
         """List tasks with optional filtering.
 
@@ -42,11 +46,14 @@ class TodoService:
             due_before: Optional upper bound for due_date (inclusive).
             due_after: Optional lower bound for due_date (inclusive).
             overdue: If True, return only overdue tasks, ignoring due_before/due_after.
+            project_id: Optional project filter.
 
         Returns:
             Filtered list of tasks.
         """
-        if overdue:
+        if project_id is not None:
+            return self._manager.list_by_project(project_id)
+        elif overdue:
             return self._manager.list_overdue(status)
         elif due_before is not None or due_after is not None:
             return self._manager.list_by_due_date_range(due_after, due_before, status)
@@ -296,3 +303,46 @@ class TodoService:
             raise ValueError(
                 f"Comment at index {index}: field 'created_at' is not valid ISO 8601 datetime"
             )
+
+    def add_project(self, name: str) -> Project:
+        """Add a new project.
+
+        Args:
+            name: Project name.
+
+        Returns:
+            Created Project.
+        """
+        if not name or not name.strip():
+            raise ValueError("Project name cannot be empty")
+        return self._project_manager.add(name.strip())
+
+    def get_project(self, project_id: str) -> Project:
+        """Get a project by ID.
+
+        Args:
+            project_id: The project ID.
+
+        Returns:
+            Project object.
+        """
+        return self._project_manager.get(project_id)
+
+    def list_projects(self) -> list[Project]:
+        """List all projects.
+
+        Returns:
+            List of all projects.
+        """
+        return self._project_manager.list_all()
+
+    def delete_project(self, project_id: str) -> None:
+        """Delete a project and unassign all its tasks.
+
+        Args:
+            project_id: The project ID to delete.
+        """
+        # Unassign all tasks from this project
+        self._manager.unassign_from_project(project_id)
+        # Delete the project
+        self._project_manager.delete(project_id)
