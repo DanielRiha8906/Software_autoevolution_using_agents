@@ -20,6 +20,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunService" as SVC
     component "WorkflowQuery" as QUERY
     component "AttemptService" as ASVC
+    component "WorkflowStatisticsService" as STATS
   }
 
   package "Persistence layer" {
@@ -34,6 +35,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunAttempt" as ATTEMPT
     component "WorkflowStatus" as STATUS
     component "WorkflowConclusion" as CONCLUSION
+    component "WorkflowRunStatistics" as STATS_MODEL
   }
 }
 
@@ -43,9 +45,11 @@ MAIN --> IM
 CLI --> TRACKER
 CLI --> ASVC
 CLI --> QUERY
+CLI --> STATS
 IM --> TRACKER
 IM --> ASVC
 IM --> QUERY
+IM --> STATS
 
 CLI --> SVC
 IM --> SVC
@@ -62,6 +66,9 @@ ASTOR --> ATTEMPT_FILE
 
 SVC ..> RUN
 ASVC ..> ATTEMPT
+STATS --> SVC
+STATS --> ASVC
+STATS ..> STATS_MODEL
 RUN --> ATTEMPT
 RUN --> STATUS
 RUN --> CONCLUSION

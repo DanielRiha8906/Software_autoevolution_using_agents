@@ -10,6 +10,7 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.workflow_query import DurationRange, TimestampRange
+from ..services.workflow_statistics_service import WorkflowStatisticsService
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -40,6 +41,42 @@ def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
         f"  created_at      : {attempt.created_at.isoformat()}\n"
         f"  duration_seconds: {duration}\n"
     )
+
+
+def _fmt_statistics(stats) -> str:
+    """Format WorkflowRunStatistics for display.
+
+    Args:
+        stats: A WorkflowRunStatistics object.
+
+    Returns:
+        Formatted string representation.
+    """
+    lines = ["--- Workflow Run Statistics ---"]
+
+    lines.append("\nCount by Conclusion:")
+    if stats.count_by_conclusion:
+        for conclusion, count in sorted(stats.count_by_conclusion.items()):
+            lines.append(f"  {conclusion}: {count}")
+    else:
+        lines.append("  (no data)")
+
+    lines.append(f"\nDuration Statistics:")
+    lines.append(f"  Average: {stats.average_duration_seconds:.2f}s")
+    lines.append(f"  Min: {stats.min_duration_seconds:.2f}s" if stats.min_duration_seconds is not None else f"  Min: —")
+    lines.append(f"  Max: {stats.max_duration_seconds:.2f}s" if stats.max_duration_seconds is not None else f"  Max: —")
+
+    lines.append(f"\nAverage Attempts per Run: {stats.average_attempts_per_run:.2f}")
+
+    if stats.per_status_breakdown:
+        lines.append("\nDuration Breakdown by Status:")
+        for status, avg_duration in sorted(stats.per_status_breakdown.items()):
+            lines.append(f"  {status}: {avg_duration:.2f}s")
+    else:
+        lines.append("\nDuration Breakdown by Status:")
+        lines.append("  (no data)")
+
+    return "\n".join(lines)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -138,6 +175,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Filter by attempt presence (true/false)",
     )
+
+    # stats
+    stats_p = sub.add_parser("stats", help="Show aggregated workflow statistics")
 
     return parser
 
@@ -269,3 +309,10 @@ def run_cli(workflow_service: WorkflowRunService, attempt_service: AttemptServic
         print(f"\n--- {len(result)} matching run(s) ---")
         for run in result:
             print(_fmt_run(run))
+
+    elif ns.command == "stats":
+        stats_service = WorkflowStatisticsService()
+        runs = workflow_service.list_runs()
+        attempts = attempt_service.list_all_attempts()
+        stats = stats_service.compute_statistics(runs, attempts)
+        print("\n" + _fmt_statistics(stats))

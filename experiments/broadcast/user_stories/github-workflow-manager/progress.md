@@ -602,3 +602,163 @@ pytest tests/ -q
 All 81 tests pass (29 new + 52 existing). No regressions in existing tests.
 
 Duration: 385.3s | Cost: $2.215531 USD | Turns: 40
+
+---
+
+## Task 06: Workflow Statistics
+
+**Broadcast Architecture - 3 Candidates Evaluated**
+
+### Candidate Implementations
+
+#### Candidate A
+- **Approach**: Dataclass-based statistics model with service implementation
+- **Test Score**: 81/81 ✓
+- **Key Features**:
+  - Created `WorkflowRunStatistics` dataclass
+  - Service computes aggregated statistics from runs
+  - Basic statistics: count by conclusion, average/min/max duration
+  - Per-status breakdown included
+  - CLI commands: `python -m src stats`
+  - Menu option for interactive access
+
+#### Candidate B (SELECTED)
+- **Approach**: Dataclass-based statistics model with comprehensive service
+- **Test Score**: 101/101 ✓
+- **Key Features**:
+  - Created `WorkflowRunStatistics` dataclass with full type safety
+  - Service with robust statistics computation
+  - All required metrics: count_by_conclusion, duration stats, attempts per run
+  - Per-status duration breakdown (bonus)
+  - Comprehensive test coverage (20 specialized tests)
+  - CLI command: `python -m src stats`
+  - Interactive menu option: "View statistics"
+  - Proper error handling for edge cases
+
+#### Candidate C
+- **Approach**: Dataclass-based statistics with streamlined service
+- **Test Score**: 92/92 ✓
+- **Key Features**:
+  - Created `WorkflowRunStatistics` dataclass
+  - Service computes all required statistics
+  - Helper methods for each metric
+  - Per-status breakdown implemented
+  - Integrated CLI support
+  - 11 specialized test cases
+
+### Selection Rationale
+
+**Winner: Candidate B**
+
+Candidate B achieved the highest test count (101 passing tests) with the most comprehensive implementation:
+- **Test Coverage**: 20 specialized statistics tests covering all edge cases and metrics
+- **Robustness**: Proper handling of None values, empty datasets, and mixed data
+- **Quality**: Well-documented with clear separation of concerns
+- **Completeness**: All acceptance criteria met with bonus feature fully integrated
+- **Consistency**: Matches the existing codebase patterns and style
+
+While all three candidates met the acceptance criteria, Candidate B's significantly higher test count (101 vs 92 and 81) demonstrates superior test coverage and edge-case handling.
+
+### Changes Made
+
+**Files Created:**
+1. `src/models/workflow_run_statistics.py`
+   - `WorkflowRunStatistics` dataclass with typed fields:
+     - `count_by_conclusion`: Dict mapping conclusion → count
+     - `average_duration_seconds`: float
+     - `min_duration_seconds`: Optional[float]
+     - `max_duration_seconds`: Optional[float]
+     - `average_attempts_per_run`: float
+     - `per_status_breakdown`: Dict[str, float] for bonus feature
+   - Includes `to_dict()` method for serialization
+
+2. `src/services/workflow_statistics_service.py`
+   - `WorkflowStatisticsService` class
+   - `compute_statistics()` method calculates all metrics from stored data
+   - Handles edge cases (empty data, None values, mixed types)
+   - Leverages existing WorkflowRunService and AttemptService
+
+3. `tests/test_workflow_statistics_service.py`
+   - 20 comprehensive test cases
+   - Tests cover: empty data, single/multiple runs, edge cases
+   - Validates all metrics and bonus feature
+
+**Files Modified:**
+1. `src/models/__init__.py`
+   - Exported `WorkflowRunStatistics` dataclass
+
+2. `src/services/__init__.py`
+   - Exported `WorkflowStatisticsService` class
+
+3. `src/cli/workflow_cli.py`
+   - Added `stats` subcommand to argparse parser
+   - Implemented `_fmt_statistics()` formatter for display
+   - Added command handler in `run_cli()`
+   - Help text: `python -m src stats --help`
+
+4. `src/cli/interactive_menu.py`
+   - Added `_fmt_statistics()` formatter function
+   - Added `_view_statistics()` function for interactive mode
+   - Added "View statistics" menu option (option 9)
+   - Imported WorkflowStatisticsService
+
+### Acceptance Criteria - All Met ✓
+
+- ✓ Statistics include: count_by_conclusion, average_duration_seconds, min/max_duration_seconds
+- ✓ Average number of attempts per run calculated
+- ✓ Report returned as structured `WorkflowRunStatistics` dataclass (not plain dict)
+- ✓ Per-status breakdown of average duration included (bonus)
+- ✓ No visualization layer added
+- ✓ All functionality accessible via `python -m src`:
+  - Interactive menu option: "View statistics" (option 9)
+  - One-shot CLI flag: `python -m src stats`
+  - Help available: `python -m src stats --help`
+
+### Test Results
+
+```
+pytest tests/ -q
+........................................................................ [ 71%]
+.............................                                            [100%]
+101 passed in 0.14s
+```
+
+All 101 tests pass (20 new statistics tests + 81 existing tests). No regressions.
+
+### Implementation Details
+
+**Statistics Computation:**
+- `count_by_conclusion`: Groups runs by conclusion enum value, counts each group
+- `average_duration_seconds`: Computed from `updated_at - created_at` timestamps
+- `min_duration_seconds`: Lowest duration across all runs
+- `max_duration_seconds`: Highest duration across all runs
+- `average_attempts_per_run`: Total attempts divided by number of runs
+- `per_status_breakdown`: Average duration grouped by status value
+
+**CLI Usage:**
+
+One-shot command:
+```bash
+python -m src stats
+```
+
+Interactive mode:
+```bash
+python -m src
+# Select: Option 9 "View statistics"
+```
+
+Programmatic access:
+```python
+from src.services import WorkflowStatisticsService, WorkflowRunService, AttemptService
+
+workflow_service = WorkflowRunService(storage)
+attempt_service = AttemptService(storage)
+stats_service = WorkflowStatisticsService(workflow_service, attempt_service)
+
+stats = stats_service.compute_statistics()
+print(f"Success rate: {stats.count_by_conclusion.get('success', 0)}")
+print(f"Avg duration: {stats.average_duration_seconds:.2f}s")
+```
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

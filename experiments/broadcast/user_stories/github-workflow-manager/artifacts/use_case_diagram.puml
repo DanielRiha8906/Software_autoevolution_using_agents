@@ -22,6 +22,7 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by duration"       as I_FDUR
     usecase "Filter by timestamp"      as I_FTSMP
     usecase "Filter by attempt presence" as I_FATT
+    usecase "View statistics"          as I_STATS
     usecase "Exit application"         as I_EXIT
   }
 
@@ -40,6 +41,7 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by duration"       as C_FDUR
     usecase "Filter by timestamp"      as C_FTSMP
     usecase "Filter by attempt presence" as C_FATT
+    usecase "View statistics"          as C_STATS
   }
 }
 
@@ -54,6 +56,7 @@ UI --> I_FILTER
 UI --> I_CREATE_ATT
 UI --> I_LIST_ATT
 UI --> I_QUERY
+UI --> I_STATS
 UI --> I_EXIT
 
 I_FILTER --> I_FBRANCH  : <<extend>>
@@ -71,6 +74,7 @@ CLI --> C_STATE
 CLI --> C_CREATE_ATT
 CLI --> C_LIST_ATT
 CLI --> C_QUERY
+CLI --> C_STATS
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>
