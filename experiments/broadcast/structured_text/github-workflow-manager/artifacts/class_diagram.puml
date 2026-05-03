@@ -122,6 +122,25 @@ package "services" #DDFFD4 {
         +list_attempts() : List[WorkflowRunAttempt]
         -_persist() : None
     }
+
+    class WorkflowStatisticsReport {
+        +total_runs : int
+        +conclusions_count : Dict[str, int]
+        +avg_duration_seconds : float
+        +min_duration_seconds : Optional[float]
+        +max_duration_seconds : Optional[float]
+        +avg_attempts_per_run : float
+        --
+        +to_dict() : dict
+    }
+
+    class StatisticsService {
+        -_workflow_run_service : WorkflowRunService
+        -_attempt_service : AttemptService
+        --
+        +__init__(workflow_run_service: WorkflowRunService,\n  attempt_service: AttemptService)
+        +compute_statistics() : WorkflowStatisticsReport
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -151,11 +170,16 @@ WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 AttemptService       "1" --> "1" AttemptJsonStorage   : -_storage
 AttemptService             ..>  WorkflowRunAttempt
+StatisticsService    "1" --> "1" WorkflowRunService  : -_workflow_run_service
+StatisticsService    "1" --> "1" AttemptService      : -_attempt_service
+StatisticsService          ..>  WorkflowStatisticsReport : returns
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
 "workflow_cli"             ..>  AttemptService
+"workflow_cli"             ..>  StatisticsService
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  AttemptService
+"interactive_menu"         ..>  StatisticsService
 
 @enduml

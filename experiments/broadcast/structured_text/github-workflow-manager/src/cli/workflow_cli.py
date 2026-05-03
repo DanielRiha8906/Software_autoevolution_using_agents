@@ -9,6 +9,7 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.statistics_service import StatisticsService
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -38,6 +39,25 @@ def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
         f"  created_at      : {attempt.created_at.isoformat()}\n"
         f"  duration_seconds: {attempt.duration_seconds}\n"
     )
+
+
+def _print_statistics_report(report) -> None:
+    """Print a formatted statistics report."""
+    print("\n--- Workflow Statistics Report ---")
+    print(f"Total Runs: {report.total_runs}")
+    print(f"\nConclusions Count:")
+    if report.conclusions_count:
+        for conclusion, count in sorted(report.conclusions_count.items()):
+            print(f"  {conclusion}: {count}")
+    else:
+        print("  (no conclusions recorded)")
+    print(f"\nDuration Statistics (seconds):")
+    print(f"  Average: {report.avg_duration_seconds:.2f}")
+    min_val = f"{report.min_duration_seconds:.2f}" if report.min_duration_seconds is not None else "—"
+    max_val = f"{report.max_duration_seconds:.2f}" if report.max_duration_seconds is not None else "—"
+    print(f"  Minimum: {min_val}")
+    print(f"  Maximum: {max_val}")
+    print(f"\nAverage Attempts per Run: {report.avg_attempts_per_run:.2f}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -119,6 +139,9 @@ def build_parser() -> argparse.ArgumentParser:
     filter_runs_p.add_argument("--updated-after", type=str, default=None, help="Updated after timestamp (ISO format)")
     filter_runs_p.add_argument("--with-attempts", action="store_true", help="Only show runs with attempts")
     filter_runs_p.add_argument("--without-attempts", action="store_true", help="Only show runs without attempts")
+
+    # statistics
+    stats_p = sub.add_parser("statistics", help="View workflow statistics and report")
 
     return parser
 
@@ -280,3 +303,8 @@ def run_cli(service: WorkflowRunService, attempt_service: AttemptService, args=N
             return
         for run in runs:
             print(_fmt_run(run))
+
+    elif ns.command == "statistics":
+        stats_service = StatisticsService(service, attempt_service)
+        report = stats_service.compute_statistics()
+        _print_statistics_report(report)
