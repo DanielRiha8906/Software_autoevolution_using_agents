@@ -65,6 +65,19 @@ class TodoCLI:
             choices=["pending", "in_progress", "done"],
             help="Filter by status",
         )
+        p_list.add_argument(
+            "--due-before",
+            help="Filter to tasks due on or before this date (ISO 8601: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS+02:00)",
+        )
+        p_list.add_argument(
+            "--due-after",
+            help="Filter to tasks due on or after this date (ISO 8601: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS+02:00)",
+        )
+        p_list.add_argument(
+            "--overdue",
+            action="store_true",
+            help="Filter to overdue tasks only (past due date and not completed)",
+        )
         p_list.set_defaults(func=self._cmd_list)
 
         # show
@@ -177,7 +190,37 @@ class TodoCLI:
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
         status = TaskStatus(args.status) if args.status else None
-        tasks = self._service.list_tasks(status)
+
+        # Parse and validate date filters
+        due_before = None
+        due_after = None
+        if hasattr(args, 'due_before') and args.due_before:
+            try:
+                due_before = parse_datetime_or_iso_string(args.due_before)
+            except ValueError as e:
+                print(f"Error parsing --due-before: {e}", file=sys.stderr)
+                return 1
+
+        if hasattr(args, 'due_after') and args.due_after:
+            try:
+                due_after = parse_datetime_or_iso_string(args.due_after)
+            except ValueError as e:
+                print(f"Error parsing --due-after: {e}", file=sys.stderr)
+                return 1
+
+        # Validate date range
+        if due_before is not None and due_after is not None and due_after > due_before:
+            print("Error: --due-after cannot be after --due-before", file=sys.stderr)
+            return 1
+
+        overdue_only = hasattr(args, 'overdue') and args.overdue
+
+        tasks = self._service.list_tasks(
+            status=status,
+            due_before=due_before,
+            due_after=due_after,
+            overdue_only=overdue_only,
+        )
         if not tasks:
             print("No tasks found.")
             return 0

@@ -69,3 +69,23 @@ def parse_datetime_or_iso_string(value: Union[datetime, str, None]) -> Optional[
         "Expected ISO 8601 (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS+02:00) "
         "or short date format (YYYY-MM-DD)"
     )
+
+
+def is_datetime_in_range(dt: Optional[datetime], start: Optional[datetime], end: Optional[datetime]) -> bool:
+    """Check if datetime is within [start, end] bounds (inclusive).
+
+    Args:
+        dt: Datetime to check. If None, returns False.
+        start: Start of range (inclusive). If None, no lower bound.
+        end: End of range (inclusive). If None, no upper bound.
+
+    Returns:
+        True if dt is within the range, False otherwise (including if dt is None)
+    """
+    if dt is None:
+        return False
+    if start is not None and dt < start:
+        return False
+    if end is not None and dt > end:
+        return False
+    return True

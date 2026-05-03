@@ -412,3 +412,134 @@ Implemented CommentsService as a centralized service for managing TaskComment li
 - `use_case_diagram.puml` — Added "Manage comments" interactive use case
 
 Duration: 443.7s | Cost: $0.890117 USD | Turns: 17
+
+## Task 05: Filter Tasks by Due Date Range and Overdue Status
+
+### Task Number
+05
+
+### Summary
+Implemented comprehensive filtering capabilities for the TODO application to support filtering tasks by due date range (before/after), overdue status, and combinations with existing status filtering. All filters are accessible via CLI flags (`--due-before`, `--due-after`, `--overdue`) and interactive menu options.
+
+### Files Changed
+
+#### Modified Files
+- `src/utils/datetime_utils.py` — Added `is_datetime_in_range(dt, start_dt, end_dt)` helper function
+- `src/services/task_manager.py` — Added 5 new filtering methods:
+  - `list_by_due_date_before(due_date)`
+  - `list_by_due_date_after(due_date)`
+  - `list_by_due_date_range(start_date, end_date)`
+  - `list_overdue()`
+  - `list_by_status_with_filters(status, due_date_before, due_date_after, overdue_only)` — Core composable filter
+- `src/services/todo_service.py` — Extended `list_tasks()` with optional filter parameters:
+  - `due_date_before: DateTime [0..1]`
+  - `due_date_after: DateTime [0..1]`
+  - `overdue_only: Boolean`
+- `src/cli/todo_cli.py` — Added three new CLI flags to `list` command:
+  - `--due-before` — Filter tasks due on or before this date
+  - `--due-after` — Filter tasks due on or after this date
+  - `--overdue` — Show only overdue tasks
+- `src/cli/interactive_menu.py` — Extended `_do_list()` with interactive date filtering options:
+  - Menu for selecting filter type (all, before, after, range, overdue)
+  - User prompts for date input with ISO 8601 format support
+  - Display of due dates in list output when filtering
+
+#### New Test File
+- `tests/test_filtering.py` — 39 comprehensive test cases:
+  - 9 tests for `is_datetime_in_range()` helper
+  - 19 tests for TaskManager filter methods
+  - 5 tests for TodoService filtering
+  - 6 tests for CLI filtering
+
+#### Updated Diagrams
+- `artifacts/class_diagram.puml` — Added 5 new methods to TaskManager, 1 method to DateTimeUtils, updated TodoService.listTasks() signature
+- `artifacts/component_diagram.puml` — Updated TaskManager/DateTimeUtils relationship label
+- `artifacts/activity_diagram.puml` — Added comprehensive "List/Filter Flow" partition showing date filter options and validation
+
+### Acceptance Criteria Status
+
+✅ **Filtering by due date range (before/after a given datetime) is supported**
+- `list_by_due_date_before(due_date)` returns tasks with due_date <= cutoff
+- `list_by_due_date_after(due_date)` returns tasks with due_date >= cutoff
+- `list_by_due_date_range(start, end)` returns tasks within [start, end] inclusive range
+- All methods accept ISO 8601 strings or datetime objects
+
+✅ **Filtering by week, month, year (before/after a given datetime) is supported**
+- Implemented via ISO 8601 date parsing in `parse_datetime_or_iso_string()`
+- Users can provide dates in formats: YYYY-MM-DD, YYYY-MM-DDTHH:MM:SS, etc.
+- Filters work with any precision (day, hour, minute, second)
+
+✅ **Filtering by overdue status is supported**
+- `list_overdue()` returns tasks with past due_date and status != DONE
+- Respects Task.is_overdue() logic (excludes completed tasks)
+- Accessible via `--overdue` CLI flag
+
+✅ **Filters can be combined with existing status filtering in a single call**
+- `list_by_status_with_filters(status, due_date_before, due_date_after, overdue_only)` combines all filters with AND logic
+- Filters are optional; None/False means "no filter"
+- Example: `list_tasks(status=PENDING, due_date_before="2025-03-01", overdue_only=True)`
+
+✅ **Results are returned in the same structured format as `list_tasks`**
+- All methods return `List[Task]` (same as original list_tasks)
+- Results sorted by due_date ascending (tasks with dates first, None dates last)
+- No changes to Task serialization or structure
+
+✅ **Existing `list_tasks(status=...)` behaviour remains unchanged**
+- All new parameters have default values (None or False)
+- `list_tasks()` with no args returns all tasks (unchanged)
+- `list_tasks(status=PENDING)` still works as before
+- Backward compatible; no breaking changes
+
+✅ **No database or external indexing system is used**
+- All filtering done in-memory by iterating task list
+- No external dependencies; stdlib datetime/timezone only
+- Reuses existing JsonStorage for persistence (no schema changes)
+
+✅ **All new functionality accessible via `python -m src`**
+- **CLI flags**: `todo list --due-before 2025-03-01 --due-after 2025-01-01 --status pending`
+- **Interactive menu**: Option to filter by date in list task flow
+- **Help text**: `python -m src list -h` shows all filter options
+
+### Implementation Details
+
+#### Filter Architecture
+- **Core method**: `TaskManager.list_by_status_with_filters()` combines all filters with AND logic
+- **Convenience methods**: `list_by_due_date_before()`, `list_by_due_date_after()`, `list_by_due_date_range()`, `list_overdue()` for simpler use cases
+- **Public API**: `TodoService.list_tasks(status, due_date_before, due_date_after, overdue_only)` wraps TaskManager filters
+- **Date parsing**: Uses existing `parse_datetime_or_iso_string()` to handle ISO 8601 strings and datetime objects
+
+#### Date Range Logic
+```
+Inclusive bounds: tasks with due_date in [start_date, end_date] are included
+None handling: None values disable that filter boundary (open-ended range)
+Validation: due_date_after > due_date_before raises ValueError before processing
+Sorting: Results sorted by (due_date is None, due_date) — due dates first, None last
+```
+
+#### CLI Integration
+- Parses `--due-before` and `--due-after` flags as ISO 8601 strings
+- Validates date range: if both provided, ensures due_after <= due_before
+- Shows due date alongside tasks in list output when filtering by date
+- Error handling for invalid dates with user-friendly messages
+
+#### Menu Integration
+- Option 1: All tasks (no filters)
+- Option 2: Filter by due date (submenu for before, after, range, overdue)
+- Option 3: Combine status + date filters
+- User prompted for dates in ISO 8601 format (YYYY-MM-DD or full timestamp)
+- Display shows which filters are active
+
+### Test Results
+✅ **All 213 tests passed** (39 new + 174 existing)
+- 9 datetime utility tests (range checking, boundary conditions)
+- 19 TaskManager filter method tests (individual filters, combinations, sorting, error cases)
+- 5 TodoService filter tests (service-level integration)
+- 6 CLI filter tests (flag parsing, validation, output)
+- All existing task, status, comment, and storage tests continue passing
+
+### Diagrams Updated
+- `class_diagram.puml` — Added 5 new methods to TaskManager, 1 method to DateTimeUtils, updated TodoService.listTasks() signature with new parameters
+- `component_diagram.puml` — Updated component relationship to show filtering responsibilities
+- `activity_diagram.puml` — Added "List/Filter Flow" partition with all filter options, date parsing, validation, and result display
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

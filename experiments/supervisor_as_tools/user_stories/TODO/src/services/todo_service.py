@@ -5,6 +5,7 @@ from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
+from ..utils.datetime_utils import parse_datetime_or_iso_string
 from .comments_service import CommentsService
 from .task_manager import TaskManager
 
@@ -22,10 +23,40 @@ class TodoService:
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
 
-    def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
-        if status is not None:
-            return self._manager.list_by_status(status)
-        return self._manager.list_all()
+    def list_tasks(
+        self,
+        status: Optional[TaskStatus] = None,
+        due_before: Optional[Union[datetime, str]] = None,
+        due_after: Optional[Union[datetime, str]] = None,
+        overdue_only: bool = False,
+    ) -> list[Task]:
+        """
+        List tasks with optional filtering by status, due date, and overdue status.
+
+        Args:
+            status: Filter by TaskStatus, or None for all statuses
+            due_before: Filter to tasks due on or before this date, or None (accepts datetime or ISO string)
+            due_after: Filter to tasks due on or after this date, or None (accepts datetime or ISO string)
+            overdue_only: If True, only return overdue tasks
+
+        Returns:
+            Sorted list of tasks matching all filters
+        """
+        # Parse date strings to datetime
+        parsed_due_before = None
+        if due_before is not None:
+            parsed_due_before = parse_datetime_or_iso_string(due_before) if isinstance(due_before, str) else due_before
+
+        parsed_due_after = None
+        if due_after is not None:
+            parsed_due_after = parse_datetime_or_iso_string(due_after) if isinstance(due_after, str) else due_after
+
+        return self._manager.list_by_status_with_filters(
+            status=status,
+            due_before=parsed_due_before,
+            due_after=parsed_due_after,
+            overdue_only=overdue_only,
+        )
 
     def start_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)

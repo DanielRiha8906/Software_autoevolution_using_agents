@@ -4,7 +4,7 @@ from typing import Optional, Union
 from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
-from ..utils.datetime_utils import parse_datetime_or_iso_string
+from ..utils.datetime_utils import parse_datetime_or_iso_string, is_datetime_in_range
 
 
 class TaskNotFoundError(Exception):
@@ -54,6 +54,59 @@ class TaskManager:
 
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
+
+    def list_by_due_date_before(self, due_before: datetime) -> list[Task]:
+        """List tasks with due_date on or before the given datetime."""
+        return [t for t in self._tasks.values() if t.due_date is not None and t.due_date <= due_before]
+
+    def list_by_due_date_after(self, due_after: datetime) -> list[Task]:
+        """List tasks with due_date on or after the given datetime."""
+        return [t for t in self._tasks.values() if t.due_date is not None and t.due_date >= due_after]
+
+    def list_by_due_date_range(self, due_start: Optional[datetime], due_end: Optional[datetime]) -> list[Task]:
+        """List tasks with due_date within [due_start, due_end] range (inclusive)."""
+        return [t for t in self._tasks.values() if is_datetime_in_range(t.due_date, due_start, due_end)]
+
+    def list_overdue(self) -> list[Task]:
+        """List tasks that are overdue (past due_date and not completed)."""
+        return [t for t in self._tasks.values() if t.is_overdue()]
+
+    def list_by_status_with_filters(
+        self,
+        status: Optional[TaskStatus] = None,
+        due_before: Optional[datetime] = None,
+        due_after: Optional[datetime] = None,
+        overdue_only: bool = False,
+    ) -> list[Task]:
+        """
+        List tasks combining status and date filters with AND logic.
+        Sorts by (due_date is None, due_date) so tasks with due dates appear first.
+
+        Args:
+            status: Filter by TaskStatus, or None for all statuses
+            due_before: Filter to tasks due on or before this datetime, or None
+            due_after: Filter to tasks due on or after this datetime, or None
+            overdue_only: If True, only return overdue tasks (takes precedence over date range)
+
+        Returns:
+            Sorted list of tasks matching all filters
+        """
+        result = list(self._tasks.values())
+
+        if status is not None:
+            result = [t for t in result if t.status == status]
+
+        if overdue_only:
+            result = [t for t in result if t.is_overdue()]
+        else:
+            if due_before is not None:
+                result = [t for t in result if t.due_date is not None and t.due_date <= due_before]
+            if due_after is not None:
+                result = [t for t in result if t.due_date is not None and t.due_date >= due_after]
+
+        # Sort by (due_date is None, due_date): tasks with due dates first, then by date
+        result.sort(key=lambda t: (t.due_date is None, t.due_date))
+        return result
 
     def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None) -> Task:
         task = self.get(task_id)
