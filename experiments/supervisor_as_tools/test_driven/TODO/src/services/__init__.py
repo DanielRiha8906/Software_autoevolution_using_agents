@@ -4,5 +4,6 @@ from .task_manager import TaskManager, TaskNotFoundError
 from .todo_service import TodoService
 from .statistics_service import TaskStatisticsService
 from .import_export_service import TaskImportExportService
+from .project_service import ProjectService, ProjectNotFoundError
 
-__all__ = ["CommentManager", "CommentNotFoundError", "CommentsService", "TaskManager", "TaskNotFoundError", "TodoService", "TaskStatisticsService", "TaskImportExportService"]
+__all__ = ["CommentManager", "CommentNotFoundError", "CommentsService", "TaskManager", "TaskNotFoundError", "TodoService", "TaskStatisticsService", "TaskImportExportService", "ProjectService", "ProjectNotFoundError"]

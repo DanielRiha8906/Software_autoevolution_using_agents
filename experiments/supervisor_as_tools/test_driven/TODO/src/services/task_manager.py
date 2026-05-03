@@ -23,8 +23,8 @@ class TaskManager:
     def _persist(self) -> None:
         self._storage.save([t.to_dict() for t in self._tasks.values()])
 
-    def add(self, title: str, description: Optional[str] = None) -> Task:
-        task = Task(title=title, description=description)
+    def add(self, title: str, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
+        task = Task(title=title, description=description, project_id=project_id)
         self._tasks[task.id] = task
         self._persist()
         return task
@@ -46,12 +46,14 @@ class TaskManager:
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
 
-    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
+    def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
         task = self.get(task_id)
         if title is not None:
             task.title = title
         if description is not None:
             task.description = description
+        if project_id is not None:
+            task.project_id = project_id
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task
@@ -62,6 +64,17 @@ class TaskManager:
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task
+
+    def list_by_project_id(self, project_id: str) -> list[Task]:
+        """List all tasks for a given project.
+
+        Args:
+            project_id: The project ID.
+
+        Returns:
+            A list of tasks belonging to the project, or empty list if none.
+        """
+        return [t for t in self._tasks.values() if t.project_id == project_id]
 
     def delete(self, task_id: str) -> None:
         task = self.get(task_id)  # resolves prefix; raises if missing
