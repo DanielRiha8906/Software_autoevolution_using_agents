@@ -334,4 +334,4 @@ Candidate A was selected as the representative solution based on being the first
 ## Test Result
 ✅ All 73 tests passing (8 new GitHubFetchService tests + 65 existing tests)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 335.8s | Cost: $0.659097 USD | Turns: 38
