@@ -42,16 +42,27 @@ repeat
       endif
 
     case (4 — Filter runs)
-      :Choose filter type\n(branch / status / conclusion);
+      :Choose filter type\n(branch / status / conclusion /\nduration / timestamp / attempts);
       if (branch?) then (yes)
         :Prompt branch name;
         :filter_by_branch();
       elseif (status?) then (yes)
         :Choose status from list;
         :filter_by_status();
-      else (conclusion)
+      elseif (conclusion?) then (yes)
         :Choose conclusion from list;
         :filter_by_conclusion();
+      elseif (duration?) then (yes)
+        :Prompt min duration (optional);
+        :Prompt max duration (optional);
+        :filter_by_duration_range();
+      elseif (timestamp?) then (yes)
+        :Choose timestamp type\n(created_before / created_after /\nupdated_before / updated_after);
+        :Prompt timestamp (ISO format);
+        :Apply filter_by_*_timestamp();
+      else (attempts)
+        :Choose attempt filter\n(with_attempts / without_attempts);
+        :Apply filter_with/without_attempts();
       endif
       if (no matches?) then (yes)
         :Print "No matching runs.";

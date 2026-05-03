@@ -109,6 +109,17 @@ def build_parser() -> argparse.ArgumentParser:
     list_attempts_p = sub.add_parser("list-attempts", help="List all attempts or attempts for a run")
     list_attempts_p.add_argument("--run-id", type=int, default=None, help="Filter by run ID (optional)")
 
+    # filter-runs
+    filter_runs_p = sub.add_parser("filter-runs", help="Filter runs by duration, timestamp, or attempts")
+    filter_runs_p.add_argument("--min-duration", type=float, default=None, help="Minimum duration in seconds")
+    filter_runs_p.add_argument("--max-duration", type=float, default=None, help="Maximum duration in seconds")
+    filter_runs_p.add_argument("--created-before", type=str, default=None, help="Created before timestamp (ISO format)")
+    filter_runs_p.add_argument("--created-after", type=str, default=None, help="Created after timestamp (ISO format)")
+    filter_runs_p.add_argument("--updated-before", type=str, default=None, help="Updated before timestamp (ISO format)")
+    filter_runs_p.add_argument("--updated-after", type=str, default=None, help="Updated after timestamp (ISO format)")
+    filter_runs_p.add_argument("--with-attempts", action="store_true", help="Only show runs with attempts")
+    filter_runs_p.add_argument("--without-attempts", action="store_true", help="Only show runs without attempts")
+
     return parser
 
 
@@ -200,3 +211,72 @@ def run_cli(service: WorkflowRunService, attempt_service: AttemptService, args=N
             return
         for attempt in attempts:
             print(_fmt_attempt(attempt))
+
+    elif ns.command == "filter-runs":
+        # Parse timestamp arguments
+        created_before = None
+        created_after = None
+        updated_before = None
+        updated_after = None
+
+        def _parse_timestamp(ts_str: str) -> datetime:
+            """Parse ISO format timestamp string, defaulting to UTC if timezone-naive."""
+            dt = datetime.fromisoformat(ts_str)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+
+        if ns.created_before:
+            try:
+                created_before = _parse_timestamp(ns.created_before)
+            except ValueError:
+                print(f"Invalid created-before timestamp: {ns.created_before}", file=sys.stderr)
+                sys.exit(1)
+
+        if ns.created_after:
+            try:
+                created_after = _parse_timestamp(ns.created_after)
+            except ValueError:
+                print(f"Invalid created-after timestamp: {ns.created_after}", file=sys.stderr)
+                sys.exit(1)
+
+        if ns.updated_before:
+            try:
+                updated_before = _parse_timestamp(ns.updated_before)
+            except ValueError:
+                print(f"Invalid updated-before timestamp: {ns.updated_before}", file=sys.stderr)
+                sys.exit(1)
+
+        if ns.updated_after:
+            try:
+                updated_after = _parse_timestamp(ns.updated_after)
+            except ValueError:
+                print(f"Invalid updated-after timestamp: {ns.updated_after}", file=sys.stderr)
+                sys.exit(1)
+
+        # Determine has_attempts filter
+        has_attempts = None
+        if ns.with_attempts and ns.without_attempts:
+            print("Cannot specify both --with-attempts and --without-attempts", file=sys.stderr)
+            sys.exit(1)
+        elif ns.with_attempts:
+            has_attempts = True
+        elif ns.without_attempts:
+            has_attempts = False
+
+        runs = service.filter_runs(
+            attempt_service=attempt_service,
+            min_duration=ns.min_duration,
+            max_duration=ns.max_duration,
+            created_before=created_before,
+            created_after=created_after,
+            updated_before=updated_before,
+            updated_after=updated_after,
+            has_attempts=has_attempts,
+        )
+
+        if not runs:
+            print("No matching runs.")
+            return
+        for run in runs:
+            print(_fmt_run(run))

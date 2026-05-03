@@ -94,6 +94,14 @@ package "services" #DDFFD4 {
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
         +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        +filter_by_duration_range(min_seconds, max_seconds) : List[WorkflowRun]
+        +filter_by_created_before(timestamp) : List[WorkflowRun]
+        +filter_by_created_after(timestamp) : List[WorkflowRun]
+        +filter_by_updated_before(timestamp) : List[WorkflowRun]
+        +filter_by_updated_after(timestamp) : List[WorkflowRun]
+        +filter_with_attempts(attempt_service) : List[WorkflowRun]
+        +filter_without_attempts(attempt_service) : List[WorkflowRun]
+        +filter_runs(...) : List[WorkflowRun]
         -_persist() : None
     }
 

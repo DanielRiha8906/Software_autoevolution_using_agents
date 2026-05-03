@@ -68,6 +68,17 @@ if (CLI arguments provided?) then (yes)
         :Print formatted attempt list;
       endif
 
+    case (filter-runs)
+      :Parse optional filters:\n--min-duration, --max-duration,\n--created-before/after,\n--updated-before/after,\n--with/without-attempts;
+      :Parse timestamp arguments\n(convert ISO to UTC datetime);
+      :Determine has_attempts filter\n(None / True / False);
+      :service.filter_runs() with all criteria;
+      if (no matches?) then (yes)
+        :Print "No matching runs.";
+      else (no)
+        :Print formatted run list;
+      endif
+
   endswitch
   stop
 
