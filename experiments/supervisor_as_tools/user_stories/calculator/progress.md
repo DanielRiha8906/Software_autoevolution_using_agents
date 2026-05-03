@@ -31,3 +31,44 @@
 - No breaking changes to API; all existing code continues to work
 
 Duration: 220.3s | Cost: $0.388252 USD | Turns: 13
+
+## Task 02: Add square, sqrt, power, and modulo operations
+
+**Objective:** Extend the calculator with advanced mathematical operations (square, sqrt, power, modulo) to enable more comprehensive calculations without switching tools.
+
+**Acceptance Criteria:** ✅ All met
+- Operations implemented: `square(x)`, `sqrt(x)`, `power(x, y)`, `modulo(x, y)`
+- Each operation follows the same interface as existing operations (add, subtract, etc.)
+- `sqrt` of a negative number raises an error
+- `modulo` by zero raises an error
+- `power` with negative or fractional exponents returns correct results
+- No existing operations duplicated or renamed
+- All operations accessible via `python -m src` (menu and CLI flag)
+
+**Files Changed:**
+- `src/models/operation.py` — Added SQUARE, SQRT, POWER, MODULO enum members
+- `src/services/calculator.py` — Added 4 new methods (square, sqrt, power, modulo) with proper error handling; updated calculate() dispatch dict; imported math module
+- `src/models/calculation_result.py` — Updated _SYMBOLS dict with symbols for new operations (sq, √, ^, %)
+- `src/cli/calculator_cli.py` — Added 4 menu entries to _MENU tuple (Square, Sqrt, Power, Modulo)
+- `src/__main__.py` — Updated argparse choices to include all 8 operations; updated usage string
+- `tests/test_calculator.py` — Added 25 new tests (TestSquare, TestSqrt, TestPower, TestModulo classes)
+- `tests/test_calculator_service.py` — Added 20 new integration tests for service layer
+- `tests/test_cli.py` — Added 12 new CLI tests; updated 6 existing tests for menu position changes
+- `artifacts/class_diagram.puml` — Updated Operation enum (8 members) and Calculator class (9 methods)
+
+**Test Results:**
+- Total tests: 99
+- Passed: 99 ✅
+- Failed: 0
+- Execution time: 0.15s
+- Coverage: All operations, error conditions, service integration, CLI behavior, and persistence verified
+
+**Implementation Notes:**
+- Error handling: sqrt raises ValueError for negative numbers; modulo raises ValueError for zero divisor; power raises ValueError for zero base with negative exponent
+- Unary operations (square, sqrt) modeled as binary for consistency with existing CalculationResult model
+- Display symbols: square="sq", sqrt="√", power="^", modulo="%"
+- All operations integrated with CalculatorService for automatic persistence and execution time tracking
+- No breaking changes; all existing operations remain unchanged
+- Interactive menu expanded to 8 operations (positions 1-8), history at position 9, exit at position 10
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

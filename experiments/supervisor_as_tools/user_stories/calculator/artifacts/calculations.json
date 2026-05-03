@@ -26,5 +26,37 @@
     "operand_b": 2.0,
     "result": 3.0,
     "timestamp": "2026-04-29T13:49:21.896125"
+  },
+  {
+    "operation": "square",
+    "operand_a": 5.0,
+    "operand_b": 0.0,
+    "result": 25.0,
+    "timestamp": "2026-05-03T12:39:26.826016",
+    "execution_time_ms": 0.007121000010101852
+  },
+  {
+    "operation": "sqrt",
+    "operand_a": 16.0,
+    "operand_b": 0.0,
+    "result": 4.0,
+    "timestamp": "2026-05-03T12:39:28.266542",
+    "execution_time_ms": 0.007560999961242487
+  },
+  {
+    "operation": "power",
+    "operand_a": 2.0,
+    "operand_b": 3.0,
+    "result": 8.0,
+    "timestamp": "2026-05-03T12:39:29.479506",
+    "execution_time_ms": 0.01419099999111495
+  },
+  {
+    "operation": "modulo",
+    "operand_a": 10.0,
+    "operand_b": 3.0,
+    "result": 1.0,
+    "timestamp": "2026-05-03T12:39:30.766517",
+    "execution_time_ms": 0.008944000001065433
   }
 ]
