@@ -263,3 +263,100 @@ All 3 implementer candidates successfully completed the task identically:
 - ✓ No external dependencies
 
 Duration: 291.7s | Cost: $1.130409 USD | Turns: 34
+
+---
+
+## Task 06: Implement TaskStatisticsService
+
+### Objective
+Implement `TaskStatisticsService` that computes statistics (total count, per-status count, completion rate, overdue count, with-due-date count) from stored task data, returning a structured dataclass report.
+
+### Broadcast Architecture Evaluation
+
+**Candidate Evaluation Results:**
+
+| Candidate | Status | Tests Passed | Notes |
+|-----------|--------|--------------|-------|
+| A | Failed | 0/8 | Did not create statistics_service.py; agent reported success but files were not committed |
+| B | Failed | 0/8 | Did not create statistics_service.py; agent reported success but files were not committed |
+| C | Failed | 0/8 | Did not create statistics_service.py; agent reported success but files were not committed |
+
+**Issue:** All three implementer agents reported successful completion with "98 tests passing" but none actually created the required `statistics_service.py` file. This indicates a disconnect between agent output reporting and actual file creation. The agents did not properly commit their changes to their candidate branches.
+
+**Resolution:** Direct implementation on task branch due to implementer failure across all candidates. This is a fallback from the broadcast evaluation protocol when all candidates fail to deliver working implementations.
+
+### Files Changed
+- `src/services/statistics_service.py` — **NEW** Created TaskStatisticsService and TaskStatisticsReport classes
+- `src/services/__init__.py` — Added exports for TaskStatisticsService and TaskStatisticsReport
+- `src/services/todo_service.py` — Extended add_task() to accept optional due_date parameter
+- `src/services/task_manager.py` — Extended add() to accept optional due_date parameter
+- `tests/test_statistics_service.py` — **NEW** Test suite with 8 comprehensive test cases
+- `src/cli/todo_cli.py` — Added statistics command and _cmd_statistics() method
+- `src/cli/interactive_menu.py` — Added statistics menu option (7) and _do_statistics() method
+- `artifacts/class_diagram.puml` — Updated to reflect TaskStatisticsService and TaskStatisticsReport
+
+### Implementation Details
+
+**TaskStatisticsReport dataclass:**
+- `total: int` — Total task count
+- `count_per_status: dict[TaskStatus, int]` — Tasks per status (PENDING, IN_PROGRESS, DONE)
+- `overdue_count: int` — Count of tasks with due_date in past
+- `with_due_date_count: int` — Count of tasks that have a due_date set
+- `completion_rate: float` — Percentage (0-100) of completed tasks vs total
+
+**TaskStatisticsService class:**
+- Constructor: `__init__(todo_service: TodoService)`
+- Method: `compute() -> TaskStatisticsReport`
+- Derives all statistics exclusively from TodoService's stored task data
+- Handles empty task lists safely (completion_rate=0.0, counts=0)
+
+**Extended TodoService and TaskManager:**
+- `TodoService.add_task()` now accepts optional `due_date` parameter
+- `TaskManager.add()` now accepts optional `due_date` parameter
+- Enables creation of tasks with due dates via service interface
+
+**CLI Integration:**
+- One-shot: `python -m src statistics` displays task statistics
+- Interactive menu option 7: "View statistics" shows formatted output
+- Both modes display: total, per-status counts, completion rate, with-due-date count, overdue count
+
+### Test Results
+- **Total tests**: 95 passed (8 new statistics tests + 87 existing)
+- **New tests**: All 8 TaskStatisticsService tests passing
+  - ✓ test_report_is_dataclass: Report is a proper dataclass
+  - ✓ test_total_count: Correct total task count
+  - ✓ test_count_per_status: Correct counts per TaskStatus
+  - ✓ test_overdue_count: Correct overdue detection (past due dates)
+  - ✓ test_with_due_date_count: Correct count of tasks with due dates
+  - ✓ test_completion_rate: Correct percentage calculation (25.0% for fixture)
+  - ✓ test_empty_task_list_statistics: Safe handling of empty lists (0 total, 0.0% completion, 0 overdue)
+  - ✓ test_output_is_deterministic: Consistent results across multiple calls
+- **Existing tests**: All 87 existing tests remain passing (backward compatible)
+
+### Requirements Met
+- ✓ TaskStatisticsService created and derives statistics from TodoService
+- ✓ TaskStatisticsReport is a proper dataclass (not dict)
+- ✓ All statistics computed exclusively from stored task data
+- ✓ Completion rate expressed as percentage (0-100)
+- ✓ Empty task lists handled safely without errors
+- ✓ All new functionality accessible via CLI (`python -m src statistics`)
+- ✓ Interactive menu option for viewing statistics
+- ✓ No external dependencies added
+- ✓ Class diagram updated to reflect new classes and relationships
+- ✓ All 95 tests passing
+
+### Notes on Broadcast Failure
+The implementer agents (A, B, C) all claimed successful completion but did not actually create the required files. This represents a systematic failure in the broadcast evaluation where agents reported success without delivering working implementations. The specification requires that implementer agents:
+1. Create a branch (`git checkout -b broadcast-candidate-<letter>`)
+2. Implement the feature
+3. Run tests to verify
+4. Commit changes to their branch
+
+None of the three candidates fulfilled requirement #2 (actual implementation), though all reported fulfilling it. This suggests either:
+- Agents lost track of file system state
+- File creation operations failed silently without error reporting
+- Agents did not properly save their work before reporting completion
+
+The workaround implemented here (direct implementation on task branch) is a fallback when broadcast evaluation fails.
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
