@@ -6,6 +6,7 @@ from ..models.statistics_report import StatisticsReport
 from ..services.calculator_service import CalculatorService
 from ..services.memory_service import MemoryService
 from ..services.statistics_service import StatisticsService
+from ..services.import_export_service import ImportExportService
 
 
 class CalculatorCLI:
@@ -37,7 +38,9 @@ class CalculatorCLI:
             history_opt = len(self._MENU) + 1
             query_opt   = len(self._MENU) + 2
             stats_opt   = len(self._MENU) + 3
-            exit_opt    = len(self._MENU) + 4
+            export_opt  = len(self._MENU) + 4
+            import_opt  = len(self._MENU) + 5
+            exit_opt    = len(self._MENU) + 6
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -53,6 +56,14 @@ class CalculatorCLI:
 
             if choice == str(stats_opt):
                 self._show_statistics()
+                continue
+
+            if choice == str(export_opt):
+                self._export_entries()
+                continue
+
+            if choice == str(import_opt):
+                self._import_entries()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -93,7 +104,9 @@ class CalculatorCLI:
         print(f"  {len(self._MENU) + 1}. View history")
         print(f"  {len(self._MENU) + 2}. Query memory")
         print(f"  {len(self._MENU) + 3}. Show statistics")
-        print(f"  {len(self._MENU) + 4}. Exit")
+        print(f"  {len(self._MENU) + 4}. Export entries")
+        print(f"  {len(self._MENU) + 5}. Import entries")
+        print(f"  {len(self._MENU) + 6}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -178,3 +191,31 @@ class CalculatorCLI:
         print(f"  Total errors: {report.total_errors}")
         print(f"  Error rate: {report.error_rate:.2f}%")
         print(f"  Average execution time: {report.avg_execution_time_ms:.2f} ms\n")
+
+    def _export_entries(self) -> None:
+        """Export memory entries to a JSON file in interactive mode."""
+        filepath = input("Enter filepath for export (or press Enter to skip): ").strip()
+        if not filepath:
+            print()
+            return
+
+        try:
+            service = ImportExportService()
+            count = service.export(self.memory_service, filepath)
+            print(f"\n  Exported {count} entries to {filepath}\n")
+        except Exception as exc:
+            print(f"\n  Error exporting: {exc}\n")
+
+    def _import_entries(self) -> None:
+        """Import memory entries from a JSON file in interactive mode."""
+        filepath = input("Enter filepath for import (or press Enter to skip): ").strip()
+        if not filepath:
+            print()
+            return
+
+        try:
+            service = ImportExportService()
+            count = service.import_from(self.memory_service, filepath)
+            print(f"\n  Imported {count} entries from {filepath}\n")
+        except Exception as exc:
+            print(f"\n  Error importing: {exc}\n")

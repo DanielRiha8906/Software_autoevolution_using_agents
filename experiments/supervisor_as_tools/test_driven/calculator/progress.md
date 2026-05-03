@@ -250,3 +250,66 @@ Implemented `StatisticsService` that computes aggregated metrics over stored cal
 - Testability: Pure computation logic with no external dependencies
 
 Duration: 336.5s | Cost: $0.609802 USD | Turns: 21
+
+## Task 07: Import/Export Service for Memory Persistence
+
+### Summary
+Implemented `ImportExportService` that exports all `MemoryEntry` records from `MemoryService` to JSON files and imports them back with validation and safe merging. The service prevents duplicate entries and preserves existing history when importing.
+
+### Files Changed
+- `src/services/import_export_service.py` - Created new ImportExportService class with export() and import_from() methods
+- `src/services/__init__.py` - Added ImportExportService import and export
+- `src/__main__.py` - Added --export and --import CLI flags with error handling
+- `src/cli/calculator_cli.py` - Added _export_entries() and _import_entries() methods, integrated menu options 12 and 13
+- `tests/test_import_export_service.py` - Created test suite with 5 test cases
+- `tests/test_cli.py` - Updated menu option numbers (exit moved from 12 to 14)
+- `artifacts/class_diagram.puml` - Added ImportExportService class and relationships
+
+### Test Results
+- All 73 tests passed (5 new + 68 existing)
+- Task 07 tests: 5/5 passed
+  - test_export_creates_valid_json_file ✓
+  - test_import_loads_entries ✓
+  - test_import_validates_structure ✓
+  - test_import_preserves_existing_entries ✓
+  - test_import_skips_duplicate_entries ✓
+- All existing tests: 68/68 passed (no regressions)
+
+### Implementation Details
+- ImportExportService is stateless; constructor takes no parameters
+- export() method:
+  - Retrieves all entries via memory_service.retrieve()
+  - Converts each to dict via MemoryEntry.to_dict()
+  - Creates parent directories with mkdir(parents=True, exist_ok=True)
+  - Writes JSON list with indent=2 for readability
+- import_from() method:
+  - Reads and parses JSON file
+  - Validates root structure is a list (raises Exception if not)
+  - Validates each item is a dict with all 7 required MemoryEntry fields
+  - Detects duplicates by comparing against existing entry IDs
+  - Skips duplicate entries (does not overwrite or re-add)
+  - Adds only new entries to MemoryService
+- Error handling: Raises generic Exception on validation failures with descriptive messages
+
+### Validation Rules
+- JSON must be a list at root level
+- Each item must be a dict
+- Each item must have all 7 required fields: operation, operands, result, success, execution_time_ms, id, timestamp
+- Duplicates detected and skipped by ID (exact match)
+- Existing entries preserved (not overwritten or removed)
+
+### Accessibility
+- Interactive mode: Menu options 12 (export) and 13 (import) with filepath prompting
+- CLI mode: `python -m src --export /path/file.json` exports all memory entries
+- CLI mode: `python -m src --import /path/file.json` imports entries with validation
+- Help: `python -m src --help` lists all available flags including --export and --import
+- Error reporting: Clear error messages on validation failure printed to stderr
+
+### Design Principles
+- Separation of concerns: Import/export independent of memory service logic
+- Safe merging: No data loss; duplicates skipped rather than overwritten
+- Fail-fast validation: Errors raised immediately on first validation failure
+- Stateless design: Service methods accept MemoryService as parameter, no state stored
+- Robustness: Handles missing files, invalid JSON, missing fields with clear exceptions
+
+Duration: 408.4s | Cost: $0.826493 USD | Turns: 25
