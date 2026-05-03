@@ -51,3 +51,23 @@ class WorkflowRun:
             commit_sha=data.get("commit_sha"),
             duration_seconds=float(data.get("duration_seconds", 0.0)),
         )
+
+    def is_terminal(self) -> bool:
+        """Return True if the workflow run has completed (status is COMPLETED)."""
+        return self.status == WorkflowStatus.COMPLETED
+
+    def is_running(self) -> bool:
+        """Return True if the workflow run is still running (not in a terminal state)."""
+        return not self.is_terminal()
+
+    def is_successful(self) -> bool:
+        """Return True if the workflow run completed successfully."""
+        return self.is_terminal() and self.conclusion == WorkflowConclusion.SUCCESS
+
+    def is_failed(self) -> bool:
+        """Return True if the workflow run completed with a failure."""
+        return self.is_terminal() and self.conclusion == WorkflowConclusion.FAILURE
+
+    def is_cancelled(self) -> bool:
+        """Return True if the workflow run was cancelled."""
+        return self.is_terminal() and self.conclusion == WorkflowConclusion.CANCELLED
