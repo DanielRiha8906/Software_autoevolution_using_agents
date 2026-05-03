@@ -41,6 +41,14 @@ package "models" #DDEEFF {
         +is_in_progress() : Boolean
         +is_overdue() : Boolean
     }
+
+    class TaskStatistics {
+        +total : int
+        +count_per_status : dict[TaskStatus, int]
+        +overdue_count : int
+        +with_due_date_count : int
+        +completion_rate : float
+    }
 }
 
 package "storage" #FFF3CC {
@@ -112,6 +120,13 @@ package "services" #DDFFD4 {
         +delete_comment(comment_id: String) : void
         +delete_comments_for_task(task_id: String) : void
     }
+
+    class TaskStatisticsService {
+        -_service : TodoService
+        --
+        +TaskStatisticsService(todo_service: TodoService)
+        +compute() : TaskStatistics
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -140,6 +155,9 @@ CommentManager ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
 CommentsService --> TodoService : todo_service
 CommentsService --> CommentManager : comment_manager
+TaskStatisticsService --> TodoService : dependency
+TaskStatisticsService ..> TaskStatistics : returns
+TaskStatistics --> TaskStatus : uses
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 
