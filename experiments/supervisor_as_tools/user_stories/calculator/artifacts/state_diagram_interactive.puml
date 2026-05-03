@@ -10,6 +10,7 @@ top to bottom direction
 Menu --> FirstOperand : operation selected
 Menu --> Feedback : history selected
 Menu --> MemoryDisplay : memory selected
+Menu --> StatisticsDisplay : statistics selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
@@ -25,6 +26,8 @@ Calculating --> MemoryRecord : error / record error
 MemoryRecord --> Feedback : memory recorded
 
 MemoryDisplay --> Feedback : memory displayed
+
+StatisticsDisplay --> Feedback : statistics displayed
 
 Feedback --> Menu
 

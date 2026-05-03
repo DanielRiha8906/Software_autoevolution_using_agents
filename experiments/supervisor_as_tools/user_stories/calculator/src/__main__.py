@@ -6,15 +6,17 @@ from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
+from .services.statistics_service import StatisticsService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
 
-def _build_service() -> tuple[CalculatorService, MemoryService]:
+def _build_service() -> tuple[CalculatorService, MemoryService, StatisticsService]:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
     calculator_service = CalculatorService(Calculator(), JsonStorage(storage_path))
     memory_service = MemoryService(calculator_service, JsonStorage(storage_path))
-    return calculator_service, memory_service
+    statistics_service = StatisticsService(memory_service)
+    return calculator_service, memory_service, statistics_service
 
 
 def _as_number(value: str) -> float:
@@ -58,6 +60,11 @@ def main() -> None:
         help="Filter to show only failed memory entries",
     )
     parser.add_argument(
+        "--statistics",
+        action="store_true",
+        help="Display calculation statistics",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -65,11 +72,28 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    calculator_service, memory_service = _build_service()
-    cli = CalculatorCLI(calculator_service, memory_service)
+    calculator_service, memory_service, statistics_service = _build_service()
+    cli = CalculatorCLI(calculator_service, memory_service, statistics_service)
 
     if args.filter_success and args.filter_error:
         parser.error("Cannot use both --filter-success and --filter-error")
+
+    if args.statistics:
+        stats = statistics_service.generate()
+        print("=== Calculation Statistics ===\n")
+        print("Operations performed:")
+        print(f"  Add:      {stats.operation_counts['add']}")
+        print(f"  Subtract: {stats.operation_counts['subtract']}")
+        print(f"  Multiply: {stats.operation_counts['multiply']}")
+        print(f"  Divide:   {stats.operation_counts['divide']}")
+        print(f"  Square:   {stats.operation_counts['square']}")
+        print(f"  Sqrt:     {stats.operation_counts['sqrt']}")
+        print(f"  Power:    {stats.operation_counts['power']}")
+        print(f"  Modulo:   {stats.operation_counts['modulo']}")
+        print(f"\nTotal errors: {stats.total_errors}")
+        print(f"Error rate: {stats.error_rate:.1f}%")
+        print(f"Average execution time: {stats.avg_execution_time_ms:.2f} ms")
+        sys.exit(0)
 
     if args.filter_operation or args.filter_success or args.filter_error:
         success_filter = None

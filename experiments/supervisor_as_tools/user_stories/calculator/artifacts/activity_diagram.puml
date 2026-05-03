@@ -71,6 +71,12 @@ else (no)
             :Return to main menu;
         endswitch
 
+      case (View Statistics)
+        :Generate statistics from memory;
+        :Display operation counts;
+        :Display error rate;
+        :Display execution time metrics;
+
       case (Operation)
         :Read operands;
 

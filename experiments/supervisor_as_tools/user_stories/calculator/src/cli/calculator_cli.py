@@ -6,6 +6,7 @@ from ..services.calculator_service import CalculatorService
 
 if TYPE_CHECKING:
     from ..services.memory_service import MemoryService
+    from ..services.statistics_service import StatisticsService
 
 
 class CalculatorCLI:
@@ -20,9 +21,15 @@ class CalculatorCLI:
         (Operation.MODULO,   "Modulo"),
     ]
 
-    def __init__(self, service: CalculatorService, memory_service: "MemoryService | None" = None) -> None:
+    def __init__(
+        self,
+        service: CalculatorService,
+        memory_service: "MemoryService | None" = None,
+        statistics_service: "StatisticsService | None" = None,
+    ) -> None:
         self.service = service
         self.memory_service = memory_service
+        self.statistics_service = statistics_service
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -34,9 +41,10 @@ class CalculatorCLI:
             self._print_menu()
             choice = input("Choose option: ").strip()
 
-            history_opt = len(self._MENU) + 1
-            memory_opt  = len(self._MENU) + 2
-            exit_opt    = len(self._MENU) + 3
+            history_opt    = len(self._MENU) + 1
+            memory_opt     = len(self._MENU) + 2
+            statistics_opt = len(self._MENU) + 3
+            exit_opt       = len(self._MENU) + 4
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -48,6 +56,10 @@ class CalculatorCLI:
 
             if choice == str(memory_opt):
                 self._show_memory()
+                continue
+
+            if choice == str(statistics_opt):
+                self._show_statistics()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -87,7 +99,8 @@ class CalculatorCLI:
             print(f"  {i}. {label}")
         print(f"  {len(self._MENU) + 1}. View history")
         print(f"  {len(self._MENU) + 2}. View memory entries")
-        print(f"  {len(self._MENU) + 3}. Exit")
+        print(f"  {len(self._MENU) + 3}. View statistics")
+        print(f"  {len(self._MENU) + 4}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -192,3 +205,23 @@ class CalculatorCLI:
             result_str = str(entry.result) if entry.success else entry.error_message
             print(f"  {i}. [ID: {entry.entry_id[:8]}...] {entry.operation_name}({entry.operand_a}, {entry.operand_b}) -> {result_str} | {entry.execution_time_ms}ms")
         print()
+
+    def _show_statistics(self) -> None:
+        """Display calculation statistics."""
+        if not self.statistics_service:
+            print("\n  Statistics service is not available.\n")
+            return
+        stats = self.statistics_service.generate()
+        print("\n=== Calculation Statistics ===\n")
+        print("Operations performed:")
+        print(f"  Add:      {stats.operation_counts['add']}")
+        print(f"  Subtract: {stats.operation_counts['subtract']}")
+        print(f"  Multiply: {stats.operation_counts['multiply']}")
+        print(f"  Divide:   {stats.operation_counts['divide']}")
+        print(f"  Square:   {stats.operation_counts['square']}")
+        print(f"  Sqrt:     {stats.operation_counts['sqrt']}")
+        print(f"  Power:    {stats.operation_counts['power']}")
+        print(f"  Modulo:   {stats.operation_counts['modulo']}")
+        print(f"\nTotal errors: {stats.total_errors}")
+        print(f"Error rate: {stats.error_rate:.1f}%")
+        print(f"Average execution time: {stats.avg_execution_time_ms:.2f} ms\n")
