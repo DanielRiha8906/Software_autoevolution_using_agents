@@ -249,3 +249,78 @@ Successfully implemented a comprehensive filtering interface for workflow runs s
 6. **Interactive menu loop**: Allows building complex queries without returning to main menu
 
 Duration: 411.4s | Cost: $0.787644 USD | Turns: 21
+
+---
+
+# Task 06: Aggregated Statistics over Stored Workflow Runs
+
+## Summary
+Successfully implemented aggregated statistics functionality to provide insights into overall success rates, durations, and retry behavior across stored workflow runs. Statistics are returned as a structured dataclass and accessible via both CLI and interactive menu.
+
+## Files Changed
+- `src/models/statistics_report.py` — New frozen dataclass with 7 fields for aggregated metrics
+- `src/models/__init__.py` — Added StatisticsReport import and export
+- `src/services/statistics_service.py` — New service class with compute_statistics() and format_statistics_for_terminal() methods
+- `src/services/__init__.py` — Added StatisticsService import and export
+- `src/cli/workflow_cli.py` — Added "stats" subcommand with --branch, --status, --conclusion optional filters
+- `src/cli/interactive_menu.py` — Added _view_statistics() function and menu option
+- `tests/test_statistics_service.py` — Comprehensive test suite with 18 test cases
+- `artifacts/class_diagram.puml` — Added StatisticsReport and StatisticsService classes with relationships
+- `artifacts/component_diagram.puml` — Added StatisticsService component to service layer
+
+## Test Results
+- **Total tests**: 206
+- **Passed**: 206 ✓
+- **Failed**: 0
+- **Command**: `pytest tests/ -q`
+
+## Acceptance Criteria Met
+✓ Statistics include: count by `conclusion`, average `duration_seconds`, average number of attempts per run
+✓ Min and max `duration_seconds` included in report
+✓ Report returned as structured `StatisticsReport` dataclass (not plain dictionary)
+✓ Per-status breakdown of average duration included as bonus
+✓ No visualization layer added
+✓ All functionality accessible via `python -m src`:
+  - Interactive menu: "View workflow statistics" option with optional filtering
+  - CLI flag: `python -m src stats [--branch B] [--status S] [--conclusion C]`
+
+## Feature Coverage
+- **Model layer**: StatisticsReport frozen dataclass with fields:
+  - total_runs, count_by_conclusion, average_duration_seconds, min_duration_seconds, max_duration_seconds, average_attempts_per_run, per_status_avg_duration
+- **Service layer**: StatisticsService with:
+  - compute_statistics(runs: List[WorkflowRun]) -> StatisticsReport
+  - format_statistics_for_terminal(report: StatisticsReport) -> str
+- **CLI layer**: New "stats" subcommand with optional filters (branch, status, conclusion)
+- **Interactive menu**: New menu option with optional filtering prompts
+- **Filtering**: Reuses existing WorkflowRunService.filter_runs() for branch, status, conclusion filtering
+- **Formatting**: Human-readable terminal output with sections for conclusions, duration metrics, attempts, and per-status averages
+- **Test coverage**: 18 new tests covering empty runs, single run, multiple runs, mixed statuses, None conclusions, filtering, and formatting
+
+## Implementation Details
+- count_by_conclusion excludes None conclusions (ongoing/pending runs)
+- All numeric calculations handle edge cases (empty lists, single items)
+- Per-status average duration includes all workflow statuses present in filtered runs
+- Terminal formatting uses 2 decimal places for float values
+- Frozen dataclass ensures immutability of results
+- Service is stateless; can be instantiated per call or reused
+
+## CLI Usage Examples
+```bash
+# View all statistics
+python -m src stats
+
+# Filter by branch
+python -m src stats --branch main
+
+# Filter by status (completed, in_progress, queued, etc.)
+python -m src stats --status completed
+
+# Filter by conclusion (success, failure, cancelled, etc.)
+python -m src stats --conclusion success
+
+# Interactive menu
+python -m src
+# Select "View workflow statistics" option
+```
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

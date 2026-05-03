@@ -11,6 +11,7 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
+from ..services.statistics_service import StatisticsService
 from .workflow_cli import _parse_iso8601
 
 
@@ -377,6 +378,40 @@ def _list_attempts(service: WorkflowRunService) -> None:
         print(f"Error: {e}")
 
 
+def _view_statistics(service: WorkflowRunService) -> None:
+    """View workflow statistics with optional filtering."""
+    print("\n--- View Workflow Statistics ---")
+
+    # Prompt for optional filters
+    filter_kwargs = {}
+
+    apply_filters = _choose("Apply filters?", ["Yes", "No"], allow_blank=False)
+    if apply_filters == "Yes":
+        filter_type = _choose("Filter by", ["branch", "status", "conclusion", "None"], allow_blank=False)
+
+        if filter_type == "branch":
+            branch = _prompt("Branch name")
+            if branch:
+                filter_kwargs["branch"] = branch
+
+        elif filter_type == "status":
+            status_val = _choose("Status", [s.value for s in WorkflowStatus])
+            filter_kwargs["status"] = WorkflowStatus(status_val)
+
+        elif filter_type == "conclusion":
+            conclusion_val = _choose("Conclusion", [c.value for c in WorkflowConclusion])
+            filter_kwargs["conclusion"] = WorkflowConclusion(conclusion_val)
+
+    # Get filtered runs
+    filtered_runs = service.filter_runs(**filter_kwargs)
+
+    # Compute and format statistics
+    stats_service = StatisticsService()
+    report = stats_service.compute_statistics(filtered_runs)
+    formatted_report = stats_service.format_statistics_for_terminal(report)
+    print(formatted_report)
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
@@ -386,6 +421,7 @@ MENU = [
     ("Advanced filter runs", _advanced_filter_menu),
     ("Add attempt", _add_attempt),
     ("List attempts", _list_attempts),
+    ("View workflow statistics", _view_statistics),
     ("Exit", None),
 ]
 

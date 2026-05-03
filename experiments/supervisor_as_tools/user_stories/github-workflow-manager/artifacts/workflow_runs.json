@@ -30,5 +30,31 @@
         "duration_seconds": 120.0
       }
     ]
+  },
+  {
+    "id": "93add7f8-07f7-49da-9f08-df1345c13d68",
+    "workflow_name": "test-workflow",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T19:45:16.556663+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 30.0,
+    "attempts": []
+  },
+  {
+    "id": "ec9c8d0a-7d1d-4dd1-a462-2f5bc9149b6d",
+    "workflow_name": "test-workflow",
+    "branch": "dev",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-05-03T19:45:17.917132+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 45.0,
+    "attempts": []
   }
 ]
