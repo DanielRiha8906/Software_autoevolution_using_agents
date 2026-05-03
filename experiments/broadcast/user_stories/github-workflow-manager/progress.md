@@ -892,4 +892,4 @@ python -m src
 5. **Partial Success**: Mixed valid/invalid entries succeed partially (valid ones imported, invalid reported)
 6. **Data Integrity**: Roundtrip testing confirms export→import preserves data
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 681.2s | Cost: $1.648372 USD | Turns: 45
