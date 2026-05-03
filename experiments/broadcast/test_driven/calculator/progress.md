@@ -492,4 +492,4 @@ Duration: 544.5s | Cost: $1.126526 USD | Turns: 64
 ✓ UML diagrams updated (class diagram, use case diagram)
 ✓ Interactive menu integration with submenu for scientific operations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 298.6s | Cost: $0.690346 USD | Turns: 66
