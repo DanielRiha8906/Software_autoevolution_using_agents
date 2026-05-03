@@ -262,4 +262,4 @@ All 3 implementer candidates successfully completed the task identically:
 - ✓ python -m src list --help documents new options
 - ✓ No external dependencies
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 291.7s | Cost: $1.130409 USD | Turns: 34
