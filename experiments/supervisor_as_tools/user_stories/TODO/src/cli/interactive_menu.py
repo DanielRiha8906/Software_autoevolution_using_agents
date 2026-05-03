@@ -86,6 +86,8 @@ class InteractiveMenu:
                 self._do_manage_comments(tasks)
             elif choice == "9":
                 self._do_summary_report()
+            elif choice == "10":
+                self._do_import_export()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -115,6 +117,7 @@ class InteractiveMenu:
         print("  7. Check task status")
         print("  8. Manage comments")
         print("  9. View summary report")
+        print("  10. Import / Export")
         print("  0. Quit")
         print()
 
@@ -511,5 +514,65 @@ class InteractiveMenu:
         print("  Task Summary Report\n")
         for line in str(report).split("\n"):
             print(f"  {line}")
+        print()
+        input("  Press Enter to continue...")
+
+    def _do_import_export(self) -> None:
+        """Import/Export submenu."""
+        while True:
+            _clear()
+            print("  Import / Export\n")
+            print("  1. Export tasks and comments to file")
+            print("  2. Import tasks and comments from file")
+            print("  0. Back")
+            print()
+
+            choice = input("  > ").strip().lower()
+
+            if choice in ("0", "q"):
+                break
+            elif choice == "1":
+                self._do_export_menu()
+            elif choice == "2":
+                self._do_import_menu()
+            else:
+                input("  Unknown option. Press Enter to continue...")
+
+    def _do_export_menu(self) -> None:
+        """Prompt for export file path and execute."""
+        _clear()
+        print("  Export tasks and comments\n")
+        file_path = _prompt("Output file path")
+        if not file_path:
+            input("  Path cannot be empty. Press Enter...")
+            return
+
+        try:
+            count = self._service.export_to_json(file_path)
+            print(f"\n  Exported {count} tasks to {file_path}")
+        except (FileNotFoundError, ValueError, OSError) as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_import_menu(self) -> None:
+        """Prompt for import file path and execute."""
+        _clear()
+        print("  Import tasks and comments\n")
+        file_path = _prompt("Input file path")
+        if not file_path:
+            input("  Path cannot be empty. Press Enter...")
+            return
+
+        try:
+            tasks_imp, tasks_skip, comments_imp, comments_skip = \
+                self._service.import_from_json(file_path, "skip")
+            _clear()
+            print("  Import Summary\n")
+            print(f"  Tasks imported:      {tasks_imp}")
+            print(f"  Tasks skipped:       {tasks_skip}")
+            print(f"  Comments imported:   {comments_imp}")
+            print(f"  Comments skipped:    {comments_skip}")
+        except (FileNotFoundError, ValueError) as e:
+            print(f"\n  Error: {e}")
         print()
         input("  Press Enter to continue...")

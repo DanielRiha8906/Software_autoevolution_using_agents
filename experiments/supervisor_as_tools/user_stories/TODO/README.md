@@ -46,6 +46,68 @@ python -m src delete <id>
 
 Task IDs are UUIDs. In all commands you can use a unique prefix (e.g. the first 8 characters shown by `list`).
 
+## Import / Export
+
+Export all tasks and comments to a JSON file for backup or migration:
+
+**Interactive menu**
+1. Select "10. Import / Export" → "1. Export tasks and comments to file"
+2. Enter output file path
+
+**CLI**
+```bash
+python -m src export --output /path/to/backup.json
+```
+
+Import tasks and comments from an exported file:
+
+**Interactive menu**
+1. Select "10. Import / Export" → "2. Import tasks and comments from file"
+2. Enter input file path
+3. Review summary (imported/skipped counts)
+
+**CLI**
+```bash
+python -m src import --input /path/to/backup.json
+python -m src import --input /path/to/backup.json --merge-mode skip
+```
+
+Merge modes:
+- `skip` (default): Duplicate task/comment IDs are skipped, existing data preserved
+- `overwrite`: Duplicate IDs are updated with imported data
+
+Invalid records (missing fields, bad enum values, orphan comments) are skipped individually with informational messages. The import continues and returns summary counts.
+
+### Export JSON Schema
+
+```json
+{
+  "version": 1,
+  "export_date": "2025-02-15T10:30:00Z",
+  "tasks": [
+    {
+      "id": "uuid",
+      "title": "string",
+      "description": "string or null",
+      "status": "pending|in_progress|done",
+      "created_at": "ISO 8601",
+      "updated_at": "ISO 8601",
+      "due_date": "ISO 8601 or null"
+    }
+  ],
+  "comments": [
+    {
+      "id": "uuid",
+      "task_id": "uuid",
+      "content": "string",
+      "created_at": "ISO 8601",
+      "updated_at": "ISO 8601",
+      "author": "string or null"
+    }
+  ]
+}
+```
+
 ## Task statuses
 
 | Symbol | Status      |

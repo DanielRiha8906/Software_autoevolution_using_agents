@@ -14,6 +14,11 @@ rectangle "TODO Manager" {
     usecase "Delete comment" as DELETE_COMMENT
   }
 
+  package "Import/Export" {
+    usecase "Export tasks and comments to JSON file" as EXPORT
+    usecase "Import tasks and comments from JSON file" as IMPORT
+  }
+
   package "Interactive mode" {
     usecase "Use interactive menu" as UI
     usecase "Add task" as I_ADD
@@ -58,6 +63,8 @@ User --> VIEW_COMMENTS
 User --> VIEW_COMMENT
 User --> UPDATE_COMMENT
 User --> DELETE_COMMENT
+User --> EXPORT
+User --> IMPORT
 
 ADD_COMMENT --> I_SHOW : relates to
 VIEW_COMMENTS --> I_SHOW : relates to
@@ -101,5 +108,10 @@ CLI ..> C_DUEDATE : <<exclude>>
 
 C_ADD ..> C_DUEDATE : <<include>>
 C_UPDATE ..> C_DUEDATE : <<include>>
+
+UI ..> EXPORT : <<exclude>>
+UI ..> IMPORT : <<exclude>>
+CLI ..> EXPORT : <<exclude>>
+CLI ..> IMPORT : <<exclude>>
 
 @enduml
