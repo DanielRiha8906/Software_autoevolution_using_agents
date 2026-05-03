@@ -6,28 +6,53 @@ actor User
 
 rectangle "GitHub Workflow Manager" {
 
-  package "Interactive Mode" {
+  package "Interactive Mode — Runs" {
     usecase "Launch interactive menu"  as UI
     usecase "Add workflow run"         as I_ADD
     usecase "List all runs"            as I_LIST
     usecase "Get run detail"           as I_DETAIL
-    usecase "Filter runs"              as I_FILTER
-    usecase "Filter by branch"         as I_FBRANCH
-    usecase "Filter by status"         as I_FSTATUS
-    usecase "Filter by conclusion"     as I_FCONCL
+    usecase "Advanced filter runs"     as I_FILTER
     usecase "Query workflow state"     as I_QUERY
-    usecase "Exit application"         as I_EXIT
+  }
+
+  package "Interactive Mode — Attempts" {
+    usecase "Add workflow attempt"     as I_AADD
+    usecase "List all attempts"        as I_ALIST
+    usecase "Get attempt detail"       as I_ADETAIL
+    usecase "Advanced filter attempts" as I_AFILTER
+    usecase "Query attempt state"      as I_AQUERY
+  }
+
+  package "Run Filters (Interactive/CLI)" {
+    usecase "Filter by branch"         as FBRANCH
+    usecase "Filter by status"         as FSTATUS
+    usecase "Filter by conclusion"     as FCONCL
+    usecase "Filter by duration"       as FDURATION
+    usecase "Filter by timestamp"      as FTIMESTAMP
+    usecase "Filter by attempts"       as FATTEMPTS
+  }
+
+  package "Attempt Filters (Interactive/CLI)" {
+    usecase "Filter by run ID"         as AFRUN
+    usecase "Filter by status"         as AFSTATUS
+    usecase "Filter by conclusion"     as AFCONCL
+    usecase "Filter by duration"       as AFDURATION
+    usecase "Filter by timestamp"      as AFTIMESTAMP
+  }
+
+  package "Utilities" {
+    usecase "Parse datetime with TZ"   as TZPARSE
+    usecase "Convert to UTC"           as TZKOTC
+    usecase "Format for display"       as TZFMT
   }
 
   package "Command-line Mode" {
     usecase "Run one-shot CLI command" as CLI
     usecase "Add workflow run"         as C_ADD
-    usecase "List runs"                as C_LIST
-    usecase "Filter by branch"         as C_FBRANCH
-    usecase "Filter by status"         as C_FSTATUS
-    usecase "Filter by conclusion"     as C_FCONCL
+    usecase "List runs (with filters)" as C_LIST
     usecase "Get run detail"           as C_DETAIL
     usecase "Query workflow state"     as C_QUERY
+    usecase "Manage attempts"          as C_ATTEMPT
   }
 }
 
@@ -39,19 +64,41 @@ UI --> I_LIST
 UI --> I_DETAIL
 UI --> I_FILTER
 UI --> I_QUERY
-UI --> I_EXIT
+UI --> I_AADD
+UI --> I_ALIST
+UI --> I_ADETAIL
+UI --> I_AFILTER
+UI --> I_AQUERY
 
-I_FILTER --> I_FBRANCH  : <<extend>>
-I_FILTER --> I_FSTATUS  : <<extend>>
-I_FILTER --> I_FCONCL   : <<extend>>
+I_FILTER --> FBRANCH  : <<extend>>
+I_FILTER --> FSTATUS  : <<extend>>
+I_FILTER --> FCONCL   : <<extend>>
+I_FILTER --> FDURATION : <<extend>>
+I_FILTER --> FTIMESTAMP : <<extend>>
+I_FILTER --> FATTEMPTS : <<extend>>
+
+I_AFILTER --> AFRUN : <<extend>>
+I_AFILTER --> AFSTATUS : <<extend>>
+I_AFILTER --> AFCONCL : <<extend>>
+I_AFILTER --> AFDURATION : <<extend>>
+I_AFILTER --> AFTIMESTAMP : <<extend>>
+
+I_FILTER --> TZPARSE : <<uses>>
+I_AFILTER --> TZPARSE : <<uses>>
 
 CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
 CLI --> C_QUERY
+CLI --> C_ATTEMPT
 
-C_LIST --> C_FBRANCH  : <<extend>>
-C_LIST --> C_FSTATUS  : <<extend>>
-C_LIST --> C_FCONCL   : <<extend>>
+C_LIST --> FBRANCH : <<extend>>
+C_LIST --> FSTATUS : <<extend>>
+C_LIST --> FCONCL : <<extend>>
+C_LIST --> FDURATION : <<extend>>
+C_LIST --> FTIMESTAMP : <<extend>>
+C_LIST --> FATTEMPTS : <<extend>>
+
+C_LIST --> TZPARSE : <<uses>>
 
 @enduml

@@ -9,6 +9,7 @@ from ..models.workflow_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_attempt_service import WorkflowAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..utils.timezone_converter import parse_datetime_with_timezone
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -88,6 +89,53 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[c.value for c in WorkflowConclusion],
         help="Filter by conclusion",
     )
+    list_p.add_argument(
+        "--duration-min",
+        type=float,
+        default=None,
+        help="Minimum duration in seconds",
+    )
+    list_p.add_argument(
+        "--duration-max",
+        type=float,
+        default=None,
+        help="Maximum duration in seconds",
+    )
+    list_p.add_argument(
+        "--created-before",
+        default=None,
+        help="Filter by created_at before (ISO format, e.g., 2026-05-03T10:00:00)",
+    )
+    list_p.add_argument(
+        "--created-after",
+        default=None,
+        help="Filter by created_at after (ISO format, e.g., 2026-05-03T10:00:00)",
+    )
+    list_p.add_argument(
+        "--updated-before",
+        default=None,
+        help="Filter by updated_at before (ISO format, e.g., 2026-05-03T10:00:00)",
+    )
+    list_p.add_argument(
+        "--updated-after",
+        default=None,
+        help="Filter by updated_at after (ISO format, e.g., 2026-05-03T10:00:00)",
+    )
+    list_p.add_argument(
+        "--with-attempts",
+        action="store_true",
+        help="Filter to only runs with attempts",
+    )
+    list_p.add_argument(
+        "--without-attempts",
+        action="store_true",
+        help="Filter to only runs without attempts",
+    )
+    list_p.add_argument(
+        "--timezone",
+        default="UTC",
+        help="Timezone for timestamp input (default: UTC, e.g., Europe/Paris)",
+    )
 
     # detail
     detail_p = sub.add_parser("detail", help="Show details for a single run")
@@ -137,6 +185,43 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[c.value for c in WorkflowConclusion],
         help="Filter by conclusion",
     )
+    attempt_list_p.add_argument(
+        "--duration-min",
+        type=float,
+        default=None,
+        help="Minimum duration in seconds",
+    )
+    attempt_list_p.add_argument(
+        "--duration-max",
+        type=float,
+        default=None,
+        help="Maximum duration in seconds",
+    )
+    attempt_list_p.add_argument(
+        "--started-before",
+        default=None,
+        help="Filter by started_at before (ISO format, e.g., 2026-05-03T10:00:00)",
+    )
+    attempt_list_p.add_argument(
+        "--started-after",
+        default=None,
+        help="Filter by started_at after (ISO format, e.g., 2026-05-03T10:00:00)",
+    )
+    attempt_list_p.add_argument(
+        "--completed-before",
+        default=None,
+        help="Filter by completed_at before (ISO format, e.g., 2026-05-03T10:00:00)",
+    )
+    attempt_list_p.add_argument(
+        "--completed-after",
+        default=None,
+        help="Filter by completed_at after (ISO format, e.g., 2026-05-03T10:00:00)",
+    )
+    attempt_list_p.add_argument(
+        "--timezone",
+        default="UTC",
+        help="Timezone for timestamp input (default: UTC, e.g., Europe/Paris)",
+    )
 
     # attempt detail
     attempt_detail_p = attempt_sub.add_parser("detail", help="Show details for a single attempt")
@@ -168,13 +253,49 @@ def run_cli(service: WorkflowRunService, attempt_service: WorkflowAttemptService
         print(f"Added run {run.id}")
 
     elif ns.command == "list":
-        runs = service.list_runs()
-        if ns.branch:
-            runs = service.filter_by_branch(ns.branch)
-        elif ns.status:
-            runs = service.filter_by_status(WorkflowStatus(ns.status))
-        elif ns.conclusion:
-            runs = service.filter_by_conclusion(WorkflowConclusion(ns.conclusion))
+        # Parse timestamp filters with timezone support
+        created_before = None
+        created_after = None
+        updated_before = None
+        updated_after = None
+
+        try:
+            if ns.created_before:
+                created_before = parse_datetime_with_timezone(ns.created_before, ns.timezone)
+            if ns.created_after:
+                created_after = parse_datetime_with_timezone(ns.created_after, ns.timezone)
+            if ns.updated_before:
+                updated_before = parse_datetime_with_timezone(ns.updated_before, ns.timezone)
+            if ns.updated_after:
+                updated_after = parse_datetime_with_timezone(ns.updated_after, ns.timezone)
+        except ValueError as e:
+            print(f"Error parsing timestamp: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        # Handle mutually exclusive attempts filters
+        with_attempts = None
+        if ns.with_attempts and ns.without_attempts:
+            print("Error: --with-attempts and --without-attempts are mutually exclusive.", file=sys.stderr)
+            sys.exit(1)
+        if ns.with_attempts:
+            with_attempts = True
+        elif ns.without_attempts:
+            with_attempts = False
+
+        # Use composite filter
+        runs = service.filter_runs(
+            branch=ns.branch,
+            status=WorkflowStatus(ns.status) if ns.status else None,
+            conclusion=WorkflowConclusion(ns.conclusion) if ns.conclusion else None,
+            duration_min_seconds=ns.duration_min,
+            duration_max_seconds=ns.duration_max,
+            created_before=created_before,
+            created_after=created_after,
+            updated_before=updated_before,
+            updated_after=updated_after,
+            with_attempts=with_attempts,
+            attempt_service=attempt_service,
+        )
 
         if not runs:
             print("No runs found.")
@@ -224,13 +345,37 @@ def run_cli(service: WorkflowRunService, attempt_service: WorkflowAttemptService
             print(f"Added attempt {attempt.id}")
 
         elif ns.attempt_command == "list":
-            attempts = attempt_service.list_attempts()
-            if ns.run_id:
-                attempts = attempt_service.filter_by_run_id(ns.run_id)
-            elif ns.status:
-                attempts = attempt_service.filter_by_status(WorkflowStatus(ns.status))
-            elif ns.conclusion:
-                attempts = attempt_service.filter_by_conclusion(WorkflowConclusion(ns.conclusion))
+            # Parse timestamp filters with timezone support
+            started_before = None
+            started_after = None
+            completed_before = None
+            completed_after = None
+
+            try:
+                if ns.started_before:
+                    started_before = parse_datetime_with_timezone(ns.started_before, ns.timezone)
+                if ns.started_after:
+                    started_after = parse_datetime_with_timezone(ns.started_after, ns.timezone)
+                if ns.completed_before:
+                    completed_before = parse_datetime_with_timezone(ns.completed_before, ns.timezone)
+                if ns.completed_after:
+                    completed_after = parse_datetime_with_timezone(ns.completed_after, ns.timezone)
+            except ValueError as e:
+                print(f"Error parsing timestamp: {e}", file=sys.stderr)
+                sys.exit(1)
+
+            # Use composite filter
+            attempts = attempt_service.filter_attempts(
+                run_id=ns.run_id,
+                status=WorkflowStatus(ns.status) if ns.status else None,
+                conclusion=WorkflowConclusion(ns.conclusion) if ns.conclusion else None,
+                duration_min_seconds=ns.duration_min,
+                duration_max_seconds=ns.duration_max,
+                started_before=started_before,
+                started_after=started_after,
+                completed_before=completed_before,
+                completed_after=completed_after,
+            )
 
             if not attempts:
                 print("No attempts found.")

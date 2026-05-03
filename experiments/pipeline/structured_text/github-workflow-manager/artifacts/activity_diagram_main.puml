@@ -17,25 +17,53 @@ if (CLI arguments provided?) then (yes)
       :WorkflowRunTracker.track();
       :Print "Added run <id>";
 
-    case (create-attempt)
-      :Read run-id, attempt-number, status\nconclusion, completed-at,\nduration-seconds, logs-url;
-      :WorkflowAttemptTracker.create_attempt();
-      if (validation error?\n(duplicate id or\n(run_id, attempt_number)?) then (yes)
-        :Print error message to stderr;
-        :Exit code 1;
-      else (no)
-        :Print "Created attempt <id>";
-      endif
+    case (attempt)
+      switch (attempt subcommand)
+        case (add)
+          :Read run-id, attempt-number, status\nconclusion, completed-at,\nduration-seconds, logs-url;
+          :WorkflowAttemptTracker.create_attempt();
+          if (validation error?) then (yes)
+            :Print error message to stderr;
+            :Exit code 1;
+          else (no)
+            :Print "Added attempt <id>";
+          endif
+        case (list)
+          :Parse composite filter flags:\n--run-id, --status, --conclusion,\n--duration-min/max,\n--started-before/after,\n--completed-before/after,\n--timezone;
+          if (timezone-specific\ntimestamps?) then (yes)
+            :parse_datetime_with_timezone();
+          endif
+          :WorkflowAttemptService.filter_attempts()\n(composite filter);
+          if (no attempts?) then (yes)
+            :Print "No attempts found.";
+          else (no)
+            :Print formatted attempt list;
+          endif
+        case (detail)
+          :WorkflowAttemptService.get_attempt_detail(attempt_id);
+          if (attempt found?) then (yes)
+            :Print attempt details;
+          else (no)
+            :Print error to stderr;
+            :Exit code 1;
+          endif
+        case (query-state)
+          :WorkflowAttemptService.get_attempt_detail(attempt_id);
+          if (attempt found?) then (yes)
+            :Query state:\n  is_terminal()\n  is_running()\n  is_successful()\n  is_failed()\n  is_cancelled();
+            :Print attempt state;
+          else (no)
+            :Print error to stderr;
+            :Exit code 1;
+          endif
+      endswitch
 
     case (list)
-      :WorkflowRunService.list_runs();
-      if (--branch?) then (yes)
-        :filter_by_branch();
-      elseif (--status?) then (yes)
-        :filter_by_status();
-      elseif (--conclusion?) then (yes)
-        :filter_by_conclusion();
+      :Parse composite filter flags:\n--branch, --status, --conclusion,\n--duration-min/max,\n--created-before/after,\n--updated-before/after,\n--with/without-attempts,\n--timezone;
+      if (timezone-specific\ntimestamps?) then (yes)
+        :parse_datetime_with_timezone();
       endif
+      :WorkflowRunService.filter_runs()\n(composite filter);
       if (no runs?) then (yes)
         :Print "No runs found.";
       else (no)
@@ -51,22 +79,10 @@ if (CLI arguments provided?) then (yes)
         :Exit code 1;
       endif
 
-    case (list-attempts)
-      :WorkflowAttemptService.filter_by_run_id(run_id);
-      note right
-        Returns attempts sorted by
-        attempt_number (ascending)
-      end note
-      if (no attempts?) then (yes)
-        :Print "No attempts for this run.";
-      else (no)
-        :Print formatted attempt list\n(sorted by attempt_number);
-      endif
-
     case (query-state)
       :WorkflowRunService.get_run_detail(run_id);
       if (run found?) then (yes)
-        :Query state using:\n  is_terminal()\n  is_running()\n  is_successful()\n  is_failed()\n  is_cancelled();
+        :Query state:\n  is_terminal()\n  is_running()\n  is_successful()\n  is_failed()\n  is_cancelled();
         :Print workflow state;
       else (no)
         :Print error to stderr;
