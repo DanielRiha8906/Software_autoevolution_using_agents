@@ -245,4 +245,4 @@ One-shot flags:
 - No regressions in existing functionality
 - Full integration testing verified
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 595.3s | Cost: $1.896795 USD | Turns: 51
