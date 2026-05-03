@@ -272,4 +272,4 @@ Duration: 410.3s | Cost: $0.852108 USD | Turns: 19
 - Output format is deterministic (same result for same task set every time)
 - All 150 existing tests continue to pass
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 394.1s | Cost: $0.784273 USD | Turns: 20
