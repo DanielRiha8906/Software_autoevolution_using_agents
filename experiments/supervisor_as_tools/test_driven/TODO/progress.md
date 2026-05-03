@@ -296,4 +296,4 @@ Successfully implemented TaskStatisticsService with a TaskStatistics dataclass t
 - Deterministic output: same input always produces same output
 - Overdue handling: uses existing Task.is_overdue() method
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 397.7s | Cost: $0.877788 USD | Turns: 19
