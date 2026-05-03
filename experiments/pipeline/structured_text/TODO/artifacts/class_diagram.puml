@@ -89,6 +89,7 @@ package "utils" #F0E5FF {
 package "services" #DDFFD4 {
     exception TaskNotFoundError
     exception CommentNotFoundError
+    exception ImportExportError
 
     class TaskManager {
         -storage : JsonStorage
@@ -143,10 +144,42 @@ package "services" #DDFFD4 {
         +get_comments(task_id: String) : List<TaskComment>
         +delete_comment(comment_id: String) : void
         +get_statistics() : TaskStatistics
+        +export_tasks_and_comments(filepath: String) : tuple[int, int]
+        +import_tasks_and_comments(filepath: String, mode: String) : tuple[int, int, int]
     }
     note right of TodoService
         delete_task() cascades: deletes all comments
         for the task before deleting the task
+        export_tasks_and_comments() delegates to ExportService
+        import_tasks_and_comments() delegates to ImportService
+    end note
+
+    class ExportService {
+        -task_manager : TaskManager
+        -comment_manager : CommentManager
+        --
+        +ExportService(task_manager: TaskManager, comment_manager: CommentManager)
+        +export_to_file(filepath: String) : tuple[int, int]
+    }
+    note right of ExportService
+        Exports all tasks and comments to JSON file.
+        Returns (tasks_exported, comments_exported).
+        Raises ImportExportError if file cannot be written.
+    end note
+
+    class ImportService {
+        -task_manager : TaskManager
+        -comment_manager : CommentManager
+        --
+        +ImportService(task_manager: TaskManager, comment_manager: CommentManager)
+        +import_from_file(filepath: String, mode: String) : tuple[int, int, int]
+        -_validate_schema(data: Dictionary) : void
+    }
+    note right of ImportService
+        Imports tasks and comments from JSON file.
+        Mode: 'fail' (stop on conflict), 'skip' (skip conflicts),
+        or 'replace' (overwrite existing).
+        Returns (tasks_imported, comments_imported, conflicts_detected).
     end note
 }
 
@@ -156,6 +189,8 @@ package "cli" #FFE5E5 {
         --
         +TodoCLI(storage_path: String [0..1])
         +run(argv: List<String> [0..1]) : Integer
+        -_cmd_export(args: Namespace) : Integer
+        -_cmd_import(args: Namespace) : Integer
     }
 
     class InteractiveMenu {
@@ -163,6 +198,9 @@ package "cli" #FFE5E5 {
         --
         +InteractiveMenu(storage_path: String [0..1])
         +run() : void
+        -_do_import_export() : void
+        -_do_export() : void
+        -_do_import() : void
     }
 }
 
@@ -174,6 +212,14 @@ CommentManager ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
 TodoService --> CommentManager : comment_manager
 TodoService ..> TaskStatistics : returns
+ExportService --> TaskManager : task_manager
+ExportService --> CommentManager : comment_manager
+ExportService ..> ImportExportError : raises
+ImportService --> TaskManager : task_manager
+ImportService --> CommentManager : comment_manager
+ImportService ..> ImportExportError : raises
+TodoService --> ExportService : uses (export)
+TodoService --> ImportService : uses (import)
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 

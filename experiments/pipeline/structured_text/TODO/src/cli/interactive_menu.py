@@ -6,6 +6,7 @@ from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..services.comment_manager import CommentNotFoundError
+from ..services.import_export_service import ImportExportError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -90,6 +91,8 @@ class InteractiveMenu:
                 self._do_manage_comments(tasks)
             elif choice == "10":
                 self._do_statistics()
+            elif choice == "11":
+                self._do_import_export()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -120,6 +123,7 @@ class InteractiveMenu:
         print("  8. Check if task is overdue")
         print("  9. Manage comments")
         print("  10. View statistics")
+        print("  11. Import / export")
         print("  0. Quit")
         print()
 
@@ -460,4 +464,88 @@ class InteractiveMenu:
         print(f"  Overdue (active):      {stats.overdue_count}")
         print(f"  With due date:         {stats.with_due_date_count}")
         print()
+        input("  Press Enter to continue...")
+
+    def _do_import_export(self) -> None:
+        """Handle import/export submenu."""
+        while True:
+            _clear()
+            print("  Import / Export\n")
+            print("  1. Export tasks and comments")
+            print("  2. Import tasks and comments")
+            print("  0. Back\n")
+
+            choice = input("  > ").strip().lower()
+
+            if choice == "0":
+                break
+            elif choice == "1":
+                self._do_export()
+            elif choice == "2":
+                self._do_import()
+            else:
+                input("  Unknown option. Press Enter to continue...")
+
+    def _do_export(self) -> None:
+        """Export tasks and comments to a JSON file."""
+        _clear()
+        print("  Export Tasks and Comments\n")
+        filepath = _prompt("Enter file path to export to")
+        if not filepath:
+            input("  No path provided. Press Enter to continue...")
+            return
+
+        try:
+            tasks_exported, comments_exported = self._service.export_tasks_and_comments(filepath)
+            print()
+            print(f"  Successfully exported {tasks_exported} task(s) and {comments_exported} comment(s)")
+            print(f"  to: {filepath}")
+        except ImportExportError as e:
+            print()
+            print(f"  Error: {e}")
+        except Exception as e:
+            print()
+            print(f"  Unexpected error: {e}")
+
+        input("  Press Enter to continue...")
+
+    def _do_import(self) -> None:
+        """Import tasks and comments from a JSON file."""
+        _clear()
+        print("  Import Tasks and Comments\n")
+        filepath = _prompt("Enter file path to import from")
+        if not filepath:
+            input("  No path provided. Press Enter to continue...")
+            return
+
+        print()
+        print("  How to handle ID conflicts?")
+        print("  1. fail   - Stop if any IDs already exist (default)")
+        print("  2. skip   - Skip conflicting records, keep existing data")
+        print("  3. replace - Overwrite existing records with imported data\n")
+
+        mode_choice = input("  > ").strip().lower()
+        mode_map = {"1": "fail", "2": "skip", "3": "replace"}
+        mode = mode_map.get(mode_choice, "fail")
+
+        try:
+            tasks_imported, comments_imported, conflicts = self._service.import_tasks_and_comments(
+                filepath, mode=mode
+            )
+            print()
+            print(f"  Successfully imported {tasks_imported} task(s) and {comments_imported} comment(s)")
+            if conflicts > 0:
+                if mode == "fail":
+                    print(f"  Warning: {conflicts} conflict(s) detected (mode=fail)")
+                elif mode == "skip":
+                    print(f"  Skipped {conflicts} conflicting record(s) (mode=skip)")
+                elif mode == "replace":
+                    print(f"  Replaced {conflicts} existing record(s) (mode=replace)")
+        except ImportExportError as e:
+            print()
+            print(f"  Error: {e}")
+        except Exception as e:
+            print()
+            print(f"  Unexpected error: {e}")
+
         input("  Press Enter to continue...")
