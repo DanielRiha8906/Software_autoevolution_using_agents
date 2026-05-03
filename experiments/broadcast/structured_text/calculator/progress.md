@@ -609,4 +609,4 @@ Key design decisions:
 4. Replace mode requires explicit user confirmation in interactive mode
 5. Returns (count, errors) tuple to allow graceful handling of partial failures
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 541.8s | Cost: $2.712057 USD | Turns: 61
