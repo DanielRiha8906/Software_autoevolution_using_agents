@@ -139,7 +139,29 @@ repeat
         :Print error message;
       endif
 
-    case (12 — Exit)
+    case (12 — Fetch from GitHub)
+      :Prompt repository owner;
+      :Prompt repository name;
+      :Prompt workflow ID/filename (optional);
+      :Choose incremental mode (yes/no);
+      if (incremental?) then (yes)
+        :Get latest stored run timestamp;
+        :GitHubFetchService.fetch_incremental();
+      else (no)
+        :GitHubFetchService.fetch_workflow_runs();
+      endif
+      if (success?) then (yes)
+        if (no runs fetched?) then (yes)
+          :Print "No workflow runs fetched from GitHub.";
+        else (no)
+          :Add fetched runs to storage;
+          :Print fetch/add/skip counts;
+        endif
+      else (no)
+        :Print error message;
+      endif
+
+    case (13 — Exit)
       :Print "Goodbye.";
       stop
 
