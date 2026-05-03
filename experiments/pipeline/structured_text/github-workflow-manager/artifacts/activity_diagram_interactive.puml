@@ -10,7 +10,7 @@ start
 
 repeat
 
-  :Display main menu:\n1. Workflow Runs\n2. Workflow Attempts\n3. View Statistics\n4. Exit;
+  :Display main menu:\n1. Workflow Runs\n2. Workflow Attempts\n3. View Statistics\n4. Export/Import Data\n5. Fetch from GitHub\n6. Exit;
   :Wait for user selection;
 
   if (Exit?) then (yes)
@@ -157,6 +157,30 @@ repeat
             break
         endswitch
       repeat while (user continues in portability menu)
+    else (Fetch from GitHub)
+      :Prompt GitHub owner;
+      :Prompt GitHub repo;
+      :Prompt workflow name (optional);
+      :Choose fetch mode: api or cli;
+      :Choose token source:\n- GITHUB_TOKEN env\n- secrets/.env file\n- Prompt now;
+      :GitHubIntegrationService.fetch_runs();
+      if (runs fetched?) then (yes)
+        :Display fetched runs;
+        :Add to WorkflowRunService (skip duplicates);
+        if (fetch attempts?) then (yes)
+          :Select run for attempts;
+          :GitHubIntegrationService.fetch_run_attempts();
+          if (attempts fetched?) then (yes)
+            :Add to WorkflowAttemptService (skip duplicates);
+            :Print summary;
+          else (no)
+            :Print "No attempts found";
+          endif
+        endif
+        :Print summary: added/skipped counts;
+      else (no)
+        :Print "No runs found";
+      endif
     endif
   endif
 

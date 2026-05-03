@@ -26,6 +26,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowAttemptService" as ASVC
     component "WorkflowStatisticsService" as STATS
     component "WorkflowDataPortabilityService" as PORTABILITY
+    component "GitHubIntegrationService" as GITHUB
   }
 
   package "Persistence layer" {
@@ -51,6 +52,7 @@ MAIN --> IM
 
 CLI --> TZ
 IM --> TZ
+IM --> GITHUB
 
 CLI --> TRACKER
 IM --> TRACKER
@@ -81,6 +83,9 @@ PORTABILITY --> SVC
 PORTABILITY --> ASVC
 PORTABILITY --> EXP_RUNS_FILE
 PORTABILITY --> EXP_ATTEMPTS_FILE
+
+GITHUB ..> RUN : returns
+GITHUB ..> ATTEMPT : returns
 
 SVC ..> RUN
 RUN --> STATUS

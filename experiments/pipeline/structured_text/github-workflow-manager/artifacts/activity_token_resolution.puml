@@ -1,0 +1,73 @@
+@startuml activity_token_resolution
+
+skinparam activityBackgroundColor #DDEEFF
+skinparam activityBorderColor     #3366AA
+skinparam activityDiamondBackgroundColor #FFF3CC
+
+start
+
+:Attempt 1: Check GITHUB_TOKEN\nenvironment variable;
+
+if (GITHUB_TOKEN is set?) then (yes)
+  :Return token\n(from environment);
+  stop
+else (no)
+endif
+
+:Attempt 2: Check secrets/.env file;
+
+if (File "secrets/.env" exists?) then (yes)
+  :Read file line by line;
+  :Find line matching\nGITHUB_TOKEN=*;
+
+  if (GITHUB_TOKEN= found?) then (yes)
+    :Extract token value\nafter '=';
+    :Trim whitespace;
+
+    if (token is not empty?) then (yes)
+      :Return token\n(from secrets file);
+      stop
+    else (empty)
+      :Continue to next attempt;
+    endif
+  else (not found)
+    :Continue to next attempt;
+  endif
+
+  note on the right
+    If file read fails
+    (IOError, OSError):
+    • Log warning
+    • Continue to next attempt
+  end note
+else (no)
+  :Continue to next attempt;
+endif
+
+:Attempt 3: Prompt user interactively;
+
+if (User provides input?) then (yes)
+  :input("GitHub token (or press Ctrl+C to cancel): ");
+
+  if (User pressed Ctrl+C?) then (yes)
+    :Raise RuntimeError:\n"Token input cancelled by user";
+    stop
+  else (user entered text)
+  endif
+
+  :Capture input;
+  :Trim whitespace;
+
+  if (input is not empty?) then (yes)
+    :Return token\n(from user input);
+    stop
+  else (empty input)
+    :Raise RuntimeError:\n"No token provided";
+    stop
+  endif
+else (user pressed Ctrl+C)
+  :Raise RuntimeError:\n"Token input cancelled by user";
+  stop
+endif
+
+@enduml

@@ -1,5 +1,6 @@
 import argparse
 import json
+import logging
 import sys
 from datetime import datetime, timezone
 
@@ -12,7 +13,11 @@ from ..services.workflow_attempt_service import WorkflowAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.workflow_statistics_service import WorkflowStatisticsService
 from ..services.workflow_data_portability_service import WorkflowDataPortabilityService
+from ..services.github_integration_service import GitHubIntegrationService
 from ..utils.timezone_converter import parse_datetime_with_timezone
+
+
+logger = logging.getLogger(__name__)
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -273,6 +278,25 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip attempts with duplicate IDs instead of raising error",
     )
 
+    # fetch
+    fetch_p = sub.add_parser("fetch", help="Fetch workflow runs from GitHub")
+    fetch_sub = fetch_p.add_subparsers(dest="fetch_command", required=True)
+
+    fetch_runs_p = fetch_sub.add_parser("runs", help="Fetch workflow runs from GitHub")
+    fetch_runs_p.add_argument("--owner", required=True, help="GitHub repository owner")
+    fetch_runs_p.add_argument("--repo", required=True, help="GitHub repository name")
+    fetch_runs_p.add_argument("--workflow", default=None, help="Filter by workflow name (optional)")
+    fetch_runs_p.add_argument("--limit", type=int, default=30, help="Maximum runs to fetch (default 30)")
+    fetch_runs_p.add_argument("--mode", choices=["api", "cli"], default="api", help="Fetch mode (default api)")
+    fetch_runs_p.add_argument("--token", default=None, help="GitHub token (optional, uses env/file if omitted)")
+
+    fetch_attempts_p = fetch_sub.add_parser("attempts", help="Fetch workflow attempts from GitHub")
+    fetch_attempts_p.add_argument("--owner", required=True, help="GitHub repository owner")
+    fetch_attempts_p.add_argument("--repo", required=True, help="GitHub repository name")
+    fetch_attempts_p.add_argument("--run-id", required=True, help="Workflow run ID")
+    fetch_attempts_p.add_argument("--mode", choices=["api", "cli"], default="api", help="Fetch mode")
+    fetch_attempts_p.add_argument("--token", default=None, help="GitHub token (optional)")
+
     return parser
 
 
@@ -281,6 +305,7 @@ def run_cli(
     attempt_service: WorkflowAttemptService = None,
     stats_service: WorkflowStatisticsService = None,
     portability_service=None,
+    github_service: GitHubIntegrationService = None,
     args=None,
 ) -> None:
     parser = build_parser()
@@ -529,4 +554,79 @@ def run_cli(
                     print(f"Failed to import {result['failed']} attempt(s)")
         except Exception as e:
             print(f"Error importing data: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "fetch":
+        if github_service is None:
+            print("GitHub integration service not initialized.", file=sys.stderr)
+            sys.exit(1)
+
+        try:
+            # Create a fresh service instance with specified fetch mode
+            github_service = GitHubIntegrationService(fetch_mode=ns.mode)
+
+            if ns.fetch_command == "runs":
+                # Fetch runs from GitHub
+                runs = github_service.fetch_runs(
+                    owner=ns.owner,
+                    repo=ns.repo,
+                    workflow_name=ns.workflow,
+                    limit=ns.limit,
+                    token=ns.token,
+                )
+
+                # Add runs to service
+                tracker = WorkflowRunTracker(service, attempt_service)
+                added_count = 0
+                skipped_count = 0
+
+                for run in runs:
+                    try:
+                        # Check if run already exists
+                        try:
+                            service.get_run_detail(run.id)
+                            skipped_count += 1
+                            logger.info(f"Skipped duplicate run {run.id}")
+                        except ValueError:
+                            # Run doesn't exist, add it
+                            service.add_workflow_run(run)
+                            added_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to add run {run.id}: {e}")
+
+                print(f"Fetched {len(runs)} run(s) from {ns.owner}/{ns.repo}")
+                print(f"Added {added_count} run(s), skipped {skipped_count} duplicate(s)")
+
+            elif ns.fetch_command == "attempts":
+                # Fetch attempts for a specific run
+                attempts = github_service.fetch_run_attempts(
+                    owner=ns.owner,
+                    repo=ns.repo,
+                    run_id=ns.run_id,
+                    token=ns.token,
+                )
+
+                # Add attempts to service
+                added_count = 0
+                skipped_count = 0
+
+                for attempt in attempts:
+                    try:
+                        # Check if attempt already exists
+                        try:
+                            attempt_service.get_attempt_detail(attempt.id)
+                            skipped_count += 1
+                            logger.info(f"Skipped duplicate attempt {attempt.id}")
+                        except ValueError:
+                            # Attempt doesn't exist, add it
+                            attempt_service.add_attempt(attempt)
+                            added_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to add attempt {attempt.id}: {e}")
+
+                print(f"Fetched {len(attempts)} attempt(s) for run {ns.run_id}")
+                print(f"Added {added_count} attempt(s), skipped {skipped_count} duplicate(s)")
+
+        except Exception as e:
+            print(f"Error fetching from GitHub: {e}", file=sys.stderr)
             sys.exit(1)

@@ -406,3 +406,96 @@ All tests pass including:
 - Graceful degradation: With skip_duplicates=True, import continues and reports skipped/failed counts
 
 Duration: 714.4s | Cost: $1.675553 USD | Turns: 14
+
+## Task 08: GitHub Integration (Fetch Workflow Runs and Attempts)
+
+### Task Summary
+Implemented optional GitHub integration to fetch workflow runs and attempts from GitHub via REST API or `gh` CLI, with secure token resolution and conversion to domain models. All functionality is accessible via both interactive menu and CLI with comprehensive error handling.
+
+### Files Changed
+
+**New Files:**
+- `src/services/github_integration_service.py` — NEW: GitHubIntegrationService class with token resolution, validation, and GitHub API/CLI integration
+- `tests/test_github_integration_service.py` — NEW: 81 comprehensive tests for all service methods and error scenarios
+
+**Modified Files:**
+- `src/__main__.py` — Initialize GitHubIntegrationService with fetch_mode="api" and wire to CLI/menu
+- `src/cli/workflow_cli.py` — Added `fetch` subcommand with `runs` and `attempts` sub-subcommands, argument parsing, handlers with duplicate detection
+- `src/cli/interactive_menu.py` — Added "Fetch from GitHub" menu option and _github_fetch_menu() function with interactive prompts
+- `src/services/__init__.py` — Export GitHubIntegrationService
+- `artifacts/class_diagram.puml` — Added GitHubIntegrationService class with all methods and relationships
+- `artifacts/component_diagram.puml` — Integrated GitHubIntegrationService into Service layer
+- `artifacts/activity_diagram_interactive.puml` — Added complete "Fetch from GitHub" interactive flow
+- `artifacts/use_case_diagram.puml` — Added GitHub Integration package with 5 use cases
+- `artifacts/sequence_github_integration.puml` — NEW: End-to-end sequence diagram for fetch flows
+- `artifacts/activity_token_resolution.puml` — NEW: Detailed token resolution flow diagram
+
+### Test Result
+✓ **514 tests passed** (1.32s)
+
+All tests pass including:
+- 10 token resolution tests (env var → secrets file → prompt priority)
+- 9 token validation tests (API and CLI modes, error handling)
+- 6 timestamp parsing tests (Z suffix, microseconds, timezone handling)
+- 9 API run conversion tests (field mapping, enum validation, duration calculation)
+- 9 API attempt conversion tests (field mapping, missing fields, duration calculation)
+- 9 REST API fetch tests (success, filtering, error handling)
+- 4 gh CLI fetch tests (success, invalid JSON, command failures)
+- 7 REST API attempts fetch tests (success, network errors, invalid data)
+- 4 gh CLI attempts fetch tests (success, invalid JSON, missing keys)
+- 4 gh CLI command execution tests
+- 2 token override tests
+- 8 edge case tests (enum variations, special characters, long durations)
+- 433 pre-existing tests (maintained backward compatibility)
+
+### Implementation Details
+
+**Must Have (All Completed):**
+- ✓ Added mode: `github_fetch_mode` accessible via CLI and interactive menu
+- ✓ Fetch workflow runs via GitHub REST API (using `requests` library)
+- ✓ Fetch workflow runs via `gh` CLI (subprocess calls)
+- ✓ Convert fetched GitHub API data into WorkflowRun and WorkflowRunAttempt domain models
+- ✓ Token resolution priority:
+  1. `GITHUB_TOKEN` environment variable
+  2. `secrets/.env` file in project root (format: GITHUB_TOKEN=...)
+  3. Interactive prompt (user input via getpass, not persisted)
+- ✓ All functionality accessible via `python -m src` (both CLI `fetch` command and interactive menu)
+
+**Should Have (All Completed):**
+- ✓ Handle API errors gracefully (network errors, invalid tokens, rate limits, malformed responses)
+- ✓ Validate token before making requests (shallow API call to /user endpoint)
+
+**Could Have (Not Implemented):**
+- Incremental fetch (only runs newer than latest stored) — deferred for future enhancement
+
+**Won't Have (Not Applicable):**
+- Full authentication management (OAuth flows, token refresh) — out of scope
+
+**Key Features:**
+- **Dual-mode operation**: REST API (requests library) as default for portability; gh CLI as alternative
+- **Secure token handling**: Environment variable → secrets file → interactive prompt; user-entered tokens not persisted to disk
+- **Comprehensive field mapping**: 
+  - Workflow runs: id → id (string), name → workflow_name, head_branch → branch, status/conclusion → enums, timestamps → UTC datetime
+  - Attempts: id → id (string), attempt_number, status/conclusion → enums, created_at → started_at, completed_at, logs_url constructed from run_id and attempt_number
+- **Duration calculation**: (end_time - start_time).total_seconds() for completed runs/attempts; 0.0 for in-progress
+- **Error handling**: Network errors, 401/403 auth failures, 403 rate limiting, invalid JSON, missing required fields, invalid enum values
+- **Duplicate detection**: Skips existing run/attempt IDs on import with count reporting
+
+**CLI Usage:**
+- `python -m src fetch runs --owner <owner> --repo <repo> [--workflow <name>] [--limit <n>] [--mode api|cli] [--token <token>]`
+- `python -m src fetch attempts --owner <owner> --repo <repo> --run-id <id> [--mode api|cli] [--token <token>]`
+
+**Interactive Menu:**
+- Main menu → "Fetch from GitHub" → Prompts for owner, repo, workflow name, fetch mode, token source
+- Displays fetched runs and offers to fetch attempts for first run
+- Reports added/skipped counts
+
+**GitHub API Endpoints Used:**
+- `GET /repos/{owner}/{repo}/actions/runs?per_page={limit}` — Fetch workflow runs
+- `GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts` — Fetch attempts for a run
+- `GET /user` (validation) — Test token validity
+
+**Dependencies Added:**
+- `requests` library (2.33.1) — Already a standard HTTP library, imported in github_integration_service.py
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
