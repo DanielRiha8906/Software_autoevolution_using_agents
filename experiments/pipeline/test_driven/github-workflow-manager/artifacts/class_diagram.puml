@@ -59,6 +59,14 @@ package "models" #DDEEFF {
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRunAttempt
     }
+
+    class WorkflowStatisticsReport {
+        +count_by_conclusion     : Dict[str, int]
+        +avg_duration_seconds    : float
+        +min_duration_seconds    : float
+        +max_duration_seconds    : float
+        +avg_attempts_per_run    : float
+    }
 }
 
 package "storage" #FFF3CC {
@@ -101,6 +109,13 @@ package "services" #DDFFD4 {
         +create(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
         +get_by_run_id(run_id: int) : List[WorkflowRunAttempt]
     }
+
+    class WorkflowStatisticsService {
+        -_workflow_run_service : WorkflowRunService
+        --
+        +__init__(workflow_run_service: WorkflowRunService) : None
+        +compute(attempt_service: Optional[AttemptService] = None) : WorkflowStatisticsReport
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -130,6 +145,9 @@ WorkflowRunService         ..>  AttemptService : query() uses
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 AttemptService       "1" --> "*" WorkflowRunAttempt : manages
+WorkflowStatisticsService "1" --> "1" WorkflowRunService : -_workflow_run_service
+WorkflowStatisticsService      ..>  AttemptService : compute() uses
+WorkflowStatisticsService      ..>  WorkflowStatisticsReport : returns
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService

@@ -1,350 +1,293 @@
-# Analysis: Query Functionality for WorkflowRunService
+# Analysis: WorkflowStatisticsService Implementation
 
 ## Task Summary
 
-Implement query functionality in `WorkflowRunService` to filter workflow runs by:
-1. **Duration range**: `min_duration` and `max_duration` filters on `duration_seconds` field
-2. **Timestamp range**: `created_before` and `created_after` as timezone-aware datetimes
-3. **Attempt presence**: `has_attempts=True` for runs with ≥1 attempts, `=False` for no attempts
+Implement `WorkflowStatisticsService` to compute aggregate statistics on workflow runs. The service must:
 
-The implementation must integrate with `AttemptService` to check attempt counts per run.
-
----
-
-## Current State of WorkflowRunService
-
-### Location
-- **File**: `/src/services/workflow_run_service.py`
-- **Lines of code**: 38 lines
-
-### Existing Methods
-| Method | Signature | Purpose |
-|--------|-----------|---------|
-| `__init__` | `(storage: WorkflowJsonStorage)` | Initialize with storage backend, load runs into memory |
-| `_persist` | `() -> None` | Write current runs list to storage |
-| `add_workflow_run` | `(run: WorkflowRun) -> WorkflowRun` | Add new run, raise ValueError if duplicate id |
-| `list_runs` | `() -> List[WorkflowRun]` | Return all runs |
-| `get_run_detail` | `(run_id: str) -> Optional[WorkflowRun]` | Fetch single run by id |
-| `filter_by_branch` | `(branch: str) -> List[WorkflowRun]` | Filter by branch field |
-| `filter_by_status` | `(status: WorkflowStatus) -> List[WorkflowRun]` | Filter by status enum |
-| `filter_by_conclusion` | `(conclusion: WorkflowConclusion) -> List[WorkflowRun]` | Filter by conclusion enum |
-
-### Architecture Pattern
-- **In-memory storage**: Loads all runs into `self._runs: List[WorkflowRun]` at init
-- **Lazy evaluation**: Each filter returns a new list (no query optimization)
-- **Persistence**: All mutations call `self._persist()` to update storage
-- **No transactions**: Single-threaded, no concurrency handling
-
-### Data Available for Filtering
-From `WorkflowRun` dataclass:
-```
-id: str
-workflow_name: str
-branch: str
-status: WorkflowStatus
-conclusion: Optional[WorkflowConclusion]
-created_at: datetime               # <-- Available for timestamp filtering
-updated_at: Optional[datetime]
-run_number: Optional[int]
-commit_sha: Optional[str]
-duration_seconds: float = 0.0      # <-- Available for duration filtering
-```
+1. Accept `WorkflowRunService` in constructor
+2. Provide a `compute()` method returning a structured report dataclass
+3. Report must contain:
+   - `count_by_conclusion: dict[WorkflowConclusion, int]` — Counts of runs grouped by conclusion type
+   - `avg_duration_seconds: float` — Mean duration across all runs
+   - `min_duration_seconds: float` — Minimum duration among all runs
+   - `max_duration_seconds: float` — Maximum duration among all runs
+   - `avg_attempts_per_run: float` — Mean attempts across all runs
+4. Handle empty datasets with zeroed values
+5. Include runs with zero attempts in `avg_attempts_per_run` calculation
 
 ---
 
-## What Query Method Signature Should Be
+## Current Architecture State
 
-### Proposed Method: `query()`
+### Service Layer Pattern (Established)
 
-A single composite query method that accepts optional filter parameters:
+The codebase establishes a clear service layer pattern for domain operations:
 
-```python
-def query(
-    self,
-    min_duration: Optional[float] = None,
-    max_duration: Optional[float] = None,
-    created_after: Optional[datetime] = None,
-    created_before: Optional[datetime] = None,
-    has_attempts: Optional[bool] = None,
-    attempt_service: Optional[AttemptService] = None,
-) -> List[WorkflowRun]:
-    """
-    Filter workflow runs by duration, timestamp, and attempt presence.
-    
-    Args:
-        min_duration: Minimum duration_seconds (inclusive). None = no minimum.
-        max_duration: Maximum duration_seconds (inclusive). None = no maximum.
-        created_after: Runs created strictly after this datetime (exclusive).
-                       Expected to be timezone-aware.
-        created_before: Runs created strictly before this datetime (exclusive).
-                        Expected to be timezone-aware.
-        has_attempts: If True, return runs with ≥1 attempts.
-                      If False, return runs with 0 attempts.
-                      If None, ignore attempt count.
-        attempt_service: Required if has_attempts is not None.
-                         Provides access to attempt data.
-    
-    Returns:
-        List of WorkflowRun objects matching all specified filters.
-        Returns empty list if no matches found.
-        Filters are combined with AND logic (all must match).
-    
-    Raises:
-        ValueError: If has_attempts is not None but attempt_service is None.
-        ValueError: If created_after >= created_before (both provided).
-        TypeError: If datetime arguments are not timezone-aware.
-    """
-```
+**WorkflowRunService** (`src/services/workflow_run_service.py`, 137 lines):
+- Constructor: Takes `WorkflowJsonStorage` and loads runs into memory (`self._runs: List[WorkflowRun]`)
+- Public methods: `add_workflow_run()`, `list_runs()`, `get_run_detail()`, `filter_by_*()`, `query()`
+- Private method: `_persist()` to write changes back to storage
+- No statistics/aggregation methods
+- Uses in-memory data structures (List[WorkflowRun])
 
-### Alternative: Multiple Specialized Methods
+**AttemptService** (`src/services/attempt_service.py`, 53 lines):
+- Constructor: Takes no arguments, initializes empty in-memory list (`self._attempts: List[WorkflowRunAttempt]`)
+- Public methods: `create()` for storage, `get_by_run_id()` for retrieval
+- Pure in-memory, no file I/O
+- Provides sorted results (by attempt_number)
 
-Instead of one composite method, could have separate methods:
-- `filter_by_duration(min_duration, max_duration)`
-- `filter_by_created_range(created_after, created_before)`
-- `filter_by_attempt_presence(has_attempts, attempt_service)`
+**WorkflowRunTracker** (`src/services/workflow_run_tracker.py`):
+- Higher-level orchestration service
+- Takes `WorkflowRunService` in constructor
+- Provides convenience methods for tracking new runs
 
-**Recommendation**: Single `query()` method is cleaner and follows principle of least API surface. Specialized methods can be added later if needed. The task doesn't specify which approach, so a single composite method is more pragmatic.
+### Key Service Pattern Rules
+
+1. **Constructor dependency injection** — Services receive dependencies (storage, other services) at init
+2. **Lazy loading** — Data loaded once at init, kept in memory
+3. **No external I/O** — Once loaded, all operations are in-memory
+4. **Deterministic output** — Same inputs produce identical results
+5. **Insertion-order preservation** — Lists maintain insertion order
 
 ---
 
-## How to Query Associated Attempts from AttemptService
+## WorkflowRun Model
 
-### AttemptService Interface
-```python
-class AttemptService:
-    def get_by_run_id(self, run_id: int) -> List[WorkflowRunAttempt]:
-        """
-        Returns all attempts for a run_id, sorted by attempt_number ascending.
-        Returns empty list if no attempts found.
-        """
+**File**: `src/models/workflow_run.py`
+
+### Fields
+```
+id: str                                    # Unique identifier
+workflow_name: str                         # Workflow name
+branch: str                                # Git branch
+status: WorkflowStatus                     # Enum: QUEUED, IN_PROGRESS, COMPLETED, WAITING, REQUESTED, PENDING
+conclusion: Optional[WorkflowConclusion]   # Enum: SUCCESS, FAILURE, CANCELLED, SKIPPED, TIMED_OUT, ACTION_REQUIRED, NEUTRAL, STALE
+created_at: datetime                       # When run was created (timezone-aware)
+updated_at: Optional[datetime]             # When run was last updated
+run_number: Optional[int]                  # GitHub run number
+commit_sha: Optional[str]                  # Git commit SHA
+duration_seconds: float = 0.0              # *** CRITICAL for statistics ***
 ```
 
-### Key Observations
-1. **ID type mismatch**: `WorkflowRun.id` is `str`, but `AttemptService.get_by_run_id()` expects `int`
-   - This is a **critical impedance mismatch** that needs resolution
-   - Two options:
-     - Convert `run.id` to int when querying (assumes id is numeric string)
-     - Query by string id and have AttemptService handle conversion
-     - Accept that some runs may have non-numeric ids and skip attempt filtering
-
-2. **Semantic check for has_attempts**:
-   ```python
-   attempts = attempt_service.get_by_run_id(run_id)
-   has_attempts = len(attempts) >= 1  # or: has_attempts = bool(attempts)
-   ```
-
-3. **No persistence**: AttemptService is in-memory only. At initialization of WorkflowRunService, attempts may not be loaded yet.
-
-### Proposed Integration Code Pattern
-```python
-def query(
-    self,
-    ...,
-    has_attempts: Optional[bool] = None,
-    attempt_service: Optional[AttemptService] = None,
-) -> List[WorkflowRun]:
-    
-    results = list(self._runs)  # Start with all runs
-    
-    # Apply filters...
-    
-    # Attempt presence filter (last, since it requires external service)
-    if has_attempts is not None:
-        if attempt_service is None:
-            raise ValueError("attempt_service required when filtering by has_attempts")
-        
-        filtered = []
-        for run in results:
-            try:
-                attempts = attempt_service.get_by_run_id(int(run.id))
-                run_has_attempts = len(attempts) >= 1
-                if run_has_attempts == has_attempts:
-                    filtered.append(run)
-            except (ValueError, TypeError):
-                # If run.id cannot convert to int, skip this run
-                # (or include/exclude based on interpretation of has_attempts)
-                pass
-        results = filtered
-    
-    return results
-```
+### Critical Methods for Statistics
+- `is_terminal()` — Returns True if status == COMPLETED
+- `is_successful()`, `is_failed()`, `is_cancelled()` — Check conclusion against COMPLETED status
 
 ---
 
-## Edge Cases and Considerations
+## WorkflowRunAttempt Model
 
-### Timezone Handling
-**Current state of created_at in WorkflowRun**:
-- Type: `datetime` (may or may not be timezone-aware)
-- Serialized: Via `.isoformat()` in `to_dict()` and `datetime.fromisoformat()` in `from_dict()`
-- **Problem**: No guarantee that loaded datetimes are timezone-aware
+**File**: `src/models/workflow_run_attempt.py`
 
-**Issues**:
-1. Comparisons with timezone-aware arguments will fail if `created_at` is naive (no tzinfo)
-2. Test fixtures use `datetime.now(timezone.utc)` (aware), but JSON roundtrip may lose tzinfo
-
-**Handling strategy**:
-- Document requirement that `created_at` must be timezone-aware
-- Validate input datetime arguments are timezone-aware
-- If `created_at` is naive, either:
-  - Raise `TypeError` (strict interpretation)
-  - Assume UTC and proceed (lenient, may cause bugs)
-  - Filter such runs out (conservative)
-
-**Recommendation**: Raise `TypeError` if comparison is attempted with naive datetime.
-
-### Duration Range Filtering
-**Edge cases**:
-- `min_duration=0, max_duration=0`: Should match runs with exactly 0 seconds
-- `min_duration=10.5, max_duration=10.5`: Should match runs with exactly 10.5 seconds
-- `min_duration=None, max_duration=5.0`: All runs with duration ≤ 5.0
-- Negative durations: `WorkflowRun.__post_init__()` already rejects these, so not a concern
-
-**Handling**:
-```python
-if min_duration is not None and run.duration_seconds < min_duration:
-    continue
-if max_duration is not None and run.duration_seconds > max_duration:
-    continue
+### Fields
+```
+id: int                                    # Unique identifier
+run_id: int                                # Foreign key to WorkflowRun
+attempt_number: int                        # 1-based attempt count (1, 2, 3...)
+status: str                                # Attempt status (string, not enum)
+conclusion: str                            # Attempt conclusion (string, not enum)
+created_at: datetime                       # When attempt was created (CEST timezone required)
+duration_seconds: Optional[float] = None   # Optional attempt duration
 ```
 
-### Timestamp Range Filtering
-**Edge cases**:
-- Both `created_after` and `created_before` specified: Verify range is valid (after < before)
-- `created_after` only: Match all runs created after this point
-- `created_before` only: Match all runs created before this point
-- `created_after == created_before`: Should match zero runs (exclusive bounds)
-
-**Inclusive vs exclusive bounds**:
-- Task says "timestamp range" but doesn't specify inclusive/exclusive
-- Typical interpretation: `created_after < created_at < created_before` (exclusive on both ends)
-- More intuitive for users: `created_after <= created_at <= created_before` (inclusive)
-- **Assumption**: Use **exclusive bounds** (`<` and `>`) to align with common query patterns
-
-**Validation**:
-```python
-if created_after is not None and created_before is not None:
-    if created_after >= created_before:
-        raise ValueError("created_after must be strictly before created_before")
-```
-
-### Attempt Presence with ID Conversion
-**Problem**: `WorkflowRun.id` is `str`, `get_by_run_id()` expects `int`
-
-**Known scenarios**:
-1. Run ID is numeric string (e.g., "123") → `int(run.id)` succeeds
-2. Run ID is non-numeric (e.g., "abc") → `int(run.id)` raises `ValueError`
-3. Attempting to match based on string vs int IDs
-
-**Options for handling**:
-1. **Strict**: Reject any non-numeric run IDs with clear error message
-2. **Lenient**: Catch `ValueError` during conversion, exclude that run from attempt filtering
-3. **Hybrid**: Log warning and exclude run
-
-**Recommendation**: Option 2 (lenient with silent exclusion), because:
-- Prevents task failure due to malformed data
-- Run is still returned; just not filtered by attempt presence
-- Aligns with defensive programming in service layer
-
-### Empty Results
-- If no runs match all criteria, return empty list `[]` (not an error)
-- Callers must handle empty results naturally
-
-### Parameter Validation
-
-**Validation order** (fail fast):
-1. Check that datetime arguments are timezone-aware (if provided)
-2. Check that `created_after < created_before` (if both provided)
-3. Check that `min_duration <= max_duration` (if both provided)
-4. Check that `has_attempts` filter has required `attempt_service`
-5. Apply filters
+### Key Constraints
+- `attempt_number` must be > 0 (validated in `__post_init__`)
+- `created_at` must use CEST timezone (UTC+2) only
+- Supports round-trip serialization via `to_dict()` / `from_dict()`
 
 ---
 
-## Implementation Checklist
+## WorkflowConclusion Enum
 
-### Core Functionality
-- [ ] Single `query()` method with all filter parameters
-- [ ] Duration filtering: `min_duration` and `max_duration` (inclusive)
-- [ ] Timestamp filtering: `created_after` and `created_before` (exclusive)
-- [ ] Attempt presence filtering: `has_attempts` with `attempt_service` integration
-- [ ] AND logic: All filters applied together
+**File**: `src/models/workflow_conclusion.py`
 
-### Error Handling
-- [ ] Raise `ValueError` if `has_attempts` is not None but `attempt_service` is None
-- [ ] Raise `ValueError` if `created_after >= created_before`
-- [ ] Raise `ValueError` if `min_duration > max_duration`
-- [ ] Raise `TypeError` if datetime arguments are not timezone-aware
-- [ ] Raise `TypeError` if `created_at` in WorkflowRun is naive and comparison is attempted
+```
+SUCCESS       = "success"
+FAILURE       = "failure"
+CANCELLED     = "cancelled"
+SKIPPED       = "skipped"
+TIMED_OUT     = "timed_out"
+ACTION_REQUIRED = "action_required"
+NEUTRAL       = "neutral"
+STALE         = "stale"
+```
 
-### Edge Cases
-- [ ] Handle non-numeric run IDs gracefully (exclude from attempt filtering, don't crash)
-- [ ] Return empty list if no matches found
-- [ ] All filters optional (None = no filtering on that dimension)
-- [ ] Duration range boundary cases (0.0, equal min/max)
-- [ ] Timestamp boundary cases (exclusive bounds, equal timestamps)
-
-### Integration
-- [ ] No changes to existing filter methods
-- [ ] No changes to storage or persistence layer
-- [ ] Accepts `AttemptService` as optional parameter (dependency injection)
-- [ ] Returns `List[WorkflowRun]` (consistent with existing methods)
-
-### Testing (Assumed)
-- Calls to `query()` with each filter individually
-- Calls to `query()` with multiple filters combined
-- Boundary conditions (min=max, exclusive bounds)
-- Empty result sets
-- Invalid parameter combinations (should raise)
-- Non-numeric run IDs with attempt filtering
-- Timezone-aware datetime requirement
+**Significance**: `count_by_conclusion` must return counts keyed by these enum values. All 8 possible conclusions should be represented in any comprehensive report, but report only includes conclusions present in data.
 
 ---
 
-## Related Code References
+## What WorkflowStatisticsService Must Implement
 
-### WorkflowRun Model
-**File**: `/src/models/workflow_run.py`
+### 1. Report Dataclass (New)
 
-Key fields for filtering:
-- `created_at: datetime` (line 16)
-- `duration_seconds: float` (line 20)
+**Name**: `WorkflowStatisticsReport` (or similar)  
+**Location**: Either in `src/services/workflow_statistics_service.py` or new file `src/models/workflow_statistics_report.py`
 
-### AttemptService Interface
-**File**: `/src/services/attempt_service.py`
+**Fields**:
+- `count_by_conclusion: dict[WorkflowConclusion, int]` — Maps conclusion enum to count
+  - Example: `{WorkflowConclusion.SUCCESS: 5, WorkflowConclusion.FAILURE: 2}`
+  - Only keys for conclusions present in data
+  - Empty dict `{}` if no runs exist
 
+- `avg_duration_seconds: float` — Mean of all runs' `duration_seconds`
+  - Returns `0.0` if no runs or all have `duration_seconds = 0.0`
+  - Precision: standard float (no rounding requirement)
+
+- `min_duration_seconds: float` — Minimum of all runs' `duration_seconds`
+  - Returns `0.0` if no runs exist
+  - Could be `0.0` if all runs have that value
+
+- `max_duration_seconds: float` — Maximum of all runs' `duration_seconds`
+  - Returns `0.0` if no runs exist
+  - Could be `0.0` if all runs have that value
+
+- `avg_attempts_per_run: float` — Mean attempt count per run
+  - **CRITICAL**: Includes runs with 0 attempts in denominator
+  - If 3 runs have [1, 2, 0] attempts: average = (1+2+0)/3 = 1.0
+  - Returns `0.0` if no runs exist
+  - Requires `AttemptService` to query attempt counts
+
+### 2. WorkflowStatisticsService Class
+
+**Location**: `src/services/workflow_statistics_service.py`
+
+**Constructor**:
 ```python
-def get_by_run_id(self, run_id: int) -> List[WorkflowRunAttempt]:
-    """Returns all attempts for a run_id, sorted by attempt_number."""
+def __init__(self, workflow_run_service: WorkflowRunService) -> None:
+    # Store the service reference
 ```
 
-### Existing Filter Pattern
-**File**: `/src/services/workflow_run_service.py` (lines 30-37)
-
+**Public Method**:
 ```python
-def filter_by_branch(self, branch: str) -> List[WorkflowRun]:
-    return [r for r in self._runs if r.branch == branch]
+def compute(self, attempt_service: Optional[AttemptService] = None) -> WorkflowStatisticsReport:
+    # Get all runs from workflow_run_service
+    # Compute statistics
+    # Return populated report dataclass
 ```
 
-All existing filters use list comprehension; `query()` should follow similar pattern.
+**Method Design Notes**:
+- `compute()` may optionally accept `attempt_service` for computing `avg_attempts_per_run`
+- If `attempt_service` is None, `avg_attempts_per_run` should be `0.0` (or require it)
+- Must handle empty datasets gracefully (no division by zero errors)
+- Must handle runs with `conclusion = None` (only count terminal runs or skip)
 
 ---
 
-## Summary
+## Integration Points
 
-**What needs to be added**:
-- Single `query()` method in `WorkflowRunService` class
-- Takes 6 optional parameters: `min_duration`, `max_duration`, `created_after`, `created_before`, `has_attempts`, `attempt_service`
-- Returns filtered list of `WorkflowRun` objects
-- Applies AND logic across all filters
-- Validates inputs (datetime timezone-aware, date range validity, attempt_service presence)
-- Handles edge cases gracefully (non-numeric IDs, naive datetimes, empty results)
+### WorkflowRunService Dependency
+- Service holds internal `List[WorkflowRun]` (loaded from storage)
+- No public method to get raw list, but `list_runs()` exists to get all
+- Query method exists for filtering by duration, timestamp, attempts
 
-**Critical integration points**:
-- Must work with `AttemptService.get_by_run_id()` despite ID type mismatch
-- Requires caller to pass `AttemptService` instance for attempt filtering
-- Should not modify existing methods or storage layer
+### AttemptService Dependency
+- Service holds internal `List[WorkflowRunAttempt]`
+- `get_by_run_id(run_id: int)` returns sorted attempts for a run
+- No single method to get all attempts; must iterate over all run IDs
 
-**Key ambiguity requiring assumption**:
-- Timestamp range bounds: Using **exclusive bounds** (`created_after < created_at < created_before`)
-- ID mismatch handling: Using **lenient exclusion** (skip non-numeric IDs from attempt filtering)
+### Timezone Awareness
+- `WorkflowRun.created_at` is timezone-aware (variable timezones)
+- `WorkflowRunAttempt.created_at` is CEST only (UTC+2)
+- Statistics don't need timezone conversion, just duration metrics
+
+---
+
+## Design Patterns to Follow
+
+### 1. In-Memory Computing
+- No database queries or file I/O
+- All computation happens on data already in service memory
+- Single pass or light iteration over runs acceptable
+
+### 2. Dataclass Report
+- Use `@dataclass` decorator for report return type
+- Makes report serializable and type-safe
+- Pattern matches existing models (WorkflowRun, WorkflowRunAttempt)
+
+### 3. Optional Dependencies
+- `AttemptService` should be optional parameter to `compute()`
+- If not provided, `avg_attempts_per_run` defaults to `0.0`
+- No hard requirement for two services to be tightly coupled
+
+### 4. Empty Dataset Handling
+- No exceptions for empty data
+- Return zeroed/default values
+- Exception only if invalid parameters passed
+
+---
+
+## Edge Cases & Assumptions
+
+### Edge Case: Runs with `conclusion = None`
+- **Current state**: `WorkflowRun.conclusion` is `Optional[WorkflowConclusion]`
+- **Behavior needed**: How to count partial/running workflows?
+- **Assumption**: Only count COMPLETED runs in `count_by_conclusion`; running workflows excluded
+- **Alternative**: Count by checking `is_terminal()` method first
+
+### Edge Case: Zero Attempts
+- **Behavior**: Runs with no attempts should count as 0 in `avg_attempts_per_run` calculation
+- **Example**: 3 runs with [1, 2, 0] attempts → average = (1+2+0)/3 = 1.0
+- **Requires**: Query all attempts, not just runs with attempts
+
+### Edge Case: All Runs Have duration_seconds = 0.0
+- **Behavior**: `min_duration_seconds = 0.0`, `max_duration_seconds = 0.0`, `avg_duration_seconds = 0.0`
+- **Distinction**: Different from "no runs" case which also returns 0.0
+- **Implication**: Cannot detect "missing data" vs "real zero" without extra field
+
+### Naming Convention
+- Model: `WorkflowStatisticsReport` (noun, what it is)
+- Service: `WorkflowStatisticsService` (noun + Service, what role it plays)
+- Method: `compute()` (verb, action it performs)
+
+---
+
+## File Structure Plan
+
+### New Files Required
+1. **`src/services/workflow_statistics_service.py`**
+   - Contains `WorkflowStatisticsService` class
+   - Contains `WorkflowStatisticsReport` dataclass (or import from models)
+
+2. **`tests/services/test_workflow_statistics_service.py`** (optional but expected)
+   - Test class initialization
+   - Test `compute()` with empty data
+   - Test `compute()` with mixed conclusions
+   - Test duration calculations
+   - Test attempts calculations
+
+### Modified Files
+1. **`src/services/__init__.py`**
+   - Add import/export: `from .workflow_statistics_service import WorkflowStatisticsService`
+
+2. **`artifacts/class_diagram.puml`**
+   - Add `WorkflowStatisticsService` class box
+   - Add `WorkflowStatisticsReport` dataclass box
+   - Show relationships: `WorkflowStatisticsService → WorkflowRunService` (dependency)
+   - Show relationships: `WorkflowStatisticsService → AttemptService` (optional)
+
+---
+
+## Summary of Key Findings
+
+### Architecture
+- **Pattern established**: Services with in-memory data, optional persistence
+- **Dependency injection**: Services receive other services/storage in constructor
+- **No file I/O**: All operations in-memory; no I/O except via passed-in storage
+
+### Data Models
+- **WorkflowRun**: Contains 10 fields; `duration_seconds` is critical
+- **WorkflowRunAttempt**: Contains 7 fields; supports 1-N relationship with runs
+- **WorkflowConclusion**: 8-value enum; must be key type for count_by_conclusion
+
+### Service Requirements
+1. Accept `WorkflowRunService` in constructor
+2. Implement `compute(attempt_service: Optional[AttemptService]) -> WorkflowStatisticsReport`
+3. Return populated dataclass with 5 aggregated fields
+4. Handle empty datasets (return 0.0 values, empty dict)
+5. Include zero-attempt runs in `avg_attempts_per_run` denominator
+
+### No External Dependencies
+- No new packages required
+- No database calls
+- No file I/O
+- Uses only existing models and services

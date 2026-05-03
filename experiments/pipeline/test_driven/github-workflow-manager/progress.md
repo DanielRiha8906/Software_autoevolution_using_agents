@@ -234,3 +234,65 @@ Implemented comprehensive query functionality in `WorkflowRunService` to filter 
 5. UML Designer — Updated class and component diagrams to show new method and service dependencies
 
 Duration: 409.0s | Cost: $0.796263 USD | Turns: 34
+
+---
+
+## Task 06: Implement WorkflowStatisticsService
+
+**Status:** ✅ COMPLETE
+
+**Summary:**
+Implemented `WorkflowStatisticsService` to compute aggregated metrics over workflow runs and return them as a structured dataclass report. The service computes success/failure distribution, duration metrics (average, min, max), and retry behavior (average attempts per run).
+
+**Files Changed:**
+- `src/models/workflow_statistics_report.py` — Created new dataclass with 5 fields
+- `src/services/workflow_statistics_service.py` — Created new service class with compute() method
+- `src/models/__init__.py` — Added WorkflowStatisticsReport import/export
+- `src/services/__init__.py` — Added WorkflowStatisticsService import/export
+- `tests/test_workflow_statistics_service.py` — Created with 17 comprehensive test cases
+- `artifacts/class_diagram.puml` — Added WorkflowStatisticsReport and WorkflowStatisticsService classes
+- `artifacts/component_diagram.puml` — Added new components and dependencies
+
+**Test Results:**
+- All 7 required tests: ✅ PASS
+- All 10 additional comprehensive tests: ✅ PASS
+- All 66 existing tests: ✅ PASS
+- Total: 83/83 tests passed
+
+**Implementation Details:**
+
+1. **WorkflowStatisticsReport Dataclass** (src/models/workflow_statistics_report.py):
+   - `count_by_conclusion: Dict[str, int]` — Count of runs by conclusion type
+   - `avg_duration_seconds: float` — Mean duration across all runs
+   - `min_duration_seconds: float` — Minimum duration (0.0 if no runs)
+   - `max_duration_seconds: float` — Maximum duration (0.0 if no runs)
+   - `avg_attempts_per_run: float` — Mean attempts per run (includes runs with 0 attempts)
+
+2. **WorkflowStatisticsService Class** (src/services/workflow_statistics_service.py):
+   - Constructor: `__init__(workflow_run_service: WorkflowRunService)`
+   - Method: `compute(attempt_service: Optional[AttemptService] = None) -> WorkflowStatisticsReport`
+   - Pure in-memory computation with no file I/O
+   - Graceful handling of empty datasets (returns 0.0 and empty dict)
+
+3. **Computation Logic**:
+   - **count_by_conclusion**: Groups terminal runs (status=COMPLETED, conclusion≠None) by conclusion type
+   - **avg_duration_seconds**: Mean of all runs' duration_seconds field
+   - **min_duration_seconds**: Minimum duration (0.0 if empty)
+   - **max_duration_seconds**: Maximum duration (0.0 if empty)
+   - **avg_attempts_per_run**: For each run, queries AttemptService.get_by_run_id(), counts attempts, averages across all runs (includes runs with 0 attempts in denominator)
+
+4. **Edge Case Handling**:
+   - Empty datasets return 0.0 for floats and {} for dict
+   - Non-integer run IDs treated as 0 attempts (no exceptions)
+   - Runs with null conclusions excluded from count_by_conclusion
+   - All runs included in duration statistics
+   - Optional attempt_service parameter returns 0.0 for avg_attempts_per_run when None
+
+**Pipeline Execution:**
+1. Data Analyst — Analyzed codebase structure, identified existing patterns, documented requirements
+2. System Architect — Designed dataclass structure, service interface, and computation algorithms
+3. Programmer — Implemented WorkflowStatisticsReport and WorkflowStatisticsService classes
+4. Pytest-Tester — Created comprehensive test suite with 17 tests, all passing (83/83 total)
+5. UML Designer — Updated class and component diagrams to reflect new classes and relationships
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
