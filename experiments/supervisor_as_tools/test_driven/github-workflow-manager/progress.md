@@ -92,4 +92,4 @@ Duration: 112.8s | Cost: $0.254861 USD | Turns: 22
 - Interactive menu includes new "Query runs" option
 - No regressions in existing tests
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 195.6s | Cost: $0.441328 USD | Turns: 33
