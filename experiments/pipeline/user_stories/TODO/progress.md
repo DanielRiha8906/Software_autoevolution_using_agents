@@ -85,4 +85,4 @@ Duration: 614.7s | Cost: $1.099172 USD | Turns: 14
 ✓ Invalid transitions raise ValueError with descriptive messages (fail-fast)
 ✓ All functionality accessible via `python -m src` (interactive menu option 4 + CLI flags start/done/reopen)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 496.0s | Cost: $0.844545 USD | Turns: 25
