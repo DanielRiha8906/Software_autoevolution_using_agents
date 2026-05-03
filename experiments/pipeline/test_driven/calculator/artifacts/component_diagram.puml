@@ -11,7 +11,7 @@ package "Calculator Application" {
     component "Application Service\n(CalculatorService)" as Service
     component "Calculation Engine\n(Calculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
-    component "Domain Models\n(Operation, CalculationResult)" as Models
+    component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
 
     Main --> CLI : initializes
     Main --> Service : initializes

@@ -1,476 +1,227 @@
-# Task 02: Add Advanced Mathematical Operations — Analysis Report
+# TASK 03 ANALYSIS: MemoryEntry Domain Class
 
 ## Task Summary
 
-Add four new mathematical methods to the Calculator class: `square(x)`, `sqrt(x)`, `power(x, y)`, and `modulo(x, y)`. These methods must be integrated into the existing operation dispatch system, exposed via CLI, and supported by comprehensive test coverage.
-
-**Test Suite Requirements (from task description):**
-- `square(4) == 16`, `square(0) == 0`
-- `sqrt(9) ≈ 3.0`, `sqrt(-1)` raises `Exception`
-- `power(2, 10) == 1024`, `power(8, 1/3) ≈ 2.0`, `power(2, -1) ≈ 0.5`
-- `modulo(10, 3) == 1`, `modulo(10, 0)` raises `Exception`
-- Existing operations (add, subtract, multiply, divide) must remain unchanged and still work
+Create a new domain class called `MemoryEntry` to record individual calculation events with full audit trail support. This class will capture the complete context of a calculation: what operation was performed, what inputs were provided, whether it succeeded, how long it took to execute, and when it happened. The class must support both construction and serialization/deserialization for storage and retrieval.
 
 ---
 
 ## Current State Analysis
 
-### 1. Calculator Implementation (src/services/calculator.py)
+### 1. Test Requirements (Explicit)
 
-**Current methods:**
-- `add(a: float, b: float) -> float` — addition
-- `subtract(a: float, b: float) -> float` — subtraction
-- `multiply(a: float, b: float) -> float` — multiplication
-- `divide(a: float, b: float) -> float` — division with zero check
-- `calculate(operation: Operation, a: float, b: float) -> float` — dispatch method
+From the test suite in the task description:
+- **Auto-generated `id` field**: UUID string, unique per instance
+- **Auto-generated `timestamp` field**: Set at construction time
+- **Required fields**: `operation`, `operands`, `result`, `success`, `execution_time_ms`
+  - `operation`: string (e.g., "add", "multiply")
+  - `operands`: list or tuple of numbers (input values)
+  - `result`: numeric value OR `None` for failed calculations
+  - `success`: boolean (whether calculation succeeded)
+  - `execution_time_ms`: numeric (execution duration in milliseconds)
+- **Methods**: `to_dict()` and `from_dict()` for serialization round-tripping
+- **Design constraint**: No print statements or formatting logic in the module
 
-**Status:** The class currently supports only 4 binary operations (ADD, SUBTRACT, MULTIPLY, DIVIDE). No unary operations or advanced mathematical functions exist.
+### 2. Existing Model Pattern: CalculationResult
 
-**Constraints:**
-- The `calculate()` method uses a dispatch dictionary keyed by `Operation` enum members
-- All current methods accept exactly 2 operands
-- `divide()` raises `ValueError("Division by zero is not allowed")` for division by zero
+The project already has a similar domain class at `src/models/calculation_result.py`:
 
-### 2. Operation Enum (src/models/operation.py)
-
-**Current members:**
-```python
-ADD = "add"
-SUBTRACT = "subtract"
-MULTIPLY = "multiply"
-DIVIDE = "divide"
-```
-
-**Methods:**
-- `from_string(value: str) -> Operation` — parses string to enum member
-- `display_name() -> str` — returns capitalized operation name
-
-**Status:** Enum supports only 4 operations. Adding new operations requires extending this enum.
-
-### 3. CalculationResult Model (src/models/calculation_result.py)
-
-**Current fields:**
 ```python
 @dataclass
 class CalculationResult:
-    operation: str         # operation name
-    operand_a: float       # first operand
-    operand_b: float       # second operand
-    result: float          # result value
-    timestamp: str         # ISO format timestamp
-    execution_time_ms: float  # execution time in milliseconds (Task 01)
+    operation: str
+    operand_a: float
+    operand_b: float
+    result: float
+    timestamp: str = field(default="")
+    execution_time_ms: float = field(default=0.0)
+
+    def __post_init__(self) -> None:
+        if not self.timestamp:
+            self.timestamp = datetime.now().isoformat()
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: dict) -> "CalculationResult":
+        return cls(**data)
 ```
 
-**Status:** All fields use generic float types and string operation names. The model supports arbitrary operations without modification.
+**Key patterns to follow:**
+- Uses `@dataclass` decorator (not manual `__init__`)
+- Auto-generates timestamps via `__post_init__()` hook in ISO format
+- `to_dict()` uses `asdict()` from dataclasses module
+- `from_dict()` is a classmethod that unpacks dict as kwargs
+- No print or display logic in the class itself
 
-**Serialization:** Uses `asdict()` and `from_dict()` for JSON round-tripping. Will transparently handle new operations.
+### 3. Key Differences: MemoryEntry vs CalculationResult
 
-### 4. CLI Integration (src/cli/calculator_cli.py)
+| Aspect | CalculationResult | MemoryEntry (Required) |
+|--------|------|---------|
+| ID field | None | Auto-generated UUID string |
+| Operands | `operand_a`, `operand_b` (separate) | `operands` (single collection) |
+| Result | Always required (float) | Optional (can be None on failure) |
+| Success indicator | Implicit (result exists) | Explicit `success: bool` field |
+| Timestamp | `timestamp: str` (auto-set in `__post_init__`) | Same pattern expected |
+| Execution time | `execution_time_ms: float` | Same field name expected |
 
-**Current menu:**
-```python
-_MENU: list[tuple[Operation, str]] = [
-    (Operation.ADD,      "Add"),
-    (Operation.SUBTRACT, "Subtract"),
-    (Operation.MULTIPLY, "Multiply"),
-    (Operation.DIVIDE,   "Divide"),
-]
-```
+**Implication**: `MemoryEntry` is broader in scope than `CalculationResult` — it records *whether* a calculation succeeded as a first-class field, supporting both successful and failed calculations.
 
-**Interactive mode:**
-- Prompts for two operands (a, b) for the selected operation
-- Displays result and saves to history
+### 4. Current Project Structure (src/models/)
 
-**One-shot mode:**
-- `python -m src --operation <op> <a> <b>`
-- Currently accepts: `add`, `subtract`, `multiply`, `divide`
+**Existing files:**
+- `operation.py` — `Operation` enum with 8 members (ADD, SUBTRACT, MULTIPLY, DIVIDE, SQUARE, SQRT, POWER, MODULO)
+- `calculation_result.py` — `CalculationResult` dataclass
+- `__init__.py` — exports Operation and CalculationResult
 
-**Status:** Menu is hard-coded to 4 operations. New operations must be added to `_MENU` list and CLI argument parser.
+**Files that need modification:**
+- Create: `memory_entry.py` — new `MemoryEntry` class
+- Update: `__init__.py` — add `MemoryEntry` to exports
 
-### 5. CLI Entry Point (src/__main__.py)
+### 5. Expected Module Imports and Dependencies
 
-**Argument parser configuration:**
-```python
-parser.add_argument(
-    "--operation",
-    metavar="OP",
-    choices=["add", "subtract", "multiply", "divide"],
-    help="Operation to perform (add | subtract | multiply | divide)",
-)
-```
+Based on task requirements and existing patterns:
+- `from dataclasses import dataclass, asdict, field` — for class definition and serialization
+- `from datetime import datetime` — for `datetime.now().isoformat()` in `__post_init__`
+- `from uuid import uuid4` — for auto-generated `id` field (currently not imported anywhere; this is new)
+- `from typing import Any, Optional` — for type hints on `result` (can be float or None)
 
-**Status:** The `choices` list is hard-coded to the 4 current operations. New operations must be added here.
+### 6. Serialization Behavior
 
-### 6. CalculatorService (src/services/calculator_service.py)
+The `CalculationResult` pattern uses `asdict()` directly. **For MemoryEntry**:
+- UUID fields will need explicit conversion to string in `to_dict()`
+- `asdict()` won't convert UUID to string automatically
+- `from_dict()` will need to convert string back to UUID: `uuid.UUID(data['id'])`
+- Operands field must support JSON serialization (list works naturally)
+- `result` can be None, which JSON represents as `null` and deserializes back to Python `None`
 
-**Current flow in `perform()` method:**
-1. Measure execution time
-2. Call `calculator.calculate(operation, a, b)`
-3. Create `CalculationResult` with all fields including `execution_time_ms`
-4. Save to storage
-5. Return result
+### 7. Test Expectations (Inferred from Test Suite)
 
-**Status:** Generic and operation-agnostic. No changes needed for new operations.
+From the provided test suite:
+- Constructor accepts 5 required fields: `operation`, `operands`, `result`, `success`, `execution_time_ms`
+- `id` should auto-generate on construction (UUID string)
+- `timestamp` should auto-generate on construction (ISO format string)
+- Each instance has a distinct UUID (uniqueness check)
+- Round-trip test: `MemoryEntry.from_dict(entry.to_dict())` preserves all fields exactly
+- Failed calculation support: `MemoryEntry(..., result=None, success=False)` must be valid
+- Serialized dict must have `id` as string (not UUID object)
+- Serialized dict must have `timestamp` as ISO format string
+- No `print()` statements anywhere in the module
 
-### 7. Test Coverage (tests/test_calculator.py)
+### 8. Operands Field Design
 
-**Current test count:** 12 tests for Calculator class
-- Basic tests: add, subtract, multiply, divide
-- Edge cases: negative numbers, floats, division by zero
-- Dispatch test: `calculate()` with all 4 operations
-
-**Status:** No tests exist for the new methods. Test coverage will need to be significantly expanded.
+**Working assumption**: `operands` is a list of floats/ints representing calculation inputs.
+- For `add(1.0, 2.0)`: `operands=[1.0, 2.0]`
+- Supports both binary and unary operations naturally
+- JSON serializes as array without modification
+- On deserialization, will be restored as list (even if originally tuple)
 
 ---
 
 ## Files That Need Modification
 
-### 1. src/models/operation.py — **REQUIRED**
+### 1. src/models/memory_entry.py — **CREATE NEW FILE**
 
-**Changes needed:**
-- Add four new enum members: `SQUARE`, `SQRT`, `POWER`, `MODULO`
-- Each member must have a string value matching the operation name
+**File location:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/models/memory_entry.py`
 
-**Current enum:**
+**Class definition required:**
 ```python
-class Operation(Enum):
-    ADD = "add"
-    SUBTRACT = "subtract"
-    MULTIPLY = "multiply"
-    DIVIDE = "divide"
+from dataclasses import dataclass, asdict, field
+from datetime import datetime
+from uuid import uuid4
+from typing import Any, Optional
+
+@dataclass
+class MemoryEntry:
+    # Required fields (from constructor)
+    operation: str
+    operands: list  # or list[float]
+    result: Optional[float]
+    success: bool
+    execution_time_ms: float
+    
+    # Auto-generated fields
+    id: str = field(default_factory=lambda: str(uuid4()))
+    timestamp: str = field(default="")
+    
+    def __post_init__(self) -> None:
+        if not self.timestamp:
+            self.timestamp = datetime.now().isoformat()
+    
+    def to_dict(self) -> dict:
+        # Must convert UUID id to string explicitly
+        d = asdict(self)
+        # id is already a string if uuid4() returned str()
+        # timestamp is already a string
+        return d
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "MemoryEntry":
+        # Ensure id is a string (it will be from JSON)
+        return cls(**data)
 ```
 
-**Required enum additions:**
+**Key implementation details:**
+- `id` field: default_factory generates UUID string via `str(uuid4())`
+- `timestamp` field: default empty string, filled in `__post_init__()` with ISO format
+- `__post_init__()` must set timestamp if empty (following CalculationResult pattern)
+- `to_dict()` must handle UUID-to-string conversion (or ensure id is already string)
+- `from_dict()` reconstructs from dict, expecting all fields present
+- Constructor signature must match test expectations (5 positional args: operation, operands, result, success, execution_time_ms)
+- Auto fields (id, timestamp) have defaults and are optional in constructor
+
+### 2. src/models/__init__.py — **UPDATE EXISTING FILE**
+
+**Current exports:**
 ```python
-SQUARE = "square"
-SQRT = "sqrt"
-POWER = "power"
-MODULO = "modulo"
+from .operation import Operation
+from .calculation_result import CalculationResult
 ```
 
-**No changes needed to methods:**
-- `from_string()` will automatically handle new values
-- `display_name()` will work for all operations
-
-### 2. src/services/calculator.py — **REQUIRED**
-
-**Methods to add:**
-
-#### `square(x: float) -> float`
-- Mathematical function: x²
-- Expected behavior: `square(4) == 16`, `square(0) == 0`
-- Implementation: `return x * x` or `return x ** 2`
-- Handles negative inputs: `square(-3) == 9` (squared negatives become positive)
-
-#### `sqrt(x: float) -> float`
-- Mathematical function: √x (square root)
-- Expected behavior: `sqrt(9) ≈ 3.0`
-- Edge case: `sqrt(-1)` must raise an `Exception`
-- Implementation: Use `math.sqrt()` from Python standard library
-- Must guard against negative inputs with an explicit check
-
-#### `power(x: float, y: float) -> float`
-- Mathematical function: x^y (x to the power of y)
-- Expected behaviors:
-  - `power(2, 10) == 1024` (integer exponents)
-  - `power(8, 1/3) ≈ 2.0` (fractional exponents, cube root of 8)
-  - `power(2, -1) ≈ 0.5` (negative exponents, reciprocals)
-- Implementation: `return x ** y` (Python's built-in power operator)
-- Note: Unlike `sqrt()`, negative bases with fractional exponents may produce complex numbers (out of scope; use `x ** y` directly)
-
-#### `modulo(x: float, y: float) -> float`
-- Mathematical function: x mod y (remainder of division)
-- Expected behavior: `modulo(10, 3) == 1` (10 % 3 = 1)
-- Edge case: `modulo(10, 0)` must raise an `Exception`
-- Implementation: `return x % y`
-- Must guard against division by zero
-
-**Dispatch table update:**
-
-The `calculate()` method currently uses a dispatch dictionary:
+**Required addition:**
 ```python
-dispatch = {
-    Operation.ADD: self.add,
-    Operation.SUBTRACT: self.subtract,
-    Operation.MULTIPLY: self.multiply,
-    Operation.DIVIDE: self.divide,
-}
+from .memory_entry import MemoryEntry
 ```
 
-**Problem:** The new methods (`square`, `sqrt`, `power`, `modulo`) have different signatures:
-- `square()` and `sqrt()` are **unary** (take 1 operand, but caller passes 2)
-- `power()` and `modulo()` are **binary** (take 2 operands, same as existing operations)
-
-**Solution:** The dispatch must handle both unary and binary operations. Two approaches are possible:
-
-**Option A: Always pass two arguments; unary operations ignore the second**
+**Updated __init__.py:**
 ```python
-def calculate(self, operation: Operation, a: float, b: float) -> float:
-    dispatch = {
-        Operation.ADD: self.add,
-        Operation.SUBTRACT: self.subtract,
-        Operation.MULTIPLY: self.multiply,
-        Operation.DIVIDE: self.divide,
-        Operation.SQUARE: self.square,
-        Operation.SQRT: self.sqrt,
-        Operation.POWER: self.power,
-        Operation.MODULO: self.modulo,
-    }
-    if operation not in dispatch:
-        raise ValueError(f"Unsupported operation: {operation}")
-    return dispatch[operation](a, b)
+from .operation import Operation
+from .calculation_result import CalculationResult
+from .memory_entry import MemoryEntry
+
+__all__ = ["Operation", "CalculationResult", "MemoryEntry"]
 ```
-
-This means:
-- `square()` and `sqrt()` must accept `(a, b)` but only use `a`
-- Caller must always provide two operands (second is ignored for unary ops)
-- This maintains CLI interface consistency (always prompt for 2 numbers)
-
-**Option B: Use method inspection to detect unary vs. binary (more complex)**
-```python
-# Check function signature and call accordingly
-# Less straightforward; not recommended
-```
-
-**Recommendation:** Option A is simpler, more maintainable, and keeps the CLI unchanged. Unary operations will have `b` passed but unused.
-
-**Update `calculate()` to include new dispatch entries:**
-```python
-dispatch = {
-    Operation.ADD: self.add,
-    Operation.SUBTRACT: self.subtract,
-    Operation.MULTIPLY: self.multiply,
-    Operation.DIVIDE: self.divide,
-    Operation.SQUARE: self.square,
-    Operation.SQRT: self.sqrt,
-    Operation.POWER: self.power,
-    Operation.MODULO: self.modulo,
-}
-```
-
-### 3. src/cli/calculator_cli.py — **REQUIRED**
-
-**Update the _MENU list:**
-```python
-_MENU: list[tuple[Operation, str]] = [
-    (Operation.ADD,      "Add"),
-    (Operation.SUBTRACT, "Subtract"),
-    (Operation.MULTIPLY, "Multiply"),
-    (Operation.DIVIDE,   "Divide"),
-    (Operation.SQUARE,   "Square"),
-    (Operation.SQRT,     "Square Root"),
-    (Operation.POWER,    "Power"),
-    (Operation.MODULO,   "Modulo"),
-]
-```
-
-**Impact on interactive mode:**
-- Menu will now show 8 options instead of 4
-- History option will move from `len(self._MENU) + 1` to index 9
-- Exit option will move to index 10
-- Menu numbering: all automatic via `enumerate(self._MENU, 1)`
-
-**Impact on one-shot mode:**
-- No changes needed to `run_command()` — it delegates to `Operation.from_string()`
-- Input parsing remains the same — always expects 2 operands
-
-**Potential UX consideration (unary operations):**
-- For `square` and `sqrt`, the caller provides two operands but only the first is used
-- Example: `python -m src --operation square 4 99` — the `99` is ignored
-- This is consistent but may confuse users
-- **Alternative:** Modify CLI to accept variable operand counts (more complex; not required by task description)
-
-### 4. src/__main__.py — **REQUIRED**
-
-**Update argument choices:**
-```python
-parser.add_argument(
-    "--operation",
-    metavar="OP",
-    choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
-    help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
-)
-```
-
-**Update usage string:**
-```python
-usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B]",
-```
-
-**No changes needed to:**
-- Argument parsing logic
-- Operand count validation (always expects exactly 2)
-- Error handling
-
-### 5. tests/ — **NOT DIRECTLY REQUIRED FOR TASK 02**
-
-**Note:** The task description states "test suite provided," implying tests will be created separately. As data analyst, I am **not** writing tests (per role boundaries), but the following test structure is expected:
-
-**Expected test file: tests/test_advanced_operations.py (or expansion of test_calculator.py)**
-
-Tests for each operation:
-- `square()`: basic cases, edge cases (0, negative)
-- `sqrt()`: basic case, error case (negative input)
-- `power()`: integer exponents, fractional exponents, negative exponents
-- `modulo()`: basic case, error case (divisor = 0)
-
-Tests for integration:
-- `calculate()` dispatch works for new operations
-- `CalculatorService.perform()` works with new operations
-- CLI accepts new operation names
-
-### 6. src/models/calculation_result.py — **NO CHANGES REQUIRED**
-
-The `CalculationResult` dataclass generically stores:
-- `operation: str` — operation name (e.g., "square", "sqrt")
-- `operand_a: float` — first operand
-- `operand_b: float` — second operand
-- `result: float` — result value
-
-For unary operations:
-- `operand_a` = the actual input (e.g., for `sqrt(9)`: operand_a=9)
-- `operand_b` = unused but stored (can be 0, None placeholder, or any value)
-- Serialization will include both operands
-
-This is semantically imperfect (storing unused operand_b) but requires no changes.
-
----
-
-## Test Requirements Summary
-
-### Basic Functionality Tests
-
-**square()**
-```
-square(4) == 16
-square(0) == 0
-square(-3) == 9 (implicit from algebra)
-square(0.5) == 0.25
-```
-
-**sqrt()**
-```
-sqrt(9) == 3.0 (or approx 3.0)
-sqrt(0) == 0.0
-sqrt(-1) raises Exception  [CRITICAL]
-sqrt(0.25) == 0.5
-```
-
-**power()**
-```
-power(2, 10) == 1024
-power(8, 1/3) ≈ 2.0  (cube root of 8)
-power(2, -1) ≈ 0.5   (1/2)
-power(5, 0) == 1.0   (any number to power 0 is 1)
-power(0, 2) == 0.0   (0 squared is 0)
-```
-
-**modulo()**
-```
-modulo(10, 3) == 1
-modulo(10, 0) raises Exception  [CRITICAL]
-modulo(7, 7) == 0
-modulo(5, 10) == 5  (remainder when 5 < divisor)
-```
-
-### Integration Tests
-
-**Calculator.calculate() dispatch:**
-- `calculate(Operation.SQUARE, 4, _) == 16`
-- `calculate(Operation.SQRT, 9, _) ≈ 3.0`
-- `calculate(Operation.POWER, 2, 10) == 1024`
-- `calculate(Operation.MODULO, 10, 3) == 1`
-
-**CalculatorService.perform():**
-- All new operations can be passed through the service layer
-- Results are stored with correct operation names
-- Execution time is tracked
-
-**CLI integration:**
-- `python -m src --operation square 4` → prints result
-- `python -m src --operation sqrt 9` → prints result
-- Interactive menu shows all 8 operations
-- `Operation.from_string()` recognizes new operation names
-
----
-
-## Edge Cases and Error Handling
-
-### sqrt() Negative Input
-- **Requirement:** `sqrt(-1)` must raise an Exception
-- **Type:** Likely `ValueError` (matches pattern of `divide(_, 0)`)
-- **Message:** Suggest something like "Cannot compute square root of negative number"
-
-### modulo() Divisor Zero
-- **Requirement:** `modulo(10, 0)` must raise an Exception
-- **Type:** Likely `ValueError` (matches pattern of `divide(_, 0)`)
-- **Message:** Suggest something like "Modulo by zero is not allowed"
-
-### power() with Fractional Exponents
-- **No error handling needed:** Python's `**` operator handles fractional exponents natively
-- `power(8, 1/3)` will compute the cube root without exception
-
-### Floating-Point Precision
-- Tests for `sqrt()` and `power()` with fractional exponents should use `pytest.approx()` for comparisons
-- Example: `assert result ≈ 2.0` for `power(8, 1/3)`
-
----
-
-## Backward Compatibility Considerations
-
-1. **Existing operations unchanged:** All 4 current operations remain untouched in signature and behavior
-2. **CalculationResult semantics:** New operations will have `operand_b` set (even for unary ops); this is non-breaking
-3. **CLI behavior:** Users expecting only 4 operations will see expanded menu; this is additive, not breaking
-4. **Serialization:** New operations will serialize/deserialize transparently; old records remain valid
 
 ---
 
 ## Implementation Dependencies and Order
 
-1. **Operation enum** (src/models/operation.py) — must come first (defines new enum members)
-2. **Calculator methods** (src/services/calculator.py) — depends on Operation enum
-3. **CLI menu and __main__.py** — depend on Operation enum
-4. **Tests** — depend on all of the above
-
-**Suggested implementation order:**
-1. Add enum members to `Operation`
-2. Implement the 4 new methods in `Calculator`
-3. Update dispatch dictionary in `calculate()`
-4. Update CLI menu in `CalculatorCLI`
-5. Update argparse choices in `__main__.py`
-6. Write and run tests
+1. **Create MemoryEntry class** (src/models/memory_entry.py) — can be done independently
+2. **Update __init__.py** (src/models/__init__.py) — depends on MemoryEntry class existing
+3. **No other files need modification** — MemoryEntry is a domain class, not yet integrated into service layer
 
 ---
 
 ## Summary of Changes
 
-| File | Change Type | Scope | Details |
-|------|-------------|-------|---------|
-| `src/models/operation.py` | Enum extension | Add 4 members | SQUARE, SQRT, POWER, MODULO |
-| `src/services/calculator.py` | New methods + dispatch | Add 4 methods + update dict | `square()`, `sqrt()`, `power()`, `modulo()` + error handling |
-| `src/cli/calculator_cli.py` | Menu expansion | Update _MENU | Add 4 new menu entries |
-| `src/__main__.py` | CLI constraints | Update choices | Add new operation names to argparse |
-| `tests/test_*.py` | Test coverage | New test file or expansion | ~20-30 new tests across all new operations |
-| `src/models/calculation_result.py` | No changes | — | Works transparently with new operations |
-| `src/services/calculator_service.py` | No changes | — | Works transparently with new operations |
-| `src/storage/json_storage.py` | No changes | — | Serialization works transparently |
+| File | Action | Details |
+|------|--------|---------|
+| `src/models/memory_entry.py` | Create | New dataclass with id (UUID), timestamp, operation, operands, result, success, execution_time_ms |
+| `src/models/__init__.py` | Update | Add MemoryEntry to imports and __all__ |
+| `src/models/calculation_result.py` | No change | Remains unchanged; MemoryEntry is separate |
+| `src/services/` | No change | MemoryEntry not integrated into service layer in this task |
+| `src/cli/` | No change | No CLI exposure required in this task |
+| `src/storage/` | No change | Storage layer not yet modified |
 
 ---
 
-## Ambiguities and Assumptions
+## Critical Test Criteria
 
-1. **Unary operation handling:** Assumed Option A (pass 2 args always; unary ops ignore second). CLI remains unchanged; user experience slightly inconsistent but simpler to implement.
-
-2. **sqrt() error type:** Assumed `ValueError` matching the pattern of existing error handling, but `Exception` (more general) would also satisfy test requirement "raises Exception".
-
-3. **modulo() with negative numbers:** Python's `%` operator works with negatives (e.g., `-10 % 3 == 2`). No special handling assumed; will use native Python semantics.
-
-4. **power() and complex numbers:** Assumed no special handling for complex results (e.g., `power(-1, 0.5)` would yield a complex number). Python's `**` operator will handle this natively.
-
-5. **Test file location:** Task says "test suite provided" but no test files exist yet. Assumed tests will be added as a separate step, not part of this analysis task.
-
----
-
-## No Further Clarifications Needed
-
-All requirements are explicit and implementable as stated. The constraint of supporting both unary and binary operations is manageable via the dispatch approach outlined above.
+1. **Constructor:** `MemoryEntry(operation="add", operands=[1, 2], result=3, success=True, execution_time_ms=5)` must work
+2. **Unique IDs:** Each instance must have a distinct UUID string
+3. **UUID format:** `id` must be parseable by `uuid.UUID(entry.id)`
+4. **Timestamp auto-generation:** Must be set at construction time, ISO format string
+5. **Round-trip serialization:** `MemoryEntry.from_dict(entry.to_dict())` must preserve all fields including id and timestamp
+6. **Null result support:** `result=None, success=False` must be valid and serializable
+7. **No print statements:** Module must contain zero print() calls or formatting logic
