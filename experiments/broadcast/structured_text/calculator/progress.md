@@ -395,4 +395,4 @@ All existing tests continue to pass. The implementation preserves backward compa
   - Captures operation name, operands, timing, and timestamp
   - Both success and failure cases tracked for complete history
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 90.9s | Cost: $3.653608 USD | Turns: 22
