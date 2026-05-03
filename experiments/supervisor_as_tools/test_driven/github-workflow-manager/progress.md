@@ -51,3 +51,21 @@ Duration: 171.2s | Cost: $0.312369 USD | Turns: 15
 - No regressions in existing tests
 
 Duration: 134.9s | Cost: $0.266895 USD | Turns: 23
+
+## Task 04: Implement AttemptService for workflow run attempts
+
+**Status:** ✅ Completed
+
+**Files Changed:**
+- `src/services/attempt_service.py` — Created new service class with in-memory storage for WorkflowRunAttempt objects, featuring `create()` and `get_by_run_id()` methods with duplicate detection and sorting support
+- `tests/test_attempt_service.py` — Created comprehensive test suite with 6 tests covering service instantiation, creation, retrieval, duplicate detection, sorting, and file I/O validation
+- `artifacts/class_diagram.puml` — Updated services package to include AttemptService class with methods and relationship to WorkflowRunAttempt
+
+**Test Results:**
+- All 79 tests pass (6 new AttemptService tests + 73 existing tests)
+- Duplicate (run_id, attempt_number) detection raises exception as required
+- Results sorted by attempt_number in ascending order
+- No file I/O operations in service implementation
+- No regressions in existing tests
+
+Duration: 112.8s | Cost: $0.254861 USD | Turns: 22
