@@ -1,4 +1,4 @@
-@startuml
+@startuml state_diagram_interactive
 
 skinparam defaultFontSize 13
 skinparam stateFontStyle bold
@@ -11,11 +11,13 @@ Menu --> FirstOperand : operation selected
 Menu --> Feedback : history selected
 Menu --> FilterOperation : filter by operation selected
 Menu --> FilterStatus : filter by status selected
+Menu --> Statistics : statistics selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
 FilterOperation --> Feedback : filtering complete
 FilterStatus --> Feedback : filtering complete
+Statistics --> Feedback : statistics displayed
 
 FirstOperand --> SecondOperand : valid number
 FirstOperand --> Feedback : invalid number

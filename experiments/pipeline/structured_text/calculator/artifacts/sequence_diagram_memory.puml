@@ -78,4 +78,25 @@ deactivate MemStore
 MemService --> CLI: complete
 deactivate CLI
 
+== Compute Statistics ==
+
+User -> CLI: show_statistics()
+activate CLI
+CLI -> MemService: compute_statistics()
+activate MemService
+MemService -> MemStore: load_all()
+activate MemStore
+MemStore -> DB: read file
+activate DB
+DB --> MemStore: JSON data
+deactivate DB
+MemStore --> MemService: List<MemoryEntry>
+deactivate MemStore
+MemService -> MemService: aggregate stats (counts, errors, times)
+MemService --> CLI: CalculationStatistics
+deactivate MemService
+CLI -> CLI: format and display statistics
+CLI --> User: show statistics report
+deactivate CLI
+
 @enduml

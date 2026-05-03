@@ -32,7 +32,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory] [--memory-filter {operation,status} ...]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory] [--statistics] [--memory-filter {operation,status} ...]",
     )
     parser.add_argument(
         "--operation",
@@ -44,6 +44,11 @@ def main() -> None:
         "--memory",
         action="store_true",
         help="Display all stored calculation memory entries and exit",
+    )
+    parser.add_argument(
+        "--statistics",
+        action="store_true",
+        help="Display calculation statistics and exit",
     )
     parser.add_argument(
         "--memory-filter",
@@ -98,6 +103,8 @@ def main() -> None:
                 for i, entry in enumerate(entries, 1):
                     print(f"  {i}. {entry}")
                 print()
+    elif args.statistics:
+        cli.show_statistics()
     elif args.memory:
         cli.show_memory()
     elif args.operation:
