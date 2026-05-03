@@ -277,4 +277,4 @@ Due to worktree isolation issues, the actual implementations from worktrees coul
 - **COULD HAVE**: ✗ Partial string matching not implemented (service methods focus on exact/range matching)
 - **WON'T HAVE**: ✓ No database or external index used
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 806.7s | Cost: $2.003995 USD | Turns: 39
