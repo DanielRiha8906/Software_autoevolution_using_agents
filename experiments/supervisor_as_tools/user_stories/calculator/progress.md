@@ -209,4 +209,4 @@ Duration: 153.5s | Cost: $0.324552 USD | Turns: 17
 - No breaking changes to existing MemoryService, CalculatorService, or CLI APIs
 - Full backward compatibility with existing memory entries and calculation history
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 352.5s | Cost: $0.708198 USD | Turns: 26
