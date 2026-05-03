@@ -102,6 +102,8 @@ package "services" #DDFFD4 {
         +filter_with_attempts(attempt_service) : List[WorkflowRun]
         +filter_without_attempts(attempt_service) : List[WorkflowRun]
         +filter_runs(...) : List[WorkflowRun]
+        +export_runs(filepath: str) : int
+        +import_runs(filepath: str, skip_duplicates: bool) : tuple
         -_persist() : None
     }
 

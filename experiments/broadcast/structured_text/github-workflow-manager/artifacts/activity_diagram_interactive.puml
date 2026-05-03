@@ -109,7 +109,30 @@ repeat
       :StatisticsService.compute_statistics();
       :Print statistics report\n(total_runs, conclusions_count,\navg/min/max_duration_seconds,\navg_attempts_per_run);
 
-    case (10 — Exit)
+    case (10 — Export runs to JSON)
+      :Prompt for output filepath;
+      if (filepath provided?) then (yes)
+        :WorkflowRunService.export_runs(filepath);
+        :Print "Successfully exported <count> runs";
+      else (no)
+        :Print "Export cancelled.";
+      endif
+
+    case (11 — Import runs from JSON)
+      :Prompt for input filepath;
+      if (filepath provided?) then (yes)
+        :Choose duplicate handling\n(fail on duplicate / skip duplicate);
+        :WorkflowRunService.import_runs(filepath, skip_duplicates);
+        :Print "Successfully imported <count> runs";
+        if (errors occurred?) then (yes)
+          :Print warnings (first 5 errors);
+        else (no)
+        endif
+      else (no)
+        :Print "Import cancelled.";
+      endif
+
+    case (12 — Exit)
       :Print "Goodbye.";
       stop
 

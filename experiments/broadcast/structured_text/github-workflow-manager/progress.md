@@ -338,3 +338,81 @@ Broadcast architecture with 3 independent implementers (candidate-a, candidate-b
 - **WON'T HAVE**: ✓ No visualization layer added
 
 Duration: 156.3s | Cost: $1.820183 USD | Turns: 52
+
+## Task 07: Data Portability (Export/Import runs to JSON)
+
+### Approach
+Broadcast architecture with 3 independent implementers (candidate-a, candidate-b, candidate-c).
+
+### Results
+- **Candidate-A**: 107/107 tests passing (91 existing + 16 new) ✓ SELECTED
+  - Full implementation with export_runs() and import_runs() methods
+  - Comprehensive test suite covering all scenarios
+  - CLI subcommands: export --output <file>, import --input <file> [--skip-duplicates]
+  - Interactive menu options: Export (option 10) and Import (option 11)
+  - Complete validation and error handling
+  - All 4 files properly committed
+
+- **Candidate-B**: 91/91 tests passing (implementation reported but not committed)
+  - Agents work in isolated worktrees; only candidate-a committed changes
+  
+- **Candidate-C**: 91/91 tests passing (implementation reported but not committed)
+  - Agents work in isolated worktrees; only candidate-a committed changes
+
+### Winner: Candidate-A
+**Reason**: Only Candidate-A successfully committed all changes with comprehensive test coverage (107 tests passing). The other candidates reported successful implementations but did not commit their work to the branch. Candidate-A implementation:
+- Added `export_runs(filepath)` method to serialize all runs to JSON file
+- Added `import_runs(filepath, skip_duplicates)` method to deserialize runs with validation
+- Implemented full validation: JSON syntax, schema structure, required fields
+- Added flexible error handling: fail-on-duplicate or skip mode
+- Comprehensive test coverage: export/import/roundtrips/error cases/validation
+
+### Files Changed
+- `src/services/workflow_run_service.py` (MODIFIED): Added export_runs() and import_runs() methods
+- `src/cli/workflow_cli.py` (MODIFIED): Added "export" and "import" subcommands with argparse integration
+- `src/cli/interactive_menu.py` (MODIFIED): Added _export_runs() and _import_runs() functions with menu options
+- `tests/test_export_import.py` (NEW): Comprehensive test suite with 16 tests covering all scenarios
+- `artifacts/class_diagram.puml` (MODIFIED): Added new methods to WorkflowRunService
+- `artifacts/use_case_diagram.puml` (MODIFIED): Added export/import use cases to both interactive and CLI modes
+- `artifacts/activity_diagram_interactive.puml` (MODIFIED): Added cases for options 10 (export) and 11 (import)
+- `artifacts/activity_diagram_main.puml` (MODIFIED): Added cases for export and import commands
+
+### Test Results
+- pytest: 107/107 tests passing ✓
+  - 16 new export/import tests (export roundtrips, import validation, duplicate handling, error cases, data integrity)
+  - 91 existing tests (unchanged from previous tasks)
+
+### Implementation Details
+
+**Export Functionality:**
+- `export_runs(filepath: str) -> int`: Serializes all runs to JSON file
+- Creates parent directories as needed
+- Uses existing `WorkflowRun.to_dict()` for schema consistency
+- Returns count of exported runs
+
+**Import Functionality:**
+- `import_runs(filepath: str, skip_duplicates: bool = False) -> tuple`: Deserializes runs from JSON
+- Validates JSON structure and schema (required fields: id, workflow_name, branch, status, created_at)
+- Duplicate detection by run ID with configurable behavior
+- Returns (imported_count, list_of_errors)
+- Can skip invalid entries or fail atomically based on configuration
+
+**CLI Exposure:**
+- Interactive: `python -m src` → Options 10 & 11 for export/import
+- One-shot export: `python -m src export --output <filepath>`
+- One-shot import: `python -m src import --input <filepath> [--skip-duplicates]`
+
+### Requirements Met
+- **MUST HAVE**: ✓ Export runs to JSON, import runs from JSON, schema consistency, CLI accessible
+- **SHOULD HAVE**: ✓ Validate imported data structure
+- **COULD HAVE**: ✓ Skip invalid/duplicate entries on import
+- **WON'T HAVE**: ✓ No external formats (CSV, DB)
+
+### CLI Usage Examples
+```bash
+python -m src export --output runs_backup.json
+python -m src import --input runs_backup.json
+python -m src import --input runs.json --skip-duplicates
+```
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
