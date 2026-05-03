@@ -44,6 +44,12 @@ else (no)
         :Load calculation history;
         :Show history;
 
+      case (Filter)
+        :Prompt for operation selection;
+        :Prompt for state selection;
+        :Apply filters to history;
+        :Show filtered results;
+
       case (Operation)
         :Read operands;
 

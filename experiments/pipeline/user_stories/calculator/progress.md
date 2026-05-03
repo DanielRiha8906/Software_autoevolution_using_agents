@@ -130,3 +130,40 @@ Duration: 756.5s | Cost: $1.392113 USD | Turns: 24
 - ✅ All functionality accessible via `python -m src` (existing --show-history flag and interactive menu continue to work)
 
 Duration: 439.1s | Cost: $0.925967 USD | Turns: 17
+
+## Task 05: History Filtering by Operation Type and Result State
+
+**Status**: ✅ Complete
+
+**Description**: Add programmatic filtering capability to retrieve stored calculations by operation type and result state (success vs. error), allowing users to query and reuse relevant past results efficiently. Filtering is exposed through both interactive menu and CLI flags.
+
+**Files Changed**:
+- `src/services/memory_service.py` — Added four filtering methods: `filter_by_operation(operation_name: str)`, `filter_by_operations(operation_names: list[str])`, `filter_by_state(state: str)`, and `filter(operations: list[str] | None, state: str | None)` for single operation, multiple operations, state-based, and combined filtering respectively
+- `src/services/calculator_service.py` — Added `filter_history(operations: list[str] | None, state: str | None)` facade method that delegates to MemoryService
+- `src/cli/calculator_cli.py` — Added "Filter history" as menu item 10, shifted Exit to item 11; added `_run_filter_menu()` for submenu flow, `_prompt_operation_selection()` for comma-separated operation selection (1,3,5 multi-select), `_prompt_state_selection()` for state choice (1=success, 2=error, 3=both), and `_show_filtered_history()` to display filtered results
+- `src/__main__.py` — Added `--filter-operation` (comma-separated operation names) and `--filter-state` (choices: success, error, both) arguments to argparse; updated `--show-history` handler to apply filters when flags provided
+- `artifacts/class_diagram.puml` — Added four filtering methods to MemoryService and wrapper method to CalculatorService; updated CalculatorCLI with new menu-handling methods
+- `artifacts/use_case_diagram.puml` — Added "Filter calculation history" use case connected to User actor
+- `artifacts/activity_diagram.puml` — Added new branch for filter operation in menu selection, showing prompt-for-operations → prompt-for-state → apply-filters → show-results flow
+- `artifacts/state_diagram_interactive.puml` — Added FilterOps and FilterState states, showing two-stage filtering process with transitions from Menu and back to Menu after completion
+- `tests/test_filtering.py` — NEW: 45 comprehensive tests covering filter_by_operation(), filter_by_operations(), filter_by_state(), combined filter(), CalculatorService delegation, CLI integration (operation/state prompts, filtered display), edge cases, error handling, and order preservation
+- `tests/test_cli.py` — Updated 14 tests to account for menu structure change (Exit moved from option 10 to 11)
+- `tests/test_cli_memory_entry.py` — Updated 14 tests to account for menu structure change (Exit moved from option 10 to 11)
+
+**Test Results**:
+- Total tests: 388 (343 existing + 45 new filtering tests)
+- Passed: 388 ✅
+- Failed: 0
+- Test files: test_filtering.py (45 new tests covering all filtering methods and CLI integration), test_cli.py (14 fixes), test_cli_memory_entry.py (14 fixes)
+- Coverage: Single/multiple operation filtering, success/error/both state filtering, combined AND-logic filtering, empty results, invalid inputs (ValueError), order preservation, CLI flag parsing (comma-separated ops, state choices), interactive submenu flows, operation validation against Operation enum, state validation, backward compatibility (--show-history without filters)
+
+**Acceptance Criteria Met**:
+- ✅ Programmatic filtering capability available over stored calculations (MemoryService.filter() and related methods)
+- ✅ Filtering by operation type supported via filter_by_operation() and filter_by_operations()
+- ✅ Filtering by result state (success vs. error) supported via filter_by_state() with "success", "error", "both" options
+- ✅ Multiple filters combined in single query via filter(operations, state) with AND logic
+- ✅ Results returned as list[MemoryEntry] with consistent structure across all queries
+- ✅ No database or external indexing system used (in-memory filtering from JsonStorage after load)
+- ✅ All functionality accessible via python -m src: interactive menu option "Filter history" (item 10) with two-stage submenu (operation selection + state selection), and one-shot CLI flags (--filter-operation and --filter-state) used with --show-history
+
+Duration: 565.8s | Cost: $1.062949 USD | Turns: 21

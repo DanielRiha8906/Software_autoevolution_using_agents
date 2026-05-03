@@ -70,8 +70,12 @@ package "services" #DDFFD4 {
         +MemoryService(storage: JsonStorage)
         +store(entry: MemoryEntry) : void
         +retrieve() : list[MemoryEntry]
+        +filter_by_operation(operation_name: str) : list[MemoryEntry]
+        +filter_by_operations(operation_names: list[str]) : list[MemoryEntry]
+        +filter_by_state(state: str) : list[MemoryEntry]
+        +filter(operations: list[str] | None, state: str | None) : list[MemoryEntry]
         ..
-        note on right : Encapsulates storage access;\\nabstraction over JsonStorage
+        note on right : Encapsulates storage access;\\nabstraction over JsonStorage;\\nfiltering by operation/state
     }
 
     class CalculatorService {
@@ -81,8 +85,9 @@ package "services" #DDFFD4 {
         +CalculatorService(calculator: Calculator, memory_service: MemoryService)
         +perform(operation: Operation, a: float, b: float) : MemoryEntry
         +get_history() : list[MemoryEntry]
+        +filter_history(operations: list[str] | None, state: str | None) : list[MemoryEntry]
         ..
-        note on right : Wraps results with error handling;\\nsaves via MemoryService
+        note on right : Wraps results with error handling;\\nsaves via MemoryService;\\ndelegate filtering
     }
 }
 
@@ -110,6 +115,10 @@ package "cli" #FFE5E5 {
         -_resolve_menu_choice(choice: str) : Operation [0..1]
         -_prompt_number(prompt: str) : float [0..1]
         -_show_history() : void
+        -_run_filter_menu() : void
+        -_prompt_operation_selection() : list[str] | None
+        -_prompt_state_selection() : str | None
+        -_show_filtered_history(operations: list[str] | None, state: str | None) : void
     }
 }
 

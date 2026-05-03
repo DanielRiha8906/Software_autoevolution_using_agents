@@ -107,33 +107,33 @@ class TestRunCommand:
 class TestRunInteractive:
     def test_exit_choice(self, capsys):
         cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["10"]):
+        with patch("builtins.input", side_effect=["11"]):
             cli.run_interactive()
         assert "Goodbye" in capsys.readouterr().out
 
     def test_add_operation(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = MemoryEntry("add", 3, 5, 8, None, None, _TS)
-        with patch("builtins.input", side_effect=["1", "3", "5", "10"]):
+        with patch("builtins.input", side_effect=["1", "3", "5", "11"]):
             cli.run_interactive()
         assert "8" in capsys.readouterr().out
 
     def test_invalid_choice_retries(self, capsys):
         cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["99", "10"]):
+        with patch("builtins.input", side_effect=["99", "11"]):
             cli.run_interactive()
         assert "Invalid choice" in capsys.readouterr().out
 
     def test_invalid_number_retries(self, capsys):
         cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["1", "abc", "10"]):
+        with patch("builtins.input", side_effect=["1", "abc", "11"]):
             cli.run_interactive()
         assert "Invalid number" in capsys.readouterr().out
 
     def test_history_empty(self, capsys):
         cli, service = _make_cli()
         service.get_history.return_value = []
-        with patch("builtins.input", side_effect=["9", "10"]):
+        with patch("builtins.input", side_effect=["9", "11"]):
             cli.run_interactive()
         assert "No calculations" in capsys.readouterr().out
 
@@ -142,7 +142,7 @@ class TestRunInteractive:
         service.get_history.return_value = [
             MemoryEntry("add", 1, 2, 3, None, None, _TS),
         ]
-        with patch("builtins.input", side_effect=["9", "10"]):
+        with patch("builtins.input", side_effect=["9", "11"]):
             cli.run_interactive()
         assert "1 + 2 = 3" in capsys.readouterr().out
 
@@ -150,7 +150,7 @@ class TestRunInteractive:
     def test_square_operation_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = MemoryEntry("square", 5, 0, 25, None, None, _TS)
-        with patch("builtins.input", side_effect=["5", "5", "0", "10"]):
+        with patch("builtins.input", side_effect=["5", "5", "0", "11"]):
             cli.run_interactive()
         assert "25" in capsys.readouterr().out
 
@@ -158,14 +158,14 @@ class TestRunInteractive:
     def test_sqrt_operation_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = MemoryEntry("sqrt", 16, 0, 4, None, None, _TS)
-        with patch("builtins.input", side_effect=["6", "16", "0", "10"]):
+        with patch("builtins.input", side_effect=["6", "16", "0", "11"]):
             cli.run_interactive()
         assert "4" in capsys.readouterr().out
 
     def test_sqrt_negative_error_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = MemoryEntry("sqrt", -1, 0, None, "Cannot take square root of negative number", "ValueError", _TS)
-        with patch("builtins.input", side_effect=["6", "-1", "0", "10"]):
+        with patch("builtins.input", side_effect=["6", "-1", "0", "11"]):
             cli.run_interactive()
         assert "Cannot take square root of negative number" in capsys.readouterr().out
 
@@ -173,7 +173,7 @@ class TestRunInteractive:
     def test_power_operation_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = MemoryEntry("power", 2, 5, 32, None, None, _TS)
-        with patch("builtins.input", side_effect=["7", "2", "5", "10"]):
+        with patch("builtins.input", side_effect=["7", "2", "5", "11"]):
             cli.run_interactive()
         assert "32" in capsys.readouterr().out
 
@@ -181,13 +181,13 @@ class TestRunInteractive:
     def test_modulo_operation_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = MemoryEntry("modulo", 10, 3, 1, None, None, _TS)
-        with patch("builtins.input", side_effect=["8", "10", "3", "10"]):
+        with patch("builtins.input", side_effect=["8", "10", "3", "11"]):
             cli.run_interactive()
         assert "1" in capsys.readouterr().out
 
     def test_modulo_by_zero_error_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = MemoryEntry("modulo", 10, 0, None, "Modulo by zero is not allowed", "ZeroDivisionError", _TS)
-        with patch("builtins.input", side_effect=["8", "10", "0", "10"]):
+        with patch("builtins.input", side_effect=["8", "10", "0", "11"]):
             cli.run_interactive()
         assert "Modulo by zero is not allowed" in capsys.readouterr().out

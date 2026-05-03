@@ -42,6 +42,17 @@ def main() -> None:
         help="Display all calculation history",
     )
     parser.add_argument(
+        "--filter-operation",
+        metavar="OPS",
+        help="Filter history by operation(s) (comma-separated names: add,subtract,multiply,etc.)",
+    )
+    parser.add_argument(
+        "--filter-state",
+        metavar="STATE",
+        choices=["success", "error", "both"],
+        help="Filter history by result state: success (no error), error (failed), or both",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -52,8 +63,33 @@ def main() -> None:
     service = _build_service()
     cli = CalculatorCLI(service)
 
-    if args.show_history:
-        cli._show_history()
+    # Handle --show-history (with optional filters)
+    if args.show_history or args.filter_operation or args.filter_state:
+        # If no filters, use the simple _show_history method
+        if not args.filter_operation and not args.filter_state:
+            cli._show_history()
+            sys.exit(0)
+
+        # Parse and validate filters
+        operations = None
+        state = None
+
+        # Parse filter-operation if provided
+        if args.filter_operation:
+            operations = [op.strip() for op in args.filter_operation.split(",")]
+            # Validate operation names
+            for op_name in operations:
+                try:
+                    Operation.from_string(op_name)
+                except ValueError as exc:
+                    parser.error(str(exc))
+
+        # Use filter-state if provided, otherwise default to None (which means 'both')
+        if args.filter_state:
+            state = args.filter_state
+
+        # Display filtered history
+        cli._show_filtered_history(operations, state)
         sys.exit(0)
 
     if args.operation:
