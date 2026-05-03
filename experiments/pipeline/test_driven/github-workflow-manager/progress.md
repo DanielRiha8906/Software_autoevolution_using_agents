@@ -233,4 +233,4 @@ Implemented comprehensive query functionality in `WorkflowRunService` to filter 
 4. Pytest-Tester — Created comprehensive test suite covering happy paths, edge cases, and validation errors (66/66 pass)
 5. UML Designer — Updated class and component diagrams to show new method and service dependencies
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 409.0s | Cost: $0.796263 USD | Turns: 34
