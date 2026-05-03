@@ -1,389 +1,458 @@
-# Task 02 Analysis: Add encapsulated state-checking methods to WorkflowRun
+# Task 03 Analysis: Create WorkflowRunAttempt Class
 
 ## What the Task Is Asking For
 
-Add five mutually-exclusive state-checking methods to the `WorkflowRun` class that encapsulate business logic for querying workflow state:
+Create a first-class model `WorkflowRunAttempt` that represents individual workflow run attempts (a run can be retried, each retry is an attempt). The class must include:
 
-- `is_terminal()` — Returns True if the run has finished (conclusion is set AND status is COMPLETED)
-- `is_successful()` — Returns True if conclusion is SUCCESS and status is COMPLETED
-- `is_failed()` — Returns True if conclusion is FAILURE and status is COMPLETED
-- `is_running()` — Returns True if status is IN_PROGRESS or REQUESTED or PENDING (actively executing)
-- `is_cancelled()` — Returns True if conclusion is CANCELLED and status is COMPLETED
+**Required attributes:**
+- `id: int` — unique identifier for the attempt
+- `run_id: int` — foreign key to parent WorkflowRun
+- `attempt_number: int` — sequential attempt counter (positive integer, starting from 1)
+- `status: str` — execution status
+- `conclusion: Optional[str]` — execution outcome (nullable)
+- `created_at: datetime` — creation timestamp (CEST, UTC+2)
+- `duration_seconds: float` — execution duration (optional)
 
-All methods must:
-- Derive state from `status` and `conclusion` fields only
-- Be mutually exclusive where specified (clarification needed on which pairs conflict)
-- Be accessible via `python -m src` menu and CLI flags (user can query state without external tools)
-- Not modify existing enum definitions (only add methods to WorkflowRun class)
+**Constraints:**
+- Unique constraint on (run_id, attempt_number) pair — no duplicate attempts for the same run
+- attempt_number must be a positive integer starting from 1
+- Must support JSON serialization/deserialization (like WorkflowRun)
+- Associated with parent WorkflowRun (relationship/association pattern needed)
 
-## Current WorkflowRun Structure
+## Current Data Model Architecture
 
-**Location:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/github-workflow-manager/src/models/workflow_run.py`
+### WorkflowRun Class (Location: src/models/workflow_run.py)
 
-**Current attributes:**
-- `id: str` — unique identifier
-- `workflow_name: str` — name of the workflow
-- `branch: str` — git branch
-- `status: WorkflowStatus` — current execution status (enum: QUEUED, IN_PROGRESS, COMPLETED, WAITING, REQUESTED, PENDING)
-- `conclusion: Optional[WorkflowConclusion]` — outcome (optional enum: SUCCESS, FAILURE, CANCELLED, SKIPPED, TIMED_OUT, ACTION_REQUIRED, NEUTRAL, STALE)
-- `created_at: datetime` — creation timestamp
-- `updated_at: Optional[datetime]` — last update timestamp (optional)
-- `run_number: Optional[int]` — GitHub run number (optional)
-- `commit_sha: Optional[str]` — commit hash (optional)
-- `duration_seconds: float` — execution duration (from Task 01, default 0.0)
+**Current structure:**
+```
+WorkflowRun (dataclass):
+  - id: str (string UUID)
+  - workflow_name: str
+  - branch: str
+  - status: WorkflowStatus (enum)
+  - conclusion: Optional[WorkflowConclusion] (optional enum)
+  - created_at: datetime
+  - updated_at: Optional[datetime]
+  - run_number: Optional[int]
+  - commit_sha: Optional[str]
+  - duration_seconds: float (default 0.0)
+```
 
-**Current methods:**
-- `__post_init__()` — validates duration_seconds >= 0
-- `to_dict() -> dict` — serializes to JSON-compatible dict
-- `from_dict(data: dict) -> WorkflowRun` — deserializes from dict (class method)
+**Patterns used:**
+- **Dataclass pattern** — Uses Python 3.7+ dataclass decorator, not ORM
+- **Enum typing** — status and conclusion use Enum classes (WorkflowStatus, WorkflowConclusion)
+- **Validation in __post_init__()** — duration_seconds >= 0 enforced at construction
+- **Optional fields** — Uses Optional[type] for nullable fields (updated_at, conclusion, run_number, etc.)
+- **ISO format serialization** — to_dict() and from_dict() use datetime.isoformat() for timestamps
+- **Class method deserialization** — from_dict() is a @classmethod that reconstructs from dict
 
-## Where State Logic Currently Lives
+### Serialization Pattern Observed
 
-**No existing state-checking methods in the codebase.** Analysis of current code reveals:
-
-1. **Service layer** (`src/services/workflow_run_service.py`):
-   - `filter_by_status(status: WorkflowStatus)` — filters by exact status match only
-   - `filter_by_conclusion(conclusion: WorkflowConclusion)` — filters by exact conclusion match only
-   - No composite state logic (e.g., "is the run terminal?")
-
-2. **CLI layer** (`src/cli/workflow_cli.py`, `src/cli/interactive_menu.py`):
-   - `_fmt_run(run: WorkflowRun)` — displays status and conclusion as raw enum values
-   - No state-based decision logic (e.g., showing different UI based on run state)
-
-3. **Model layer:**
-   - WorkflowRun is a simple dataclass with no business logic methods beyond serialization
-
-**Implication:** State checking (e.g., "is this run done?") would currently require external callers to:
-1. Check `run.status == WorkflowStatus.COMPLETED`
-2. Check `run.conclusion is not None`
-3. Check `run.conclusion == WorkflowConclusion.SUCCESS` (or similar)
-
-This duplicates logic across potential callers. The new methods encapsulate this.
-
-## What the New Methods Should Be
-
-Add to `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/github-workflow-manager/src/models/workflow_run.py`:
-
+In WorkflowRun.to_dict():
 ```python
-def is_terminal(self) -> bool:
-    """
-    Returns True if the workflow run has reached a terminal state.
-    Terminal = COMPLETED status AND conclusion is set (not None).
-    Mutually exclusive with: is_running()
-    """
-    return self.status == WorkflowStatus.COMPLETED and self.conclusion is not None
+def to_dict(self) -> dict:
+    return {
+        "id": self.id,
+        "workflow_name": self.workflow_name,
+        "branch": self.branch,
+        "status": self.status.value,              # Enum → string value
+        "conclusion": self.conclusion.value if self.conclusion else None,  # Null-safe enum
+        "created_at": self.created_at.isoformat(),  # datetime → ISO string
+        "updated_at": self.updated_at.isoformat() if self.updated_at else None,  # Null-safe ISO
+        "run_number": self.run_number,
+        "commit_sha": self.commit_sha,
+        "duration_seconds": self.duration_seconds,
+    }
+```
 
-def is_successful(self) -> bool:
-    """
-    Returns True if the workflow completed successfully.
-    Success = COMPLETED status AND conclusion is SUCCESS.
-    Mutually exclusive with: is_failed(), is_cancelled()
-    """
-    return self.status == WorkflowStatus.COMPLETED and self.conclusion == WorkflowConclusion.SUCCESS
-
-def is_failed(self) -> bool:
-    """
-    Returns True if the workflow completed with failure.
-    Failure = COMPLETED status AND conclusion is FAILURE.
-    Mutually exclusive with: is_successful(), is_cancelled()
-    """
-    return self.status == WorkflowStatus.COMPLETED and self.conclusion == WorkflowConclusion.FAILURE
-
-def is_running(self) -> bool:
-    """
-    Returns True if the workflow is actively executing.
-    Running = status is IN_PROGRESS, REQUESTED, or PENDING.
-    Mutually exclusive with: is_terminal()
-    """
-    return self.status in (
-        WorkflowStatus.IN_PROGRESS,
-        WorkflowStatus.REQUESTED,
-        WorkflowStatus.PENDING
+And in WorkflowRun.from_dict():
+```python
+@classmethod
+def from_dict(cls, data: dict) -> "WorkflowRun":
+    return cls(
+        id=data["id"],
+        workflow_name=data["workflow_name"],
+        branch=data["branch"],
+        status=WorkflowStatus(data["status"]),  # String → Enum
+        conclusion=WorkflowConclusion(data["conclusion"]) if data.get("conclusion") else None,  # Null-safe
+        created_at=datetime.fromisoformat(data["created_at"]),  # ISO string → datetime
+        updated_at=datetime.fromisoformat(data["updated_at"]) if data.get("updated_at") else None,  # Null-safe
+        run_number=data.get("run_number"),
+        commit_sha=data.get("commit_sha"),
+        duration_seconds=data.get("duration_seconds", 0.0),
     )
-
-def is_cancelled(self) -> bool:
-    """
-    Returns True if the workflow was cancelled.
-    Cancelled = COMPLETED status AND conclusion is CANCELLED.
-    Mutually exclusive with: is_successful(), is_failed()
-    """
-    return self.status == WorkflowStatus.COMPLETED and self.conclusion == WorkflowConclusion.CANCELLED
 ```
 
-**Logic model:**
-- `is_terminal()` and `is_running()` are mutually exclusive (terminal ↔ not running)
-- `is_successful()`, `is_failed()`, `is_cancelled()` are all subsets of `is_terminal()` and mutually exclusive with each other
-- A run can be terminal without being any of those three (e.g., COMPLETED + SKIPPED)
+**Key pattern:** Enums are stored as .value (string), datetimes as isoformat() strings; deserialization reverses this.
 
-## Dependencies and Constraints
+### Storage Layer (Location: src/storage/workflow_json_storage.py)
 
-### Enum Values Available
+**Current approach:**
+- JSON file storage (no database/ORM)
+- Single file per list: `artifacts/workflow_runs.json`
+- Loads entire list at startup, keeps in memory, saves whole list on mutation
+- Calls `run.to_dict()` for serialization, `WorkflowRun.from_dict()` for deserialization
 
-**WorkflowStatus** (6 values):
-- QUEUED, IN_PROGRESS, COMPLETED, WAITING, REQUESTED, PENDING
+**Pattern:** Store all objects in a JSON array; no relational schema.
 
-**WorkflowConclusion** (8 values, optional):
-- SUCCESS, FAILURE, CANCELLED, SKIPPED, TIMED_OUT, ACTION_REQUIRED, NEUTRAL, STALE
+### Service Layer (Location: src/services/workflow_run_service.py)
 
-### State Machine Reality (inferred from GitHub Actions)
+**Current approach:**
+- Single responsibility: in-memory CRUD operations for WorkflowRun objects
+- Methods: add_workflow_run(), list_runs(), get_run_detail(), filter_by_branch(), filter_by_status(), filter_by_conclusion()
+- Duplicate detection: `if any(r.id == run.id for r in self._runs)` raises ValueError on duplicate
+- Persistence: calls `self._storage.save(self._runs)` after each mutation
 
-- **Active states:** `status` is IN_PROGRESS, REQUESTED, PENDING, or QUEUED
-- **Terminal states:** `status` is COMPLETED with `conclusion` set
-- **Indeterminate:** Other status values (WAITING) may occur in edge cases
-- **Conclusion necessity:** A COMPLETED run must have a conclusion; a running run must not
+**Pattern:** Service manages in-memory list; storage handles persistence. No transaction model.
 
-**No external constraints:** These methods derive state from fields already present in the model.
+### Enum Definitions
 
-### No Modification to Enums
+**WorkflowStatus** (src/models/workflow_status.py):
+- String enum (inherits from str, Enum)
+- Values: QUEUED, IN_PROGRESS, COMPLETED, WAITING, REQUESTED, PENDING
 
-- Task explicitly forbids modifying `WorkflowStatus` or `WorkflowConclusion` definitions
-- This is correct; the enums represent GitHub's state space, not ours
+**WorkflowConclusion** (src/models/workflow_conclusion.py):
+- String enum (inherits from str, Enum)
+- Values: SUCCESS, FAILURE, CANCELLED, SKIPPED, TIMED_OUT, ACTION_REQUIRED, NEUTRAL, STALE
 
-## Entry Point Modifications Needed for CLI/Menu Access
+**Note:** These represent GitHub Actions API states; task requirement says not to modify them.
 
-### 1. CLI Layer (`src/cli/workflow_cli.py`)
+### Import Pattern in Models
 
-**Problem:** Users can run `python -m src add ... --status completed --conclusion success`, but there's no way to query state via CLI flags (e.g., `python -m src check --run-id <id> --is-terminal`).
-
-**Solution:** Add a new `check` subcommand to `build_parser()`:
-
+In src/models/__init__.py:
 ```python
-# check
-check_p = sub.add_parser("check", help="Check run state")
-check_p.add_argument("run_id", help="Run ID")
-check_p.add_argument("--is-terminal", action="store_true", help="Check if run is terminal")
-check_p.add_argument("--is-successful", action="store_true", help="Check if run succeeded")
-check_p.add_argument("--is-failed", action="store_true", help="Check if run failed")
-check_p.add_argument("--is-running", action="store_true", help="Check if run is active")
-check_p.add_argument("--is-cancelled", action="store_true", help="Check if run was cancelled")
+from .workflow_run import WorkflowRun
+from .workflow_status import WorkflowStatus
+from .workflow_conclusion import WorkflowConclusion
+
+__all__ = ["WorkflowRun", "WorkflowStatus", "WorkflowConclusion"]
 ```
 
-Then in `run_cli()`:
+**Pattern:** Each model gets its own file; __init__.py re-exports them.
 
+## What Needs to Be Added for WorkflowRunAttempt
+
+### 1. New Model Class
+
+**File:** `src/models/workflow_run_attempt.py` (new file)
+
+**Requirements:**
 ```python
-elif ns.command == "check":
-    run = service.get_run_detail(ns.run_id)
-    if run is None:
-        print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
-        sys.exit(1)
+@dataclass
+class WorkflowRunAttempt:
+    id: int                                      # Unique identifier
+    run_id: int                                  # Foreign key to WorkflowRun
+    attempt_number: int                          # Positive integer, starts at 1
+    status: str                                  # Execution status (string, not enum)
+    conclusion: Optional[str]                    # Optional outcome (string, not enum)
+    created_at: datetime                         # CEST timezone (UTC+2)
+    duration_seconds: float = 0.0                # Optional, defaults to 0.0
     
-    # If no flag specified, show all states
-    if not any([ns.is_terminal, ns.is_successful, ns.is_failed, ns.is_running, ns.is_cancelled]):
-        print(f"id               : {run.id}")
-        print(f"is_terminal      : {run.is_terminal()}")
-        print(f"is_successful    : {run.is_successful()}")
-        print(f"is_failed        : {run.is_failed()}")
-        print(f"is_running       : {run.is_running()}")
-        print(f"is_cancelled     : {run.is_cancelled()}")
-    else:
-        # Check only requested flags
-        if ns.is_terminal:
-            print(f"{run.id}: is_terminal = {run.is_terminal()}")
-        if ns.is_successful:
-            print(f"{run.id}: is_successful = {run.is_successful()}")
-        if ns.is_failed:
-            print(f"{run.id}: is_failed = {run.is_failed()}")
-        if ns.is_running:
-            print(f"{run.id}: is_running = {run.is_running()}")
-        if ns.is_cancelled:
-            print(f"{run.id}: is_cancelled = {run.is_cancelled()}")
+    def __post_init__(self) -> None:
+        # Validate attempt_number is positive integer >= 1
+        if not isinstance(self.attempt_number, int) or self.attempt_number < 1:
+            raise ValueError("attempt_number must be a positive integer (>= 1)")
+        # Validate duration_seconds is non-negative (same pattern as WorkflowRun)
+        if self.duration_seconds < 0:
+            raise ValueError("duration_seconds must be non-negative")
+    
+    def to_dict(self) -> dict:
+        # Serialize to JSON-compatible dict
+        # created_at should be ISO format (isoformat())
+        # Handle nullable conclusion
+        pass
+    
+    @classmethod
+    def from_dict(cls, data: dict) -> "WorkflowRunAttempt":
+        # Deserialize from dict
+        # Parse created_at from ISO format (fromisoformat())
+        # Handle nullable conclusion
+        pass
 ```
 
-### 2. Interactive Menu (`src/cli/interactive_menu.py`)
+**Design notes:**
+- Use dataclass decorator (matches WorkflowRun pattern)
+- `status` and `conclusion` are strings, NOT enums (task specifies str type)
+- `created_at` has CEST (UTC+2) requirement — likely metadata/documentation; actual storage should use UTC and let callers adjust if needed
+- `duration_seconds` is optional with default 0.0 (matches WorkflowRun pattern)
+- Unique constraint (run_id, attempt_number) is enforced at **service layer**, not in dataclass
 
-Add a new menu option to the `MENU` list:
+### 2. Service Layer Enhancements
+
+**File:** `src/services/workflow_run_service.py` (or new file `src/services/workflow_run_attempt_service.py`)
+
+**Decision point:** Should attempts be:
+- **Option A:** Nested inside WorkflowRunService (add_attempt, get_attempts, etc.)
+- **Option B:** New separate service class WorkflowRunAttemptService
+- **Option C:** Embedded in WorkflowRun (has_many relationship)
+
+**Recommended:** Option B (separate service) — Keeps concerns separate, matches SRP, easier to test and reuse.
+
+**Methods needed:**
+```python
+class WorkflowRunAttemptService:
+    def __init__(self, storage: WorkflowJsonStorage):
+        self._storage = storage
+        self._attempts: List[WorkflowRunAttempt] = storage.load_attempts()
+    
+    def add_attempt(self, attempt: WorkflowRunAttempt) -> WorkflowRunAttempt:
+        # Enforce unique constraint: (run_id, attempt_number)
+        if any(a.run_id == attempt.run_id and a.attempt_number == attempt.attempt_number for a in self._attempts):
+            raise ValueError(f"Attempt {attempt.attempt_number} for run {attempt.run_id} already exists.")
+        self._attempts.append(attempt)
+        self._persist()
+        return attempt
+    
+    def list_attempts(self) -> List[WorkflowRunAttempt]:
+        return list(self._attempts)
+    
+    def get_attempt(self, attempt_id: int) -> Optional[WorkflowRunAttempt]:
+        # By attempt id
+        pass
+    
+    def get_attempts_for_run(self, run_id: int) -> List[WorkflowRunAttempt]:
+        # All attempts for a given run
+        return [a for a in self._attempts if a.run_id == run_id]
+    
+    def _persist(self) -> None:
+        self._storage.save_attempts(self._attempts)
+```
+
+### 3. Storage Layer Enhancements
+
+**File:** `src/storage/workflow_json_storage.py` (extend existing)
+
+**Methods to add:**
+```python
+class WorkflowJsonStorage:
+    def __init__(self, filepath: str = "artifacts/workflow_runs.json", attempts_filepath: str = "artifacts/workflow_run_attempts.json"):
+        self.filepath = Path(filepath)
+        self.attempts_filepath = Path(attempts_filepath)
+        self.filepath.parent.mkdir(parents=True, exist_ok=True)
+    
+    def save_attempts(self, attempts: List[WorkflowRunAttempt]) -> None:
+        data = [attempt.to_dict() for attempt in attempts]
+        self.attempts_filepath.write_text(json.dumps(data, indent=2))
+    
+    def load_attempts(self) -> List[WorkflowRunAttempt]:
+        if not self.attempts_filepath.exists():
+            return []
+        raw = json.loads(self.attempts_filepath.read_text())
+        return [WorkflowRunAttempt.from_dict(item) for item in raw]
+```
+
+**Design decision:** Separate JSON file for attempts (`workflow_run_attempts.json`) keeps data cleanly separated and allows independent queries.
+
+### 4. Model Package Update
+
+**File:** `src/models/__init__.py` (extend)
 
 ```python
-def _check_run_state(service: WorkflowRunService) -> None:
-    """Check state of a run."""
-    run_id = _prompt("Enter run ID")
-    run = service.get_run_detail(run_id)
-    if run is None:
-        print(f"No run found with id '{run_id}'.")
-        return
-    
-    print(f"\n--- Run State: {run.id} ---")
-    print(f"  is_terminal      : {run.is_terminal()}")
-    print(f"  is_successful    : {run.is_successful()}")
-    print(f"  is_failed        : {run.is_failed()}")
-    print(f"  is_running       : {run.is_running()}")
-    print(f"  is_cancelled     : {run.is_cancelled()}")
+from .workflow_run import WorkflowRun
+from .workflow_status import WorkflowStatus
+from .workflow_conclusion import WorkflowConclusion
+from .workflow_run_attempt import WorkflowRunAttempt
 
-MENU = [
-    ("Add workflow run", _add_run),
-    ("List all runs", _list_runs),
-    ("Get run detail", _detail_run),
-    ("Check run state", _check_run_state),  # NEW
-    ("Filter runs", _filter_menu),
-    ("Exit", None),
-]
+__all__ = ["WorkflowRun", "WorkflowStatus", "WorkflowConclusion", "WorkflowRunAttempt"]
 ```
 
-### 3. No Changes Needed to:
+### 5. CLI Integration (if required)
 
-- `src/models/workflow_run.py` — Only add methods; no attribute or serialization changes
-- `src/services/workflow_run_service.py` — No changes; state methods are on the model
-- `src/storage/workflow_json_storage.py` — No changes; state methods are not persisted
-- `src/__main__.py` — No changes; router already delegates to CLI or menu based on args
+**Task requirement:** "JSON serialization/deserialization support" and association with parent WorkflowRun
 
-## Testing Patterns (for implementation)
+**Minimum:** Serialization and model relationship working
 
-Existing tests (from Task 01) use:
-- `_make_run_with_duration()` helper to create test instances with realistic data
-- `MagicMock` for service/storage layer mocking in integration tests
-- Direct instantiation of `WorkflowRun` for unit tests
+**Optional but recommended:** CLI commands to add/list/detail attempts
+- `python -m src attempt add --run-id <id> --attempt-number <n> --status <s> --conclusion <c>`
+- `python -m src attempt list [--run-id <id>]`
+- `python -m src attempt detail <attempt-id>`
 
-**New tests needed:**
-- Unit tests on `WorkflowRun` model directly (no mocks):
-  - `is_terminal()` returns True when status=COMPLETED and conclusion is set
-  - `is_terminal()` returns False when status≠COMPLETED or conclusion is None
-  - `is_successful()` returns True only when status=COMPLETED and conclusion=SUCCESS
-  - `is_failed()` returns True only when status=COMPLETED and conclusion=FAILURE
-  - `is_running()` returns True when status is IN_PROGRESS, REQUESTED, or PENDING
-  - `is_running()` returns False when status is QUEUED, WAITING, or COMPLETED
-  - `is_cancelled()` returns True only when status=COMPLETED and conclusion=CANCELLED
-  - Mutually exclusive pairs (e.g., `is_terminal()` and `is_running()` cannot both be True)
-  - Edge cases: All status/conclusion combinations
+**Extend:** `src/cli/workflow_cli.py` with new subcommand or menu option
 
-- CLI/integration tests (with service):
-  - `python -m src check <run-id>` returns all state flags
-  - `python -m src check <run-id> --is-terminal` returns single state check
-  - Non-existent run ID exits with error code 1
-  - Multiple flags (e.g., `--is-terminal --is-running`) all print correctly
+### 6. Relationship Between WorkflowRun and WorkflowRunAttempt
 
-- Interactive menu tests:
-  - Menu option "Check run state" launches `_check_run_state()`
-  - Prompts for run ID and displays all state flags
-  - Non-existent run ID shows error and returns to menu
+**Pattern needed:** Parent-child association
 
-## Files That Will Need Changes
+**Option A (Lazy association):**
+```python
+# In WorkflowRun or service:
+def get_attempts(self, run_id: int) -> List[WorkflowRunAttempt]:
+    return self.attempt_service.get_attempts_for_run(run_id)
+```
 
-1. **Model class:**
-   - `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/github-workflow-manager/src/models/workflow_run.py`
-     - Add `is_terminal()` method
-     - Add `is_successful()` method
-     - Add `is_failed()` method
-     - Add `is_running()` method
-     - Add `is_cancelled()` method
-     - No attribute or serialization changes needed
+**Option B (Eager association):**
+```python
+@dataclass
+class WorkflowRun:
+    # ... existing fields ...
+    attempts: List[WorkflowRunAttempt] = field(default_factory=list)
+```
 
-2. **CLI layer:**
-   - `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/github-workflow-manager/src/cli/workflow_cli.py`
-     - Add `check` subcommand to `build_parser()`
-     - Add handler in `run_cli()` for `ns.command == "check"`
-     - Output all state flags or query-specific flags based on user input
+**Recommended:** Option A (lazy) — Keeps WorkflowRun simple and independent; WorkflowRunAttempt is a peer model, not a nested structure.
 
-3. **Interactive menu:**
-   - `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/github-workflow-manager/src/cli/interactive_menu.py`
-     - Add `_check_run_state()` function
-     - Add menu entry to `MENU` list
+## Data Model Architecture Pattern Summary
 
-4. **Test files:**
-   - Create or update `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/github-workflow-manager/tests/test_state_checking_methods.py`
-     - 40+ unit tests for all combinations of status/conclusion
-     - Mutually exclusive pair tests
-     - Integration tests for CLI `check` subcommand
-     - Interactive menu tests
+**Stack:**
+1. **Model layer** (src/models/) — Dataclasses with validation, serialization
+2. **Service layer** (src/services/) — In-memory CRUD, uniqueness constraints, persistence delegation
+3. **Storage layer** (src/storage/) — JSON file read/write, model reconstruction
+4. **CLI layer** (src/cli/) — User-facing commands, menu options
 
-5. **Diagrams:**
-   - `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/github-workflow-manager/artifacts/class_diagram.puml`
-     - Add five new methods to WorkflowRun class box
-   - `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/github-workflow-manager/artifacts/activity_diagram_main.puml`
-     - Add `check` subcommand flow
-   - `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/github-workflow-manager/artifacts/activity_diagram_interactive.puml`
-     - Add "Check run state" menu option flow
+**Key traits:**
+- No ORM/database — pure JSON with in-memory state
+- Dataclass-based models — simple, lightweight, no boilerplate
+- Enum typing for constrained string values — type safety
+- ISO datetime serialization — interop with JSON/external systems
+- Optional fields use Optional[type] — explicit nullability
+- Validation in __post_init__() — fail-fast on invalid construction
+- Duplicate detection at service layer — enforces uniqueness
+- Separate persistence — storage layer is thin, models are dumb
+
+## Architectural Constraints to Respect
+
+1. **No ORM/database drivers** — Stick with JSON storage pattern
+2. **Dataclass pattern only** — Don't use custom classes without @dataclass
+3. **Enum for constrained values** — But WorkflowRunAttempt.status and conclusion are strings (task spec)
+4. **No __main__.py wiring required** — But if adding CLI, follow existing arg parser patterns
+5. **Existing test patterns** — Use pytest, MagicMock, parametrize where helpful
+6. **ISO datetime format** — Use isoformat() for serialization
+
+## Timestamp Timezone Consideration
+
+**Task requirement:** `created_at` should be CEST (UTC+2)
+
+**Current code pattern** (WorkflowRunTracker):
+```python
+created_at=datetime.now(timezone.utc)  # Creates UTC timestamp
+```
+
+**Decision for WorkflowRunAttempt:**
+- Store in UTC (best practice for storage/interchange)
+- Provide method or documentation for CEST conversion at display time
+- Or: Accept created_at parameter as-is (caller provides correct timezone)
+- **Working assumption:** Task mentions CEST as context (GitHub Actions is UTC), but storage should be UTC. CLI/display layer handles timezone conversion if needed.
+
+## Files That Will Need Changes/Creation
+
+### New Files
+1. **src/models/workflow_run_attempt.py** — New WorkflowRunAttempt dataclass
+2. **src/services/workflow_run_attempt_service.py** (optional) — Service for attempt CRUD
+
+### Modified Files
+1. **src/models/__init__.py** — Export WorkflowRunAttempt
+2. **src/storage/workflow_json_storage.py** — Add load_attempts(), save_attempts()
+3. **src/__main__.py** (optional) — Wire new service to CLI if commands needed
+4. **src/cli/workflow_cli.py** (optional) — Add `attempt` subcommand if desired
+5. **src/cli/interactive_menu.py** (optional) — Add menu option for attempts if desired
+6. **tests/** — Add test_workflow_run_attempt.py with unit and integration tests
+
+### Diagram Updates (post-implementation)
+1. **artifacts/class_diagram.puml** — Add WorkflowRunAttempt class box
+2. **artifacts/component_diagram.puml** — Show WorkflowRunAttemptService if added
 
 ## Ambiguities and Working Assumptions
 
-### 1. Mutually Exclusive Definition
+### 1. Unique Constraint Enforcement
 
-**Ambiguity:** Task says "Methods must be mutually exclusive where specified" but doesn't list which pairs.
+**Ambiguity:** Should (run_id, attempt_number) uniqueness be enforced at model, service, or database level?
 
-**Working assumption:** 
-- `is_terminal()` and `is_running()` are mutually exclusive by definition (opposite states)
-- `is_successful()`, `is_failed()`, `is_cancelled()` are mutually exclusive with each other (all are terminal conclusions)
-- The implementation enforces these via logic, not a guard clause
+**Working assumption:** Enforce at service layer (like WorkflowRunService does for id). Model doesn't validate business rules, service does.
 
-### 2. Incomplete Conclusion Coverage
+### 2. ID Generation
 
-**Ambiguity:** Only 3 of 8 conclusion values are covered (SUCCESS, FAILURE, CANCELLED). What about SKIPPED, TIMED_OUT, ACTION_REQUIRED, NEUTRAL, STALE?
+**Ambiguity:** How are `id` values assigned? Auto-increment, UUID, provided by caller?
 
-**Working assumption:** 
-- The task specifies only 5 methods; the other 5 conclusion types don't need dedicated checkers
-- A run can be `is_terminal()` without being any of the 5 specific types (e.g., SKIPPED is terminal but has no `is_skipped()` method)
-- This is intentional; the 5 methods cover the most common/critical outcomes
+**Working assumption:** Likely auto-increment (mimics database behavior) or UUID. Task doesn't specify. Recommend: Let caller provide or generate; service accepts as-is (like WorkflowRun's run_id parameter).
 
-### 3. CLI Flag Design
+### 3. Status and Conclusion as Strings
 
-**Ambiguity:** Should `check` command require a single flag or allow multiple?
+**Ambiguity:** Why are these strings instead of enums (like WorkflowRun)?
 
-**Working assumption:**
-- Allow multiple flags to query multiple states in one call
-- If no flag is provided, show all states (useful for debugging)
-- Exit code 0 if run found; 1 if not found
+**Working assumption:** Task explicitly specifies `status: str` and `conclusion: Optional[str]`. This may indicate that attempt status/conclusion values differ from WorkflowRun statuses. Respect the task spec; don't change to enums.
 
-### 4. Return Value Meaning
+### 4. CEST Timezone Requirement
 
-**Ambiguity:** Should methods return boolean or string representation?
+**Ambiguity:** Should created_at be stored as CEST or UTC?
 
-**Working assumption:**
-- Methods return strict boolean (True/False)
-- CLI layer formats output (e.g., prints "is_terminal = True")
-- This keeps the model clean and allows callers to choose how to display
+**Working assumption:** Store as UTC (best practice), document CEST context. Callers can convert for display. If task strictly requires CEST storage, use UTC+2 offset in datetime.
+
+### 5. Parent Association Implementation
+
+**Ambiguity:** How should WorkflowRun and WorkflowRunAttempt relate?
+
+**Working assumption:** Lazy association via run_id foreign key. No eager loading or nested structures. Query via service layer (attempt_service.get_attempts_for_run(run_id)).
+
+### 6. CLI Exposure Requirement
+
+**Ambiguity:** Are CLI commands required or just JSON serialization?
+
+**Working assumption:** Task says "JSON serialization/deserialization support" and "associated with parent WorkflowRun". This suggests model + storage. CLI commands are optional but recommended for testing and usability (following "all functionality must be reachable via `python -m src`" governance).
 
 ## Scope Signals
 
 ### In Scope
-
-- ✅ Five state-checking methods on WorkflowRun class
-- ✅ Methods derive state from `status` and `conclusion` only
-- ✅ No modification to enum definitions
-- ✅ CLI `check` subcommand with optional flags
-- ✅ Interactive menu option to check run state
-- ✅ Comprehensive unit and integration tests
-- ✅ Update class diagram to show new methods
+- ✅ WorkflowRunAttempt dataclass with 7 required fields
+- ✅ Unique constraint (run_id, attempt_number) enforced at service layer
+- ✅ JSON serialization/deserialization (to_dict, from_dict)
+- ✅ Validation in __post_init__() (attempt_number >= 1, duration_seconds >= 0)
+- ✅ Association with parent WorkflowRun (via run_id foreign key)
+- ✅ Storage in separate JSON file (workflow_run_attempts.json)
+- ✅ Service layer CRUD operations
 
 ### Out of Scope
-
-- ❌ Modifying WorkflowStatus or WorkflowConclusion enums
-- ❌ Adding new fields to WorkflowRun (use existing fields only)
-- ❌ Persisting state check results (state is computed, not stored)
-- ❌ Creating a new service class for state logic (keep it on the model)
-- ❌ Filtering methods in service layer (focus on per-run checks, not bulk queries)
+- ❌ Creating or modifying database schema (JSON storage only)
+- ❌ Adding database ORM (stay with JSON)
+- ❌ Modifying WorkflowRun enum definitions (only JSON-compatible strings for attempts)
+- ❌ Nested/eager loading (lazy associations only)
+- ❌ Update/edit operations (if task doesn't specify, assume add only)
 
 ### Borderline
-
-- ✓ Service layer filtering methods — Out of scope; task focuses on per-run checks, not bulk filtering
-- ✓ State machine validation — Out of scope; task is to expose existing state, not validate transitions
-- ✓ GUI/graphical features — Out of scope; keep as CLI/menu, not windowed interface
+- ✓ CLI commands — Not explicitly required, but recommended for completeness and testing
+- ✓ Menu integration — Not explicit, but follows governance "all functionality via python -m src"
+- ✓ State-checking methods (like WorkflowRun has) — Not mentioned; keep focus on CRUD
 
 ## Suggested Priorities
 
-### 1. **HIGH**: Implement state-checking methods in WorkflowRun (highest value, lowest complexity)
-   - These are the core requirement
-   - Unit tests are straightforward (test all status/conclusion combinations)
-   - No architectural changes needed
+### 1. **HIGH**: Create WorkflowRunAttempt dataclass (core requirement)
+   - Define fields per task spec
+   - Implement __post_init__() validation
+   - Implement to_dict() and from_dict()
+   - No external dependencies needed
 
-### 2. **HIGH**: CLI `check` subcommand (full CLI accessibility requirement)
-   - Task requires "accessible via `python -m src` menu and CLI flags"
-   - Relatively simple to add (follow existing `detail` subcommand pattern)
-   - Enables headless/automation use cases
+### 2. **HIGH**: Extend storage layer (JSON persistence)
+   - Add load_attempts() and save_attempts() to WorkflowJsonStorage
+   - Ensure round-trip serialization works (to_dict → JSON → from_dict)
+   - Test with sample attempts
 
-### 3. **MEDIUM**: Interactive menu `_check_run_state()` option (full menu accessibility requirement)
-   - Completes the "accessible via `python -m src` menu" requirement
-   - Low complexity (reuse existing prompt patterns)
-   - Adds UI consistency
+### 3. **HIGH**: Create WorkflowRunAttemptService (CRUD + uniqueness)
+   - add_attempt() with (run_id, attempt_number) uniqueness check
+   - list_attempts(), get_attempt(), get_attempts_for_run()
+   - Persist after mutations
 
-### 4. **MEDIUM**: Comprehensive state-checking tests (correctness assurance)
-   - 40+ test cases covering all status/conclusion combinations
-   - Mutually exclusive pair assertions
-   - CLI integration tests
+### 4. **MEDIUM**: Test coverage (correctness assurance)
+   - Unit tests for dataclass validation
+   - Serialization round-trip tests
+   - Service uniqueness constraint tests
+   - Integration tests with storage layer
 
-### 5. **LOW**: Diagram updates (documentation)
-   - Update class diagram to reflect new methods
-   - Update activity diagrams to show `check` flow
-   - Happens last and doesn't block functionality
+### 5. **MEDIUM**: CLI integration (optional but recommended)
+   - Add `attempt` subcommand or extend workflow_cli
+   - Wire new service to __main__.py
+   - Update interactive menu if desired
+
+### 6. **LOW**: Diagram updates (documentation)
+   - Update class_diagram.puml to show WorkflowRunAttempt
+   - Add service if created
+   - Update component diagram if service added
 
 ---
 
-**Summary:** The task is well-scoped and localized to the WorkflowRun model and CLI/menu layers. No storage or service logic changes needed. The five methods are simple state queries that encapsulate existing field access patterns. Primary complexity is comprehensive testing and ensuring all combinations are covered. CLI and menu integration follow established patterns in the codebase.
+## Summary
+
+WorkflowRunAttempt is a first-class model for retried workflow runs, paralleling WorkflowRun but independent. It uses the same dataclass pattern, JSON serialization, and service-layer validation architecture as WorkflowRun. The key differences:
+- Attempts are identified by (run_id, attempt_number) pair, not a standalone id
+- Status and conclusion are strings, not enums (per task spec)
+- Related to WorkflowRun via run_id (lazy association)
+- Stored separately (workflow_run_attempts.json) but managed by parallel service
+
+No architectural innovation needed; follow the established patterns from WorkflowRun closely, adjust field types/constraints per task spec, and ensure unique constraint enforcement at service layer.

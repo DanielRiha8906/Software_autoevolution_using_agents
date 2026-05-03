@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
+from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
+from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 
 
@@ -23,6 +25,18 @@ def _fmt_run(run: WorkflowRun) -> str:
         f"  duration_seconds : {run.duration_seconds}\n"
         f"  created_at       : {run.created_at.isoformat()}\n"
         f"  updated_at       : {updated}\n"
+    )
+
+
+def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
+    return (
+        f"  id               : {attempt.id}\n"
+        f"  run_id           : {attempt.run_id}\n"
+        f"  attempt_number   : {attempt.attempt_number}\n"
+        f"  status           : {attempt.status}\n"
+        f"  conclusion       : {attempt.conclusion or '—'}\n"
+        f"  duration_seconds : {attempt.duration_seconds}\n"
+        f"  created_at       : {attempt.created_at.isoformat()}\n"
     )
 
 
@@ -83,10 +97,31 @@ def build_parser() -> argparse.ArgumentParser:
     check_p.add_argument("--is-running", action="store_true", help="Check if run is active")
     check_p.add_argument("--is-cancelled", action="store_true", help="Check if run was cancelled")
 
+    # attempt add
+    attempt_add_p = sub.add_parser("attempt-add", help="Add a new workflow run attempt")
+    attempt_add_p.add_argument("--id", dest="attempt_id", type=int, required=True, help="Attempt ID")
+    attempt_add_p.add_argument("--run-id", type=int, required=True, help="Parent run ID")
+    attempt_add_p.add_argument("--attempt-number", type=int, required=True, help="Attempt number (positive integer)")
+    attempt_add_p.add_argument("--status", required=True, help="Attempt status")
+    attempt_add_p.add_argument("--conclusion", default=None, help="Attempt conclusion (optional)")
+    attempt_add_p.add_argument("--duration-seconds", type=float, default=0.0, help="Duration in seconds (default: 0.0)")
+
+    # attempt list
+    attempt_list_p = sub.add_parser("attempt-list", help="List workflow run attempts")
+    attempt_list_p.add_argument("--run-id", type=int, default=None, help="Filter by parent run ID")
+
+    # attempt detail
+    attempt_detail_p = sub.add_parser("attempt-detail", help="Show details for a single attempt")
+    attempt_detail_p.add_argument("attempt_id", type=int, help="Attempt ID")
+
     return parser
 
 
-def run_cli(service: WorkflowRunService, args=None) -> None:
+def run_cli(
+    service: WorkflowRunService,
+    attempt_service: WorkflowRunAttemptService,
+    args=None,
+) -> None:
     parser = build_parser()
     ns = parser.parse_args(args)
     tracker = WorkflowRunTracker(service)
@@ -152,3 +187,35 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
                 print(f"{run.id}: is_running = {run.is_running()}")
             if ns.is_cancelled:
                 print(f"{run.id}: is_cancelled = {run.is_cancelled()}")
+
+    elif ns.command == "attempt-add":
+        attempt = WorkflowRunAttempt(
+            id=ns.attempt_id,
+            run_id=ns.run_id,
+            attempt_number=ns.attempt_number,
+            status=ns.status,
+            conclusion=ns.conclusion,
+            created_at=datetime.now(timezone.utc),
+            duration_seconds=ns.duration_seconds,
+        )
+        attempt_service.add_attempt(attempt)
+        print(f"Added attempt {attempt.id}")
+
+    elif ns.command == "attempt-list":
+        if ns.run_id is not None:
+            attempts = attempt_service.get_attempts_for_run(ns.run_id)
+        else:
+            attempts = attempt_service.list_attempts()
+
+        if not attempts:
+            print("No attempts found.")
+            return
+        for attempt in attempts:
+            print(_fmt_attempt(attempt))
+
+    elif ns.command == "attempt-detail":
+        attempt = attempt_service.get_attempt(ns.attempt_id)
+        if attempt is None:
+            print(f"No attempt found with id {ns.attempt_id}.", file=sys.stderr)
+            sys.exit(1)
+        print(_fmt_attempt(attempt))

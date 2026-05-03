@@ -80,3 +80,47 @@ Implemented five encapsulated state-checking methods on the WorkflowRun class to
 - ✅ All functionality accessible via `python -m src` (CLI flag and menu option)
 
 Duration: 449.7s | Cost: $0.856924 USD | Turns: 15
+
+## Task 03: Model workflow run attempts as first-class objects
+
+**Status:** ✅ COMPLETED
+
+### Summary
+Implemented `WorkflowRunAttempt` as a first-class data model to represent individual attempts (retries) of workflow runs. Includes complete CRUD service layer with unique constraint enforcement, JSON persistence, and full CLI/menu integration.
+
+### Files Changed
+- **src/models/workflow_run_attempt.py** — New dataclass with fields: id, run_id, attempt_number, status, conclusion, created_at, duration_seconds; includes validation and serialization methods
+- **src/services/workflow_run_attempt_service.py** — New service with add_attempt(), list_attempts(), get_attempt(), get_attempts_for_run() methods and (run_id, attempt_number) uniqueness enforcement
+- **src/models/__init__.py** — Added WorkflowRunAttempt export
+- **src/storage/workflow_json_storage.py** — Extended with save_attempts() and load_attempts() methods; added attempts_filepath parameter
+- **src/__main__.py** — Wired WorkflowRunAttemptService into application; updated run_cli() and run_interactive() signatures
+- **src/cli/workflow_cli.py** — Added "attempt" subcommands: add, list, detail with full argument parsing
+- **src/cli/interactive_menu.py** — Added menu options for attempt operations: add, list, detail
+- **tests/test_workflow_run_attempt.py** — Added 70 comprehensive test cases
+- **artifacts/class_diagram.puml** — Added WorkflowRunAttempt dataclass and WorkflowRunAttemptService; showed 1:N relationship with WorkflowRun
+- **artifacts/component_diagram.puml** — Added components for WorkflowRunAttempt and WorkflowRunAttemptService; showed workflow_run_attempts.json persistence
+
+### Test Results
+- Total tests: 70 new
+- Pass rate: 100% (70/70)
+- All acceptance criteria verified:
+  - ✅ WorkflowRunAttempt has all required fields: id, run_id, attempt_number, status, conclusion, created_at, duration_seconds
+  - ✅ (run_id, attempt_number) uniqueness enforced at service layer
+  - ✅ attempt_number validated as positive integer >= 1
+  - ✅ JSON serialization/deserialization round-trips
+  - ✅ Nullable conclusion field handled correctly
+  - ✅ Parent WorkflowRun association via run_id foreign key
+  - ✅ Separate JSON persistence at artifacts/workflow_run_attempts.json
+  - ✅ Full CLI and interactive menu support
+
+### Acceptance Criteria Met
+- ✅ WorkflowRunAttempt has: id (int), run_id (int), attempt_number (int), status (str), conclusion (Optional[str]), created_at (CEST, UTC+2)
+- ✅ (run_id, attempt_number) must be unique
+- ✅ attempt_number is a positive integer starting from 1
+- ✅ WorkflowRunAttempt associated with parent WorkflowRun
+- ✅ JSON serialization/deserialization support
+- ✅ Optional duration_seconds: float attribute implemented
+- ✅ All functionality accessible via `python -m src attempt` (add/list/detail)
+- ✅ Interactive menu options available
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

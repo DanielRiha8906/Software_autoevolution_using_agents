@@ -18,15 +18,18 @@ package "GitHub Workflow Manager" {
   package "Service layer" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
+    component "WorkflowRunAttemptService" as ATTEMPT_SVC
   }
 
   package "Persistence layer" {
     component "WorkflowJsonStorage" as STOR
     artifact "workflow_runs.json" as JSON_FILE
+    artifact "workflow_run_attempts.json" as ATTEMPTS_FILE
   }
 
   package "Domain model" {
     component "WorkflowRun" as RUN
+    component "WorkflowRunAttempt" as ATTEMPT
     component "WorkflowStatus" as STATUS
     component "WorkflowConclusion" as CONCLUSION
   }
@@ -44,9 +47,14 @@ IM --> SVC
 TRACKER --> SVC
 SVC --> STOR
 STOR --> JSON_FILE
+STOR --> ATTEMPTS_FILE
+
+ATTEMPT_SVC --> STOR
 
 SVC ..> RUN
+ATTEMPT_SVC ..> ATTEMPT
 RUN --> STATUS
 RUN --> CONCLUSION
+RUN "1" --> "N" ATTEMPT : relationship
 
 @enduml
