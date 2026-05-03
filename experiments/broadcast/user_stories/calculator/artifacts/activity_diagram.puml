@@ -43,6 +43,20 @@ else (no)
         :Load calculation history;
         :Show history;
 
+      case (Memory History)
+        :Load memory history;
+        :Show memory entries;
+
+      case (Filter)
+        :Show filter options;
+        :Get filter criteria (operation, state);
+        :Query filtered entries;
+        if (Entries found?) then (yes)
+          :Show filtered results;
+        else (no)
+          :Show no match message;
+        endif
+
       case (Operation)
         :Read operands;
 

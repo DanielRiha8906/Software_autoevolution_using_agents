@@ -10,6 +10,7 @@ package "Calculator Application" {
     component "CLI Interface\n(CalculatorCLI)" as CLI
     component "Calculation Service\n(CalculatorService)" as Service
     component "Memory Service\n(MemoryService)" as MemService
+    component "Filter Service\n(FilterService)" as FilterSvc
     component "Calculation Engine\n(Calculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
@@ -23,9 +24,11 @@ package "Calculator Application" {
     Service --> Calc : uses
     Service --> Store : uses
     MemService --> Store : delegates to
+    MemService --> FilterSvc : uses for filtering
 
     Service ..> Models
     MemService ..> Models
+    FilterSvc ..> Models
     Store ..> Models
 }
 
