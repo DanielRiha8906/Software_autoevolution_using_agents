@@ -641,4 +641,4 @@ Filters combine with AND logic:
 - `component_diagram.puml` — Shows correct component relationships
 - `state_diagram.puml` — Task status transitions including overdue tracking
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 188.7s | Cost: $0.408992 USD | Turns: 21
