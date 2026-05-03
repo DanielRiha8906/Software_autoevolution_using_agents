@@ -332,7 +332,4 @@ Duration: 617.2s | Cost: $1.223649 USD | Turns: 31
 - **CLI Exposure**: Both interactive menu and one-shot flags for all operations
 - **Type Safety**: Proper handling of ResultEntry and ErrorEntry polymorphism
 
-Duration: 1599
-99.0s | Cost: $1.2624851.262485
-1.7519339999999994 USD | Turns: 1
-31
+Duration: 159.90s | Cost: 1.7519339999999994 USD | Turns: 31
