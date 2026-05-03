@@ -200,4 +200,4 @@ Broadcast architecture with 3 independent implementers (candidate-a, candidate-b
 - **COULD HAVE**: ✗ Sorting by attempt number not implemented (working implementation prioritized)
 - **WON'T HAVE**: ✓ No caching layer added
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 348.0s | Cost: $1.594399 USD | Turns: 61
