@@ -29,3 +29,50 @@ Extended the `WorkflowRun` model with a new `duration_seconds: float` field that
 - No schema migration required
 
 Duration: 211.4s | Cost: $0.336953 USD | Turns: 16
+
+---
+
+## Task 02: Add State-Checking Methods to WorkflowRun
+
+**Status:** ✅ COMPLETE
+
+**Summary:**
+Implemented five state-checking methods on the WorkflowRun model to encapsulate workflow state logic. Methods derive state strictly from `status` and `conclusion` fields.
+
+**Methods Implemented:**
+- `is_running()` → Check if status is IN_PROGRESS
+- `is_terminal()` → Check if status is COMPLETED
+- `is_successful()` → Check if status is COMPLETED and conclusion is SUCCESS
+- `is_failed()` → Check if status is COMPLETED and conclusion is FAILURE
+- `is_cancelled()` → Check if status is COMPLETED and conclusion is CANCELLED
+
+**Files Changed:**
+- `src/models/workflow_run.py` — Added five methods to WorkflowRun class (lines 56-78)
+- `tests/test_workflow_run.py` — New test file with 11 test cases
+- `artifacts/class_diagram.puml` — Updated WorkflowRun class definition
+
+**Test Results:**
+- All 28 tests: ✅ PASS (11 new + 17 existing)
+- is_running() — 2 test cases ✅
+- is_terminal() — 3 test cases ✅
+- is_successful() — 2 test cases ✅
+- is_failed() — 2 test cases ✅
+- is_cancelled() — 1 test case ✅
+- Mutual exclusivity — 2 test cases ✅
+- Field usage validation — 1 test case ✅
+
+**Implementation Details:**
+1. All methods use only `status` and `conclusion` fields (no I/O, no external dependencies)
+2. is_running() and is_terminal() are mutually exclusive by design
+3. Conclusion-based methods (is_successful/failed/cancelled) require COMPLETED status
+4. No modifications to existing methods or field definitions
+5. Backward compatible — no breaking changes
+
+**Pipeline Execution:**
+1. Data Analyst — Analyzed requirements and identified exact changes needed
+2. System Architect — Designed implementation with method signatures and logic
+3. Programmer — Implemented five methods in src/models/workflow_run.py
+4. Pytest-Tester — Created comprehensive test suite (28/28 pass)
+5. UML Designer — Updated artifacts/class_diagram.puml
+
+Duration: 247.6s | Cost: $0.429886 USD | Turns: 19
