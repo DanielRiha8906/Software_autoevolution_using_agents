@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 
-from ..models.task import Task
+from ..models.task import Task, CEST
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
@@ -23,10 +23,59 @@ class TodoService:
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
 
-    def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
+    def list_tasks(
+        self,
+        status: Optional[TaskStatus] = None,
+        overdue: bool = False,
+        due_before: Optional[datetime] = None,
+        due_after: Optional[datetime] = None,
+    ) -> list[Task]:
+        """List tasks with optional filters for status, overdue, and due date range.
+
+        Args:
+            status: Filter by task status
+            overdue: If True, return only overdue tasks
+            due_before: Filter tasks with due_date <= this datetime
+            due_after: Filter tasks with due_date >= this datetime
+
+        Returns:
+            Filtered list of tasks
+        """
+        # Normalize timezone-naive datetimes to UTC for consistent comparison
+        if due_before is not None and due_before.tzinfo is None:
+            due_before = due_before.replace(tzinfo=timezone.utc)
+        if due_after is not None and due_after.tzinfo is None:
+            due_after = due_after.replace(tzinfo=timezone.utc)
+
+        # Start with base query
         if status is not None:
-            return self._manager.list_by_status(status)
-        return self._manager.list_all()
+            tasks = self._manager.list_by_status(status)
+        else:
+            tasks = self._manager.list_all()
+
+        # Apply overdue filter
+        if overdue:
+            tasks = [t for t in tasks if t.is_overdue()]
+
+        # Apply due date range filters
+        if due_before is not None or due_after is not None:
+            filtered = []
+            for t in tasks:
+                if t.due_date is None:
+                    continue
+                # Normalize task's due_date to UTC if naive
+                task_due_date = t.due_date
+                if task_due_date.tzinfo is None:
+                    task_due_date = task_due_date.replace(tzinfo=timezone.utc)
+                # Now compare
+                if due_before is not None and task_due_date > due_before:
+                    continue
+                if due_after is not None and task_due_date < due_after:
+                    continue
+                filtered.append(t)
+            tasks = filtered
+
+        return tasks
 
     def start_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)

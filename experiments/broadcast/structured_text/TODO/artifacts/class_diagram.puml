@@ -60,6 +60,8 @@ package "services" #DDFFD4 {
         +get(taskId: String) : Task
         +listAll() : List<Task>
         +listByStatus(status: TaskStatus) : List<Task>
+        +listOverdue() : List<Task>
+        +listByDueDateRange(before: DateTime [0..1], after: DateTime [0..1]) : List<Task>
         +update(taskId: String, title: String [0..1], description: String [0..1], dueDate: DateTime [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
         +delete(taskId: String) : void
@@ -89,7 +91,7 @@ package "services" #DDFFD4 {
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1], dueDate: DateTime [0..1]) : Task
         +getTask(taskId: String) : Task
-        +listTasks(status: TaskStatus [0..1]) : List<Task>
+        +listTasks(status: TaskStatus [0..1], overdue: Boolean = False, due_before: DateTime [0..1], due_after: DateTime [0..1]) : List<Task>
         +startTask(taskId: String) : Task
         +completeTask(taskId: String) : Task
         +reopenTask(taskId: String) : Task

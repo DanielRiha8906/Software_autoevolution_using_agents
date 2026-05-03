@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from ..models.task import Task
+from ..models.task import Task, CEST
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 
@@ -56,6 +56,31 @@ class TaskManager:
 
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
+
+    def list_overdue(self) -> list[Task]:
+        """Return all tasks that are overdue (due_date is set and earlier than current CEST time)."""
+        return [t for t in self._tasks.values() if t.is_overdue()]
+
+    def list_by_due_date_range(self, before: Optional[datetime] = None, after: Optional[datetime] = None) -> list[Task]:
+        """Return tasks with due_date in the specified range.
+
+        Args:
+            before: Only include tasks with due_date <= this datetime
+            after: Only include tasks with due_date >= this datetime
+
+        Returns:
+            List of tasks matching the criteria (those with due_date set)
+        """
+        result = []
+        for task in self._tasks.values():
+            if task.due_date is None:
+                continue
+            if before is not None and task.due_date > before:
+                continue
+            if after is not None and task.due_date < after:
+                continue
+            result.append(task)
+        return result
 
     def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         task = self.get(task_id)
