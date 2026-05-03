@@ -7,8 +7,13 @@ from ..models.task import Task
 class CommentsService:
     """Service for managing task comments."""
 
-    def __init__(self) -> None:
-        """Initialize the comments service with an empty comments store."""
+    def __init__(self, todo_service=None) -> None:
+        """Initialize the comments service with an empty comments store.
+
+        Args:
+            todo_service: Optional reference to TodoService (for future use).
+        """
+        self._todo_service = todo_service
         self._comments: dict[str, list[TaskComment]] = {}
 
     def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:

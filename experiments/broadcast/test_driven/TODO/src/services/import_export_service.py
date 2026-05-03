@@ -26,7 +26,7 @@ class TaskImportExportService:
 
         The JSON structure includes:
         - "tasks": list of task dictionaries
-        - "comments": dictionary mapping task_id to list of comment dictionaries
+        - "comments": list of comment dictionaries
 
         Args:
             path: The file path to export to.
@@ -36,12 +36,12 @@ class TaskImportExportService:
         """
         # Get all tasks and comments
         tasks = self._todo_service.list_tasks()
-        comments_data = self._comments_service.to_dict()
+        all_comments = self._comments_service.get_all_comments()
 
         # Build the export structure
         export_data = {
             "tasks": [t.to_dict() for t in tasks],
-            "comments": comments_data,
+            "comments": [c.to_dict() for c in all_comments],
         }
 
         # Write to file
@@ -55,7 +55,7 @@ class TaskImportExportService:
 
         The JSON structure must include:
         - "tasks": list of task dictionaries
-        - "comments": dictionary mapping task_id to list of comment dictionaries
+        - "comments": list of comment dictionaries
 
         Only imports tasks and comments that don't already exist (by ID).
         Existing data is never overwritten.
@@ -94,16 +94,15 @@ class TaskImportExportService:
                 raise ValueError("Each task must have an 'id' field")
 
         # Validate comments structure
-        if not isinstance(data["comments"], dict):
-            raise ValueError("'comments' must be a dictionary")
-        for task_id, comment_list in data["comments"].items():
-            if not isinstance(comment_list, list):
-                raise ValueError(f"Comments for task {task_id} must be a list")
-            for comment_data in comment_list:
-                if not isinstance(comment_data, dict):
-                    raise ValueError(f"Each comment must be a dictionary")
-                if "id" not in comment_data:
-                    raise ValueError("Each comment must have an 'id' field")
+        if not isinstance(data["comments"], list):
+            raise ValueError("'comments' must be a list")
+        for comment_data in data["comments"]:
+            if not isinstance(comment_data, dict):
+                raise ValueError("Each comment must be a dictionary")
+            if "id" not in comment_data:
+                raise ValueError("Each comment must have an 'id' field")
+            if "task_id" not in comment_data:
+                raise ValueError("Each comment must have a 'task_id' field")
 
         # Import tasks (skip duplicates)
         existing_task_ids = {t.id for t in self._todo_service.list_tasks()}
@@ -123,16 +122,16 @@ class TaskImportExportService:
         existing_comment_ids = {c.id for c in existing_comments}
 
         comments_added = False
-        for task_id, comment_list in data["comments"].items():
-            for comment_data in comment_list:
-                comment_id = comment_data["id"]
-                if comment_id not in existing_comment_ids:
-                    comment = TaskComment.from_dict(comment_data)
-                    if task_id not in self._comments_service._comments:
-                        self._comments_service._comments[task_id] = []
-                    self._comments_service._comments[task_id].append(comment)
-                    existing_comment_ids.add(comment_id)
-                    comments_added = True
+        for comment_data in data["comments"]:
+            comment_id = comment_data["id"]
+            if comment_id not in existing_comment_ids:
+                comment = TaskComment.from_dict(comment_data)
+                task_id = comment.task_id
+                if task_id not in self._comments_service._comments:
+                    self._comments_service._comments[task_id] = []
+                self._comments_service._comments[task_id].append(comment)
+                existing_comment_ids.add(comment_id)
+                comments_added = True
 
         # Persist comments if any were added
         if comments_added and hasattr(self._comments_service, '_persist'):
