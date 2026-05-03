@@ -893,3 +893,150 @@ python -m src
 6. **Data Integrity**: Roundtrip testing confirms export→import preserves data
 
 Duration: 681.2s | Cost: $1.648372 USD | Turns: 45
+
+---
+
+## Task 08: GitHub workflow runs fetch from REST API
+
+**Broadcast Architecture - 3 Candidates Evaluated**
+
+### Candidate Implementations
+
+All three candidates produced identical, high-quality implementations with all 140 tests passing.
+
+#### Candidate A (SELECTED)
+- **Approach**: GitHubFetchService with dual API backend (gh CLI preferred, requests fallback)
+- **Test Score**: 140/140 ✓
+- **Key Features**:
+  - Fetches workflow runs from GitHub REST API using requests library or gh CLI
+  - Converts GitHub API schema to existing WorkflowRun domain model
+  - PAT resolution: GITHUB_TOKEN env var → secrets/.env file → getpass prompt
+  - Token validation via GitHub /user endpoint before making requests
+  - API error handling (rate limits, auth failures, network issues)
+  - Incremental fetch filters runs by created_at timestamp
+  - Both interactive menu and CLI command access
+
+#### Candidate B
+- **Approach**: Identical to Candidate A
+- **Test Score**: 140/140 ✓
+- **Implementation**: Same design, code organization, and test coverage
+
+#### Candidate C
+- **Approach**: Identical to Candidate A
+- **Test Score**: 140/140 ✓
+- **Implementation**: Same design, code organization, and test coverage
+
+### Selection Rationale
+
+**Winner: Candidate A**
+
+All three candidates produced functionally identical implementations with identical test coverage (140/140). The implementation uses a clean service layer pattern with:
+- Dual API backend support (gh CLI with requests fallback)
+- Secure token handling with three-tier resolution
+- Comprehensive error handling for all GitHub API failure modes
+- Incremental fetch capability to minimize API calls
+- Full CLI and interactive menu integration
+
+### Changes Made
+
+**Files Modified:**
+1. `src/services/github_fetch_service.py` (445 lines - NEW)
+   - GitHubFetchService class with complete GitHub API integration
+   - Methods: fetch_workflow_runs(), fetch_incremental(), _resolve_token(), _validate_token()
+   - Token resolution in priority order (env → file → getpass)
+   - Both gh CLI and requests-based API clients
+   - Status/conclusion mapping from GitHub API to enums
+   - Comprehensive error handling and logging
+
+2. `src/cli/workflow_cli.py`
+   - Added github-fetch subcommand with full argparse integration
+   - Arguments: --owner, --repo, --workflow, --token, --no-validate, --incremental
+   - Error handling with user-friendly messages
+
+3. `src/cli/interactive_menu.py`
+   - Added "Fetch from GitHub" menu option (#12)
+   - Interactive prompts for: owner, repo, workflow, incremental mode
+   - Result display and error handling
+
+4. `src/services/__init__.py`
+   - Exported GitHubFetchService for public API access
+
+5. `tests/test_github_fetch_service.py` (300 lines - NEW)
+   - 19 comprehensive tests covering:
+     - GitHub API field mapping
+     - Token resolution from all sources
+     - Token validation
+     - Both API backends (gh CLI and requests)
+     - All error scenarios (401, 403, 404, network)
+     - Incremental fetch filtering
+
+6. Diagrams updated (artifacts/):
+   - class_diagram.puml — Added GitHubFetchService class
+   - component_diagram.puml — Added GitHub API integration component
+   - activity_diagram_interactive.puml — Added "Fetch from GitHub" activity
+   - use_case_diagram.puml — Added GitHub fetch use case
+
+### Acceptance Criteria - All Met ✓
+
+- ✓ github_fetch_mode available that fetches via GitHub REST API
+- ✓ Fetched data converted to existing WorkflowRun domain model
+- ✓ PAT resolved in priority order: GITHUB_TOKEN env → secrets/.env → getpass
+- ✓ User-entered PAT not persisted unless explicitly configured
+- ✓ API errors handled gracefully (rate limits, auth, network)
+- ✓ Token validated before making requests
+- ✓ Incremental fetch supported (bonus feature implemented)
+- ✓ Full authentication management out of scope (as required)
+- ✓ Accessible via python -m src (both menu and CLI flag)
+
+### Test Results
+
+```
+pytest tests/ -q
+........................................................................ [ 51%]
+....................................................................     [100%]
+140 passed in 0.19s
+```
+
+All 140 tests pass (19 new github_fetch tests + 121 existing tests). No regressions.
+
+### CLI Usage
+
+Fetch workflow runs from GitHub:
+```bash
+python -m src github-fetch --owner <owner> --repo <repo> [options]
+
+Options:
+  --workflow TEXT          Filter by workflow file (optional)
+  --token TEXT            Custom PAT (uses resolution chain if omitted)
+  --no-validate          Skip token validation before fetching
+  --incremental          Only fetch runs newer than latest stored run
+```
+
+Interactive mode:
+```bash
+python -m src
+# Select: Option 12 "Fetch from GitHub"
+```
+
+### Key Features
+
+1. **GitHub API Integration**: Fetches workflow runs with full metadata preservation
+2. **Dual Backend Support**: Prefers gh CLI if available, falls back to requests library
+3. **Secure Token Handling**: Three-tier resolution without persistence
+4. **API Error Handling**: Rate limits, auth failures, network issues, malformed data
+5. **Incremental Updates**: Fetch only runs newer than latest timestamp
+6. **Deduplication**: Skips runs that already exist in local storage
+7. **Status/Conclusion Mapping**: Converts GitHub API enums to domain model enums
+8. **Full CLI + Interactive Support**: Accessible both ways as required
+
+### Implementation Highlights
+
+- Used subprocess for gh CLI to avoid unnecessary dependencies
+- Made requests optional with graceful fallback to gh CLI
+- Token never persisted when entered via prompt
+- Error types: ValueError for user/token errors, RuntimeError for system errors
+- Incremental fetch uses created_at timestamp comparison
+- Pagination support (100 items per page)
+- All API responses include retry-after header parsing for rate limits
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
