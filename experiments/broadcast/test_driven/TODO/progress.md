@@ -359,4 +359,4 @@ None of the three candidates fulfilled requirement #2 (actual implementation), t
 
 The workaround implemented here (direct implementation on task branch) is a fallback when broadcast evaluation fails.
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 554.3s | Cost: $1.254886 USD | Turns: 72
