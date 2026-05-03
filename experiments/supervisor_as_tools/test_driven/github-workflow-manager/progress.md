@@ -163,4 +163,4 @@ Duration: 354.9s | Cost: $0.694199 USD | Turns: 23
 - No attempt data fetched or handled (as per requirements)
 - No OAuth or token refresh logic implemented
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 160.3s | Cost: $0.327618 USD | Turns: 18
