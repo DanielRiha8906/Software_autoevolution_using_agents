@@ -6,6 +6,7 @@ from .memory_entry import (
     ErrorEntry,
     _reset_id_counter,
 )
+from .statistics import Statistics
 
 __all__ = [
     "Operation",
@@ -14,4 +15,5 @@ __all__ = [
     "ResultEntry",
     "ErrorEntry",
     "_reset_id_counter",
+    "Statistics",
 ]

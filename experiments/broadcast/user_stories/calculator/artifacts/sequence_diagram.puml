@@ -4,6 +4,7 @@ actor User
 participant CalculatorCLI
 participant CalculatorService
 participant MemoryService
+participant StatisticsService
 participant FilterService
 participant Calculator
 participant JsonStorage
@@ -92,6 +93,32 @@ MemoryService --> CalculatorCLI: filtered results
 deactivate MemoryService
 
 CalculatorCLI -> User: display filtered entries
+deactivate CalculatorCLI
+
+== Statistics Flow ==
+User -> CalculatorCLI: --statistics flag or interactive menu option
+activate CalculatorCLI
+
+CalculatorCLI -> StatisticsService: compute_statistics()
+activate StatisticsService
+
+StatisticsService -> MemoryService: retrieve()
+activate MemoryService
+
+MemoryService -> JsonStorage: load_memory_all()
+activate JsonStorage
+JsonStorage --> MemoryService: list[MemoryEntry]
+deactivate JsonStorage
+
+MemoryService --> StatisticsService: list[MemoryEntry]
+deactivate MemoryService
+
+note over StatisticsService: compute operation counts\ncount errors\ncalculate error rate\ncompute average execution time
+
+StatisticsService --> CalculatorCLI: Statistics object
+deactivate StatisticsService
+
+CalculatorCLI -> User: display statistics
 deactivate CalculatorCLI
 
 @enduml
