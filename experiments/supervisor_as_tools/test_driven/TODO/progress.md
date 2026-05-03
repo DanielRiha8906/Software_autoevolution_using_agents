@@ -381,4 +381,4 @@ Successfully implemented TaskImportExportService with export() and import_from()
 - Empty import files: Successfully imports 0 tasks and 0 comments
 - File not found: FileNotFoundError propagates uncaught
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 459.5s | Cost: $0.916275 USD | Turns: 31
