@@ -82,3 +82,40 @@ Duration: 367.9s | Cost: $0.723867 USD | Turns: 18
 - All status mutations properly persist to storage via Task.to_dict/from_dict
 
 Duration: 279.6s | Cost: $0.533964 USD | Turns: 13
+
+---
+
+## Task 03: Introduce TaskComment domain class
+
+### Status: COMPLETED ✓
+
+### Files Changed
+- `src/models/task_comment.py` — New file with TaskComment dataclass
+- `src/models/__init__.py` — Added TaskComment export
+- `artifacts/class_diagram.puml` — Added TaskComment class and relationship to Task
+
+### Test Results
+- **Total tests: 119**
+- **Passed: 119**
+- **Failed: 0**
+- **Success rate: 100%**
+
+### Requirements Met
+✓ MUST: Create class `TaskComment` with attributes: id, task_id, content, created_at
+✓ MUST: Support serialization and deserialization to/from JSON-compatible dictionaries
+✓ MUST: id is UUID (generated via uuid.uuid4())
+✓ MUST: created_at is datetime with CEST timezone (UTC+2)
+✓ SHOULD: Validate that content is not empty (implemented in __post_init__)
+✓ SHOULD: Maintain relationship integrity (task_id references parent Task by id)
+
+### Implementation Summary
+- TaskComment is a dataclass following the same pattern as Task
+- UUID id auto-generated via default_factory
+- created_at auto-generated as UTC timezone-aware datetime
+- Content validation rejects empty or whitespace-only strings
+- Serialization: to_dict() converts datetime to isoformat() strings
+- Deserialization: from_dict() parses isoformat() strings back to datetime
+- Relationship to Task represented in class diagram as: TaskComment --> Task (task_id references Task.id)
+- No service layer or CLI integration in this task (future work)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
