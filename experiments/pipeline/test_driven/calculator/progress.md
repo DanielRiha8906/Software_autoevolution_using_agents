@@ -23,3 +23,33 @@
 - All serialization/deserialization works transparently
 
 Duration: 259.3s | Cost: $0.404111 USD | Turns: 16
+
+## Task 02: Advanced Mathematical Operations
+
+**Status:** Completed
+
+**Files Changed:**
+- src/models/operation.py — Added SQUARE, SQRT, POWER, MODULO enum members
+- src/services/calculator.py — Added square(a, b=0), sqrt(a, b=0), power(a, b), modulo(a, b) methods with edge case handling; updated dispatch table
+- src/models/calculation_result.py — Added symbols for new operations (², √, ^, %) to _SYMBOLS dictionary
+- src/cli/calculator_cli.py — Added four menu entries: Square, Square Root, Power, Modulo
+- src/__main__.py — Updated argparse choices and usage string to include new operations
+- tests/test_advanced_operations.py — New test file with 75 comprehensive test cases
+- artifacts/class_diagram.puml — Updated to show all 8 operations and 8 Calculator methods
+
+**Test Results:**
+- 10/10 provided tests passing (square, sqrt, power, modulo, existing operations)
+- 75/75 advanced operation tests passing (including edge cases and integration)
+- All provided test suite requirements met
+- Existing operations (add, subtract, multiply, divide) remain unchanged and functional
+
+**Implementation Summary:**
+- Added 4 new mathematical operations following existing interface conventions
+- Edge case handling: sqrt(negative) raises ValueError, modulo(_, 0) raises ValueError
+- Unary operations (square, sqrt) implemented with optional second parameter (b=0) for dispatch compatibility
+- Binary operations (power, modulo) work with both positive and negative exponents/dividends
+- Full CLI integration: interactive menu shows all 8 operations, one-shot mode supports --operation flag
+- All new operations exposed via `python -m src` in both interactive and CLI modes
+- Display symbols added for nice string output (4 new operations formatted with Unicode symbols)
+
+Duration: 420.3s | Cost: $0.684168 USD | Turns: 21
