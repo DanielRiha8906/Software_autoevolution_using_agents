@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 from ..models.workflow_run_attempt import WorkflowRunAttempt
 
@@ -33,7 +33,7 @@ class AttemptService:
             )
         self._attempts.append(attempt)
 
-    def get_by_run_id(self, run_id: int) -> List[WorkflowRunAttempt]:
+    def get_by_run_id(self, run_id: Union[int, str]) -> List[WorkflowRunAttempt]:
         """Get all attempts for a given run_id, sorted by attempt_number ascending.
 
         Args:
