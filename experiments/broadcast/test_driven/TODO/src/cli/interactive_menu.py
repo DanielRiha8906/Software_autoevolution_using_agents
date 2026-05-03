@@ -112,18 +112,42 @@ class InteractiveMenu:
 
     def _do_list(self) -> None:
         _clear()
-        print("  Filter by status (leave blank for all):")
-        print("  1. pending")
-        print("  2. in progress")
-        print("  3. done")
-        print("  0. All")
+        print("  Filter options:")
+        print("  1. By status")
+        print("  2. Overdue only")
+        print("  0. All tasks")
         raw = input("  > ").strip()
-        status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
-        status = status_map.get(raw)
+
+        status = None
+        overdue = False
+
+        if raw == "1":
+            _clear()
+            print("  Filter by status:")
+            print("  1. pending")
+            print("  2. in progress")
+            print("  3. done")
+            print("  0. Back")
+            raw = input("  > ").strip()
+            status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
+            status = status_map.get(raw)
+        elif raw == "2":
+            overdue = True
 
         _clear()
-        tasks = self._service.list_tasks(status)
-        label = f"[{_STATUS_NAME[status]}]" if status else "[all]"
+        try:
+            tasks = self._service.list_tasks(status=status, overdue=overdue)
+        except ValueError as e:
+            print(f"  Error: {e}")
+            input("  Press Enter to continue...")
+            return
+
+        if status:
+            label = f"[{_STATUS_NAME[status]}]"
+        elif overdue:
+            label = "[overdue]"
+        else:
+            label = "[all]"
         print(f"  Tasks {label}\n")
         if not tasks:
             print("  (none)")

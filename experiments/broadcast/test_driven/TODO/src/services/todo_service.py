@@ -1,6 +1,7 @@
 from typing import Optional
+from datetime import datetime, timezone, timedelta
 
-from ..models.task import Task
+from ..models.task import Task, CEST
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
@@ -18,10 +19,40 @@ class TodoService:
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
 
-    def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
+    def list_tasks(
+        self,
+        status: Optional[TaskStatus] = None,
+        due_before: Optional[datetime] = None,
+        due_after: Optional[datetime] = None,
+        overdue: bool = False,
+    ) -> list[Task]:
+        # Validate timezone for due_before and due_after
+        if due_before is not None:
+            if due_before.tzinfo is None or due_before.tzinfo != CEST:
+                raise ValueError("due_before must be a timezone-aware CEST datetime")
+        if due_after is not None:
+            if due_after.tzinfo is None or due_after.tzinfo != CEST:
+                raise ValueError("due_after must be a timezone-aware CEST datetime")
+
+        # Start with all tasks or filtered by status
         if status is not None:
-            return self._manager.list_by_status(status)
-        return self._manager.list_all()
+            tasks = self._manager.list_by_status(status)
+        else:
+            tasks = self._manager.list_all()
+
+        # Apply due_before filter
+        if due_before is not None:
+            tasks = [t for t in tasks if t.due_date is not None and t.due_date < due_before]
+
+        # Apply due_after filter
+        if due_after is not None:
+            tasks = [t for t in tasks if t.due_date is not None and t.due_date > due_after]
+
+        # Apply overdue filter
+        if overdue:
+            tasks = [t for t in tasks if t.is_overdue()]
+
+        return tasks
 
     def start_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)
