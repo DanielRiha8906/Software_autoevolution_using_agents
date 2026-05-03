@@ -111,3 +111,39 @@ Created a new `MemoryEntry` domain class to serve as the primary record for stor
 - Serialization compatible with JSON storage layer
 
 Duration: 151.0s | Cost: $0.293341 USD | Turns: 24
+
+## Task 04: MemoryService for Lifecycle Management
+
+### Summary
+Implemented `MemoryService` to manage the lifecycle of `MemoryEntry` objects. The service provides a clean abstraction for storing and retrieving calculation memory entries while keeping all persistence details (file I/O, serialization) in a separate storage layer.
+
+### Files Changed
+- `src/services/memory_service.py` - Created new MemoryService class with store() and retrieve() methods
+- `tests/test_memory_service.py` - Created test suite with 5 test cases
+- `artifacts/class_diagram.puml` - Added MemoryService to services package with relationship to MemoryEntry
+
+### Test Results
+- All 62 tests passed (5 new MemoryService tests + 57 existing tests)
+- All MemoryService tests pass:
+  - test_memory_service_can_store_entry ✓
+  - test_memory_service_retrieve_returns_stored_entries ✓
+  - test_memory_service_stores_multiple_entries ✓
+  - test_memory_service_retrieve_returns_list ✓
+  - test_memory_service_does_not_contain_file_io ✓
+- No regressions: all existing tests still pass
+
+### Implementation Details
+- `MemoryService` is a simple in-memory service with `_entries` list
+- `store(entry: MemoryEntry)` appends entries to internal list
+- `retrieve()` returns the list of all stored MemoryEntry objects
+- No file I/O operations: "open(" and "json.dump" are explicitly absent
+- Separation of concerns: persistence details belong in a storage layer, not in the service
+- Service focuses only on lifecycle management (store/retrieve), not persistence
+
+### Design Principles
+- Single Responsibility: MemoryService only manages entry lifecycle
+- Separation of Concerns: Storage layer handles persistence, service handles logic
+- Interface Simplicity: Two public methods (store, retrieve) with clear contracts
+- In-memory implementation: State persists for the lifetime of the service instance
+
+Duration: 92.8s | Cost: $0.249394 USD | Turns: 29
