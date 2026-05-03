@@ -113,4 +113,4 @@ Duration: 219.6s | Cost: $0.440051 USD | Turns: 28
 - Report is properly implemented as frozen dataclass for immutability
 - No regressions in existing tests
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 351.0s | Cost: $0.614922 USD | Turns: 19
