@@ -762,4 +762,4 @@ The scientific mode is fully accessible via:
 3. **Help:** `python -m src --help` documents all 14 operations
 4. **Memory filtering:** `python -m src --memory-filter operation --filter-operation sin` works with new operations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 584.0s | Cost: $1.343593 USD | Turns: 15
