@@ -717,4 +717,4 @@ All PlantUML diagrams updated to reflect export/import functionality:
 - **use_case_diagram.puml**: Added "Export history to JSON" and "Import history from JSON" use cases
 - **state_diagram_interactive.puml**: Added export/import input and result states
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 588.1s | Cost: $1.314122 USD | Turns: 28
