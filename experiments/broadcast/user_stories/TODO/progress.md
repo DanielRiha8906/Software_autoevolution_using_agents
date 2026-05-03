@@ -178,3 +178,118 @@ Duration: 257.2s | Cost: $0.894447 USD | Turns: 35
 No new dependencies added. Uses existing imports and Python standard library.
 
 Duration: 174.2s | Cost: $1.660204 USD | Turns: 50
+
+---
+
+# Task 03: Task Comments
+
+## Task Overview
+
+**User Story:** As a user collaborating on tasks, I want to attach comments to a task, so that I can record notes, decisions, or updates alongside the task itself.
+
+**Acceptance Criteria:**
+- ✅ TaskComment has: id (UUID), task_id, content, created_at (CEST)
+- ✅ TaskComment can be serialised to and deserialised from a JSON-compatible dictionary
+- ✅ Empty content is rejected
+- ✅ A TaskComment must reference a valid task_id
+- ✅ An optional author attribute can record who wrote the comment
+- ✅ An optional updated_at attribute is available for consistency with the Task model
+- ✅ Rich text, markdown rendering, and nested comments are out of scope
+
+## Implementation Results
+
+### Candidate Evaluation
+
+| Candidate | Approach | Tests Passing | Selection |
+|-----------|----------|---------------|-----------|
+| A (broadcast-candidate-a) | Dataclass with validation, ISO serialization, CEST timezone | 67 | **SELECTED** |
+| B (broadcast-candidate-b) | Dataclass with validation, ISO serialization, CEST timezone | 67 | Identical |
+| C (broadcast-candidate-c) | Dataclass with validation, ISO serialization, CEST timezone | 67 | Identical |
+
+**Winner:** Candidate A (all candidates converged on identical implementation)
+
+### Files Changed
+
+1. **`src/models/task_comment.py`** (NEW)
+   - Created new TaskComment dataclass with:
+     - `task_id: str` — required reference to a task
+     - `content: str` — required comment text
+     - `id: str` — auto-generated UUID
+     - `created_at: datetime` — defaults to current CEST time
+     - `author: Optional[str]` — optional author name
+     - `updated_at: Optional[datetime]` — optional update timestamp
+   - Implemented `__post_init__()` validation:
+     - Rejects empty or whitespace-only content
+     - Rejects empty or whitespace-only task_id
+   - Implemented `to_dict()` — serializes to JSON-compatible dict, omits None optional fields
+   - Implemented `from_dict()` — deserializes from dict with proper handling of optional fields
+
+2. **`src/models/__init__.py`**
+   - Added `TaskComment` to module imports and `__all__` exports
+
+3. **`tests/test_task_comment.py`** (NEW)
+   - Created comprehensive test suite with 17 tests covering:
+     - Default initialization with minimal required parameters
+     - Unique ID generation per instance
+     - Optional author and updated_at attributes
+     - Rejection of empty or whitespace-only content
+     - Rejection of empty or whitespace-only task_id
+     - Full serialization/deserialization roundtrip
+     - Selective inclusion of optional fields in to_dict()
+     - Reconstruction from dict with various optional field combinations
+     - CEST timezone handling for created_at timestamps
+
+4. **`artifacts/class_diagram.puml`**
+   - Added TaskComment class with all attributes and methods
+   - Added relationship: `Task "1" --> "*" TaskComment : has`
+
+5. **`artifacts/component_diagram.puml`**
+   - Updated Domain Model component to include TaskComment
+
+### Test Results
+
+```
+...................................................................      [100%]
+67 passed in 0.12s
+```
+(50 existing tests + 17 new TaskComment tests)
+
+### Design Decisions
+
+1. **Model Pattern:** Followed the existing Task dataclass pattern:
+   - Dataclass with field defaults for id and created_at
+   - Validation in `__post_init__()`
+   - Serialization/deserialization methods (to_dict/from_dict)
+   - Consistent with existing codebase conventions
+
+2. **CEST Timezone:** 
+   - created_at defaults to `datetime.now(CEST)` with `ZoneInfo("Europe/Paris")`
+   - Consistent with Task model and project timezone requirements
+
+3. **Validation Strategy:**
+   - Validates at instantiation time via `__post_init__()`
+   - Rejects empty content (empty string or whitespace-only)
+   - Rejects invalid task_id (empty string or whitespace-only)
+   - Prevents invalid states from being created
+
+4. **Serialization:**
+   - ISO 8601 format for datetime fields
+   - Optional fields (author, updated_at) only included in dict when non-None
+   - Backward compatible with missing optional fields in from_dict()
+   - Matches Task model serialization pattern
+
+5. **Out-of-Scope:** Explicitly not implemented as required:
+   - Rich text support
+   - Markdown rendering
+   - Nested comments
+   - CLI/Service layer integration (not part of this task)
+
+### Dependencies
+
+No new dependencies added. Implementation uses:
+- `uuid` — standard library for UUID generation
+- `dataclasses` — Python 3.7+ standard library
+- `datetime` and `zoneinfo` — standard library for timezone-aware dates
+- `typing.Optional` — standard library for optional types
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

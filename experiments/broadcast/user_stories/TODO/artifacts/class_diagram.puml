@@ -30,6 +30,21 @@ package "models" #DDEEFF {
         +is_completed() : Boolean
         +is_overdue() : Boolean
     }
+
+    class TaskComment {
+        +id : String
+        +task_id : String
+        +content : String
+        +created_at : DateTime
+        +author : String [0..1]
+        +updated_at : DateTime [0..1]
+        --
+        +__post_init__() : void
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : TaskComment
+    }
+
+    Task "1" --> "*" TaskComment : has
 }
 
 package "storage" #FFF3CC {
