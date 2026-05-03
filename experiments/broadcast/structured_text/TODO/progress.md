@@ -448,4 +448,4 @@ One-shot:
 - Total tests: 93/93 passing ✓
 - No regressions in existing functionality
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 607.8s | Cost: $1.475982 USD | Turns: 43
