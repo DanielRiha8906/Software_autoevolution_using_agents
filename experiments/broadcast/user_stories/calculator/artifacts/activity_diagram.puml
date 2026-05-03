@@ -30,10 +30,19 @@ if (CLI operation provided?) then (yes)
 else (no)
 
   repeat
-    :Show menu;
+    :Show menu (standard or scientific mode);
     :Read user choice;
 
     switch (User choice?)
+
+      case (Toggle Mode)
+        if (Current mode == standard?) then (yes)
+          :Switch to scientific mode;
+          :Update menu with scientific operations;
+        else (no)
+          :Switch to standard mode;
+          :Update menu to standard operations only;
+        endif
 
       case (Exit)
         :Show goodbye message;
@@ -84,20 +93,34 @@ else (no)
         endif
 
       case (Operation)
-        :Read operands;
+        :Get operation;
 
-        if (Input valid?) then (yes)
-          :Perform calculation;
-
-          if (Calculation successful?) then (yes)
-            :Save result to history;
-            :Show result;
+        if (Operation is unary?) then (yes)
+          :Prompt for one operand;
+          if (Input valid?) then (yes)
+            :Perform unary calculation;
+            if (Calculation successful?) then (yes)
+              :Save result to history;
+              :Show result as op(a) = r;
+            else (no)
+              :Show calculation error;
+            endif
           else (no)
-            :Show calculation error;
+            :Show input error;
           endif
-
         else (no)
-          :Show input error;
+          :Prompt for two operands;
+          if (Input valid?) then (yes)
+            :Perform binary calculation;
+            if (Calculation successful?) then (yes)
+              :Save result to history;
+              :Show result as a op b = r;
+            else (no)
+              :Show calculation error;
+            endif
+          else (no)
+            :Show input error;
+          endif
         endif
 
       case (Invalid choice)

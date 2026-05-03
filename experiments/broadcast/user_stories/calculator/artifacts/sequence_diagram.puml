@@ -10,11 +10,37 @@ participant FilterService
 participant Calculator
 participant JsonStorage
 
-== Calculation Flow with Memory ==
-User -> CalculatorCLI: run_interactive() or run_command()
+== Unary Operation Flow (Scientific Mode) ==
+User -> CalculatorCLI: selects unary operation (sin, cos, tan, log, ln, exp, sqrt, square)
 activate CalculatorCLI
 
-CalculatorCLI -> CalculatorService: perform_with_memory(operation, a, b)
+note over CalculatorCLI: operation.is_unary() returns true\nonly asks for one operand
+
+CalculatorCLI -> CalculatorService: perform(operation, a, None)
+activate CalculatorService
+
+note over CalculatorService: b parameter is None\nperform_with_memory() handles None gracefully
+
+CalculatorService -> Calculator: calculate(operation, a, 0)
+activate Calculator
+Calculator --> CalculatorService: result
+deactivate Calculator
+
+note over CalculatorService: operands = [a] (only one operand)\noperand_b is None in CalculationResult
+
+CalculatorService --> CalculatorCLI: CalculationResult with operand_b=None
+deactivate CalculatorService
+
+CalculatorCLI -> User: shows result as "sin(a) = r"
+deactivate CalculatorCLI
+
+== Binary Operation Flow (Standard & Scientific Mode) ==
+User -> CalculatorCLI: selects binary operation (add, subtract, multiply, power, modulo)
+activate CalculatorCLI
+
+note over CalculatorCLI: operation.is_unary() returns false\nasks for two operands
+
+CalculatorCLI -> CalculatorService: perform(operation, a, b)
 activate CalculatorService
 
 note over CalculatorService: start_time = perf_counter()
@@ -24,17 +50,28 @@ activate Calculator
 Calculator --> CalculatorService: result
 deactivate Calculator
 
-note over CalculatorService: end_time = perf_counter()\ncreate ResultEntry with execution_time_ms
+note over CalculatorService: end_time = perf_counter()\ncreate CalculationResult with execution_time_ms
 
 CalculatorService -> JsonStorage: save(memory_entry)
 activate JsonStorage
 JsonStorage --> CalculatorService: saved
 deactivate JsonStorage
 
-CalculatorService --> CalculatorCLI: MemoryEntry
+CalculatorService --> CalculatorCLI: CalculationResult with operand_b value
 deactivate CalculatorService
 
-CalculatorCLI -> User: show result
+CalculatorCLI -> User: shows result as "a op b = r"
+deactivate CalculatorCLI
+
+== Mode Toggle Flow ==
+User -> CalculatorCLI: selects mode toggle option from menu
+activate CalculatorCLI
+
+CalculatorCLI -> CalculatorCLI: _toggle_mode()
+
+note over CalculatorCLI: if mode == "standard": switch to "scientific"\nupdate _menu to include scientific ops\nelse: switch back to "standard"
+
+CalculatorCLI -> User: show mode switch confirmation
 deactivate CalculatorCLI
 
 == Memory Retrieve Flow ==

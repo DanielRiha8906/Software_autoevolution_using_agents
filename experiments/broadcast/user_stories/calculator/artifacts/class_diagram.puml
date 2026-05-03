@@ -13,22 +13,30 @@ package "models" #DDEEFF {
         SQRT
         POWER
         MODULO
+        SIN
+        COS
+        TAN
+        LOG
+        LN
+        EXP
         --
         +fromString(value: String) : Operation
         +displayName() : String
+        +arity() : int
+        +is_unary() : bool
     }
 
     class CalculationResult {
-        +operation : Operation
-        +operandA : float
-        +operandB : float
+        +operation : String
+        +operand_a : float
+        +operand_b : float | None
         +result : float
         +timestamp : String
         +execution_time_ms : float
         --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : CalculationResult
-        +toString() : String
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : CalculationResult
+        +__str__() : String
     }
 
     abstract class MemoryEntry {
@@ -71,6 +79,8 @@ package "models" #DDEEFF {
 
 package "services" #DDFFD4 {
     class Calculator {
+        +mode : String
+        --
         +add(a: float, b: float) : float
         +subtract(a: float, b: float) : float
         +multiply(a: float, b: float) : float
@@ -79,6 +89,12 @@ package "services" #DDFFD4 {
         +sqrt(a: float, b: float) : float
         +power(a: float, b: float) : float
         +modulo(a: float, b: float) : float
+        +sin(a: float, b: float) : float
+        +cos(a: float, b: float) : float
+        +tan(a: float, b: float) : float
+        +log(a: float, b: float) : float
+        +ln(a: float, b: float) : float
+        +exp(a: float, b: float) : float
         +calculate(op: Operation, a: float, b: float) : float
     }
 
@@ -87,9 +103,9 @@ package "services" #DDFFD4 {
         -storage : JsonStorage
         --
         +CalculatorService(calculator: Calculator, storage: JsonStorage)
-        +perform(operation: Operation, a: float, b: float) : CalculationResult
-        +perform_with_memory(operation: Operation, a: float, b: float) : MemoryEntry
-        +getHistory() : List<CalculationResult>
+        +perform(operation: Operation, a: float, b: float [0..1]) : CalculationResult
+        +perform_with_memory(operation: Operation, a: float, b: float [0..1]) : MemoryEntry
+        +get_history() : List<CalculationResult>
         +get_memory_history() : List<MemoryEntry>
     }
 
@@ -144,14 +160,17 @@ package "storage" #FFF3CC {
 
 package "cli" #FFE5E5 {
     class CalculatorCLI {
-        -MENU : List<Tuple<Operation, String>>
+        -_STANDARD_OPS : List<Tuple<Operation, String>>
+        -_SCIENTIFIC_OPS : List<Tuple<Operation, String>>
+        -mode : String
+        -_menu : List<Tuple<Operation, String>>
         -service : CalculatorService
         -memory_service : MemoryService
         -statistics_service : StatisticsService
         --
         +CalculatorCLI(service: CalculatorService, memory_service: MemoryService)
         +run_interactive() : void
-        +run_command(operation: String, a: float, b: float) : void
+        +run_command(operation: String, a: float, b: float [0..1]) : void
         +show_memory_history_command() : void
         +show_history_command() : void
         +memory_retrieve_command() : void
@@ -161,6 +180,7 @@ package "cli" #FFE5E5 {
         +export_command(filepath: String) : void
         +import_command(filepath: String, overwrite: bool) : void
         -_print_menu() : void
+        -_toggle_mode() : void
         -_resolve_menu_choice(choice: String) : Operation [0..1]
         -_prompt_number(prompt: String) : float [0..1]
         -_show_history() : void

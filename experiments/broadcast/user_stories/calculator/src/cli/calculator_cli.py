@@ -8,7 +8,7 @@ from ..services.statistics_service import StatisticsService
 
 
 class CalculatorCLI:
-    _MENU: list[tuple[Operation, str]] = [
+    _STANDARD_OPS: list[tuple[Operation, str]] = [
         (Operation.ADD,      "Add"),
         (Operation.SUBTRACT, "Subtract"),
         (Operation.MULTIPLY, "Multiply"),
@@ -19,10 +19,21 @@ class CalculatorCLI:
         (Operation.MODULO,   "Modulo"),
     ]
 
+    _SCIENTIFIC_OPS: list[tuple[Operation, str]] = [
+        (Operation.SIN,      "Sine"),
+        (Operation.COS,      "Cosine"),
+        (Operation.TAN,      "Tangent"),
+        (Operation.LOG,      "Logarithm (base 10)"),
+        (Operation.LN,       "Natural logarithm"),
+        (Operation.EXP,      "Exponential (e^x)"),
+    ]
+
     def __init__(self, service: CalculatorService, memory_service: MemoryService) -> None:
         self.service = service
         self.memory_service = memory_service
         self.statistics_service = StatisticsService(memory_service)
+        self.mode = "standard"  # "standard" or "scientific"
+        self._menu = self._STANDARD_OPS
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -34,17 +45,24 @@ class CalculatorCLI:
             self._print_menu()
             choice = input("Choose option: ").strip()
 
-            memory_history_opt = len(self._MENU) + 1
-            history_opt        = len(self._MENU) + 2
-            filter_opt         = len(self._MENU) + 3
-            statistics_opt     = len(self._MENU) + 4
-            export_opt         = len(self._MENU) + 5
-            import_opt         = len(self._MENU) + 6
-            exit_opt           = len(self._MENU) + 7
+            # Calculate menu option indices
+            num_ops = len(self._menu)
+            mode_opt           = num_ops + 1
+            memory_history_opt = num_ops + 2
+            history_opt        = num_ops + 3
+            filter_opt         = num_ops + 4
+            statistics_opt     = num_ops + 5
+            export_opt         = num_ops + 6
+            import_opt         = num_ops + 7
+            exit_opt           = num_ops + 8
 
             if choice == str(exit_opt):
                 print("Goodbye!")
                 break
+
+            if choice == str(mode_opt):
+                self._toggle_mode()
+                continue
 
             if choice == str(memory_history_opt):
                 self._show_memory_history()
@@ -75,20 +93,30 @@ class CalculatorCLI:
                 print("Invalid choice — try again.\n")
                 continue
 
+            # Prompt for operands based on arity
             a = self._prompt_number("Enter first number: ")
             if a is None:
                 continue
-            b = self._prompt_number("Enter second number: ")
-            if b is None:
-                continue
 
-            try:
-                result = self.service.perform(operation, a, b)
-                print(f"\n  Result: {result}\n")
-            except ValueError as exc:
-                print(f"\n  Error: {exc}\n")
+            if operation.is_unary():
+                # Unary operation: don't ask for second operand
+                try:
+                    result = self.service.perform(operation, a, None)
+                    print(f"\n  Result: {result}\n")
+                except ValueError as exc:
+                    print(f"\n  Error: {exc}\n")
+            else:
+                # Binary operation: ask for second operand
+                b = self._prompt_number("Enter second number: ")
+                if b is None:
+                    continue
+                try:
+                    result = self.service.perform(operation, a, b)
+                    print(f"\n  Result: {result}\n")
+                except ValueError as exc:
+                    print(f"\n  Error: {exc}\n")
 
-    def run_command(self, operation_str: str, a: float, b: float) -> None:
+    def run_command(self, operation_str: str, a: float, b: float | None = None) -> None:
         try:
             operation = Operation.from_string(operation_str)
             result = self.service.perform(operation, a, b)
@@ -208,22 +236,35 @@ class CalculatorCLI:
     # ------------------------------------------------------------------
 
     def _print_menu(self) -> None:
-        print("\nOperations:")
-        for i, (_, label) in enumerate(self._MENU, 1):
+        print(f"\nOperations ({self.mode.capitalize()} Mode):")
+        for i, (_, label) in enumerate(self._menu, 1):
             print(f"  {i}. {label}")
-        print(f"  {len(self._MENU) + 1}. View memory history")
-        print(f"  {len(self._MENU) + 2}. View calculation history")
-        print(f"  {len(self._MENU) + 3}. Filter calculations")
-        print(f"  {len(self._MENU) + 4}. View statistics")
-        print(f"  {len(self._MENU) + 5}. Export history to JSON")
-        print(f"  {len(self._MENU) + 6}. Import history from JSON")
-        print(f"  {len(self._MENU) + 7}. Exit")
+        num_ops = len(self._menu)
+        print(f"  {num_ops + 1}. Toggle mode (currently {self.mode})")
+        print(f"  {num_ops + 2}. View memory history")
+        print(f"  {num_ops + 3}. View calculation history")
+        print(f"  {num_ops + 4}. Filter calculations")
+        print(f"  {num_ops + 5}. View statistics")
+        print(f"  {num_ops + 6}. Export history to JSON")
+        print(f"  {num_ops + 7}. Import history from JSON")
+        print(f"  {num_ops + 8}. Exit")
+
+    def _toggle_mode(self) -> None:
+        """Toggle between standard and scientific mode."""
+        if self.mode == "standard":
+            self.mode = "scientific"
+            self._menu = self._STANDARD_OPS + self._SCIENTIFIC_OPS
+            print("\nSwitched to scientific mode.\n")
+        else:
+            self.mode = "standard"
+            self._menu = self._STANDARD_OPS
+            print("\nSwitched to standard mode.\n")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
             idx = int(choice) - 1
-            if 0 <= idx < len(self._MENU):
-                return self._MENU[idx][0]
+            if 0 <= idx < len(self._menu):
+                return self._menu[idx][0]
         except ValueError:
             pass
         return None
