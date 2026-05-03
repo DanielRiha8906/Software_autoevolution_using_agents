@@ -11,6 +11,7 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
 from ..services.statistics_service import StatisticsService
+from ..services.data_portability_service import DataPortabilityService
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -184,6 +185,26 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format (default: text)",
     )
 
+    # export
+    export_p = sub.add_parser("export", help="Export runs and attempts to JSON file")
+    export_p.add_argument("--output", required=True, help="Output file path")
+
+    # import
+    import_p = sub.add_parser("import", help="Import runs and attempts from JSON file")
+    import_p.add_argument("--input", required=True, help="Input file path")
+    import_p.add_argument(
+        "--skip-duplicates",
+        action="store_true",
+        default=True,
+        help="Skip duplicate entries",
+    )
+    import_p.add_argument(
+        "--fail-on-invalid",
+        action="store_true",
+        default=False,
+        help="Fail on invalid data",
+    )
+
     return parser
 
 
@@ -191,6 +212,7 @@ def run_cli(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
     args=None,
 ) -> None:
     parser = build_parser()
@@ -378,3 +400,37 @@ def run_cli(
             print(json.dumps(statistics.to_dict(), indent=2))
         else:
             print(_fmt_statistics(statistics))
+
+    elif ns.command == "export":
+        try:
+            result = portability_service.export_data(service, attempt_service, ns.output)
+            print(f"Export successful!")
+            print(f"  Runs: {result.runs_count}")
+            print(f"  Attempts: {result.attempts_count}")
+            print(f"  File: {result.output_path}")
+            print(f"  Timestamp: {result.timestamp}")
+        except IOError as e:
+            print(f"Export failed: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "import":
+        try:
+            skip_invalid = not ns.fail_on_invalid
+            result = portability_service.import_data(
+                service,
+                attempt_service,
+                ns.input,
+                skip_duplicates=ns.skip_duplicates,
+                skip_invalid=skip_invalid,
+            )
+            print(f"Import completed!")
+            print(f"  Runs: {result.runs_imported} imported, {result.runs_skipped} skipped, {result.runs_failed} failed")
+            print(f"  Attempts: {result.attempts_imported} imported, {result.attempts_skipped} skipped, {result.attempts_failed} failed")
+            print(f"  Timestamp: {result.timestamp}")
+            if result.errors:
+                print(f"\nFirst few errors:")
+                for err in result.errors[:5]:
+                    print(f"  - {err}")
+        except (IOError, ValueError) as e:
+            print(f"Import failed: {e}", file=sys.stderr)
+            sys.exit(1)

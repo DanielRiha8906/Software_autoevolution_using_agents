@@ -346,3 +346,99 @@ Successfully implemented aggregated insights and statistics reporting for workfl
 - to_dict() method provides JSON-serializable representation for output formatting
 
 Duration: 474.9s | Cost: $1.086862 USD | Turns: 21
+
+## Task 07: Data Portability (Export/Import JSON)
+
+**Status:** Completed
+
+### Summary
+Successfully implemented JSON export/import functionality for workflow runs and attempts. Users can now backup, transfer, and restore workflow data via both CLI commands and interactive menu options. All functionality is accessible via `python -m src` as required.
+
+### Files Changed
+- `src/services/data_portability_service.py` — NEW: Dataclasses (PortabilityEnvelope, ExportResult, ImportResult) and DataPortabilityService with export_data() and import_data() methods
+- `src/cli/workflow_cli.py` — Added export and import subcommands to parser, added handlers in run_cli()
+- `src/cli/interactive_menu.py` — Added _export_data() and _import_data() menu functions, integrated into main menu
+- `src/__main__.py` — Instantiated DataPortabilityService and passed to CLI and interactive menu
+- `tests/test_data_portability_service.py` — NEW: 20 comprehensive tests covering export, import, validation, round-trip, and error scenarios
+- `tests/test_interactive_menu.py` — Updated 5 test functions to pass portability_service parameter
+- `tests/test_workflow_cli.py` — Updated 8 test functions to pass portability_service parameter
+- `artifacts/class_diagram.puml` — Added DataPortabilityService, ExportResult, ImportResult, PortabilityEnvelope classes
+- `artifacts/component_diagram.puml` — Added Data Portability package with service and export.json artifact
+
+### Test Results
+- **Export/Import Tests:** 20 tests (100% pass)
+- **Updated Existing Tests:** 13 tests fixed for portability_service parameter
+- **Total Tests:** 163 tests
+- **Passed:** 163
+- **Failed:** 0
+- **Status:** ✅ All tests pass with no regressions
+
+### Implementation Details
+
+**Must Have:**
+- ✅ Export runs to JSON — Exports all runs with metadata envelope (timestamp, schema_version="1.0", counts)
+- ✅ Import runs from JSON — Imports runs with duplicate detection, validation, and error collection
+- ✅ Ensure schema consistency — Metadata includes schema_version="1.0" for forward compatibility
+- ✅ Accessible via `python -m src` — Both CLI commands (export/import) and interactive menu options
+
+**Should Have:**
+- ✅ Validate imported data structure — Full validation: required fields, datetime formats, enum values, numeric types
+
+**Could Have:**
+- ✅ Skip invalid/duplicate entries on import — Configurable via skip_duplicates and skip_invalid flags
+
+**Won't Have:**
+- ✅ No external formats (CSV, DB) — JSON only
+
+### Key Features
+- **Export Format**: Single JSON file with metadata envelope:
+  ```json
+  {
+    "metadata": {
+      "timestamp": "2026-05-03T15:30:00Z",
+      "schema_version": "1.0",
+      "runs_count": 42,
+      "attempts_count": 127
+    },
+    "data": {
+      "runs": [...],
+      "attempts": [...]
+    }
+  }
+  ```
+- **Duplicate Detection**: Skips or fails on duplicate run IDs or (run_id, attempt_number) composite keys
+- **Validation**: Checks schema version, required fields, datetime ISO 8601 format, enum values, numeric bounds
+- **Error Collection**: Non-failing error collection — continues processing all records, returns detailed error list
+- **Parent Directory Creation**: Automatically creates parent directories for export files using pathlib.Path
+
+### CLI Commands
+- `python -m src export --output <path>` — Export all runs and attempts to JSON file
+- `python -m src import --input <path>` — Import runs and attempts from JSON file
+- `python -m src import --input <path> --skip-duplicates` — Skip duplicate entries (default: true)
+- `python -m src import --input <path> --fail-on-invalid` — Fail on first invalid item (default: false, skip instead)
+
+### Interactive Menu (New)
+- "Export data to JSON" — Prompt for output path, create export with success confirmation
+- "Import data from JSON" — Prompt for input path, skip options, confirmation, then import with detailed summary
+
+### Service Signatures Updated
+- `run_cli(service, attempt_service, statistics_service, portability_service, args)` — Added portability_service parameter
+- `run_interactive(service, attempt_service, statistics_service, portability_service)` — Added portability_service parameter
+- All menu handler functions — Updated to accept and pass portability_service
+
+### Test Coverage
+- **Export tests**: Valid data, empty database, parent directory creation, timestamp format, schema version, file write errors
+- **Import tests**: Valid imports, duplicate handling (skip/fail), invalid data handling (skip/fail), schema validation, format validation, file I/O errors
+- **Round-trip tests**: Data preservation, datetime precision, enum serialization
+- **Integration tests**: CLI export/import commands with flags, interactive menu integration
+
+### Design Notes
+- DataPortabilityService is stateless — takes service instances as method parameters
+- Export timestamp is ISO 8601 UTC using datetime.isoformat()
+- Import validates schema version against "1.0" and rejects incompatible formats
+- Enum serialization uses .value for compact JSON; import reconstructs via enum(string_value)
+- Datetime precision preserved through ISO 8601 round-trip (full timestamp with microseconds)
+- Error messages include item IDs and specific field names for debugging
+- WorkflowRun.id (str) and WorkflowRunAttempt.id/run_id (int) types are preserved through serialization
+
+Duration: 590.9s | Cost: $1.431707 USD | Turns: 41

@@ -11,6 +11,7 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
 from ..services.statistics_service import StatisticsService
+from ..services.data_portability_service import DataPortabilityService
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -102,6 +103,7 @@ def _add_run(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     tracker = WorkflowRunTracker(service)
     print("\n--- Add Workflow Run ---")
@@ -132,6 +134,7 @@ def _list_runs(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     runs = service.list_runs()
     if not runs:
@@ -146,6 +149,7 @@ def _detail_run(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     run_id = _prompt("\nEnter run ID")
     run = service.get_run_detail(run_id)
@@ -159,6 +163,7 @@ def _check_run_state(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     run_id = _prompt("\nEnter run ID")
     run = service.get_run_detail(run_id)
@@ -202,6 +207,7 @@ def _filter_menu(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     filter_by = _choose("Filter by", ["branch", "status", "conclusion"])
     if filter_by == "branch":
@@ -226,6 +232,7 @@ def _filter_by_duration_interactive(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     """Interactive duration range filter."""
     print("\n--- Filter by Duration Range ---")
@@ -260,6 +267,7 @@ def _filter_by_created_interactive(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     """Interactive created date range filter."""
     print("\n--- Filter by Created Date Range ---")
@@ -287,6 +295,7 @@ def _filter_by_updated_interactive(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     """Interactive updated date range filter."""
     print("\n--- Filter by Updated Date Range ---")
@@ -314,6 +323,7 @@ def _filter_by_attempts_interactive(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     """Interactive filter by attempt presence."""
     choice = _choose("Show runs with attempts?", ["Yes", "No"])
@@ -337,6 +347,7 @@ def _filter_compound_interactive(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     """Interactive compound filter builder."""
     print("\n--- Combine Filters ---")
@@ -398,6 +409,7 @@ def _advanced_filter_menu(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     """Advanced filter sub-menu."""
     while True:
@@ -415,15 +427,15 @@ def _advanced_filter_menu(
         )
 
         if choice == "Duration range":
-            _filter_by_duration_interactive(service, attempt_service)
+            _filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service)
         elif choice == "Created date range":
-            _filter_by_created_interactive(service, attempt_service)
+            _filter_by_created_interactive(service, attempt_service, statistics_service, portability_service)
         elif choice == "Updated date range":
-            _filter_by_updated_interactive(service, attempt_service)
+            _filter_by_updated_interactive(service, attempt_service, statistics_service, portability_service)
         elif choice == "Has attempts":
-            _filter_by_attempts_interactive(service, attempt_service)
+            _filter_by_attempts_interactive(service, attempt_service, statistics_service, portability_service)
         elif choice == "Combine filters":
-            _filter_compound_interactive(service, attempt_service)
+            _filter_compound_interactive(service, attempt_service, statistics_service, portability_service)
         elif choice == "Back to main menu":
             return
 
@@ -432,6 +444,7 @@ def _add_attempt(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     print("\n--- Add Workflow Attempt ---")
     run_id = int(_prompt("Run ID"))
@@ -455,6 +468,7 @@ def _list_attempts_menu(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     attempts = attempt_service.list_attempts()
     if not attempts:
@@ -469,6 +483,7 @@ def _detail_attempt(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     attempt_id = int(_prompt("\nEnter attempt ID"))
     attempt = attempt_service.get_attempt_detail(attempt_id)
@@ -482,6 +497,7 @@ def _view_statistics(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     """Display workflow statistics."""
     print("\n--- Workflow Statistics ---")
@@ -496,6 +512,69 @@ def _view_statistics(
         print(_fmt_statistics(statistics))
 
 
+def _export_data(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
+) -> None:
+    """Export workflow data to JSON file."""
+    print("\n--- Export Workflow Data ---")
+    output = input("Output file path [artifacts/workflow_export.json]: ").strip()
+    if not output:
+        output = "artifacts/workflow_export.json"
+    try:
+        result = portability_service.export_data(service, attempt_service, output)
+        print(f"\nExport successful!")
+        print(f"  Runs: {result.runs_count}")
+        print(f"  Attempts: {result.attempts_count}")
+        print(f"  File: {result.output_path}")
+        print(f"  Timestamp: {result.timestamp}")
+    except Exception as e:
+        print(f"\nExport failed: {e}")
+
+
+def _import_data(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
+) -> None:
+    """Import workflow data from JSON file."""
+    print("\n--- Import Workflow Data ---")
+    input_file = input("Input file path: ").strip()
+    if not input_file:
+        print("Import cancelled.")
+        return
+
+    skip_dup = input("Skip duplicates? (y/n) [y]: ").strip().lower() != 'n'
+    fail_invalid = input("Fail on invalid data? (y/n) [n]: ").strip().lower() == 'y'
+
+    confirm = input("Proceed with import? (y/n) [n]: ").strip().lower()
+    if confirm != 'y':
+        print("Import cancelled.")
+        return
+
+    try:
+        result = portability_service.import_data(
+            service,
+            attempt_service,
+            input_file,
+            skip_duplicates=skip_dup,
+            skip_invalid=(not fail_invalid),
+        )
+        print(f"\nImport completed!")
+        print(f"  Runs: {result.runs_imported} imported, {result.runs_skipped} skipped, {result.runs_failed} failed")
+        print(f"  Attempts: {result.attempts_imported} imported, {result.attempts_skipped} skipped, {result.attempts_failed} failed")
+        print(f"  Timestamp: {result.timestamp}")
+        if result.errors:
+            print(f"\nFirst few errors:")
+            for err in result.errors[:5]:
+                print(f"  - {err}")
+    except Exception as e:
+        print(f"\nImport failed: {e}")
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
@@ -507,6 +586,8 @@ MENU = [
     ("List attempts", _list_attempts_menu),
     ("Get attempt detail", _detail_attempt),
     ("View Statistics", _view_statistics),
+    ("Export data to JSON", _export_data),
+    ("Import data from JSON", _import_data),
     ("Exit", None),
 ]
 
@@ -515,6 +596,7 @@ def run_interactive(
     service: WorkflowRunService,
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
 ) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
@@ -530,6 +612,6 @@ def run_interactive(
             print("Goodbye.")
             sys.exit(0)
         try:
-            handler(service, attempt_service, statistics_service)
+            handler(service, attempt_service, statistics_service, portability_service)
         except KeyboardInterrupt:
             print()

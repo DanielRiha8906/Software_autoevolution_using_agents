@@ -25,6 +25,12 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
     component "AttemptService" as ATTEMPT_SVC
+    component "StatisticsService" as STATS_SVC
+  }
+
+  package "Data Portability" {
+    component "DataPortabilityService" as PORTABILITY
+    artifact "export.json" as EXPORT_FILE
   }
 
   package "Persistence layer" {
@@ -58,6 +64,11 @@ COMP_FILTER --> SVC
 
 CLI --> TRACKER
 IM --> TRACKER
+CLI --> STATS_SVC
+IM --> STATS_SVC
+
+CLI --> PORTABILITY
+IM --> PORTABILITY
 
 TRACKER --> SVC
 SVC --> STOR
@@ -66,6 +77,10 @@ STOR --> JSON_FILE
 
 ATTEMPT_SVC --> ATTEMPT_STOR
 ATTEMPT_STOR --> ATTEMPT_FILE
+
+PORTABILITY --> SVC
+PORTABILITY --> ATTEMPT_SVC
+PORTABILITY --> EXPORT_FILE
 
 SVC ..> RUN
 RUN --> STATUS
