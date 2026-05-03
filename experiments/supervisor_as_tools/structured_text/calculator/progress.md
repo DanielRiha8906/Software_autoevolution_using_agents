@@ -78,4 +78,4 @@ Successfully implemented four new mathematical operations (square, sqrt, power, 
 - Service integration: storage behavior, error non-persistence
 - CLI tests: command mode, interactive mode, error handling, operand validation
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 347.1s | Cost: $0.700574 USD | Turns: 31
