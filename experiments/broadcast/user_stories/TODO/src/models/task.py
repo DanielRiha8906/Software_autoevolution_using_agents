@@ -67,3 +67,34 @@ class Task:
             updated_at=datetime.fromisoformat(data["updated_at"]),
             due_date=due_date,
         )
+
+    def mark_in_progress(self) -> None:
+        if self.status == TaskStatus.PENDING:
+            self.status = TaskStatus.IN_PROGRESS
+            self.updated_at = datetime.now(CEST)
+
+    def mark_done(self) -> None:
+        if self.status == TaskStatus.IN_PROGRESS:
+            self.status = TaskStatus.DONE
+            self.updated_at = datetime.now(CEST)
+
+    def reopen(self) -> None:
+        if self.status == TaskStatus.DONE:
+            self.status = TaskStatus.PENDING
+            self.updated_at = datetime.now(CEST)
+
+    def is_pending(self) -> bool:
+        return self.status == TaskStatus.PENDING
+
+    def is_in_progress(self) -> bool:
+        return self.status == TaskStatus.IN_PROGRESS
+
+    def is_completed(self) -> bool:
+        return self.status == TaskStatus.DONE
+
+    def is_overdue(self) -> bool:
+        if self.due_date is None:
+            return False
+        now_cest = datetime.now(CEST)
+        due_date_cest = self.due_date.astimezone(CEST)
+        return due_date_cest < now_cest

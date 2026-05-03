@@ -39,3 +39,19 @@ class TodoService:
 
     def delete_task(self, task_id: str) -> None:
         self._manager.delete(task_id)
+
+    def is_task_pending(self, task_id: str) -> bool:
+        task = self._manager.get(task_id)
+        return task.is_pending()
+
+    def is_task_in_progress(self, task_id: str) -> bool:
+        task = self._manager.get(task_id)
+        return task.is_in_progress()
+
+    def is_task_completed(self, task_id: str) -> bool:
+        task = self._manager.get(task_id)
+        return task.is_completed()
+
+    def is_task_overdue(self, task_id: str) -> bool:
+        task = self._manager.get(task_id)
+        return task.is_overdue()

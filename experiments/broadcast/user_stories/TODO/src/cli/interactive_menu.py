@@ -78,6 +78,8 @@ class InteractiveMenu:
             elif choice == "5":
                 self._do_update(tasks)
             elif choice == "6":
+                self._do_check_status(tasks)
+            elif choice == "7":
                 self._do_delete(tasks)
             else:
                 input("  Unknown option. Press Enter to continue...")
@@ -104,7 +106,8 @@ class InteractiveMenu:
         print("  3. Show task details")
         print("  4. Change status  (start / done / reopen)")
         print("  5. Update task    (title / description)")
-        print("  6. Delete task")
+        print("  6. Check task status (pending / in progress / completed / overdue)")
+        print("  7. Delete task")
         print("  0. Quit")
         print()
 
@@ -216,6 +219,31 @@ class InteractiveMenu:
             print(f"\n  Updated: {_task_line(updated)}")
         except (TaskNotFoundError, ValueError) as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_check_status(self, tasks: list[Task]) -> None:
+        _clear()
+        if not tasks:
+            input("  No tasks. Press Enter...")
+            return
+        print("  Check status — pick a task:\n")
+        idx = _pick("Select", [_task_line(t) for t in tasks])
+        if idx is None:
+            return
+        task = tasks[idx]
+
+        _clear()
+        print(f"  Task: {task.title}\n")
+        is_pending = self._service.is_task_pending(task.id)
+        is_in_progress = self._service.is_task_in_progress(task.id)
+        is_completed = self._service.is_task_completed(task.id)
+        is_overdue = self._service.is_task_overdue(task.id)
+
+        print(f"  Is pending:      {is_pending}")
+        print(f"  Is in progress:  {is_in_progress}")
+        print(f"  Is completed:    {is_completed}")
+        print(f"  Is overdue:      {is_overdue}")
+        print()
         input("  Press Enter to continue...")
 
     def _do_delete(self, tasks: list[Task]) -> None:
