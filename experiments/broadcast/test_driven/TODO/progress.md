@@ -483,4 +483,4 @@ Implement `TaskImportExportService` that exports tasks and comments together int
 - Export format changed from dict-of-lists to flat list for comments to match test schema expectations
 - All diagrams successfully updated with proper @startuml/@enduml tags
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 465.2s | Cost: $2.291396 USD | Turns: 59
