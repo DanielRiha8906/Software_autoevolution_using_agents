@@ -4,8 +4,10 @@ from typing import Optional
 from ..models.task import Task, CEST
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
+from ..models.project import Project
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
+from .project_manager import ProjectManager
 from .comments_service import CommentsService
 
 
@@ -13,12 +15,19 @@ class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._storage = storage or JsonStorage()
         self._manager = TaskManager(self._storage)
+        self._project_manager = ProjectManager(self._storage)
         self._comments = CommentsService(self._storage)
 
-    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None, project_id: Optional[str] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description, due_date)
+        task = self._manager.add(title.strip(), description, due_date)
+        if project_id:
+            # Validate project exists and get the full ID
+            project = self._project_manager.get(project_id)
+            task.project_id = project.id
+            self._manager._persist()
+        return task
 
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
@@ -29,14 +38,16 @@ class TodoService:
         overdue: bool = False,
         due_before: Optional[datetime] = None,
         due_after: Optional[datetime] = None,
+        project_id: Optional[str] = None,
     ) -> list[Task]:
-        """List tasks with optional filters for status, overdue, and due date range.
+        """List tasks with optional filters for status, overdue, due date range, and project.
 
         Args:
             status: Filter by task status
             overdue: If True, return only overdue tasks
             due_before: Filter tasks with due_date <= this datetime
             due_after: Filter tasks with due_date >= this datetime
+            project_id: Filter tasks by project ID
 
         Returns:
             Filtered list of tasks
@@ -48,7 +59,11 @@ class TodoService:
             due_after = due_after.replace(tzinfo=timezone.utc)
 
         # Start with base query
-        if status is not None:
+        if project_id is not None:
+            # Validate project exists and get the full ID
+            project = self._project_manager.get(project_id)
+            tasks = self._manager.list_by_project(project.id)
+        elif status is not None:
             tasks = self._manager.list_by_status(status)
         else:
             tasks = self._manager.list_all()
@@ -171,3 +186,74 @@ class TodoService:
             ValueError: If content is empty
         """
         return self._comments.update_comment(comment_id, content)
+
+    # Project management methods
+    def add_project(self, name: str) -> Project:
+        """Create a new project.
+
+        Args:
+            name: The project name
+
+        Returns:
+            The created Project
+
+        Raises:
+            ValueError: If name is empty
+        """
+        return self._project_manager.add(name)
+
+    def get_project(self, project_id: str) -> Project:
+        """Get a project by ID.
+
+        Args:
+            project_id: The project ID
+
+        Returns:
+            The Project object
+
+        Raises:
+            ProjectNotFoundError: If the project is not found
+        """
+        return self._project_manager.get(project_id)
+
+    def list_projects(self) -> list[Project]:
+        """List all projects.
+
+        Returns:
+            List of all projects
+        """
+        return self._project_manager.list_all()
+
+    def update_project(self, project_id: str, name: str) -> Project:
+        """Update a project's name.
+
+        Args:
+            project_id: The project ID
+            name: The new project name
+
+        Returns:
+            The updated Project
+
+        Raises:
+            ProjectNotFoundError: If the project is not found
+            ValueError: If name is empty
+        """
+        return self._project_manager.update(project_id, name)
+
+    def delete_project(self, project_id: str) -> None:
+        """Delete a project. Tasks in the project become unassigned.
+
+        Args:
+            project_id: The project ID
+
+        Raises:
+            ProjectNotFoundError: If the project is not found
+        """
+        # Unassign tasks from this project
+        tasks = self._manager.list_by_project(project_id)
+        for task in tasks:
+            task.project_id = None
+        if tasks:
+            self._manager._persist()
+        # Delete the project
+        self._project_manager.delete(project_id)

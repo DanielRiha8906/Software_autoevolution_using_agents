@@ -57,6 +57,9 @@ class TaskManager:
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
 
+    def list_by_project(self, project_id: str) -> list[Task]:
+        return [t for t in self._tasks.values() if t.project_id == project_id]
+
     def list_overdue(self) -> list[Task]:
         """Return all tasks that are overdue (due_date is set and earlier than current CEST time)."""
         return [t for t in self._tasks.values() if t.is_overdue()]

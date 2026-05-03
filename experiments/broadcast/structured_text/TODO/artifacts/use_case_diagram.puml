@@ -15,6 +15,7 @@ rectangle "TODO Manager" {
     usecase "Update task" as I_UPDATE
     usecase "Delete task" as I_DELETE
     usecase "Manage comments" as I_COMMENTS
+    usecase "Manage projects" as I_PROJECTS
     usecase "View statistics" as I_STATS
     usecase "Quit application" as I_QUIT
   }
@@ -33,6 +34,11 @@ rectangle "TODO Manager" {
     usecase "List comments" as C_LIST_COMMENTS
     usecase "Update comment" as C_UPDATE_COMMENT
     usecase "Delete comment" as C_DELETE_COMMENT
+    usecase "Add project" as C_ADD_PROJECT
+    usecase "List projects" as C_LIST_PROJECT
+    usecase "Show project details" as C_SHOW_PROJECT
+    usecase "Update project" as C_UPDATE_PROJECT
+    usecase "Delete project" as C_DELETE_PROJECT
     usecase "View statistics" as C_STATS
     usecase "Export tasks and comments" as C_EXPORT
     usecase "Import tasks and comments" as C_IMPORT
@@ -49,6 +55,7 @@ UI ..> I_STATUS : <<exclude>>
 UI ..> I_UPDATE : <<exclude>>
 UI ..> I_DELETE : <<exclude>>
 UI ..> I_COMMENTS : <<exclude>>
+UI ..> I_PROJECTS : <<exclude>>
 UI ..> I_STATS  : <<exclude>>
 UI ..> I_QUIT   : <<exclude>>
 
@@ -64,6 +71,11 @@ CLI ..> C_ADD_COMMENT : <<exclude>>
 CLI ..> C_LIST_COMMENTS : <<exclude>>
 CLI ..> C_UPDATE_COMMENT : <<exclude>>
 CLI ..> C_DELETE_COMMENT : <<exclude>>
+CLI ..> C_ADD_PROJECT : <<exclude>>
+CLI ..> C_LIST_PROJECT : <<exclude>>
+CLI ..> C_SHOW_PROJECT : <<exclude>>
+CLI ..> C_UPDATE_PROJECT : <<exclude>>
+CLI ..> C_DELETE_PROJECT : <<exclude>>
 CLI ..> C_STATS : <<exclude>>
 CLI ..> C_EXPORT : <<exclude>>
 CLI ..> C_IMPORT : <<exclude>>

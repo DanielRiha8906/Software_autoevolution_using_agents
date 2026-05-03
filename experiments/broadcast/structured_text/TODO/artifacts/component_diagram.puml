@@ -17,12 +17,14 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Project Manager" as PMGR
         component "Comments Service" as CMTS
         component "Import/Export Service" as IMPEXP
     }
 
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus, TaskComment)" as Model
+        component "Project Model\n(Project)" as ProjModel
     }
 
     package "Persistence Layer" {
@@ -40,13 +42,17 @@ CLI --> SVC
 CLI --> IMPEXP
 
 SVC --> MGR
+SVC --> PMGR
 SVC --> CMTS
 MGR --> Storage
+PMGR --> Storage
 CMTS --> Storage
 IMPEXP --> Storage
 MGR ..> Model
+PMGR ..> ProjModel
 CMTS ..> Model
 Storage ..> Model
+Storage ..> ProjModel
 
 Storage --> DB : read/write
 

@@ -36,7 +36,9 @@ repeat
       :Run delete task flow;
     case (7 — Manage comments)
       :Run comment management flow;
-    case (8 — Export tasks/comments)
+    case (8 — Manage projects)
+      :Run project management flow;
+    case (9 — Export tasks/comments)
       :Run export flow;
     case (0/q — Quit)
       :Clear screen;
@@ -46,6 +48,32 @@ repeat
   endswitch
 
 repeat while (user continues)
+}
+
+partition "Project Management Flow" {
+  :Wait for project action;
+  switch (action)
+    case (Add project)
+      :Enter project name;
+      :Call add_project(name);
+    case (List projects)
+      :Call list_projects();
+      :Display project list;
+    case (Show project)
+      :Select project ID;
+      :Call get_project(id);
+      :Display project details and tasks;
+    case (Update project)
+      :Select project ID;
+      :Enter new name;
+      :Call update_project(id, name);
+    case (Delete project)
+      :Select project ID;
+      :Call delete_project(id);
+      :Unassign tasks from project;
+    case (Cancel)
+      :Return to main menu;
+  endswitch
 }
 
 partition "Export Flow" {
