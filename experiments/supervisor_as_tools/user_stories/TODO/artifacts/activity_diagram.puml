@@ -22,6 +22,10 @@ repeat
       :Run delete task flow;
     case (7 — Check status)
       :Run check status flow;
+    case (8 — Manage comments)
+      :Run comment management flow;
+    case (9 — Summary report)
+      :Run summary report flow;
     case (0/q — Quit)
       :Clear screen;
       stop
@@ -154,6 +158,20 @@ partition "Comment Management Flow" {
       endif
     endif
   endif
+}
+
+partition "Summary Report Flow" {
+  :Call generate_summary_report();
+  :Retrieve report with statistics;
+  :- total_count;
+  :- pending_count;
+  :- in_progress_count;
+  :- done_count;
+  :- overdue_count;
+  :- with_due_date_count;
+  :- completion_rate_percent;
+  :- average_days_to_completion;
+  :Format and display report;
 }
 
 @enduml

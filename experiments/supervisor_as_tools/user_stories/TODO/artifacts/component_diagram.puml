@@ -23,6 +23,7 @@ package "TODO Application" {
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus)" as Model
         component "Comment Model\n(TaskComment)" as CommentModel
+        component "Task Summary Report\n(TaskSummaryReport)" as SummaryModel
     }
 
     package "Utilities" {
@@ -44,6 +45,7 @@ CLI --> SVC
 
 SVC --> MGR
 SVC --> CMT
+SVC ..> SummaryModel : generates
 
 MGR --> Storage
 MGR --> DTUtils : validate & filter dates

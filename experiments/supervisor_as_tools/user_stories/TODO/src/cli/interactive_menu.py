@@ -84,6 +84,8 @@ class InteractiveMenu:
                 self._do_check_status(tasks)
             elif choice == "8":
                 self._do_manage_comments(tasks)
+            elif choice == "9":
+                self._do_summary_report()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -112,6 +114,7 @@ class InteractiveMenu:
         print("  6. Delete task")
         print("  7. Check task status")
         print("  8. Manage comments")
+        print("  9. View summary report")
         print("  0. Quit")
         print()
 
@@ -500,4 +503,13 @@ class InteractiveMenu:
             print(f"  Deleted comment {comment.id[:8]}")
         except Exception as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_summary_report(self) -> None:
+        _clear()
+        report = self._service.generate_summary_report()
+        print("  Task Summary Report\n")
+        for line in str(report).split("\n"):
+            print(f"  {line}")
+        print()
         input("  Press Enter to continue...")
