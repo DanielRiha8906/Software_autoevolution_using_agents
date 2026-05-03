@@ -29,6 +29,18 @@ package "models" #DDEEFF {
         +mark_done() : Task
         +reopen() : Task
     }
+
+    class TaskComment {
+        +id : String
+        +task_id : String
+        +content : String
+        +created_at : DateTime
+        +updated_at : DateTime
+        +author : String [0..1]
+        --
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : TaskComment
+    }
 }
 
 package "utils" #E8F8E8 {
@@ -50,6 +62,7 @@ package "storage" #FFF3CC {
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
+    exception CommentNotFoundError
 
     class TaskManager {
         -storage : JsonStorage
@@ -68,8 +81,24 @@ package "services" #DDFFD4 {
         -validateDueDate(due_date: DateTime [0..1]) : DateTime [0..1]
     }
 
+    class CommentManager {
+        -storage : JsonStorage
+        -comments : Dictionary<String, TaskComment>
+        -task_manager : TaskManager
+        --
+        +CommentManager(task_manager: TaskManager, storage: JsonStorage [0..1])
+        +add(task_id: String, content: String) : TaskComment
+        +get(comment_id: String) : TaskComment
+        +list_by_task(task_id: String) : List<TaskComment>
+        +update(comment_id: String, content: String) : TaskComment
+        +delete(comment_id: String) : void
+        -load() : void
+        -persist() : void
+    }
+
     class TodoService {
         -manager : TaskManager
+        -comment_manager : CommentManager
         --
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
@@ -87,6 +116,11 @@ package "services" #DDFFD4 {
         +is_in_progress(taskId: String) : Boolean
         +is_completed(taskId: String) : Boolean
         +is_overdue(taskId: String) : Boolean
+        +add_comment(task_id: String, content: String) : TaskComment
+        +get_comment(comment_id: String) : TaskComment
+        +list_task_comments(task_id: String) : List<TaskComment>
+        +update_comment(comment_id: String, content: String) : TaskComment
+        +delete_comment(comment_id: String) : void
     }
 }
 
@@ -107,10 +141,15 @@ package "cli" #FFE5E5 {
 }
 
 Task --> TaskStatus : status
+TaskComment --> Task : references
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 TaskManager --> DateTimeUtils : validates with
+CommentManager --> JsonStorage : storage
+CommentManager --> TaskManager : validates with
+CommentManager ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
+TodoService --> CommentManager : comment_manager
 TodoService --> DateTimeUtils : validates with
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service

@@ -199,3 +199,109 @@ Implemented 7 status transition and state checking methods on the Task model wit
 - `use_case_diagram.puml` — 7 new use cases (3 status changes + 4 state checks)
 
 Duration: 391.8s | Cost: $0.800551 USD | Turns: 29
+
+## Task 03: Task Comments
+
+### Task Number
+03
+
+### Summary
+Implemented TaskComment model and full comment management system with CRUD operations, storage persistence, service layer integration, and CLI commands. Users can now add, view, update, and delete comments on tasks for recording notes and decisions.
+
+### Files Changed
+
+#### New Files
+- `src/models/task_comment.py` — TaskComment dataclass with id, task_id, content, created_at, updated_at, author (optional)
+- `src/services/comment_manager.py` — CommentManager with add/get/list_by_task/update/delete operations and persistence
+- `tests/test_task_comment.py` — 13 test cases for TaskComment model serialization and validation
+- `tests/test_comment_manager.py` — 19 test cases for CommentManager CRUD and persistence
+- `tests/test_todo_service_comments.py` — 15 test cases for TodoService comment integration
+- `tests/test_cli_comment_commands.py` — 12 test cases for CLI comment commands
+
+#### Modified Files
+- `src/models/__init__.py` — Exported TaskComment
+- `src/services/todo_service.py` — Added _comment_manager instance and 5 comment methods
+- `src/services/__init__.py` — Exported CommentManager and CommentNotFoundError
+- `src/cli/todo_cli.py` — Added 5 new subcommands (add-comment, list-comments, show-comment, update-comment, delete-comment)
+- `artifacts/class_diagram.puml` — Added TaskComment, CommentManager, and relationships
+- `artifacts/component_diagram.puml` — Added Comment Management component
+- `artifacts/activity_diagram.puml` — Added Comment Management Flow partition
+- `artifacts/use_case_diagram.puml` — Added 5 comment management use cases
+- `artifacts/state_diagram.puml` — Added note about comments at any task state
+
+### Acceptance Criteria Status
+
+✅ **TaskComment has: id (UUID), task_id, content, created_at (CEST)**
+- All fields implemented as dataclass attributes
+- `id` auto-generated as UUID string
+- `task_id` as String reference to Task
+- `content` as String (non-empty validation)
+- `created_at` as datetime in UTC
+
+✅ **TaskComment serialised to and deserialised from JSON-compatible dictionary**
+- `to_dict()` method serializes all fields with ISO 8601 timestamps
+- `from_dict()` class method deserializes from dictionary
+- Full round-trip serialization working (to_dict → from_dict → equality)
+
+✅ **Empty content is rejected**
+- `__post_init__` validation in TaskComment raises ValueError if content is empty or whitespace-only
+- CommentManager.add() propagates validation error with clear message
+
+✅ **TaskComment must reference a valid task_id**
+- CommentManager.add() validates task_id exists via TaskManager.get()
+- Raises TaskNotFoundError if task not found before saving comment
+- Foreign key constraint enforced at add-time
+
+✅ **Optional author attribute**
+- `author: Optional[str] = None` field implemented
+- Can be set to None or any string value
+- Serialized/deserialized correctly in to_dict/from_dict
+
+✅ **Optional updated_at attribute**
+- `updated_at: datetime` field implemented alongside `created_at`
+- Auto-generated on creation and updated on comment modification
+- Serialized/deserialized as ISO 8601 timestamp
+
+### Implementation Details
+
+#### Storage Architecture
+- Comments stored in separate `~/.todo_comments.json` file
+- CommentManager handles persistence with `_load()` and `_persist()` methods
+- Follows same pattern as TaskManager with JsonStorage dependency injection
+- Supports prefix matching for comment IDs (first 8 chars in list views)
+
+#### Validation Strategy
+- Task existence validation: CommentManager.add() checks TaskManager.get(task_id)
+- Content validation: TaskComment.__post_init__() rejects empty/whitespace strings
+- Error propagation: TaskNotFoundError and ValueError bubble to CLI layer with user-friendly messages
+
+#### CLI Commands (5 new subcommands)
+- `add-comment <task_id> --content "<text>"` — Create comment on task
+- `list-comments <task_id>` — Show all comments for task with table format
+- `show-comment <comment_id>` — Display full comment details
+- `update-comment <comment_id> --content "<text>"` — Modify comment content and timestamp
+- `delete-comment <comment_id>` — Remove comment
+
+All commands accessible via `python -m src <command>` and listed in `--help`.
+
+#### Service Layer Integration
+- TodoService initializes CommentManager with TaskManager and storage
+- 5 public methods delegate to CommentManager with error propagation
+- No circular dependencies: CommentManager receives TaskManager instance via injection
+
+### Test Results
+✅ **All 174 tests passed** (59 new + 115 existing)
+- 13 TaskComment model tests (serialization, validation, edge cases)
+- 19 CommentManager tests (CRUD, persistence, prefix matching, error handling)
+- 15 TodoService tests (comment integration, error propagation)
+- 12 CLI tests (command functionality, output formatting, error messages)
+- All existing task, status, and management tests continue passing
+
+### Diagrams Updated
+- `class_diagram.puml` — Added TaskComment class, CommentManager with 8 methods, CommentNotFoundError exception
+- `component_diagram.puml` — Added Comment Management component with data flows
+- `activity_diagram.puml` — Added Comment Management Flow partition showing validation and persistence
+- `use_case_diagram.puml` — Added 5 new comment management use cases
+- `state_diagram.puml` — Added note about comment availability at any task state
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

@@ -6,6 +6,14 @@ actor User
 
 rectangle "TODO Manager" {
 
+  package "Comment Management" {
+    usecase "Add comment to task" as ADD_COMMENT
+    usecase "View task comments" as VIEW_COMMENTS
+    usecase "View single comment" as VIEW_COMMENT
+    usecase "Update comment" as UPDATE_COMMENT
+    usecase "Delete comment" as DELETE_COMMENT
+  }
+
   package "Interactive mode" {
     usecase "Use interactive menu" as UI
     usecase "Add task" as I_ADD
@@ -42,6 +50,17 @@ rectangle "TODO Manager" {
 
 User --> UI
 User --> CLI
+User --> ADD_COMMENT
+User --> VIEW_COMMENTS
+User --> VIEW_COMMENT
+User --> UPDATE_COMMENT
+User --> DELETE_COMMENT
+
+ADD_COMMENT --> I_SHOW : relates to
+VIEW_COMMENTS --> I_SHOW : relates to
+VIEW_COMMENT --> I_SHOW : relates to
+UPDATE_COMMENT --> I_SHOW : relates to
+DELETE_COMMENT --> I_SHOW : relates to
 
 UI ..> I_ADD    : <<exclude>>
 UI ..> I_LIST   : <<exclude>>

@@ -3,6 +3,7 @@ import sys
 from typing import Optional
 
 from ..models.task_status import TaskStatus
+from ..services.comment_manager import CommentNotFoundError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -29,6 +30,9 @@ class TodoCLI:
         try:
             return args.func(args)
         except TaskNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except CommentNotFoundError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
         except ValueError as e:
@@ -125,6 +129,37 @@ class TodoCLI:
         p_is_overdue = sub.add_parser("is-overdue", help="Check if task is overdue")
         p_is_overdue.add_argument("id", help="Task ID")
         p_is_overdue.set_defaults(func=self._cmd_is_overdue)
+
+        # add-comment
+        p_add_comment = sub.add_parser("add-comment", help="Add a comment to a task")
+        p_add_comment.add_argument("task_id", help="Task ID")
+        p_add_comment.add_argument("--content", required=True, help="Comment content")
+        p_add_comment.add_argument("--long", action="store_true", help="Show full IDs")
+        p_add_comment.set_defaults(func=self._cmd_add_comment)
+
+        # list-comments
+        p_list_comments = sub.add_parser("list-comments", help="List comments for a task")
+        p_list_comments.add_argument("task_id", help="Task ID")
+        p_list_comments.add_argument("--long", action="store_true", help="Show full IDs")
+        p_list_comments.set_defaults(func=self._cmd_list_comments)
+
+        # show-comment
+        p_show_comment = sub.add_parser("show-comment", help="Show comment details")
+        p_show_comment.add_argument("id", help="Comment ID")
+        p_show_comment.add_argument("--long", action="store_true", help="Show full ID")
+        p_show_comment.set_defaults(func=self._cmd_show_comment)
+
+        # update-comment
+        p_update_comment = sub.add_parser("update-comment", help="Update a comment")
+        p_update_comment.add_argument("id", help="Comment ID")
+        p_update_comment.add_argument("--content", required=True, help="New comment content")
+        p_update_comment.add_argument("--long", action="store_true", help="Show full ID")
+        p_update_comment.set_defaults(func=self._cmd_update_comment)
+
+        # delete-comment
+        p_delete_comment = sub.add_parser("delete-comment", help="Delete a comment")
+        p_delete_comment.add_argument("id", help="Comment ID")
+        p_delete_comment.set_defaults(func=self._cmd_delete_comment)
 
         return parser
 
@@ -227,4 +262,46 @@ class TodoCLI:
     def _cmd_is_overdue(self, args: argparse.Namespace) -> int:
         result = self._service.is_overdue(args.id)
         print("true" if result else "false")
+        return 0
+
+    # ── Comment commands ───────────────────────────────────────────────────
+
+    def _cmd_add_comment(self, args: argparse.Namespace) -> int:
+        comment = self._service.add_comment(args.task_id, args.content)
+        comment_id = comment.id if hasattr(args, 'long') and args.long else comment.id[:8]
+        print(f"Added comment {comment_id}")
+        return 0
+
+    def _cmd_list_comments(self, args: argparse.Namespace) -> int:
+        comments = self._service.list_task_comments(args.task_id)
+        if not comments:
+            print("No comments found.")
+            return 0
+        for comment in comments:
+            comment_id = comment.id if hasattr(args, 'long') and args.long else comment.id[:8]
+            print(f"{comment_id}  {comment.content[:50]}")
+        return 0
+
+    def _cmd_show_comment(self, args: argparse.Namespace) -> int:
+        comment = self._service.get_comment(args.id)
+        comment_id = comment.id if hasattr(args, 'long') and args.long else comment.id
+        print(f"ID:        {comment_id}")
+        print(f"Task ID:   {comment.task_id[:8]}")
+        print(f"Content:   {comment.content}")
+        print(f"Author:    {comment.author or '—'}")
+        print(f"Created:   {comment.created_at.isoformat()}")
+        print(f"Updated:   {comment.updated_at.isoformat()}")
+        return 0
+
+    def _cmd_update_comment(self, args: argparse.Namespace) -> int:
+        comment = self._service.update_comment(args.id, args.content)
+        comment_id = comment.id if hasattr(args, 'long') and args.long else comment.id[:8]
+        print(f"Updated comment {comment_id}")
+        return 0
+
+    def _cmd_delete_comment(self, args: argparse.Namespace) -> int:
+        comment = self._service.get_comment(args.id)
+        self._service.delete_comment(args.id)
+        comment_id = comment.id[:8]
+        print(f"Deleted comment {comment_id}")
         return 0

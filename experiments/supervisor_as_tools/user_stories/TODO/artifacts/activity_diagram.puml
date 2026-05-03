@@ -76,4 +76,41 @@ partition "Check Status Flow" {
   :Display status results (true/false);
 }
 
+partition "Comment Management Flow" {
+  :Pick action (add/view/update/delete);
+  if (Action == add?) then (yes)
+    :Input comment content;
+    if (Content empty?) then (yes)
+      :Show error: empty content;
+      :Return to input;
+    else (no)
+      :Check if task exists;
+      if (Task found?) then (yes)
+        :Create comment with task_id;
+        :Persist to storage;
+        :Show success;
+      else (not found)
+        :Show error: task not found;
+      endif
+    endif
+  else
+    if (Action == view?) then (yes)
+      :Pick task from list;
+      :Load all comments for task;
+      :Display comments;
+    else
+      if (Action == update?) then (yes)
+        :Pick comment to edit;
+        :Input new content;
+        :Update comment.updated_at;
+        :Persist to storage;
+      else
+        :Pick comment to delete;
+        :Remove from storage;
+        :Persist changes;
+      endif
+    endif
+  endif
+}
+
 @enduml
