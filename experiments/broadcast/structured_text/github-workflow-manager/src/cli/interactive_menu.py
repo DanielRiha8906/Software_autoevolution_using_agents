@@ -252,6 +252,44 @@ def _statistics(service: WorkflowRunService, attempt_service: AttemptService) ->
     print(f"\nAverage Attempts per Run: {report.avg_attempts_per_run:.2f}")
 
 
+def _export_runs(service: WorkflowRunService) -> None:
+    """Export all runs to a JSON file."""
+    print("\n--- Export Workflow Runs ---")
+    filepath = _prompt("Enter output file path")
+    if not filepath:
+        print("Export cancelled.")
+        return
+    try:
+        count = service.export_runs(filepath)
+        print(f"\nSuccessfully exported {count} runs to {filepath}")
+    except Exception as e:
+        print(f"Error during export: {e}")
+
+
+def _import_runs(service: WorkflowRunService) -> None:
+    """Import runs from a JSON file."""
+    print("\n--- Import Workflow Runs ---")
+    filepath = _prompt("Enter input file path")
+    if not filepath:
+        print("Import cancelled.")
+        return
+    skip_dup = _choose("Handle duplicates", ["fail on duplicate", "skip duplicate"], allow_blank=False)
+    skip_duplicates = skip_dup == "skip duplicate"
+    try:
+        count, errors = service.import_runs(filepath, skip_duplicates=skip_duplicates)
+        print(f"\nSuccessfully imported {count} runs from {filepath}")
+        if errors:
+            print(f"Warnings ({len(errors)} items):")
+            for error in errors[:5]:  # Show first 5 errors
+                print(f"  - {error}")
+            if len(errors) > 5:
+                print(f"  ... and {len(errors) - 5} more")
+    except FileNotFoundError as e:
+        print(f"Error: {e}")
+    except ValueError as e:
+        print(f"Error: {e}")
+
+
 MENU = [
     ("Add workflow run", lambda s, a: _add_run(s)),
     ("List all runs", lambda s, a: _list_runs(s)),
@@ -262,6 +300,8 @@ MENU = [
     ("List all attempts", lambda s, a: _list_attempts(a)),
     ("Get attempts for run", lambda s, a: _get_attempts_by_run(a)),
     ("View statistics", lambda s, a: _statistics(s, a)),
+    ("Export runs to JSON", lambda s, a: _export_runs(s)),
+    ("Import runs from JSON", lambda s, a: _import_runs(s)),
     ("Exit", None),
 ]
 
