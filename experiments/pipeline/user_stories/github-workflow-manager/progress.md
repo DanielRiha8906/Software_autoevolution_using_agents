@@ -389,4 +389,4 @@ Implemented GitHub fetch mode to retrieve workflow runs directly from GitHub rep
 ✓ All functionality accessible via `python -m src fetch [--options]` (one-shot CLI)
 ✓ All functionality accessible via interactive menu option "Fetch from GitHub" (interactive)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 1172.6s | Cost: $2.656254 USD | Turns: 47
