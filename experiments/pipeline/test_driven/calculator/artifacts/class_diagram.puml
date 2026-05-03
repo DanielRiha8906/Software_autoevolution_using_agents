@@ -43,6 +43,13 @@ package "models" #DDEEFF {
         +to_dict() : dict
         +from_dict(data: dict) : MemoryEntry
     }
+
+    class StatisticsResult {
+        +count_per_operation : dict[str, int]
+        +total_errors : int
+        +error_rate : float
+        +avg_execution_time_ms : float
+    }
 }
 
 package "services" #DDFFD4 {
@@ -74,6 +81,13 @@ package "services" #DDFFD4 {
         +store(entry: MemoryEntry) : void
         +retrieve() : list[MemoryEntry]
         +query(operation: Optional[str], success: Optional[bool]) : list[MemoryEntry]
+    }
+
+    class StatisticsService {
+        -_memory_service : MemoryService
+        --
+        +StatisticsService(memory_service: MemoryService)
+        +compute() : StatisticsResult
     }
 }
 
@@ -115,5 +129,8 @@ Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
 
 MemoryService --> MemoryEntry : uses
+
+StatisticsService --> MemoryService : dependency
+StatisticsService ..> StatisticsResult : creates
 
 @enduml

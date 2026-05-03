@@ -140,3 +140,36 @@ Duration: 359.9s | Cost: $0.556227 USD | Turns: 21
 - Full docstring with behavior specification and examples
 
 Duration: 250.5s | Cost: $0.469915 USD | Turns: 26
+
+## Task 06: Statistics Service
+
+**Status:** Completed
+
+**Files Changed:**
+- src/models/statistics_result.py — Created new StatisticsResult dataclass with fields: count_per_operation, total_errors, error_rate, avg_execution_time_ms
+- src/services/statistics_service.py — Created new StatisticsService class with compute() method for aggregating metrics
+- src/models/__init__.py — Added StatisticsResult to imports and __all__ exports
+- src/services/__init__.py — Added StatisticsService to imports and __all__ exports
+- tests/test_statistics_service.py — New test file with 27 comprehensive test cases
+- artifacts/class_diagram.puml — Updated to include StatisticsResult and StatisticsService
+- artifacts/component_diagram.puml — Updated to show Statistics Service component and dependencies
+
+**Test Results:**
+- 27/27 test_statistics_service.py tests: PASSED
+- All existing 140 tests: PASSED
+- Total: 167/167 tests passing
+- No regressions
+
+**Implementation Summary:**
+- Created StatisticsResult as @dataclass with four fields: count_per_operation (dict[str, int]), total_errors (int), error_rate (float), avg_execution_time_ms (float)
+- Implemented StatisticsService with constructor injection of MemoryService
+- compute() method aggregates metrics from stored MemoryEntry objects:
+  - Counts operations by tallying occurrences in a dictionary
+  - Counts total errors (entries where success=False)
+  - Calculates error rate as (total_errors / total_entries) * 100 (percentage scale 0-100)
+  - Calculates average execution time as sum(execution_time_ms) / total_entries
+- Handles empty MemoryService gracefully (returns zero statistics without exceptions)
+- All type hints and docstrings follow existing code patterns
+- Verified round-trip consistency: multiple compute() calls return identical results
+
+Duration: 359.1s | Cost: $0.668301 USD | Turns: 16
