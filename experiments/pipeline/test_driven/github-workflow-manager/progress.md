@@ -172,3 +172,65 @@ Implemented `AttemptService` as a service layer managing the lifecycle of `Workf
 5. UML Designer — Updated class and component diagrams
 
 Duration: 349.3s | Cost: $0.588775 USD | Turns: 17
+
+---
+
+## Task 05: Implement WorkflowRunService Query Functionality
+
+**Status:** ✅ COMPLETE
+
+**Summary:**
+Implemented comprehensive query functionality in `WorkflowRunService` to filter workflow runs by duration range, timestamp range, and attempt presence. The query() method applies all filters using AND logic, integrates with `AttemptService` for attempt-based filtering, and handles timezone-aware datetime comparisons with defensive validation.
+
+**Files Changed:**
+- `src/services/workflow_run_service.py` — Added query() method (lines 43-136) with 6 optional parameters
+- `tests/services/test_workflow_run_service_query.py` — Created with 24 comprehensive test cases
+- `artifacts/class_diagram.puml` — Added query() method signature to WorkflowRunService class
+- `artifacts/component_diagram.puml` — Added WorkflowRunService → AttemptService dependency for query operations
+
+**Test Results:**
+- All 24 new tests: ✅ PASS (8 required + 16 comprehensive)
+- All 42 existing tests: ✅ PASS
+- Total: 66/66 tests passed
+
+**Implementation Details:**
+1. Method signature with 6 optional parameters:
+   - `min_duration: Optional[float]` — Inclusive lower bound on duration_seconds (>= operator)
+   - `max_duration: Optional[float]` — Inclusive upper bound on duration_seconds (<= operator)
+   - `created_after: Optional[datetime]` — Exclusive lower bound on created_at (> operator)
+   - `created_before: Optional[datetime]` — Exclusive upper bound on created_at (< operator)
+   - `has_attempts: Optional[bool]` — Filter by attempt presence (≥1 vs 0)
+   - `attempt_service: Optional[AttemptService]` — Required when has_attempts is not None
+
+2. Validation logic (fail-fast order):
+   - Timezone awareness check: Rejects naive datetimes for created_after/created_before
+   - Range validity: Validates created_after < created_before and min_duration ≤ max_duration
+   - Service requirement: Ensures attempt_service provided when filtering by has_attempts
+
+3. Filtering stages (AND logic):
+   - **Stage 1 (Duration):** Filters by inclusive bounds on duration_seconds
+   - **Stage 2 (Timestamp):** Filters by exclusive bounds on created_at with timezone-aware comparison
+   - **Stage 3 (Attempts):** Queries AttemptService with graceful handling of non-numeric run IDs
+
+4. Integration with AttemptService:
+   - Safely converts run_id (string) to int for AttemptService.get_by_run_id()
+   - Silently excludes non-numeric IDs from attempt filtering (no exceptions)
+   - Checks `len(attempts) >= 1` to determine attempt presence
+
+**Key Features:**
+- All filters use AND logic (all conditions must be satisfied)
+- Insertion order preserved in results
+- Deterministic results (same inputs produce identical outputs)
+- In-memory filtering only (no database, no indexing)
+- No mutation of stored workflow runs
+- Handles timezone mismatches between filter arguments and stored data
+- Graceful degradation for non-numeric run IDs
+
+**Pipeline Execution:**
+1. Data Analyst — Analyzed code structure, identified ID type mismatches, documented edge cases
+2. System Architect — Designed complete implementation with validation order, filtering stages, and integration strategy
+3. Programmer — Implemented query() method with full validation, filtering, and attempt service integration
+4. Pytest-Tester — Created comprehensive test suite covering happy paths, edge cases, and validation errors (66/66 pass)
+5. UML Designer — Updated class and component diagrams to show new method and service dependencies
+
+Duration: 409.0s | Cost: $0.796263 USD | Turns: 34

@@ -1,10 +1,12 @@
 import sys
 from typing import Optional
+from datetime import datetime
 
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
 from ..services.workflow_run_service import WorkflowRunService
+from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 
 
@@ -107,26 +109,74 @@ def _filter_menu(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
-MENU = [
-    ("Add workflow run", _add_run),
-    ("List all runs", _list_runs),
-    ("Get run detail", _detail_run),
-    ("Filter runs", _filter_menu),
-    ("Exit", None),
-]
+def _query_runs(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    print("\n--- Query Workflow Runs ---")
+    min_duration_raw = _prompt("Min duration (seconds, leave blank for none)", "")
+    max_duration_raw = _prompt("Max duration (seconds, leave blank for none)", "")
+    created_after_raw = _prompt("Created after (ISO 8601 datetime, leave blank for none)", "")
+    created_before_raw = _prompt("Created before (ISO 8601 datetime, leave blank for none)", "")
+    has_attempts_raw = _choose(
+        "Attempt filter",
+        ["No filter", "Has attempts", "No attempts"],
+        allow_blank=False,
+    )
+
+    try:
+        min_duration = float(min_duration_raw) if min_duration_raw else None
+        max_duration = float(max_duration_raw) if max_duration_raw else None
+        created_after = datetime.fromisoformat(created_after_raw) if created_after_raw else None
+        created_before = datetime.fromisoformat(created_before_raw) if created_before_raw else None
+
+        if has_attempts_raw == "Has attempts":
+            has_attempts = True
+        elif has_attempts_raw == "No attempts":
+            has_attempts = False
+        else:
+            has_attempts = None
+
+        runs = service.query(
+            min_duration=min_duration,
+            max_duration=max_duration,
+            created_after=created_after,
+            created_before=created_before,
+            has_attempts=has_attempts,
+            attempt_service=attempt_service if has_attempts is not None else None,
+        )
+
+        if not runs:
+            print("\nNo matching runs.")
+            return
+        print(f"\n--- {len(runs)} matching run(s) ---")
+        for run in runs:
+            print(_fmt_run(run))
+    except ValueError as e:
+        print(f"\nQuery error: {e}")
+    except TypeError as e:
+        print(f"\nQuery error: {e}")
 
 
-def run_interactive(service: WorkflowRunService) -> None:
+def run_interactive(service: WorkflowRunService, attempt_service: AttemptService = None) -> None:
+    if attempt_service is None:
+        attempt_service = AttemptService()
+
+    menu = [
+        ("Add workflow run", _add_run),
+        ("List all runs", _list_runs),
+        ("Get run detail", _detail_run),
+        ("Filter runs", _filter_menu),
+        ("Query runs", lambda svc: _query_runs(svc, attempt_service)),
+        ("Exit", None),
+    ]
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
         print("\n" + "=" * 44)
-        for i, (label, _) in enumerate(MENU, 1):
+        for i, (label, _) in enumerate(menu, 1):
             print(f"  {i}. {label}")
         raw = input("\nSelect option: ").strip()
-        if not raw.isdigit() or not (1 <= int(raw) <= len(MENU)):
+        if not raw.isdigit() or not (1 <= int(raw) <= len(menu)):
             print("Invalid selection.")
             continue
-        label, handler = MENU[int(raw) - 1]
+        label, handler = menu[int(raw) - 1]
         if handler is None:
             print("Goodbye.")
             sys.exit(0)
