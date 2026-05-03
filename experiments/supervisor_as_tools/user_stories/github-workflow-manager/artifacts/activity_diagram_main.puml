@@ -50,6 +50,24 @@ if (CLI arguments provided?) then (yes)
         :Exit code 1;
       endif
 
+    case (attempt)
+      switch (subcommand)
+        case (create)
+          :AttemptService.create_attempt()\nwith attempt_number, status,\nconclusion, duration;
+          :Print "Added attempt <number> to run <id>";
+
+        case (list)
+          :AttemptService.get_attempts_by_run(run_id);
+          if (--sort?) then (yes)
+            :Sort by attempt_number;
+          endif
+          if (no attempts?) then (yes)
+            :Print "No attempts found for run";
+          else (no)
+            :Print formatted attempt list;
+          endif
+      endswitch
+
   endswitch
   stop
 

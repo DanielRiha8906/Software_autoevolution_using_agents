@@ -69,7 +69,27 @@ repeat
         :Print matching runs;
       endif
 
-    case (6 — Exit)
+    case (6 — Add attempt)
+      :Prompt run ID;
+      :Validate run exists;
+      :Prompt attempt number;
+      :Choose status from list;
+      :Choose conclusion (optional, 0 to skip);
+      :Prompt duration in seconds (optional);
+      :AttemptService.create_attempt();
+      :Print "Added attempt <number> to run <id>";
+
+    case (7 — List attempts)
+      :Prompt run ID;
+      :Choose sort by number? (Yes / No);
+      :AttemptService.get_attempts_by_run();
+      if (no attempts?) then (yes)
+        :Print "No attempts found for run";
+      else (no)
+        :Print all attempts;
+      endif
+
+    case (8 — Exit)
       :Print "Goodbye.";
       stop
 

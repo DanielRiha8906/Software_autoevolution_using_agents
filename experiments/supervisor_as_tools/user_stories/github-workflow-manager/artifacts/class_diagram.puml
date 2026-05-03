@@ -113,6 +113,15 @@ package "services" #DDFFD4 {
         +__init__(service: WorkflowRunService)
         +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str],\n  duration_seconds: float = 0.0) : WorkflowRun
     }
+
+    class AttemptService {
+        -_run_service : WorkflowRunService
+        --
+        +__init__(run_service: WorkflowRunService)
+        +create_attempt(run_id: str, attempt_data: dict) : WorkflowRunAttempt
+        +get_attempts_by_run(run_id: str, sort_by_number: bool = False) : list[WorkflowRunAttempt]
+        +validate_duplicate_attempt_number(attempts: list) : bool
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -128,6 +137,8 @@ package "cli" #FFE5E5 {
         -_list_runs(service: WorkflowRunService) : None
         -_detail_run(service: WorkflowRunService) : None
         -_filter_menu(service: WorkflowRunService) : None
+        -_add_attempt(service: WorkflowRunService) : None
+        -_list_attempts(service: WorkflowRunService) : None
     }
 }
 
@@ -143,9 +154,13 @@ WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunService         ..>  WorkflowRunAttempt
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
+AttemptService       "1" --> "1" WorkflowRunService  : -_run_service
+AttemptService             ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
+"workflow_cli"             ..>  AttemptService
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  WorkflowRunTracker
+"interactive_menu"         ..>  AttemptService
 
 @enduml
