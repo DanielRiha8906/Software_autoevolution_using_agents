@@ -127,6 +127,15 @@ package "services" #DDFFD4 {
         +TaskStatisticsService(todo_service: TodoService)
         +compute() : TaskStatistics
     }
+
+    class TaskImportExportService {
+        -_todo_service : TodoService
+        -_comments_service : CommentsService
+        --
+        +TaskImportExportService(todo_service: TodoService, comments_service: CommentsService)
+        +export(filepath: String) : void
+        +import_from(filepath: String) : Tuple<List<Task>, List<TaskComment>>
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -158,7 +167,13 @@ CommentsService --> CommentManager : comment_manager
 TaskStatisticsService --> TodoService : dependency
 TaskStatisticsService ..> TaskStatistics : returns
 TaskStatistics --> TaskStatus : uses
+TaskImportExportService --> TodoService : uses
+TaskImportExportService --> CommentsService : uses
 TodoCLI --> TodoService : service
+TodoCLI --> CommentsService : comments_service
+TodoCLI --> TaskImportExportService : import_export
 InteractiveMenu --> TodoService : service
+InteractiveMenu --> CommentsService : comments_service
+InteractiveMenu --> TaskImportExportService : import_export
 
 @enduml

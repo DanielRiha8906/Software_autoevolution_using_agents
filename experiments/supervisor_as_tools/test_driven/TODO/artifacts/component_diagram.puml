@@ -20,6 +20,7 @@ package "TODO Application" {
         component "Comments Service" as CSVC
         component "Comment Manager" as CMGR
         component "Statistics Service" as SSVC
+        component "Import/Export Service" as IEXVC
     }
 
     package "Domain Model" {
@@ -38,12 +39,18 @@ Main --> IM : interactive mode
 Main --> CLI : command mode
 
 IM --> SVC
+IM --> CSVC
+IM --> IEXVC
 CLI --> SVC
+CLI --> CSVC
+CLI --> IEXVC
 
 SVC --> MGR
 CSVC --> SVC
 CSVC --> CMGR
 SSVC --> SVC
+IEXVC --> SVC
+IEXVC --> CSVC
 MGR --> Storage
 CMGR --> Storage
 MGR ..> Model
