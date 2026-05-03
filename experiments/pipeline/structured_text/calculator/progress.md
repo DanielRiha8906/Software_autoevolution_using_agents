@@ -404,3 +404,131 @@ The memory filtering is now fully accessible via:
 5. **Menu structure update:** Exit moved from option 10 to 13 to accommodate new filter options
 
 Duration: 585.3s | Cost: $1.061077 USD | Turns: 14
+
+## Task 06
+
+**Description:** Add calculation statistics
+
+**Status:** ✅ Complete
+
+### Files Changed
+
+1. `src/models/calculation_statistics.py` (new file)
+   - Created CalculationStatistics dataclass with 8 fields: operation_counts, total_calculations, error_count, error_percentage, average_execution_time_ms, min_execution_time_ms, max_execution_time_ms, per_operation_stats
+   - Implemented to_dict() method for JSON serialization
+   - Implemented from_dict() classmethod for deserialization
+   - Implemented __str__() for string representation
+
+2. `src/models/__init__.py`
+   - Added CalculationStatistics export to models package public API
+
+3. `src/services/memory_service.py`
+   - Added import of CalculationStatistics
+   - Implemented compute_statistics() → CalculationStatistics method that:
+     - Computes operation usage counts
+     - Computes error frequency (count and percentage)
+     - Computes average, min, max execution_time_ms
+     - Computes per-operation breakdown with individual error rates
+     - Handles empty storage gracefully (returns zeros)
+
+4. `src/cli/calculator_cli.py`
+   - Added show_statistics() public method (for one-shot --statistics CLI flag)
+   - Added _show_statistics() private method (for interactive menu)
+   - Updated _print_menu() to include "View statistics" option 13
+   - Updated run_interactive() to route statistics option (menu option 13, exit moved to 14)
+   - Displays formatted statistics with headers, per-operation breakdown, and decimals
+
+5. `src/__main__.py`
+   - Added --statistics flag to argparse
+   - Updated usage string to include [--statistics]
+   - Added routing logic to call cli.show_statistics() when --statistics flag is used
+
+6. `tests/test_calculation_statistics.py` (new file)
+   - 34 comprehensive tests covering:
+     - CalculationStatistics dataclass instantiation, field access, serialization
+     - MemoryService.compute_statistics() with empty storage, single entry, multiple entries
+     - Error percentage calculation (0%, 100%, partial)
+     - Min/max/average execution time calculation
+     - Per-operation statistics with error rates
+     - Edge cases (very small/large times, decimal precision)
+     - Consistency across repeated calls
+
+7. `tests/test_cli.py` (modified)
+   - Updated 16 existing tests to use exit option "14" (was "13")
+   - Added TestStatisticsInteractiveMenu class (7 new tests):
+     - Option 13 with data, empty storage, no memory service
+     - Displays error rate, execution times, operation usage, per-operation error rates
+
+8. `tests/test_cli_flags.py` (modified)
+   - Added TestStatisticsFlag class (6 new tests):
+     - --statistics flag with data, empty storage
+     - Displays error rate, execution times, operation usage, per-operation error rates
+
+9. `artifacts/class_diagram.puml` (modified)
+   - Added CalculationStatistics class with all 8 fields and methods
+   - Updated MemoryService class to show compute_statistics() method
+   - Updated CalculatorCLI class to show show_statistics() and _show_statistics() methods
+   - Added dependency relationship: MemoryService → CalculationStatistics
+
+10. `artifacts/sequence_diagram_memory.puml` (modified)
+    - Added new "Compute Statistics" sequence section documenting flow
+
+11. `artifacts/activity_diagram.puml` (modified)
+    - Added "View statistics" case in interactive menu switch
+
+12. `artifacts/state_diagram_interactive.puml` (modified)
+    - Added Statistics state with transitions
+
+13. `artifacts/use_case_diagram.puml` (modified)
+    - Added "View calculation statistics" use case
+
+14. `artifacts/component_diagram.puml` (modified)
+    - Updated Domain Models component to include CalculationStatistics
+
+### Test Results
+
+- Total tests: 305 (47 new + 258 existing)
+- Passed: 305
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Requirements Met
+
+**Must:**
+- ✅ Operation usage count (operation_counts dict)
+- ✅ Error frequency (error_count and error_percentage)
+- ✅ Average execution_time_ms computed from all entries
+- ✅ Results derived from stored MemoryEntry data
+- ✅ All functionality accessible via `python -m src` (interactive menu option 13 + --statistics flag)
+
+**Should:**
+- ✅ Return dataclass (CalculationStatistics) instead of plain dict
+
+**Could:**
+- ✅ Min/max execution_time_ms included
+- ✅ Per-operation error rate breakdown included
+
+**Won't:**
+- ✅ No visualization layer added
+
+### Key Implementation Details
+
+1. **CalculationStatistics Structure:** Holds all aggregated metrics with proper type hints
+2. **compute_statistics() Logic:** 
+   - Retrieves all MemoryEntry objects via retrieve_all()
+   - Iterates once to compute operation counts, error metrics, time metrics
+   - Computes per-operation breakdown in single pass
+   - Returns CalculationStatistics instance (not dict)
+3. **Edge Case Handling:** Empty storage returns sensible defaults (zeros) rather than raising exceptions
+4. **Per-operation Stats:** dict[str, dict] with count, error_count, error_rate, avg_time_ms, min_time_ms, max_time_ms
+5. **CLI Integration:** Both interactive (option 13) and one-shot (--statistics flag) modes
+6. **Display Formatting:** 2 decimal places for percentages and times, human-readable labels
+
+### CLI Accessibility
+
+The statistics feature is now fully accessible via:
+1. **Interactive mode:** `python -m src` → option 13 displays statistics with all metrics
+2. **One-shot CLI:** `python -m src --statistics` displays statistics and exits
+3. **Help:** `python -m src --help` documents the --statistics flag
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

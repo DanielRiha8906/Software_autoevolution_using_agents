@@ -35,7 +35,8 @@ class CalculatorCLI:
             memory_opt  = len(self._MENU) + 2
             filter_op_opt = len(self._MENU) + 3
             filter_status_opt = len(self._MENU) + 4
-            exit_opt    = len(self._MENU) + 5
+            statistics_opt = len(self._MENU) + 5
+            exit_opt    = len(self._MENU) + 6
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -55,6 +56,10 @@ class CalculatorCLI:
 
             if choice == str(filter_status_opt):
                 self._filter_memory_by_status()
+                continue
+
+            if choice == str(statistics_opt):
+                self._show_statistics()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -96,7 +101,8 @@ class CalculatorCLI:
         print(f"  {len(self._MENU) + 2}. View memory")
         print(f"  {len(self._MENU) + 3}. Filter memory by operation")
         print(f"  {len(self._MENU) + 4}. Filter memory by status")
-        print(f"  {len(self._MENU) + 5}. Exit")
+        print(f"  {len(self._MENU) + 5}. View statistics")
+        print(f"  {len(self._MENU) + 6}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -131,6 +137,13 @@ class CalculatorCLI:
             print("Memory service not available.")
             return
         self._show_memory()
+
+    def show_statistics(self) -> None:
+        """Display statistics (used in one-shot CLI mode)."""
+        if self.memory_service is None:
+            print("Memory service not available.")
+            return
+        self._show_statistics()
 
     def _show_memory(self) -> None:
         """Display all memory entries (internal method for interactive menu)."""
@@ -186,4 +199,33 @@ class CalculatorCLI:
         print()
         for i, entry in enumerate(entries, 1):
             print(f"  {i}. {entry}")
+        print()
+
+    def _show_statistics(self) -> None:
+        """Display calculation statistics."""
+        if self.memory_service is None:
+            print("\n  Memory service not available.\n")
+            return
+        stats = self.memory_service.compute_statistics()
+        if stats.total_calculations == 0:
+            print("\n  No calculations recorded yet.\n")
+            return
+
+        print()
+        print("  === Calculation Statistics ===")
+        print()
+        print(f"  Total Calculations: {stats.total_calculations}")
+        print(f"  Successful: {stats.total_calculations - stats.error_count}")
+        print(f"  Failed: {stats.error_count}")
+        print(f"  Error Rate: {stats.error_percentage:.2f}%")
+        print()
+        print(f"  Average Execution Time: {stats.average_execution_time_ms:.2f} ms")
+        print(f"  Min Execution Time: {stats.min_execution_time_ms:.2f} ms")
+        print(f"  Max Execution Time: {stats.max_execution_time_ms:.2f} ms")
+        print()
+        print("  Operation Usage:")
+        for operation, count in sorted(stats.operation_counts.items()):
+            op_stats = stats.per_operation_stats.get(operation, {})
+            error_rate = op_stats.get("error_rate", 0.0)
+            print(f"    {operation}: {count} calculations ({error_rate:.2f}% error rate)")
         print()

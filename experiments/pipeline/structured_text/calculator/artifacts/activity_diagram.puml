@@ -53,6 +53,10 @@ else (no)
         :Filter memory entries by status;
         :Show filtered entries;
 
+      case (View statistics)
+        :Compute statistics from memory entries;
+        :Show statistics report;
+
       case (Operation)
         :Read operands;
 

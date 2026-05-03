@@ -49,6 +49,20 @@ package "models" #DDEEFF {
         +__str__() : String
         +__repr__() : String
     }
+
+    class CalculationStatistics {
+        +operation_counts : dict[str, int]
+        +total_calculations : int
+        +error_count : int
+        +error_percentage : float
+        +average_execution_time_ms : float
+        +min_execution_time_ms : float
+        +max_execution_time_ms : float
+        +per_operation_stats : dict[str, dict]
+        --
+        +to_dict() : dict
+        +from_dict(data: dict) : CalculationStatistics
+    }
 }
 
 package "services" #DDFFD4 {
@@ -82,6 +96,7 @@ package "services" #DDFFD4 {
         +filter_by_operation(operation_name: str) : List<MemoryEntry>
         +filter_by_success(success: bool) : List<MemoryEntry>
         +filter_by_execution_time(min_ms: float, max_ms: float) : List<MemoryEntry>
+        +compute_statistics() : CalculationStatistics
     }
 }
 
@@ -117,11 +132,13 @@ package "cli" #FFE5E5 {
         +run_interactive() : void
         +run_command(operation: String, a: float, b: float) : void
         +show_memory() : void
+        +show_statistics() : void
         -_print_menu() : void
         -_resolve_menu_choice(choice: String) : Operation [0..1]
         -_prompt_number(prompt: String) : float [0..1]
         -_show_history() : void
         -_show_memory() : void
+        -_show_statistics() : void
         -_filter_memory_by_operation() : void
         -_filter_memory_by_status() : void
     }
@@ -139,6 +156,7 @@ CalculatorCLI ..> Operation
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
 MemoryService ..> MemoryEntry : manages
+MemoryService ..> CalculationStatistics : produces
 MemoryJsonStorage ..> MemoryEntry : persists
 
 note right of MemoryEntry

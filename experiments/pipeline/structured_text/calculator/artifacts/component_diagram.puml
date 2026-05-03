@@ -16,7 +16,7 @@ package "Calculator Application" {
     component "JSON Storage\n(JsonStorage)" as Store
     component "Memory JSON Storage\n(MemoryJsonStorage)" as MemStore
 
-    component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
+    component "Domain Models\n(Operation, CalculationResult, MemoryEntry, CalculationStatistics)" as Models
 
     Main --> CLI : initializes
     Main --> Service : initializes

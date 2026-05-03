@@ -43,33 +43,33 @@ class TestRunCommand:
 class TestRunInteractive:
     def test_exit_choice(self, capsys):
         cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["13"]):
+        with patch("builtins.input", side_effect=["14"]):
             cli.run_interactive()
         assert "Goodbye" in capsys.readouterr().out
 
     def test_add_operation(self, capsys):
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("add", 3, 5, 8, _TS)
-        with patch("builtins.input", side_effect=["1", "3", "5", "13"]):
+        with patch("builtins.input", side_effect=["1", "3", "5", "14"]):
             cli.run_interactive()
         assert "8" in capsys.readouterr().out
 
     def test_invalid_choice_retries(self, capsys):
         cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["99", "13"]):
+        with patch("builtins.input", side_effect=["99", "14"]):
             cli.run_interactive()
         assert "Invalid choice" in capsys.readouterr().out
 
     def test_invalid_number_retries(self, capsys):
         cli, _ = _make_cli()
-        with patch("builtins.input", side_effect=["1", "abc", "13"]):
+        with patch("builtins.input", side_effect=["1", "abc", "14"]):
             cli.run_interactive()
         assert "Invalid number" in capsys.readouterr().out
 
     def test_history_empty(self, capsys):
         cli, service = _make_cli()
         service.get_history.return_value = []
-        with patch("builtins.input", side_effect=["9", "13"]):
+        with patch("builtins.input", side_effect=["9", "14"]):
             cli.run_interactive()
         assert "No calculations" in capsys.readouterr().out
 
@@ -78,7 +78,7 @@ class TestRunInteractive:
         service.get_history.return_value = [
             CalculationResult("add", 1, 2, 3, _TS),
         ]
-        with patch("builtins.input", side_effect=["9", "13"]):
+        with patch("builtins.input", side_effect=["9", "14"]):
             cli.run_interactive()
         assert "1 + 2 = 3" in capsys.readouterr().out
 
@@ -144,7 +144,7 @@ class TestNewOperationsRunInteractive:
         """Test SQUARE via menu option 5."""
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("square", 4, 0, 16, _TS)
-        with patch("builtins.input", side_effect=["5", "4", "0", "13"]):
+        with patch("builtins.input", side_effect=["5", "4", "0", "14"]):
             cli.run_interactive()
         assert "16" in capsys.readouterr().out
 
@@ -152,7 +152,7 @@ class TestNewOperationsRunInteractive:
         """Test SQRT via menu option 6."""
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("sqrt", 9, 0, 3.0, _TS)
-        with patch("builtins.input", side_effect=["6", "9", "0", "13"]):
+        with patch("builtins.input", side_effect=["6", "9", "0", "14"]):
             cli.run_interactive()
         assert "3" in capsys.readouterr().out
 
@@ -160,7 +160,7 @@ class TestNewOperationsRunInteractive:
         """Test POWER via menu option 7."""
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("power", 2, 8, 256, _TS)
-        with patch("builtins.input", side_effect=["7", "2", "8", "13"]):
+        with patch("builtins.input", side_effect=["7", "2", "8", "14"]):
             cli.run_interactive()
         assert "256" in capsys.readouterr().out
 
@@ -168,21 +168,21 @@ class TestNewOperationsRunInteractive:
         """Test MODULO via menu option 8."""
         cli, service = _make_cli()
         service.perform.return_value = CalculationResult("modulo", 10, 3, 1, _TS)
-        with patch("builtins.input", side_effect=["8", "10", "3", "13"]):
+        with patch("builtins.input", side_effect=["8", "10", "3", "14"]):
             cli.run_interactive()
         assert "1" in capsys.readouterr().out
 
     def test_sqrt_negative_error_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.side_effect = ValueError("Square root of negative numbers is not allowed")
-        with patch("builtins.input", side_effect=["6", "-4", "0", "13"]):
+        with patch("builtins.input", side_effect=["6", "-4", "0", "14"]):
             cli.run_interactive()
         assert "Square root of negative" in capsys.readouterr().out
 
     def test_modulo_by_zero_error_in_interactive(self, capsys):
         cli, service = _make_cli()
         service.perform.side_effect = ValueError("Modulo by zero is not allowed")
-        with patch("builtins.input", side_effect=["8", "10", "0", "13"]):
+        with patch("builtins.input", side_effect=["8", "10", "0", "14"]):
             cli.run_interactive()
         assert "Modulo by zero" in capsys.readouterr().out
 
@@ -199,7 +199,7 @@ class TestMemoryInteractiveMenu:
         memory_service.store(entry)
 
         cli = CalculatorCLI(service, memory_service)
-        with patch("builtins.input", side_effect=["10", "13"]):
+        with patch("builtins.input", side_effect=["10", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -212,7 +212,7 @@ class TestMemoryInteractiveMenu:
         memory_service = MemoryService(MemoryJsonStorage(tmp_path / "memory.json"))
 
         cli = CalculatorCLI(service, memory_service)
-        with patch("builtins.input", side_effect=["10", "13"]):
+        with patch("builtins.input", side_effect=["10", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -229,7 +229,7 @@ class TestMemoryInteractiveMenu:
         memory_service.store(MemoryEntry("add", 5.0, 5.0, 10.0, True, None, "2026-05-03T10:02:00", 1.5, "id-3"))
 
         cli = CalculatorCLI(service, memory_service)
-        with patch("builtins.input", side_effect=["11", "add", "13"]):
+        with patch("builtins.input", side_effect=["11", "add", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -245,7 +245,7 @@ class TestMemoryInteractiveMenu:
         memory_service.store(MemoryEntry("multiply", 4.0, 5.0, 20.0, True, None, "2026-05-03T10:01:00", 2.0, "id-2"))
 
         cli = CalculatorCLI(service, memory_service)
-        with patch("builtins.input", side_effect=["11", "ADD", "13"]):
+        with patch("builtins.input", side_effect=["11", "ADD", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -259,7 +259,7 @@ class TestMemoryInteractiveMenu:
         memory_service.store(MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"))
 
         cli = CalculatorCLI(service, memory_service)
-        with patch("builtins.input", side_effect=["11", "power", "13"]):
+        with patch("builtins.input", side_effect=["11", "power", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -275,7 +275,7 @@ class TestMemoryInteractiveMenu:
         memory_service.store(MemoryEntry("multiply", 4.0, 5.0, 20.0, True, None, "2026-05-03T10:02:00", 2.0, "id-3"))
 
         cli = CalculatorCLI(service, memory_service)
-        with patch("builtins.input", side_effect=["12", "1", "13"]):
+        with patch("builtins.input", side_effect=["12", "1", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -291,7 +291,7 @@ class TestMemoryInteractiveMenu:
         memory_service.store(MemoryEntry("divide", 10.0, 0.0, None, False, "Division by zero", "2026-05-03T10:01:00", 0.5, "id-2"))
 
         cli = CalculatorCLI(service, memory_service)
-        with patch("builtins.input", side_effect=["12", "2", "13"]):
+        with patch("builtins.input", side_effect=["12", "2", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -305,7 +305,7 @@ class TestMemoryInteractiveMenu:
         memory_service.store(MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"))
 
         cli = CalculatorCLI(service, memory_service)
-        with patch("builtins.input", side_effect=["12", "99", "13"]):
+        with patch("builtins.input", side_effect=["12", "99", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -316,7 +316,7 @@ class TestMemoryInteractiveMenu:
         service = MagicMock()
         cli = CalculatorCLI(service, None)
 
-        with patch("builtins.input", side_effect=["11", "13"]):
+        with patch("builtins.input", side_effect=["11", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
@@ -327,8 +327,130 @@ class TestMemoryInteractiveMenu:
         service = MagicMock()
         cli = CalculatorCLI(service, None)
 
-        with patch("builtins.input", side_effect=["12", "13"]):
+        with patch("builtins.input", side_effect=["12", "14"]):
             cli.run_interactive()
 
         output = capsys.readouterr().out
         assert "Memory service not available" in output
+
+
+class TestStatisticsInteractiveMenu:
+    """Test statistics display in interactive menu (option 13)."""
+
+    def test_statistics_option_13_with_data(self, capsys, tmp_path):
+        """Test 1: Option 13 displays statistics with stored data."""
+        service = MagicMock()
+        memory_service = MemoryService(MemoryJsonStorage(tmp_path / "memory.json"))
+
+        # Store some entries
+        memory_service.store(MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"))
+        memory_service.store(MemoryEntry("subtract", 10.0, 3.0, 7.0, True, None, "2026-05-03T10:01:00", 2.0, "id-2"))
+        memory_service.store(MemoryEntry("divide", 10.0, 0.0, None, False, "Division by zero", "2026-05-03T10:02:00", 0.5, "id-3"))
+
+        cli = CalculatorCLI(service, memory_service)
+        with patch("builtins.input", side_effect=["13", "14"]):
+            cli.run_interactive()
+
+        output = capsys.readouterr().out
+        assert "Calculation Statistics" in output
+        assert "Total Calculations: 3" in output
+        assert "Failed: 1" in output
+
+    def test_statistics_option_13_empty_storage(self, capsys, tmp_path):
+        """Test 2: Option 13 with empty storage shows no calculations message."""
+        service = MagicMock()
+        memory_service = MemoryService(MemoryJsonStorage(tmp_path / "memory.json"))
+
+        cli = CalculatorCLI(service, memory_service)
+        with patch("builtins.input", side_effect=["13", "14"]):
+            cli.run_interactive()
+
+        output = capsys.readouterr().out
+        assert "No calculations" in output
+
+    def test_statistics_option_13_no_memory_service(self, capsys):
+        """Test 3: Option 13 without memory service shows unavailable message."""
+        service = MagicMock()
+        cli = CalculatorCLI(service, None)
+
+        with patch("builtins.input", side_effect=["13", "14"]):
+            cli.run_interactive()
+
+        output = capsys.readouterr().out
+        assert "Memory service not available" in output
+
+    def test_statistics_option_13_shows_error_rate(self, capsys, tmp_path):
+        """Test 4: Option 13 displays error rate percentage."""
+        service = MagicMock()
+        memory_service = MemoryService(MemoryJsonStorage(tmp_path / "memory.json"))
+
+        # Store 4 successful, 1 failed
+        for i in range(4):
+            memory_service.store(MemoryEntry("add", float(i), float(i+1), float(2*i+1), True, None, "2026-05-03T10:00:00", 1.0, f"id-{i}"))
+        memory_service.store(MemoryEntry("divide", 10.0, 0.0, None, False, "Division by zero", "2026-05-03T10:04:00", 0.5, "id-4"))
+
+        cli = CalculatorCLI(service, memory_service)
+        with patch("builtins.input", side_effect=["13", "14"]):
+            cli.run_interactive()
+
+        output = capsys.readouterr().out
+        assert "Error Rate:" in output
+        assert "20.00%" in output
+
+    def test_statistics_option_13_shows_execution_times(self, capsys, tmp_path):
+        """Test 5: Option 13 displays execution time statistics."""
+        service = MagicMock()
+        memory_service = MemoryService(MemoryJsonStorage(tmp_path / "memory.json"))
+
+        memory_service.store(MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 0.5, "id-1"))
+        memory_service.store(MemoryEntry("subtract", 10.0, 3.0, 7.0, True, None, "2026-05-03T10:01:00", 2.0, "id-2"))
+        memory_service.store(MemoryEntry("multiply", 4.0, 5.0, 20.0, True, None, "2026-05-03T10:02:00", 1.5, "id-3"))
+
+        cli = CalculatorCLI(service, memory_service)
+        with patch("builtins.input", side_effect=["13", "14"]):
+            cli.run_interactive()
+
+        output = capsys.readouterr().out
+        assert "Average Execution Time:" in output
+        assert "Min Execution Time:" in output
+        assert "Max Execution Time:" in output
+
+    def test_statistics_option_13_shows_operation_usage(self, capsys, tmp_path):
+        """Test 6: Option 13 displays operation usage counts."""
+        service = MagicMock()
+        memory_service = MemoryService(MemoryJsonStorage(tmp_path / "memory.json"))
+
+        memory_service.store(MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"))
+        memory_service.store(MemoryEntry("add", 5.0, 5.0, 10.0, True, None, "2026-05-03T10:01:00", 1.5, "id-2"))
+        memory_service.store(MemoryEntry("multiply", 4.0, 5.0, 20.0, True, None, "2026-05-03T10:02:00", 2.0, "id-3"))
+
+        cli = CalculatorCLI(service, memory_service)
+        with patch("builtins.input", side_effect=["13", "14"]):
+            cli.run_interactive()
+
+        output = capsys.readouterr().out
+        assert "Operation Usage:" in output
+        assert "add:" in output.lower() or "Add:" in output
+        assert "2 calculations" in output
+        assert "multiply:" in output.lower() or "Multiply:" in output
+        assert "1 calculation" in output
+
+    def test_statistics_shows_per_operation_error_rates(self, capsys, tmp_path):
+        """Test 7: Option 13 shows error rate for each operation."""
+        service = MagicMock()
+        memory_service = MemoryService(MemoryJsonStorage(tmp_path / "memory.json"))
+
+        # Add: 2 successful, 0 failed
+        memory_service.store(MemoryEntry("add", 1.0, 2.0, 3.0, True, None, "2026-05-03T10:00:00", 1.0, "id-1"))
+        memory_service.store(MemoryEntry("add", 5.0, 5.0, 10.0, True, None, "2026-05-03T10:01:00", 1.5, "id-2"))
+        # Divide: 1 successful, 1 failed
+        memory_service.store(MemoryEntry("divide", 10.0, 2.0, 5.0, True, None, "2026-05-03T10:02:00", 1.0, "id-3"))
+        memory_service.store(MemoryEntry("divide", 10.0, 0.0, None, False, "Division by zero", "2026-05-03T10:03:00", 0.5, "id-4"))
+
+        cli = CalculatorCLI(service, memory_service)
+        with patch("builtins.input", side_effect=["13", "14"]):
+            cli.run_interactive()
+
+        output = capsys.readouterr().out
+        # Should show error rates in Operation Usage section
+        assert "error rate" in output.lower()
