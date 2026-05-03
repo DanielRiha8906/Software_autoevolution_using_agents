@@ -15,22 +15,22 @@ package "models" #DDEEFF {
         +title : String
         +description : String [0..1]
         +status : TaskStatus
-        +dueDate : DateTime [0..1]
-        +createdAt : DateTime
-        +updatedAt : DateTime
+        +due_date : DateTime [0..1]
+        +created_at : DateTime
+        +updated_at : DateTime
         --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : Task
-        +isOverdue() : Boolean
-        +markInProgress() : Task
-        +markDone() : Task
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : Task
+        +is_overdue() : Boolean
+        +mark_in_progress() : Task
+        +mark_done() : Task
         +reopen() : Task
-        +isCompleted() : Boolean
+        +is_completed() : Boolean
     }
     note right of Task
-        toDict() conditionally includes due_date
-        fromDict() safely parses due_date with backward compatibility
-        isOverdue() returns True if due_date is set,
+        to_dict() conditionally includes due_date
+        from_dict() safely parses due_date with backward compatibility
+        is_overdue() returns True if due_date is set,
         task is not DONE, and current time is past due_date
     end note
 
@@ -45,6 +45,7 @@ package "models" #DDEEFF {
         +to_dict() : Dictionary
         +from_dict(data: Dictionary) : TaskComment
     }
+    Task "1" -- "0..*" TaskComment : "has (via task_id)"
     note right of TaskComment
         Foreign key reference to Task via task_id
         Supports optional author and update timestamp
@@ -71,12 +72,12 @@ package "services" #DDFFD4 {
         --
         +TaskManager(storage: JsonStorage [0..1])
         +add(title: String, description: String [0..1]) : Task
-        +get(taskId: String) : Task
-        +listAll() : List<Task>
-        +listByStatus(status: TaskStatus) : List<Task>
-        +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
-        +setStatus(taskId: String, status: TaskStatus) : Task
-        +delete(taskId: String) : void
+        +get(task_id: String) : Task
+        +list_all() : List<Task>
+        +list_by_status(status: TaskStatus) : List<Task>
+        +update(task_id: String, title: String [0..1], description: String [0..1]) : Task
+        +set_status(task_id: String, status: TaskStatus) : Task
+        +delete(task_id: String) : void
         -load() : void
         -persist() : void
     }
@@ -86,12 +87,12 @@ package "services" #DDFFD4 {
         -comments : Dictionary<String, TaskComment>
         --
         +CommentManager(storage: JsonStorage [0..1])
-        +add(taskId: String, content: String, author: String [0..1]) : TaskComment
-        +get(commentId: String) : TaskComment
-        +listAll() : List<TaskComment>
-        +listByTask(taskId: String) : List<TaskComment>
-        +delete(commentId: String) : void
-        +deleteAllByTask(taskId: String) : void
+        +add(task_id: String, content: String, author: String [0..1]) : TaskComment
+        +get(comment_id: String) : TaskComment
+        +list_all() : List<TaskComment>
+        +list_by_task(task_id: String) : List<TaskComment>
+        +delete(comment_id: String) : void
+        +delete_all_by_task(task_id: String) : void
         -load() : void
         -persist() : void
     }
@@ -101,38 +102,41 @@ package "services" #DDFFD4 {
         -comment_manager : CommentManager
         --
         +TodoService(storage: JsonStorage [0..1])
-        +addTask(title: String, description: String [0..1]) : Task
-        +getTask(taskId: String) : Task
-        +listTasks(status: TaskStatus [0..1]) : List<Task>
-        +startTask(taskId: String) : Task
-        +completeTask(taskId: String) : Task
-        +reopenTask(taskId: String) : Task
-        +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
-        +deleteTask(taskId: String) : void
-        +addComment(taskId: String, content: String, author: String [0..1]) : TaskComment
-        +getComments(taskId: String) : List<TaskComment>
-        +deleteComment(commentId: String) : void
+        +add_task(title: String, description: String [0..1]) : Task
+        +get_task(task_id: String) : Task
+        +list_tasks(status: TaskStatus [0..1]) : List<Task>
+        +start_task(task_id: String) : Task
+        +complete_task(task_id: String) : Task
+        +reopen_task(task_id: String) : Task
+        +update_task(task_id: String, title: String [0..1], description: String [0..1]) : Task
+        +delete_task(task_id: String) : void
+        +add_comment(task_id: String, content: String, author: String [0..1]) : TaskComment
+        +get_comments(task_id: String) : List<TaskComment>
+        +delete_comment(comment_id: String) : void
     }
+    note right of TodoService
+        delete_task() cascades: deletes all comments
+        for the task before deleting the task
+    end note
 }
 
 package "cli" #FFE5E5 {
     class TodoCLI {
         -service : TodoService
         --
-        +TodoCLI(storagePath: String [0..1])
+        +TodoCLI(storage_path: String [0..1])
         +run(argv: List<String> [0..1]) : Integer
     }
 
     class InteractiveMenu {
         -service : TodoService
         --
-        +InteractiveMenu(storagePath: String [0..1])
+        +InteractiveMenu(storage_path: String [0..1])
         +run() : void
     }
 }
 
 Task --> TaskStatus : status
-Task "1" --> "0..*" TaskComment : has
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 CommentManager --> JsonStorage : storage
