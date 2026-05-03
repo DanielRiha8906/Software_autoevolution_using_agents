@@ -42,6 +42,22 @@ def main() -> None:
         help="Display all recorded memory entries",
     )
     parser.add_argument(
+        "--filter-operation",
+        metavar="OPERATION",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
+        help="Filter memory entries by operation name",
+    )
+    parser.add_argument(
+        "--filter-success",
+        action="store_true",
+        help="Filter to show only successful memory entries",
+    )
+    parser.add_argument(
+        "--filter-error",
+        action="store_true",
+        help="Filter to show only failed memory entries",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -51,6 +67,18 @@ def main() -> None:
     args = parser.parse_args()
     calculator_service, memory_service = _build_service()
     cli = CalculatorCLI(calculator_service, memory_service)
+
+    if args.filter_success and args.filter_error:
+        parser.error("Cannot use both --filter-success and --filter-error")
+
+    if args.filter_operation or args.filter_success or args.filter_error:
+        success_filter = None
+        if args.filter_success:
+            success_filter = True
+        elif args.filter_error:
+            success_filter = False
+        cli.show_filtered_memory_cli(args.filter_operation, success_filter)
+        sys.exit(0)
 
     if args.memory:
         cli.show_memory_cli()

@@ -128,13 +128,64 @@ class CalculatorCLI:
             result_str = str(entry.result) if entry.success else entry.error_message
             print(f"[ID: {entry.entry_id[:8]}...] {entry.operation_name}({entry.operand_a}, {entry.operand_b}) -> {result_str} | {entry.execution_time_ms}ms")
 
+    def show_filtered_memory_cli(self, operation_name: str | None = None, success: bool | None = None) -> None:
+        """Display filtered memory entries to the console.
+
+        Args:
+            operation_name: Optional operation name to filter by.
+            success: Optional success status to filter by.
+        """
+        if not self.memory_service:
+            print("Memory service is not available.", file=sys.stderr)
+            return
+        entries = self.memory_service.filter(operation_name, success)
+        if not entries:
+            print("No matching memory entries.")
+            return
+        for entry in entries:
+            result_str = str(entry.result) if entry.success else entry.error_message
+            print(f"[ID: {entry.entry_id[:8]}...] {entry.operation_name}({entry.operand_a}, {entry.operand_b}) -> {result_str} | {entry.execution_time_ms}ms")
+
     def _show_memory(self) -> None:
         if not self.memory_service:
             print("\n  Memory service is not available.\n")
             return
-        entries = self.memory_service.get_all_entries()
+        self._show_memory_filter_submenu()
+
+    def _show_memory_filter_submenu(self) -> None:
+        """Display interactive memory filter submenu."""
+        while True:
+            print("\n  Memory Filter Options:")
+            print("    (1) View all")
+            print("    (2) Filter by operation")
+            print("    (3) Filter by success")
+            print("    (4) Filter by error")
+            print("    (5) Back")
+            choice = input("  Choose option: ").strip()
+
+            if choice == "1":
+                entries = self.memory_service.get_all_entries()
+                self._display_memory_entries(entries)
+            elif choice == "2":
+                operation = input("  Enter operation name (add/subtract/multiply/divide/square/sqrt/power/modulo): ").strip()
+                if operation:
+                    entries = self.memory_service.filter_by_operation(operation)
+                    self._display_memory_entries(entries)
+            elif choice == "3":
+                entries = self.memory_service.filter_by_success(True)
+                self._display_memory_entries(entries)
+            elif choice == "4":
+                entries = self.memory_service.filter_by_success(False)
+                self._display_memory_entries(entries)
+            elif choice == "5":
+                break
+            else:
+                print("  Invalid choice — try again.")
+
+    def _display_memory_entries(self, entries: list) -> None:
+        """Display a list of memory entries."""
         if not entries:
-            print("\n  No memory entries recorded yet.\n")
+            print("\n  No matching memory entries.\n")
             return
         print()
         for i, entry in enumerate(entries, 1):

@@ -51,3 +51,52 @@ class MemoryService:
     def get_all_entries(self) -> list[MemoryEntry]:
         all_records = self.storage.load_all()
         return [r for r in all_records if isinstance(r, MemoryEntry)]
+
+    def filter_by_operation(self, operation_name: str) -> list[MemoryEntry]:
+        """Filter memory entries by operation name (case-insensitive).
+
+        Args:
+            operation_name: The operation name to filter by.
+
+        Returns:
+            List of MemoryEntry objects matching the operation.
+        """
+        all_entries = self.get_all_entries()
+        return [e for e in all_entries if e.operation_name.lower() == operation_name.lower()]
+
+    def filter_by_success(self, success: bool) -> list[MemoryEntry]:
+        """Filter memory entries by success status.
+
+        Args:
+            success: True to return successful entries, False for failed entries.
+
+        Returns:
+            List of MemoryEntry objects matching the success status.
+        """
+        all_entries = self.get_all_entries()
+        return [e for e in all_entries if e.success == success]
+
+    def filter(self, operation_name: str | None = None, success: bool | None = None) -> list[MemoryEntry]:
+        """Filter memory entries by operation name and/or success status.
+
+        Both filters use AND logic. If both are None, returns all entries.
+
+        Args:
+            operation_name: Optional operation name to filter by (case-insensitive).
+            success: Optional success status to filter by.
+
+        Returns:
+            List of MemoryEntry objects matching all provided criteria.
+        """
+        if operation_name is None and success is None:
+            return self.get_all_entries()
+
+        entries = self.get_all_entries()
+
+        if operation_name is not None:
+            entries = [e for e in entries if e.operation_name.lower() == operation_name.lower()]
+
+        if success is not None:
+            entries = [e for e in entries if e.success == success]
+
+        return entries

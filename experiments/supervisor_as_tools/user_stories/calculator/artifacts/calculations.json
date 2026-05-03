@@ -22,5 +22,53 @@
     "result": 30.0,
     "timestamp": "2026-05-03T13:40:53.676234",
     "execution_time_ms": 0.01039500000388216
+  },
+  {
+    "operation": "add",
+    "operand_a": 3.0,
+    "operand_b": 5.0,
+    "result": 8.0,
+    "timestamp": "2026-05-03T18:01:41.943648",
+    "execution_time_ms": 0.006331999998110405
+  },
+  {
+    "operation": "add",
+    "operand_a": 1.0,
+    "operand_b": 2.0,
+    "result": 3.0,
+    "timestamp": "2026-05-03T18:01:43.557020",
+    "execution_time_ms": 0.006591999976990337
+  },
+  {
+    "operation": "subtract",
+    "operand_a": 10.0,
+    "operand_b": 5.0,
+    "result": 5.0,
+    "timestamp": "2026-05-03T18:01:43.611773",
+    "execution_time_ms": 0.006381999980931141
+  },
+  {
+    "operation": "add",
+    "operand_a": 1.0,
+    "operand_b": 2.0,
+    "result": 3.0,
+    "timestamp": "2026-05-03T18:01:46.243046",
+    "execution_time_ms": 0.006361000032484299
+  },
+  {
+    "operation": "subtract",
+    "operand_a": 10.0,
+    "operand_b": 5.0,
+    "result": 5.0,
+    "timestamp": "2026-05-03T18:01:46.295908",
+    "execution_time_ms": 0.006030999998074549
+  },
+  {
+    "operation": "divide",
+    "operand_a": 10.0,
+    "operand_b": 2.0,
+    "result": 5.0,
+    "timestamp": "2026-05-03T18:01:46.350216",
+    "execution_time_ms": 0.006903000041802443
   }
 ]

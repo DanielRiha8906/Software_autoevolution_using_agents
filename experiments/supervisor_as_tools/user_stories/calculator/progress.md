@@ -164,3 +164,49 @@ Duration: 578.3s | Cost: $1.043396 USD | Turns: 27
 - Backward compatible with CalculationResult legacy format
 
 Duration: 153.5s | Cost: $0.324552 USD | Turns: 17
+
+## Task 05: Filter stored calculations by operation type and result state
+
+**Objective:** Implement filtering capability for memory entries, allowing users to retrieve and reuse relevant past results by filtering on operation type and success/error state.
+
+**Acceptance Criteria:** ✅ All met
+- Programmatic filtering capability is available over stored calculations
+- Filtering by operation type is supported (case-insensitive)
+- Filtering by result state (success vs. error) is supported
+- Multiple filters can be combined in a single query (AND logic)
+- Results are returned as a collection of `MemoryEntry` objects
+- Structure of returned results is consistent across all queries
+- No database or external indexing system is used (in-memory filtering)
+- All new functionality is accessible via `python -m src` (both interactive menu and CLI flags)
+
+**Files Changed:**
+- `src/services/memory_service.py` — Added 3 new filtering methods: `filter_by_operation()`, `filter_by_success()`, and `filter()` (generic with AND logic for combined filters)
+- `src/cli/calculator_cli.py` — Added `show_filtered_memory_cli()` for CLI output; added `_show_memory_filter_submenu()` for interactive submenu; added `_display_memory_entries()` helper; updated `_show_memory()` to call submenu
+- `src/__main__.py` — Added 3 argparse arguments: `--filter-operation`, `--filter-success`, `--filter-error`; added validation (mutual exclusivity of success/error); integrated filter logic in main()
+- `tests/test_memory_service.py` — Added 28 new tests covering all filter methods, edge cases (empty results, case sensitivity, combined filters), and type consistency
+- `tests/test_cli.py` — Added 12 new tests for CLI flag integration, help text, and filtered output; added 10 tests for interactive submenu with all options (view all, filter by operation, by success, by error, back)
+- `artifacts/class_diagram.puml` — Updated MemoryService to include new filtering methods; updated CalculatorCLI to include new filtering methods
+- `artifacts/activity_diagram.puml` — Added filter submenu flow with 4 filtering options
+- `artifacts/use_case_diagram.puml` — Added "Filter memory by operation" and "Filter memory by result state" use cases as extensions of "View memory entries"
+
+**Test Results:**
+- Total tests: 237
+- Passed: 237 ✅
+- Failed: 0
+- New tests written: 50 (28 memory service + 22 CLI/integration)
+- Execution time: 0.36s
+- Coverage: All filter methods, edge cases, CLI flag integration, interactive menu, combined filters, and type consistency verified
+
+**Implementation Notes:**
+- Three-method filtering approach: `filter_by_operation()` and `filter_by_success()` for specific single-field filtering; generic `filter()` for combined criteria with AND logic
+- Case-insensitive operation filtering (e.g., "ADD", "add", "Add" all match)
+- Combined filters use AND logic: both criteria must match (intersection)
+- In-memory filtering: all entries loaded from storage, then filtered in-process (no database/indexing needed)
+- CLI flags: `--filter-operation` (choices hardcoded), `--filter-success` (boolean flag), `--filter-error` (boolean flag); mutual exclusivity enforced
+- Interactive submenu: 5 options under "View memory entries" (option 10): View all, Filter by operation, Filter by success, Filter by error, Back
+- Filtering methods return MemoryEntry objects, preserving consistency with existing APIs
+- MemoryService responsible for filtering logic; CalculatorCLI responsible for display/prompting
+- No breaking changes to existing MemoryService, CalculatorService, or CLI APIs
+- Full backward compatibility with existing memory entries and calculation history
+
+Duration: 352.5s | Cost: $0.708198 USD | Turns: 26
