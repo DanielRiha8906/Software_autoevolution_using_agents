@@ -207,4 +207,4 @@ Implemented a comprehensive programmatic query interface for filtering workflow 
 - ✅ Accessible via `python -m src list --created-after/before --duration-min/max --has/no-attempts` (one-shot)
 - ✅ Accessible via interactive menu option 6 "Advanced filter runs" (interactive)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 581.1s | Cost: $1.261054 USD | Turns: 20
