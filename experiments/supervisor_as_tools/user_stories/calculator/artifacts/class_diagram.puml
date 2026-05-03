@@ -30,6 +30,21 @@ package "models" #DDEEFF {
         +fromDict(data: Dictionary) : CalculationResult
         +toString() : String
     }
+
+    class MemoryEntry {
+        +entryId : str
+        +operationName : str
+        +operandA : float
+        +operandB : float
+        +result : float | null
+        +success : bool
+        +errorMessage : str | null
+        +timestamp : str
+        +executionTimeMs : float
+        --
+        +toDict() : Dictionary
+        +fromDict(data: Dictionary) : MemoryEntry
+    }
 }
 
 package "services" #DDFFD4 {
@@ -53,6 +68,15 @@ package "services" #DDFFD4 {
         +perform(operation: Operation, a: float, b: float) : CalculationResult
         +getHistory() : List<CalculationResult>
     }
+
+    class MemoryService {
+        -calculatorService : CalculatorService
+        -storage : JsonStorage
+        --
+        +MemoryService(calculatorService: CalculatorService, storage: JsonStorage)
+        +record(operation: str, operandA: float, operandB: float) : MemoryEntry
+        +getAllEntries() : List<MemoryEntry>
+    }
 }
 
 package "storage" #FFF3CC {
@@ -60,8 +84,8 @@ package "storage" #FFF3CC {
         -filepath : String
         --
         +JsonStorage(filepath: String)
-        +save(result: CalculationResult) : void
-        +loadAll() : List<CalculationResult>
+        +save(result: CalculationResult | MemoryEntry) : void
+        +loadAll() : List<CalculationResult | MemoryEntry>
         -readRaw() : List<Dictionary>
         -writeRaw(records: List<Dictionary>) : void
     }
@@ -83,13 +107,18 @@ package "cli" #FFE5E5 {
 }
 
 CalculatorCLI --> CalculatorService : service
+CalculatorCLI --> MemoryService : memory service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
+MemoryService --> CalculatorService : uses
+MemoryService --> JsonStorage : persists to
 
 CalculatorService ..> CalculationResult : create
+MemoryService ..> MemoryEntry : create/return
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
+JsonStorage ..> MemoryEntry : stores
 
 @enduml

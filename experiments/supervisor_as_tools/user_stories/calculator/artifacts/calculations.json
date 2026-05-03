@@ -1,62 +1,26 @@
 [
   {
     "operation": "add",
-    "operand_a": 3.0,
-    "operand_b": 5.0,
-    "result": 8.0,
-    "timestamp": "2026-04-29T12:01:36.308310"
+    "operand_a": 2.0,
+    "operand_b": 3.0,
+    "result": 5.0,
+    "timestamp": "2026-05-03T13:40:50.278757",
+    "execution_time_ms": 0.008793000006335205
+  },
+  {
+    "operation": "subtract",
+    "operand_a": 10.0,
+    "operand_b": 4.0,
+    "result": 6.0,
+    "timestamp": "2026-05-03T13:40:53.617122",
+    "execution_time_ms": 0.009535000003779714
   },
   {
     "operation": "multiply",
-    "operand_a": 6.0,
-    "operand_b": 7.0,
-    "result": 42.0,
-    "timestamp": "2026-04-29T12:01:36.413624"
-  },
-  {
-    "operation": "divide",
-    "operand_a": 10.0,
-    "operand_b": 3.0,
-    "result": 3.3333333333333335,
-    "timestamp": "2026-04-29T12:01:36.522452"
-  },
-  {
-    "operation": "divide",
-    "operand_a": 6.0,
-    "operand_b": 2.0,
-    "result": 3.0,
-    "timestamp": "2026-04-29T13:49:21.896125"
-  },
-  {
-    "operation": "square",
     "operand_a": 5.0,
-    "operand_b": 0.0,
-    "result": 25.0,
-    "timestamp": "2026-05-03T12:39:26.826016",
-    "execution_time_ms": 0.007121000010101852
-  },
-  {
-    "operation": "sqrt",
-    "operand_a": 16.0,
-    "operand_b": 0.0,
-    "result": 4.0,
-    "timestamp": "2026-05-03T12:39:28.266542",
-    "execution_time_ms": 0.007560999961242487
-  },
-  {
-    "operation": "power",
-    "operand_a": 2.0,
-    "operand_b": 3.0,
-    "result": 8.0,
-    "timestamp": "2026-05-03T12:39:29.479506",
-    "execution_time_ms": 0.01419099999111495
-  },
-  {
-    "operation": "modulo",
-    "operand_a": 10.0,
-    "operand_b": 3.0,
-    "result": 1.0,
-    "timestamp": "2026-05-03T12:39:30.766517",
-    "execution_time_ms": 0.008944000001065433
+    "operand_b": 6.0,
+    "result": 30.0,
+    "timestamp": "2026-05-03T13:40:53.676234",
+    "execution_time_ms": 0.01039500000388216
   }
 ]

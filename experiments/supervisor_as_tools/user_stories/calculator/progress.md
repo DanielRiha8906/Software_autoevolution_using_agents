@@ -72,3 +72,56 @@ Duration: 220.3s | Cost: $0.388252 USD | Turns: 13
 - Interactive menu expanded to 8 operations (positions 1-8), history at position 9, exit at position 10
 
 Duration: 427.1s | Cost: $0.703650 USD | Turns: 15
+
+## Task 03: Create MemoryEntry class for history data structure
+
+**Objective:** Implement a dedicated `MemoryEntry` class that captures complete history of both successful and failed calculations, enabling consistent history data structure for querying and reporting.
+
+**Acceptance Criteria:** ✅ All met
+- `MemoryEntry` stores: operation name, input operands, result, success/error state, execution timestamp, and `execution_time_ms`
+- Both successful and failed calculations can be represented
+- `MemoryEntry` can be serialised to and deserialised from a JSON-compatible dictionary
+- Each entry has a unique identifier
+- Presentation/formatting logic is kept out of the class
+- Existing calculation history is not broken
+- All new functionality accessible via `python -m src` — both as interactive menu option and one-shot CLI flag
+
+**Files Changed:**
+- `src/models/memory_entry.py` — Created MemoryEntry dataclass with 9 fields (entry_id, operation_name, operand_a, operand_b, result, success, error_message, timestamp, execution_time_ms); auto-generates UUID4 entry_id and ISO timestamp; implements to_dict() and from_dict() without presentation logic
+- `src/services/memory_service.py` — Created MemoryService class that orchestrates calculation execution with timing, error handling, and MemoryEntry creation; includes record() and get_all_entries() methods
+- `src/storage/json_storage.py` — Updated to handle both CalculationResult and MemoryEntry types; modified deserialization to distinguish by 'entry_id' key; maintains backward compatibility
+- `src/cli/calculator_cli.py` — Added show_memory_cli() for one-shot display; added _show_memory() for interactive menu; updated menu to include memory option (position 10); updated run_interactive() to handle memory choice
+- `src/__main__.py` — Updated _build_service() to instantiate MemoryService alongside CalculatorService; added --memory flag to argument parser; added logic to display memory entries when --memory flag provided
+- `src/services/calculator_service.py` — Updated get_history() to filter CalculationResult instances when loading mixed storage
+- `tests/test_memory_entry.py` — Created 27 tests covering MemoryEntry creation, unique IDs, timestamp format, serialization round-trips, execution_time_ms handling, and verification of no custom formatting logic
+- `tests/test_memory_service.py` — Created 33 tests covering initialization, successful calculations (all 8 operations), failed calculations, execution time tracking, storage persistence, entry retrieval, and operation validation
+- `tests/test_memory_storage.py` — Created 16 tests covering save/load round-trips, failed entry persistence, multiple entry accumulation, type detection, backward compatibility with CalculationResult, and mixed storage
+- `tests/test_memory_cli_integration.py` — Created 18 tests covering show_memory_cli() with empty/single/multiple entries, failed entry display, --memory flag integration, and interactive menu option
+- `tests/test_cli.py` — Updated 12 existing tests to account for menu position shifts (exit option moved from 10 to 11)
+- `artifacts/class_diagram.puml` — Added MemoryEntry model class and MemoryService service class with relationships
+- `artifacts/component_diagram.puml` — Added MemoryService component and updated dependencies
+- `artifacts/activity_diagram.puml` — Added memory recording flows for both successful and failed calculations
+- `artifacts/use_case_diagram.puml` — Added "View memory entries" use case
+- `artifacts/state_diagram_interactive.puml` — Added MemoryDisplay and MemoryRecord states
+- `artifacts/state_diagram_command.puml` — Added MemoryRecorded state
+
+**Test Results:**
+- Total tests: 193
+- Passed: 193 ✅
+- Failed: 0
+- New tests written: 94 (27 + 33 + 16 + 18)
+- Existing tests updated: 12 (menu position shifts)
+- Execution time: 0.42s
+- Coverage: MemoryEntry creation/serialization, MemoryService orchestration, mixed type storage, backward compatibility, CLI integration, and error handling all verified
+
+**Implementation Notes:**
+- UUID4 format for entry_id: `uuid.uuid4().hex` produces 32-character hex string (no hyphens)
+- Timestamp format: ISO 8601 via `datetime.now().isoformat()`, consistent with CalculationResult
+- Error handling: MemoryService catches all exceptions during calculation and records them with success=False, error_message=str(exception), result=None
+- Storage polymorphism: Both CalculationResult and MemoryEntry objects coexist in same JSON file; deserialization detects type by presence of 'entry_id' key
+- MemoryEntry has no custom __str__() or __repr__() — presentation logic remains in CLI layer only
+- Backward compatibility: Old CalculationResult entries load as CalculationResult; new entries load as MemoryEntry; both types accessible via same API
+- CLI integration: Menu option 10 displays memory, option 11 exits; --memory flag prints all memory entries; both modes work without history data
+- No breaking changes to existing CalculationResult or CalculatorService APIs
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

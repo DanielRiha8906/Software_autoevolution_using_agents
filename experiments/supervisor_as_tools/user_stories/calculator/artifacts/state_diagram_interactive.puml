@@ -9,6 +9,7 @@ top to bottom direction
 
 Menu --> FirstOperand : operation selected
 Menu --> Feedback : history selected
+Menu --> MemoryDisplay : memory selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
@@ -18,8 +19,13 @@ FirstOperand --> Feedback : invalid number
 SecondOperand --> Calculating : valid number
 SecondOperand --> Feedback : invalid number
 
-Calculating --> Feedback : success / show result
-Calculating --> Feedback : error / show error
+Calculating --> MemoryRecord : success / record entry
+Calculating --> MemoryRecord : error / record error
+
+MemoryRecord --> Feedback : memory recorded
+
+MemoryDisplay --> Feedback : memory displayed
+
 Feedback --> Menu
 
 @enduml
