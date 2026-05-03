@@ -89,6 +89,10 @@ class InteractiveMenu:
                 self._do_manage_comments()
             elif choice == "9":
                 self._do_delete(tasks)
+            elif choice == "10":
+                self._do_export()
+            elif choice == "11":
+                self._do_import()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -118,6 +122,8 @@ class InteractiveMenu:
         print("  7. View statistics")
         print("  8. Manage comments")
         print("  9. Delete task")
+        print(" 10. Export tasks and comments")
+        print(" 11. Import tasks and comments")
         print("  0. Quit")
         print()
 
@@ -563,4 +569,57 @@ class InteractiveMenu:
             print(f"  Deleted: {task.id[:8]}  {task.title}")
         except TaskNotFoundError as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_export(self) -> None:
+        """Export all tasks and comments to a JSON file."""
+        _clear()
+        print("  Export Tasks and Comments\n")
+        filepath = _prompt("Export filepath")
+        if not filepath:
+            input("  Filepath cannot be empty. Press Enter...")
+            return
+
+        try:
+            task_count, comment_count = self._service.export_tasks(filepath)
+            _clear()
+            print("  Export successful!")
+            print(f"  Exported {task_count} task(s) and {comment_count} comment(s)")
+            print(f"  File: {filepath}")
+        except (ValueError, OSError) as e:
+            _clear()
+            print(f"  Export failed: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_import(self) -> None:
+        """Import tasks and comments from a JSON file."""
+        _clear()
+        print("  Import Tasks and Comments\n")
+        filepath = _prompt("Import filepath")
+        if not filepath:
+            input("  Filepath cannot be empty. Press Enter...")
+            return
+
+        # Check if database is not empty
+        existing_tasks = self._service.list_tasks()
+        overwrite = False
+        if existing_tasks:
+            _clear()
+            print("  Database is not empty.")
+            confirm = input("  Overwrite existing data? (y/N): ").strip().lower()
+            if confirm != "y":
+                print("  Import cancelled.")
+                input("  Press Enter to continue...")
+                return
+            overwrite = True
+
+        try:
+            task_count, comment_count, _ = self._service.import_tasks(filepath, overwrite)
+            _clear()
+            print("  Import successful!")
+            print(f"  Imported {task_count} task(s) and {comment_count} comment(s)")
+            print(f"  File: {filepath}")
+        except ValueError as e:
+            _clear()
+            print(f"  Import failed: {e}")
         input("  Press Enter to continue...")

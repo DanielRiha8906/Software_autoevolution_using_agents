@@ -28,6 +28,15 @@ class TaskManager:
         raw = self._storage.load()
         self._tasks = {d["id"]: Task.from_dict(d) for d in raw}
 
+    def _load_from_dicts(self, task_dicts: list[dict]) -> None:
+        """Load tasks from a list of dictionaries.
+
+        Args:
+            task_dicts: List of task dictionaries.
+        """
+        self._tasks = {d["id"]: Task.from_dict(d) for d in task_dicts}
+        self._persist()
+
     def _persist(self) -> None:
         self._storage.save([t.to_dict() for t in self._tasks.values()])
 
