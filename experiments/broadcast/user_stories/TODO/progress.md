@@ -425,4 +425,4 @@ No new dependencies added. Implementation uses Python standard library:
 - `typing.Optional`
 - `uuid` (already used in Task model)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 567.3s | Cost: $3.081796 USD | Turns: 80
