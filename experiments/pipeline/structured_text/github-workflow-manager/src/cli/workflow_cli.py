@@ -74,6 +74,10 @@ def build_parser() -> argparse.ArgumentParser:
     detail_p = sub.add_parser("detail", help="Show details for a single run")
     detail_p.add_argument("run_id", help="Run ID")
 
+    # query-state
+    query_p = sub.add_parser("query-state", help="Query workflow run state")
+    query_p.add_argument("run_id", help="Run ID")
+
     return parser
 
 
@@ -116,3 +120,15 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_run(run))
+
+    elif ns.command == "query-state":
+        run = service.get_run_detail(ns.run_id)
+        if run is None:
+            print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
+            sys.exit(1)
+        print(f"Run ID: {run.id}")
+        print(f"Terminal: {'yes' if run.is_terminal() else 'no'}")
+        print(f"Running: {'yes' if run.is_running() else 'no'}")
+        print(f"Successful: {'yes' if run.is_successful() else 'no'}")
+        print(f"Failed: {'yes' if run.is_failed() else 'no'}")
+        print(f"Cancelled: {'yes' if run.is_cancelled() else 'no'}")
