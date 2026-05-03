@@ -129,3 +129,69 @@ Successfully implemented the `WorkflowRunAttempt` model as a first-class object 
 - Backward compatibility: Missing attempts field defaults to empty list on load
 
 Duration: 230.8s | Cost: $0.427512 USD | Turns: 19
+
+---
+
+# Task 04: AttemptService for Attempt Management
+
+## Summary
+Successfully implemented the `AttemptService` to centralize attempt management and provide unified API for attempt creation, retrieval, and validation. Service integrates seamlessly with existing storage and CLI/menu infrastructure.
+
+## Files Changed
+- `src/services/attempt_service.py` — New service class with create_attempt(), get_attempts_by_run(), validate_duplicate_attempt_number()
+- `src/cli/workflow_cli.py` — Added "attempt" subcommand with "create" and "list" variants, argument parsing, and output formatting
+- `src/cli/interactive_menu.py` — Added _add_attempt() and _list_attempts() menu functions, updated MENU list with two new options
+- `tests/test_attempt_service.py` — Comprehensive unit and integration tests (16 new tests)
+- `artifacts/class_diagram.puml` — Added AttemptService class with dependencies, updated CLI modules to show usage
+- `artifacts/component_diagram.puml` — Added AttemptService component to service layer
+- `artifacts/activity_diagram_main.puml` — Added attempt subcommand flow with create/list branches
+- `artifacts/activity_diagram_interactive.puml` — Added menu options 6 & 7 for attempt management
+- `artifacts/use_case_diagram.puml` — Added create/list attempt use cases for both CLI and interactive modes
+
+## Test Results
+- **Total tests**: 170
+- **Passed**: 170 ✓
+- **Failed**: 0
+- **New tests**: 16 (4 create, 5 retrieval, 5 validation, 2 integration)
+- **Command**: `pytest tests/ -q`
+
+## Acceptance Criteria Met
+✓ AttemptService manages WorkflowRunAttempt creation and retrieval
+✓ Duplicate attempt numbers per run are prevented via validation
+✓ Service integrates with existing WorkflowRunService and storage mechanism
+✓ Attempts can be retrieved sorted by attempt_number (optional parameter)
+✓ No caching layer — all reads are live from service
+✓ All functionality accessible via python -m src:
+  - Interactive menu: "Add attempt" (menu option 6) and "List attempts" (menu option 7)
+  - CLI flags: `python -m src attempt create` and `python -m src attempt list`
+
+## Feature Coverage
+- **Service layer**: AttemptService with composition dependency on WorkflowRunService
+- **CLI layer**: Nested "attempt" subcommand with create/list variants
+  - `python -m src attempt create --run-id <ID> --attempt-number <N> --status <status> [--conclusion <conclusion>] [--duration-seconds <F>] [--id <ID>]`
+  - `python -m src attempt list --run-id <ID> [--sort]`
+- **Interactive menu**: Two new menu functions with full user interaction flows
+  - Auto-generates attempt IDs in interactive mode
+  - Prompts for run_id, attempt_number, status, optional conclusion, optional duration
+  - List with optional sorting by attempt_number
+- **Validation**: Duplicate attempt number detection, run existence check, input validation
+- **Error handling**: Clear ValueError messages for business logic errors
+- **Diagrams**: All 5 relevant PlantUML diagrams updated to reflect new service
+
+## Implementation Decisions
+1. **Separate service file**: Follows SRP; keeps attempt logic decoupled from run-level operations
+2. **Composition with WorkflowRunService**: AttemptService delegates to existing service for persistence
+3. **Live reads only**: No caching per requirements; all get operations hit fresh data
+4. **Dict-to-object conversion**: create_attempt() uses WorkflowRunAttempt.from_dict() for consistency
+5. **Nested CLI subcommands**: `attempt create` and `attempt list` for clarity and extensibility
+6. **Interactive menu placement**: Added as options 6 & 7 after existing run operations
+
+## Test Coverage
+- **Happy path**: Create attempt, list attempts with/without sorting
+- **Duplicate handling**: Prevents duplicate attempt_number in same run
+- **Error cases**: Non-existent run, validation failures
+- **Edge cases**: Empty attempt list, single attempt, multiple duplicates
+- **Integration**: Persistence validation, fresh instance reads
+- **State**: Stateless service operations, no side effects beyond persistence
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

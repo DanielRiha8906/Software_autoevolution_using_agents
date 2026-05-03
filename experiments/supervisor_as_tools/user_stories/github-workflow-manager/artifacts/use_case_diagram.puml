@@ -16,6 +16,8 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by branch"         as I_FBRANCH
     usecase "Filter by status"         as I_FSTATUS
     usecase "Filter by conclusion"     as I_FCONCL
+    usecase "Add attempt"              as I_AADD
+    usecase "List attempts"            as I_ALIST
     usecase "Exit application"         as I_EXIT
   }
 
@@ -28,6 +30,8 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by conclusion"     as C_FCONCL
     usecase "Get run detail"           as C_DETAIL
     usecase "Check run status"         as C_STATUS
+    usecase "Create attempt"           as C_AADD
+    usecase "List attempts"            as C_ALIST
   }
 }
 
@@ -39,6 +43,8 @@ UI --> I_LIST
 UI --> I_DETAIL
 UI --> I_STATUS
 UI --> I_FILTER
+UI --> I_AADD
+UI --> I_ALIST
 UI --> I_EXIT
 
 I_FILTER --> I_FBRANCH  : <<extend>>
@@ -49,6 +55,8 @@ CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
 CLI --> C_STATUS
+CLI --> C_AADD
+CLI --> C_ALIST
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>
