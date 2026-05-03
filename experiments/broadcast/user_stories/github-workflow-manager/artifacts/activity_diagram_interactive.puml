@@ -73,7 +73,30 @@ repeat
         :Print "No run found with id '<id>'";
       endif
 
-    case (6 — Exit)
+    case (6 — Create attempt)
+      :Prompt run ID;
+      :Prompt attempt ID;
+      :Prompt attempt number;
+      :Prompt status;
+      :Prompt conclusion (optional);
+      :Prompt duration (optional);
+      :AttemptService.create_attempt();
+      if (success?) then (yes)
+        :Print "Created attempt <num> for run <id>";
+      else (no)
+        :Print error message;
+      endif
+
+    case (7 — List attempts for run)
+      :Prompt run ID;
+      :AttemptService.get_attempts_for_run(run_id);
+      if (no attempts?) then (yes)
+        :Print "No attempts found for run <id>.";
+      else (no)
+        :Print all attempts (sorted by attempt_number);
+      endif
+
+    case (8 — Exit)
       :Print "Goodbye.";
       stop
 

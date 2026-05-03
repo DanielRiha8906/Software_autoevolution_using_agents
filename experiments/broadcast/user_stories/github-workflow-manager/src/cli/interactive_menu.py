@@ -1,10 +1,13 @@
 import sys
 from typing import Optional
+from datetime import datetime, timezone
 
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
+from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
+from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 
 
@@ -41,6 +44,20 @@ def _fmt_run(run: WorkflowRun) -> str:
         f"  commit_sha  : {run.commit_sha or '—'}\n"
         f"  created_at  : {run.created_at.isoformat()}\n"
         f"  updated_at  : {run.updated_at.isoformat() if run.updated_at else '—'}\n"
+    )
+
+
+def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
+    conclusion = attempt.conclusion or "—"
+    duration = f"{attempt.duration_seconds}s" if attempt.duration_seconds is not None else "—"
+    return (
+        f"  id              : {attempt.id}\n"
+        f"  run_id          : {attempt.run_id}\n"
+        f"  attempt_number  : {attempt.attempt_number}\n"
+        f"  status          : {attempt.status}\n"
+        f"  conclusion      : {conclusion}\n"
+        f"  created_at      : {attempt.created_at.isoformat()}\n"
+        f"  duration_seconds: {duration}\n"
     )
 
 
@@ -121,17 +138,66 @@ def _filter_menu(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
+def _create_attempt(attempt_service: AttemptService) -> None:
+    print("\n--- Create Workflow Attempt ---")
+    run_id_raw = _prompt("Run ID")
+    attempt_id_raw = _prompt("Attempt ID")
+    attempt_number_raw = _prompt("Attempt number")
+    status = _prompt("Status")
+    conclusion = _prompt("Conclusion (leave blank for none)", "")
+    duration_raw = _prompt("Duration in seconds (leave blank for none)", "")
+
+    try:
+        run_id = int(run_id_raw)
+        attempt_id = int(attempt_id_raw)
+        attempt_number = int(attempt_number_raw)
+        duration = float(duration_raw) if duration_raw else None
+        conclusion_val = conclusion if conclusion else None
+
+        attempt = WorkflowRunAttempt(
+            id=attempt_id,
+            run_id=run_id,
+            attempt_number=attempt_number,
+            status=status,
+            conclusion=conclusion_val,
+            created_at=datetime.now(timezone.utc),
+            duration_seconds=duration,
+        )
+        created_attempt = attempt_service.create_attempt(attempt)
+        print(f"\nCreated attempt {created_attempt.attempt_number} for run {created_attempt.run_id}")
+    except ValueError as e:
+        print(f"\nError: {e}")
+
+
+def _list_attempts(attempt_service: AttemptService) -> None:
+    print("\n--- List Attempts ---")
+    run_id_raw = _prompt("Run ID")
+    try:
+        run_id = int(run_id_raw)
+        attempts = attempt_service.get_attempts_for_run(run_id)
+        if not attempts:
+            print(f"\nNo attempts found for run {run_id}.")
+            return
+        print(f"\n--- {len(attempts)} attempt(s) for run {run_id} ---")
+        for attempt in attempts:
+            print(_fmt_attempt(attempt))
+    except ValueError as e:
+        print(f"\nError: {e}")
+
+
 MENU = [
-    ("Add workflow run", _add_run),
-    ("List all runs", _list_runs),
-    ("Get run detail", _detail_run),
-    ("Filter runs", _filter_menu),
-    ("Check run state", _check_state),
+    ("Add workflow run", lambda ws, as_: _add_run(ws)),
+    ("List all runs", lambda ws, as_: _list_runs(ws)),
+    ("Get run detail", lambda ws, as_: _detail_run(ws)),
+    ("Filter runs", lambda ws, as_: _filter_menu(ws)),
+    ("Check run state", lambda ws, as_: _check_state(ws)),
+    ("Create attempt", lambda ws, as_: _create_attempt(as_)),
+    ("List attempts for run", lambda ws, as_: _list_attempts(as_)),
     ("Exit", None),
 ]
 
 
-def run_interactive(service: WorkflowRunService) -> None:
+def run_interactive(workflow_service: WorkflowRunService, attempt_service: AttemptService) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
         print("\n" + "=" * 44)
@@ -146,6 +212,6 @@ def run_interactive(service: WorkflowRunService) -> None:
             print("Goodbye.")
             sys.exit(0)
         try:
-            handler(service)
+            handler(workflow_service, attempt_service)
         except KeyboardInterrupt:
             print()
