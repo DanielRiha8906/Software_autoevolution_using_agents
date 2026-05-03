@@ -30,6 +30,36 @@ package "models" #DDEEFF {
         +fromDict(data: Dictionary) : CalculationResult
         +toString() : String
     }
+
+    abstract class MemoryEntry {
+        +entry_id : int
+        +operation : str
+        +operand_a : float
+        +operand_b : float
+        +timestamp : float
+        +execution_time_ms : float
+        --
+        +is_success() : bool {abstract}
+        +to_dict() : Dictionary {abstract}
+        +from_dict(data: Dictionary) : MemoryEntry {static}
+    }
+
+    class ResultEntry {
+        +result : float
+        --
+        +is_success() : bool
+        +to_dict() : Dictionary
+    }
+
+    class ErrorEntry {
+        +error_message : str
+        --
+        +is_success() : bool
+        +to_dict() : Dictionary
+    }
+
+    MemoryEntry <|-- ResultEntry
+    MemoryEntry <|-- ErrorEntry
 }
 
 package "services" #DDFFD4 {
@@ -51,7 +81,9 @@ package "services" #DDFFD4 {
         --
         +CalculatorService(calculator: Calculator, storage: JsonStorage)
         +perform(operation: Operation, a: float, b: float) : CalculationResult
+        +perform_with_memory(operation: Operation, a: float, b: float) : MemoryEntry
         +getHistory() : List<CalculationResult>
+        +get_memory_history() : List<MemoryEntry>
     }
 }
 
@@ -62,6 +94,8 @@ package "storage" #FFF3CC {
         +JsonStorage(filepath: String)
         +save(result: CalculationResult) : void
         +loadAll() : List<CalculationResult>
+        +save_memory(entry: MemoryEntry) : void
+        +load_memory_all() : List<MemoryEntry>
         -readRaw() : List<Dictionary>
         -writeRaw(records: List<Dictionary>) : void
     }
@@ -87,9 +121,12 @@ CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 
 CalculatorService ..> CalculationResult : create
+CalculatorService ..> MemoryEntry : create
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
+CalculatorCLI ..> MemoryEntry : display
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
+JsonStorage ..> MemoryEntry : stores
 
 @enduml

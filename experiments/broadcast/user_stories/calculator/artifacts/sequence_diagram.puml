@@ -6,11 +6,12 @@ participant CalculatorService
 participant Calculator
 participant JsonStorage
 participant CalculationResult
+participant MemoryEntry
 
 User -> CalculatorCLI: perform(operation, a, b)
 activate CalculatorCLI
 
-CalculatorCLI -> CalculatorService: perform(operation, a, b)
+CalculatorCLI -> CalculatorService: perform_with_memory(operation, a, b)
 activate CalculatorService
 
 note over CalculatorService: start_time = perf_counter()
@@ -31,12 +32,22 @@ activate CalculationResult
 CalculationResult --> CalculatorService: instance
 deactivate CalculationResult
 
+CalculatorService -> MemoryEntry: create(operation, operand_a, operand_b, result, execution_time_ms)
+activate MemoryEntry
+MemoryEntry --> CalculatorService: ResultEntry instance
+deactivate MemoryEntry
+
 CalculatorService -> JsonStorage: save(calc_result)
 activate JsonStorage
 JsonStorage --> CalculatorService: saved
 deactivate JsonStorage
 
-CalculatorService --> CalculatorCLI: CalculationResult
+CalculatorService -> JsonStorage: save_memory(memory_entry)
+activate JsonStorage
+JsonStorage --> CalculatorService: saved
+deactivate JsonStorage
+
+CalculatorService --> CalculatorCLI: MemoryEntry
 deactivate CalculatorService
 
 CalculatorCLI -> User: show result with execution_time_ms
