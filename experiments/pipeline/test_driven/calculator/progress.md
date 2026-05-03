@@ -172,4 +172,4 @@ Duration: 250.5s | Cost: $0.469915 USD | Turns: 26
 - All type hints and docstrings follow existing code patterns
 - Verified round-trip consistency: multiple compute() calls return identical results
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 359.1s | Cost: $0.668301 USD | Turns: 16
