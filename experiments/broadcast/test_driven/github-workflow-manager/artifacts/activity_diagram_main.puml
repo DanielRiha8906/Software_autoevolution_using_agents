@@ -41,6 +41,13 @@ if (CLI arguments provided?) then (yes)
         :Exit code 1;
       endif
 
+    case (statistics)
+      :WorkflowStatisticsService.compute();
+      :Print total runs;
+      :Print runs by conclusion;
+      :Print duration stats\n(avg, min, max);
+      :Print avg attempts per run;
+
   endswitch
   stop
 
