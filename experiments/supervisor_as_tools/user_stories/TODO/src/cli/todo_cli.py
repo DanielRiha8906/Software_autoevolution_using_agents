@@ -96,6 +96,36 @@ class TodoCLI:
         p_delete.add_argument("id", help="Task ID")
         p_delete.set_defaults(func=self._cmd_delete)
 
+        # mark-in-progress
+        p_mark_in_progress = sub.add_parser("mark-in-progress", help="Mark task as in-progress")
+        p_mark_in_progress.add_argument("id", help="Task ID")
+        p_mark_in_progress.set_defaults(func=self._cmd_mark_in_progress)
+
+        # mark-done
+        p_mark_done = sub.add_parser("mark-done", help="Mark task as done")
+        p_mark_done.add_argument("id", help="Task ID")
+        p_mark_done.set_defaults(func=self._cmd_mark_done)
+
+        # is-pending
+        p_is_pending = sub.add_parser("is-pending", help="Check if task is pending")
+        p_is_pending.add_argument("id", help="Task ID")
+        p_is_pending.set_defaults(func=self._cmd_is_pending)
+
+        # is-in-progress
+        p_is_in_progress = sub.add_parser("is-in-progress", help="Check if task is in-progress")
+        p_is_in_progress.add_argument("id", help="Task ID")
+        p_is_in_progress.set_defaults(func=self._cmd_is_in_progress)
+
+        # is-completed
+        p_is_completed = sub.add_parser("is-completed", help="Check if task is completed")
+        p_is_completed.add_argument("id", help="Task ID")
+        p_is_completed.set_defaults(func=self._cmd_is_completed)
+
+        # is-overdue
+        p_is_overdue = sub.add_parser("is-overdue", help="Check if task is overdue")
+        p_is_overdue.add_argument("id", help="Task ID")
+        p_is_overdue.set_defaults(func=self._cmd_is_overdue)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -167,4 +197,34 @@ class TodoCLI:
         task = self._service.get_task(args.id)
         self._service.delete_task(args.id)
         print(f"Deleted {task.id[:8]}  {task.title}")
+        return 0
+
+    def _cmd_mark_in_progress(self, args: argparse.Namespace) -> int:
+        task = self._service.mark_in_progress(args.id)
+        print(f"Started {task.id[:8]}  {task.title}")
+        return 0
+
+    def _cmd_mark_done(self, args: argparse.Namespace) -> int:
+        task = self._service.mark_done(args.id)
+        print(f"Completed {task.id[:8]}  {task.title}")
+        return 0
+
+    def _cmd_is_pending(self, args: argparse.Namespace) -> int:
+        result = self._service.is_pending(args.id)
+        print("true" if result else "false")
+        return 0
+
+    def _cmd_is_in_progress(self, args: argparse.Namespace) -> int:
+        result = self._service.is_in_progress(args.id)
+        print("true" if result else "false")
+        return 0
+
+    def _cmd_is_completed(self, args: argparse.Namespace) -> int:
+        result = self._service.is_completed(args.id)
+        print("true" if result else "false")
+        return 0
+
+    def _cmd_is_overdue(self, args: argparse.Namespace) -> int:
+        result = self._service.is_overdue(args.id)
+        print("true" if result else "false")
         return 0

@@ -99,3 +99,103 @@ Implemented an optional `due_date` field for the Task model with complete suppor
 - `use_case_diagram.puml` — Added set/view due_date use cases
 
 Duration: 476.8s | Cost: $0.861312 USD | Turns: 23
+
+## Task 02: Status Transition Methods and State Checking
+
+### Task Number
+02
+
+### Summary
+Implemented 7 status transition and state checking methods on the Task model with full CLI and interactive menu exposure. All methods are accessible via `python -m src` with both interactive menu options and CLI flags.
+
+### Files Changed
+
+#### Modified Files
+- `src/models/task.py` — Added 7 methods: `is_pending()`, `is_in_progress()`, `is_completed()`, `is_overdue()`, `mark_in_progress()`, `mark_done()`, `reopen()`
+- `src/services/todo_service.py` — Added 7 service wrapper methods for state transitions and queries with persistence
+- `src/cli/todo_cli.py` — Added 6 subcommand parsers (mark-in-progress, mark-done, is-pending, is-in-progress, is-completed, is-overdue) with handlers
+- `src/cli/interactive_menu.py` — Added menu option 7 "Check task status" with `_do_check_status()` method
+
+#### New Test Files
+- `tests/test_task_methods.py` — 28 test cases for Task model methods
+- `tests/test_todo_service_status_methods.py` — 12 test cases for TodoService wrappers
+- `tests/test_cli_status_commands.py` — 8 test cases for CLI commands
+- `tests/test_interactive_menu_status.py` — 3 test cases for interactive menu
+
+#### Updated Diagrams
+- `artifacts/class_diagram.puml` — Added 7 methods to Task and TodoService classes
+- `artifacts/activity_diagram.puml` — Added "Change Status Flow" and "Check Status Flow" partitions
+- `artifacts/state_diagram.puml` — Enhanced state transitions with no-op guards
+- `artifacts/use_case_diagram.puml` — Added 7 new use cases for status transitions and checks
+
+### Acceptance Criteria Status
+
+✅ **Task provides: `mark_in_progress()`, `mark_done()`, `reopen()`, `is_completed()`, `is_overdue()`, `is_pending()`, `is_in_progress()`**
+- All 7 methods implemented on Task dataclass
+- Each method follows single-responsibility principle
+
+✅ **Each status-mutating method updates `updated_at` to the current CEST time**
+- Uses `datetime.now(timezone.utc)` for consistency with audit timestamps
+- Only updates `updated_at` when status actually changes (no-op guard)
+
+✅ **Methods derive state strictly from existing `Task` attributes**
+- No external input required; all methods operate on self
+- `is_overdue()` checks `self.due_date` against current UTC time
+- No database queries or external dependencies
+
+✅ **Invalid transitions are no-ops (idempotent behavior)**
+- `mark_in_progress()` on IN_PROGRESS task: no-op (no timestamp update)
+- `mark_done()` on DONE task: no-op
+- `reopen()` on PENDING task: no-op
+- All methods return `self` for optional method chaining
+
+✅ **All new functionality accessible via `python -m src`**
+- Interactive menu: Option 7 displays status checks for selected task
+- CLI flags: `mark-in-progress <id>`, `mark-done <id>`, `is-pending <id>`, etc.
+- Query commands output "true" or "false" for scripting compatibility
+
+### Implementation Details
+
+#### State Transition Logic
+- PENDING → IN_PROGRESS via `mark_in_progress()`
+- IN_PROGRESS → DONE via `mark_done()`
+- PENDING ← any status via `reopen()`
+- All transitions update `updated_at` timestamp
+
+#### State Predicates
+- `is_pending()`: Returns true if status == PENDING
+- `is_in_progress()`: Returns true if status == IN_PROGRESS
+- `is_completed()`: Returns true if status == DONE
+- `is_overdue()`: Returns true if due_date is past and status != DONE
+
+#### Service Layer
+- TodoService wrapper methods call Task methods, then invoke `_persist()` for atomicity
+- Service queries delegate directly to Task methods without persistence
+
+#### CLI Commands
+- Mutation commands: `mark-in-progress <id>`, `mark-done <id>`
+- Query commands: `is-pending <id>`, `is-in-progress <id>`, `is-completed <id>`, `is-overdue <id>`
+- All commands exposed in `--help` output
+
+#### Interactive Menu
+- New menu option 7: "Check task status"
+- Displays human-readable status information:
+  - Current status (PENDING, IN_PROGRESS, DONE)
+  - Status predicates with ✓/✗ symbols
+  - Due date if set, with "—" if None
+
+### Test Results
+✅ **All 115 tests passed** (61 existing + 54 new)
+- 28 Task method tests (state checks, transitions, no-ops, chaining, serialization)
+- 12 TodoService wrapper tests (persistence verification)
+- 8 CLI command tests (argument parsing, exit codes, output)
+- 3 Interactive menu tests (menu display, status checks)
+- 16+ tests for other existing features (all passing)
+
+### Diagrams Updated
+- `class_diagram.puml` — Task and TodoService now show 7 new methods
+- `activity_diagram.puml` — New "Change Status Flow" and "Check Status Flow" partitions
+- `state_diagram.puml` — Enhanced state transitions with guard conditions
+- `use_case_diagram.puml` — 7 new use cases (3 status changes + 4 state checks)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
