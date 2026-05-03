@@ -210,3 +210,11 @@ Duration: 153.5s | Cost: $0.324552 USD | Turns: 17
 - Full backward compatibility with existing memory entries and calculation history
 
 Duration: 352.5s | Cost: $0.708198 USD | Turns: 26
+
+**Post-Implementation Bug Fix:**
+- **Issue:** CLI was using CalculatorService instead of MemoryService for recording calculations, preventing MemoryEntry objects from being created and making filtering non-functional
+- **Root Cause:** `run_command()` and `run_interactive()` methods were calling `service.perform()` instead of `memory_service.record()`
+- **Fix:** Updated both methods to use `memory_service.record()` when available
+- **Files Changed:** `src/cli/calculator_cli.py`
+- **Verification:** All 237 tests pass; filtering confirmed working end-to-end with actual calculations
+- **Commit:** b73f7a0 — "Fix CLI to use MemoryService.record() for calculating and recording entries"
