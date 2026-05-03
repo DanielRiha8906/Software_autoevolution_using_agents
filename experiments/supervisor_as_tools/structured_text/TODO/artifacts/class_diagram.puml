@@ -21,6 +21,10 @@ package "models" #DDEEFF {
         --
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
+        +mark_in_progress() : void
+        +mark_done() : void
+        +reopen() : void
+        +is_completed() : Boolean
         +is_overdue() : Boolean
     }
 }

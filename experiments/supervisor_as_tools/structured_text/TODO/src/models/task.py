@@ -44,6 +44,28 @@ class Task:
             due_date=due_date,
         )
 
+    def mark_in_progress(self) -> None:
+        """Transition status to IN_PROGRESS (no-op if already IN_PROGRESS or DONE)."""
+        if self.status not in (TaskStatus.IN_PROGRESS, TaskStatus.DONE):
+            self.status = TaskStatus.IN_PROGRESS
+            self.updated_at = datetime.now(ZoneInfo("Europe/Paris")).astimezone(timezone.utc)
+
+    def mark_done(self) -> None:
+        """Transition status to DONE (no-op if already DONE)."""
+        if self.status != TaskStatus.DONE:
+            self.status = TaskStatus.DONE
+            self.updated_at = datetime.now(ZoneInfo("Europe/Paris")).astimezone(timezone.utc)
+
+    def reopen(self) -> None:
+        """Transition status to PENDING (no-op if already PENDING)."""
+        if self.status != TaskStatus.PENDING:
+            self.status = TaskStatus.PENDING
+            self.updated_at = datetime.now(ZoneInfo("Europe/Paris")).astimezone(timezone.utc)
+
+    def is_completed(self) -> bool:
+        """Return True if status is DONE."""
+        return self.status == TaskStatus.DONE
+
     def is_overdue(self) -> bool:
         """Check if task is overdue (due_date is in the past in CEST timezone)."""
         if self.due_date is None:
