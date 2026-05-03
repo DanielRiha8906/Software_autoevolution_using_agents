@@ -14,6 +14,8 @@ rectangle "TODO Manager" {
     usecase "Change task status" as I_STATUS
     usecase "Update task" as I_UPDATE
     usecase "Delete task" as I_DELETE
+    usecase "Check if completed" as I_COMPLETED
+    usecase "Check if overdue" as I_OVERDUE
     usecase "Quit application" as I_QUIT
   }
 
@@ -27,27 +29,33 @@ rectangle "TODO Manager" {
     usecase "Reopen task" as C_REOPEN
     usecase "Update task" as C_UPDATE
     usecase "Delete task" as C_DELETE
+    usecase "Check if completed" as C_COMPLETED
+    usecase "Check if overdue" as C_OVERDUE
   }
 }
 
 User --> UI
 User --> CLI
 
-UI ..> I_ADD    : <<exclude>>
-UI ..> I_LIST   : <<exclude>>
-UI ..> I_SHOW   : <<exclude>>
-UI ..> I_STATUS : <<exclude>>
-UI ..> I_UPDATE : <<exclude>>
-UI ..> I_DELETE : <<exclude>>
-UI ..> I_QUIT   : <<exclude>>
+UI ..> I_ADD       : <<exclude>>
+UI ..> I_LIST      : <<exclude>>
+UI ..> I_SHOW      : <<exclude>>
+UI ..> I_STATUS    : <<exclude>>
+UI ..> I_UPDATE    : <<exclude>>
+UI ..> I_DELETE    : <<exclude>>
+UI ..> I_COMPLETED : <<exclude>>
+UI ..> I_OVERDUE   : <<exclude>>
+UI ..> I_QUIT      : <<exclude>>
 
-CLI ..> C_ADD    : <<exclude>>
-CLI ..> C_LIST   : <<exclude>>
-CLI ..> C_SHOW   : <<exclude>>
-CLI ..> C_START  : <<exclude>>
-CLI ..> C_DONE   : <<exclude>>
-CLI ..> C_REOPEN : <<exclude>>
-CLI ..> C_UPDATE : <<exclude>>
-CLI ..> C_DELETE : <<exclude>>
+CLI ..> C_ADD       : <<exclude>>
+CLI ..> C_LIST      : <<exclude>>
+CLI ..> C_SHOW      : <<exclude>>
+CLI ..> C_START     : <<exclude>>
+CLI ..> C_DONE      : <<exclude>>
+CLI ..> C_REOPEN    : <<exclude>>
+CLI ..> C_UPDATE    : <<exclude>>
+CLI ..> C_DELETE    : <<exclude>>
+CLI ..> C_COMPLETED : <<exclude>>
+CLI ..> C_OVERDUE   : <<exclude>>
 
 @enduml

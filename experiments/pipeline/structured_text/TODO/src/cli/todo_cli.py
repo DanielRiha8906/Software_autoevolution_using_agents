@@ -93,6 +93,16 @@ class TodoCLI:
         p_delete.add_argument("id", help="Task ID")
         p_delete.set_defaults(func=self._cmd_delete)
 
+        # is-completed
+        p_is_completed = sub.add_parser("is-completed", help="Check if task is completed")
+        p_is_completed.add_argument("id", help="Task ID")
+        p_is_completed.set_defaults(func=self._cmd_is_completed)
+
+        # check-overdue
+        p_check_overdue = sub.add_parser("check-overdue", help="Check if task is overdue")
+        p_check_overdue.add_argument("id", help="Task ID")
+        p_check_overdue.set_defaults(func=self._cmd_check_overdue)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -147,3 +157,25 @@ class TodoCLI:
         self._service.delete_task(args.id)
         print(f"Deleted {task.id[:8]}  {task.title}")
         return 0
+
+    def _cmd_is_completed(self, args: argparse.Namespace) -> int:
+        task = self._service.get_task(args.id)
+        if task.is_completed():
+            print(f"{task.id[:8]}  {task.title}")
+            print("Status: completed")
+            return 0
+        else:
+            print(f"{task.id[:8]}  {task.title}")
+            print("Status: not completed")
+            return 0
+
+    def _cmd_check_overdue(self, args: argparse.Namespace) -> int:
+        task = self._service.get_task(args.id)
+        if task.is_overdue():
+            print(f"{task.id[:8]}  {task.title}")
+            print("Status: overdue")
+            return 0
+        else:
+            print(f"{task.id[:8]}  {task.title}")
+            print("Status: not overdue")
+            return 0

@@ -53,3 +53,37 @@ class Task:
         if self.due_date is None or self.status == TaskStatus.DONE:
             return False
         return datetime.now(timezone.utc) > self.due_date
+
+    def mark_in_progress(self) -> Task:
+        """Mark task as in-progress and update the updated_at timestamp.
+
+        Returns self for method chaining.
+        """
+        self.status = TaskStatus.IN_PROGRESS
+        self.updated_at = datetime.now(timezone.utc)
+        return self
+
+    def mark_done(self) -> Task:
+        """Mark task as done and update the updated_at timestamp.
+
+        Returns self for method chaining.
+        """
+        self.status = TaskStatus.DONE
+        self.updated_at = datetime.now(timezone.utc)
+        return self
+
+    def reopen(self) -> Task:
+        """Reopen task (set status to pending) and update the updated_at timestamp.
+
+        Returns self for method chaining.
+        """
+        self.status = TaskStatus.PENDING
+        self.updated_at = datetime.now(timezone.utc)
+        return self
+
+    def is_completed(self) -> bool:
+        """Check if task is completed.
+
+        Returns True if status is DONE, False otherwise.
+        """
+        return self.status == TaskStatus.DONE
