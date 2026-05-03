@@ -26,6 +26,18 @@ def _fmt_run(run: WorkflowRun) -> str:
     )
 
 
+def _fmt_status_report(run: WorkflowRun) -> str:
+    """Format run status report with state-checking method results."""
+    return (
+        f"Run Status Report for {run.id}:\n"
+        f"  is_terminal: {run.is_terminal()}\n"
+        f"  is_running: {run.is_running()}\n"
+        f"  is_successful: {run.is_successful()}\n"
+        f"  is_failed: {run.is_failed()}\n"
+        f"  is_cancelled: {run.is_cancelled()}\n"
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="workflow-tracker",
@@ -74,6 +86,10 @@ def build_parser() -> argparse.ArgumentParser:
     detail_p = sub.add_parser("detail", help="Show details for a single run")
     detail_p.add_argument("run_id", help="Run ID")
 
+    # status
+    status_p = sub.add_parser("status", help="Check run status")
+    status_p.add_argument("--id", dest="run_id", required=True, help="Run ID")
+
     return parser
 
 
@@ -116,3 +132,10 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
             print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_run(run))
+
+    elif ns.command == "status":
+        run = service.get_run_detail(ns.run_id)
+        if run is None:
+            print(f"No run found with id '{ns.run_id}'.", file=sys.stderr)
+            sys.exit(1)
+        print(_fmt_status_report(run))

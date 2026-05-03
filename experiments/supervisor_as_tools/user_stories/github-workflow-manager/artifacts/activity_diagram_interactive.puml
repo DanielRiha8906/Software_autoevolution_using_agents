@@ -42,7 +42,16 @@ repeat
         :Print "No run found with id '<id>'";
       endif
 
-    case (4 — Filter runs)
+    case (4 — Check run status)
+      :Prompt run ID;
+      :WorkflowRunService.get_run_detail(run_id);
+      if (found?) then (yes)
+        :Print status report\n(is_terminal, is_running,\nis_successful, is_failed,\nis_cancelled);
+      else (no)
+        :Print "No run found with id '<id>'";
+      endif
+
+    case (5 — Filter runs)
       :Choose filter type\n(branch / status / conclusion);
       if (branch?) then (yes)
         :Prompt branch name;
@@ -60,7 +69,7 @@ repeat
         :Print matching runs;
       endif
 
-    case (5 — Exit)
+    case (6 — Exit)
       :Print "Goodbye.";
       stop
 
