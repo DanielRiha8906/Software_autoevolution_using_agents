@@ -4,6 +4,7 @@ from typing import Optional
 from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
+from ..models.task_summary import TaskSummary
 from ..models.filter_options import FilterOptions
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
@@ -122,3 +123,38 @@ class TodoService:
     def edit_comment(self, comment_id: str, content: str) -> TaskComment:
         """Edit a comment's content."""
         return self._comments_service.edit_comment(comment_id, content)
+
+    def generate_report(self) -> TaskSummary:
+        """Generate a summary report of all tasks."""
+        all_tasks = self._manager.list_all()
+
+        total_tasks = len(all_tasks)
+        pending_count = sum(1 for t in all_tasks if t.status == TaskStatus.PENDING)
+        in_progress_count = sum(1 for t in all_tasks if t.status == TaskStatus.IN_PROGRESS)
+        done_count = sum(1 for t in all_tasks if t.status == TaskStatus.DONE)
+        overdue_count = sum(1 for t in all_tasks if t.is_overdue())
+        with_due_date_count = sum(1 for t in all_tasks if t.due_date is not None)
+
+        # Calculate completion rate (percentage of done tasks)
+        completion_rate = (done_count / total_tasks * 100) if total_tasks > 0 else 0.0
+
+        # Calculate average days to completion for done tasks
+        avg_days_to_completion = None
+        if done_count > 0:
+            total_days = 0
+            for task in all_tasks:
+                if task.status == TaskStatus.DONE:
+                    days_elapsed = (task.updated_at - task.created_at).total_seconds() / 86400
+                    total_days += days_elapsed
+            avg_days_to_completion = round(total_days / done_count, 2)
+
+        return TaskSummary(
+            total_tasks=total_tasks,
+            pending_count=pending_count,
+            in_progress_count=in_progress_count,
+            done_count=done_count,
+            overdue_count=overdue_count,
+            with_due_date_count=with_due_date_count,
+            completion_rate=completion_rate,
+            avg_days_to_completion=avg_days_to_completion,
+        )

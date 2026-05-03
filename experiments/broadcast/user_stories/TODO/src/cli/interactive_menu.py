@@ -87,6 +87,8 @@ class InteractiveMenu:
                 self._do_manage_comments(tasks)
             elif choice == "9":
                 self._do_filter_by_date()
+            elif choice == "10":
+                self._do_show_report()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -116,6 +118,7 @@ class InteractiveMenu:
         print("  7. Delete task")
         print("  8. Manage comments")
         print("  9. Filter tasks by date/overdue")
+        print("  10. View task summary report")
         print("  0. Quit")
         print()
 
@@ -495,5 +498,22 @@ class InteractiveMenu:
                 desc = f"  — {task.description}" if task.description else ""
                 due_str = f" (due: {task.due_date.isoformat()})" if task.due_date else ""
                 print(f"  {_task_line(task)}{desc}{due_str}")
+        print()
+        input("  Press Enter to continue...")
+
+    def _do_show_report(self) -> None:
+        """Display task summary report."""
+        _clear()
+        report = self._service.generate_report()
+        print("  Task Summary Report\n")
+        print(f"  Total tasks:              {report.total_tasks}")
+        print(f"  Pending:                  {report.pending_count}")
+        print(f"  In progress:              {report.in_progress_count}")
+        print(f"  Done:                     {report.done_count}")
+        print(f"  Overdue:                  {report.overdue_count}")
+        print(f"  With due date:            {report.with_due_date_count}")
+        print(f"  Completion rate:          {report.completion_rate:.1f}%")
+        if report.avg_days_to_completion is not None:
+            print(f"  Avg days to completion:   {report.avg_days_to_completion:.2f}")
         print()
         input("  Press Enter to continue...")

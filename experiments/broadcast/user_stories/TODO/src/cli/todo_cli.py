@@ -152,6 +152,10 @@ class TodoCLI:
         p_edit_comment.add_argument("content", help="New comment content")
         p_edit_comment.set_defaults(func=self._cmd_edit_comment)
 
+        # report
+        p_report = sub.add_parser("report", help="Display task summary report")
+        p_report.set_defaults(func=self._cmd_report)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -278,4 +282,19 @@ class TodoCLI:
     def _cmd_edit_comment(self, args: argparse.Namespace) -> int:
         comment = self._service.edit_comment(args.comment_id, args.content)
         print(f"Updated comment {comment.id[:8]}")
+        return 0
+
+    def _cmd_report(self, args: argparse.Namespace) -> int:
+        report = self._service.generate_report()
+        print("Task Summary Report")
+        print("=" * 40)
+        print(f"Total tasks: {report.total_tasks}")
+        print(f"Pending: {report.pending_count}")
+        print(f"In progress: {report.in_progress_count}")
+        print(f"Done: {report.done_count}")
+        print(f"Overdue: {report.overdue_count}")
+        print(f"With due date: {report.with_due_date_count}")
+        print(f"Completion rate: {report.completion_rate:.1f}%")
+        if report.avg_days_to_completion is not None:
+            print(f"Avg days to completion: {report.avg_days_to_completion:.2f}")
         return 0

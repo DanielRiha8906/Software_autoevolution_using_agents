@@ -53,6 +53,17 @@ package "models" #DDEEFF {
         +__post_init__() : void
     }
 
+    class TaskSummary {
+        +total_tasks : Integer
+        +pending_count : Integer
+        +in_progress_count : Integer
+        +done_count : Integer
+        +overdue_count : Integer
+        +with_due_date_count : Integer
+        +completion_rate : Float
+        +avg_days_to_completion : Float [0..1]
+    }
+
     Task "1" --> "*" TaskComment : has
 }
 
@@ -136,6 +147,7 @@ package "services" #DDFFD4 {
         +get_comment(commentId: String) : TaskComment
         +delete_comment(commentId: String) : void
         +edit_comment(commentId: String, content: String) : TaskComment
+        +generate_report() : TaskSummary
     }
 }
 
@@ -165,6 +177,7 @@ CommentsService ..> TaskNotFoundError : raises
 CommentsService ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
 TodoService --> CommentsService : comments_service
+TodoService --> TaskSummary : generates
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 
