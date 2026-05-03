@@ -84,8 +84,13 @@ else (no)
               :Apply status filter (optional);
               :Retrieve filtered entries;
               :Show filtered list;
-            case (Summary/Other)
-              :Show memory summary, failures, or clear;
+            case (Summary)
+              :Show memory summary;
+            case (Statistics)
+              :Compute statistics;
+              :Display statistics (counts, timing, error rates);
+            case (Other)
+              :Show failures or clear memory;
           endswitch
         else (no)
           :Show memory unavailable message;

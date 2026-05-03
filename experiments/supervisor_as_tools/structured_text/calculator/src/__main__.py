@@ -41,7 +41,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A [B]] [--memory {list,detail,failures,summary,clear} [ID]]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A [B]] [--memory {list,detail,failures,summary,stats,clear} [ID]]",
     )
     parser.add_argument(
         "--operation",
@@ -52,8 +52,8 @@ def main() -> None:
     parser.add_argument(
         "--memory",
         metavar="ACTION",
-        choices=["list", "detail", "failures", "summary", "clear"],
-        help="Memory action (list | detail | failures | summary | clear)",
+        choices=["list", "detail", "failures", "summary", "stats", "clear"],
+        help="Memory action (list | detail | failures | summary | stats | clear)",
     )
     parser.add_argument(
         "--status",
@@ -87,6 +87,8 @@ def main() -> None:
             cli.show_memory_failures()
         elif args.memory == "summary":
             cli.show_memory_summary()
+        elif args.memory == "stats":
+            cli.show_memory_statistics(operation=args.operation)
         elif args.memory == "clear":
             cli.clear_memory_confirm()
         return

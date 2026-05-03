@@ -45,6 +45,17 @@ package "models" #DDEEFF {
         +to_dict() : Dict
         +from_dict(data: Dict) : MemoryEntry
     }
+
+    class MemoryStatistics {
+        +operation_counts : Dict[str, int]
+        +total_errors : int
+        +error_rate : float
+        +avg_execution_time_ms : float
+        +total_entries : int
+        +min_execution_time_ms : float | None
+        +max_execution_time_ms : float | None
+        +operation_error_rates : Dict[str, float]
+    }
 }
 
 package "services" #DDFFD4 {
@@ -85,6 +96,8 @@ package "services" #DDFFD4 {
         +count_by_status() : Dict<str, int>
         +count_by_operation() : Dict<str, int>
         +clear() : void
+        +get_operation_error_rates() : Dict[str, float]
+        +compute_statistics(filter_operation: str | None) : MemoryStatistics
     }
 }
 
@@ -113,33 +126,36 @@ package "storage" #FFF3CC {
 
 package "cli" #FFE5E5 {
     class CalculatorCLI {
-        -MENU : List<Tuple<Operation, String>>
+        -_MENU : List<Tuple<Operation, String>>
         -service : CalculatorService
         -memory_service : MemoryService [0..1]
         --
         +CalculatorCLI(service: CalculatorService, memory_service: MemoryService | None)
-        +runInteractive() : void
-        +runCommand(operation: String, a: float, b: float) : void
+        +run_interactive() : void
+        +run_command(operation: String, a: float, b: float) : void
         +show_memory_list() : void
         +show_memory_filtered_list(operation: str | None, status: bool | None) : void
         +show_memory_detail(entry_id: str) : void
         +show_memory_summary() : void
         +show_memory_failures() : void
+        +show_memory_statistics(operation: str | None) : void
         +clear_memory_confirm() : void
-        -printMenu() : void
-        -resolveMenuChoice(choice: String) : Operation [0..1]
-        -promptNumber(prompt: String) : float [0..1]
-        -showHistory() : void
+        -_print_menu() : void
+        -_resolve_menu_choice(choice: String) : Operation [0..1]
+        -_prompt_number(prompt: String) : float [0..1]
+        -_show_history() : void
     }
 }
 
 CalculatorCLI --> CalculatorService : service
 CalculatorCLI ..> MemoryService : memory_service [0..1]
+CalculatorCLI ..> MemoryStatistics : displays
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 CalculatorService ..> MemoryService : memory_service [0..1]
 MemoryService --> MemoryJsonStorage : storage
 MemoryService ..> MemoryEntry : manages
+MemoryService ..> MemoryStatistics : creates
 
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> MemoryEntry : creates
