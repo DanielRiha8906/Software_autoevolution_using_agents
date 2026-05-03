@@ -564,4 +564,4 @@ One-shot flags:
 - No regressions in existing functionality
 - Full round-trip export/import tested
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 545.2s | Cost: $2.813669 USD | Turns: 43
