@@ -981,4 +981,4 @@ No new dependencies added. Implementation uses Python standard library:
 - `datetime` and `zoneinfo` for timezone handling
 - `dataclasses` for ImportSummary definition
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 577.4s | Cost: $1.435432 USD | Turns: 40
