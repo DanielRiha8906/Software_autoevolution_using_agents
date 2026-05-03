@@ -172,6 +172,49 @@ class CalculatorCLI:
             print(f"     ID: {entry.id[:8]}... | {entry.timestamp}")
         print()
 
+    def show_memory_filtered_list(
+        self,
+        operation: str | None = None,
+        status: bool | None = None
+    ) -> None:
+        """
+        Display memory entries with optional operation and/or status filters.
+
+        Args:
+            operation: Filter by operation name (e.g., "add"), or None for no filter.
+            status: True for successes only, False for failures only, None for all.
+        """
+        if not self.memory_service:
+            print("\n  Memory service not available.\n")
+            return
+
+        entries = self.memory_service.retrieve_by_filter(operation=operation, success=status)
+
+        if not entries:
+            filters_desc = []
+            if operation:
+                filters_desc.append(f"operation={operation}")
+            if status is not None:
+                filters_desc.append(f"status={'success' if status else 'failure'}")
+            filter_str = " AND ".join(filters_desc) if filters_desc else "all"
+            print(f"\n  No entries match filters: {filter_str}\n")
+            return
+
+        print()
+        for i, entry in enumerate(entries, 1):
+            status_char = "✓" if entry.success else "✗"
+            result_str = (
+                f"= {entry.result}"
+                if entry.success
+                else f"error: {entry.error_message}"
+            )
+            print(
+                f"  {i}. [{status_char}] {entry.operation} "
+                f"({entry.operand_a}, {entry.operand_b}) {result_str}"
+            )
+            print(f"     ID: {entry.id[:8]}... | {entry.timestamp}")
+        print()
+
     def show_memory_detail(self, entry_id: str) -> None:
         if not self.memory_service:
             print("\n  Memory service not available.\n")
