@@ -7,6 +7,7 @@ from ..services.task_manager import TaskNotFoundError
 from ..services.comments_service import CommentNotFoundError
 from ..services.todo_service import TodoService
 from ..services.statistics_service import StatisticsService
+from ..services.import_export_service import ImportExportService, ImportExportValidationError
 from ..storage.json_storage import JsonStorage
 
 _STATUS_LABEL = {
@@ -56,6 +57,7 @@ class InteractiveMenu:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
         self._stats_service = StatisticsService(storage)
+        self._import_export_service = ImportExportService(storage)
 
     def run(self) -> None:
         while True:
@@ -86,6 +88,10 @@ class InteractiveMenu:
                 self._do_manage_comments(tasks)
             elif choice == "8":
                 self._do_view_statistics()
+            elif choice == "9":
+                self._do_export()
+            elif choice in ("a", "A"):
+                self._do_import()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -114,6 +120,8 @@ class InteractiveMenu:
         print("  6. Delete task")
         print("  7. Manage comments")
         print("  8. View statistics")
+        print("  9. Export tasks and comments")
+        print("  A. Import tasks and comments")
         print("  0. Quit")
         print()
 
@@ -397,4 +405,68 @@ class InteractiveMenu:
         print(f"  With due date:            {stats.tasks_with_due_date_count}")
         print(f"  Completion rate:          {stats.completion_rate:.1%}")
         print()
+        input("  Press Enter to continue...")
+
+    def _do_export(self) -> None:
+        _clear()
+        print("  Export Tasks and Comments\n")
+        filepath = _prompt("Output file path")
+        if not filepath:
+            print("  Cancelled.")
+            input("  Press Enter to continue...")
+            return
+
+        try:
+            result = self._import_export_service.export_to_file(filepath)
+            num_tasks = len(result.get("tasks", []))
+            num_comments = len(result.get("comments", []))
+            print(f"\n  Successfully exported {num_tasks} task(s) and {num_comments} comment(s)")
+            print(f"  to {filepath}")
+        except IOError as e:
+            print(f"\n  Error: Failed to export: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_import(self) -> None:
+        _clear()
+        print("  Import Tasks and Comments\n")
+        filepath = _prompt("Input file path")
+        if not filepath:
+            print("  Cancelled.")
+            input("  Press Enter to continue...")
+            return
+
+        _clear()
+        print("  Import options:\n")
+        print("  1. Add new tasks/comments (skip duplicates)")
+        print("  2. Overwrite existing tasks/comments with same IDs")
+        print("  0. Cancel")
+        print()
+        choice = input("  > ").strip()
+
+        if choice == "0":
+            print("  Cancelled.")
+            input("  Press Enter to continue...")
+            return
+
+        overwrite = choice == "2"
+
+        try:
+            result = self._import_export_service.import_from_file(filepath, overwrite=overwrite)
+            added_tasks = len(result["added_tasks"])
+            added_comments = len(result["added_comments"])
+            skipped_tasks = len(result["skipped_tasks"])
+            skipped_comments = len(result["skipped_comments"])
+
+            _clear()
+            print("  Import complete:\n")
+            print(f"  Added:   {added_tasks} task(s), {added_comments} comment(s)")
+            if skipped_tasks or skipped_comments:
+                print(f"  Skipped: {skipped_tasks} task(s), {skipped_comments} comment(s)")
+                print("    (duplicates or invalid entries)")
+        except FileNotFoundError as e:
+            print(f"\n  Error: {e}")
+        except ImportExportValidationError as e:
+            print(f"\n  Error: Invalid import file: {e}")
+        except IOError as e:
+            print(f"\n  Error: Failed to import: {e}")
         input("  Press Enter to continue...")

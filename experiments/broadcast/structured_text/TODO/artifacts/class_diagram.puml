@@ -60,6 +60,7 @@ package "storage" #FFF3CC {
 package "services" #DDFFD4 {
     exception TaskNotFoundError
     exception CommentNotFoundError
+    exception ImportExportValidationError
 
     class TaskManager {
         -storage : JsonStorage
@@ -120,6 +121,16 @@ package "services" #DDFFD4 {
         +StatisticsService(task_manager: TaskManager)
         +compute_statistics() : TaskStatistics
     }
+
+    class ImportExportService {
+        -storage : JsonStorage
+        --
+        +ImportExportService(storage: JsonStorage [0..1])
+        +export_to_file(file_path: String) : Dictionary
+        +import_from_file(file_path: String, overwrite: Boolean = False) : Dictionary
+        +validate_import_data(data: Dictionary) : Tuple<Boolean, String>
+        -_validate_import_data(data: Dictionary) : void
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -146,12 +157,15 @@ TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
 CommentsService --> JsonStorage : storage
 CommentsService ..> CommentNotFoundError : raises
+ImportExportService --> JsonStorage : storage
+ImportExportService ..> ImportExportValidationError : raises
 TodoService --> TaskManager : manager
 TodoService --> CommentsService : comments
 StatisticsService --> TaskManager : task_manager
 StatisticsService --> TaskStatistics : computes
 TodoCLI --> TodoService : service
 TodoCLI --> StatisticsService : stats_service
+TodoCLI --> ImportExportService : import_export_service
 InteractiveMenu --> TodoService : service
 InteractiveMenu --> StatisticsService : stats_service
 

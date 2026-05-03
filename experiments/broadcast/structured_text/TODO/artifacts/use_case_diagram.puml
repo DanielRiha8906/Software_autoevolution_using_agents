@@ -34,6 +34,8 @@ rectangle "TODO Manager" {
     usecase "Update comment" as C_UPDATE_COMMENT
     usecase "Delete comment" as C_DELETE_COMMENT
     usecase "View statistics" as C_STATS
+    usecase "Export tasks and comments" as C_EXPORT
+    usecase "Import tasks and comments" as C_IMPORT
   }
 }
 
@@ -63,5 +65,13 @@ CLI ..> C_LIST_COMMENTS : <<exclude>>
 CLI ..> C_UPDATE_COMMENT : <<exclude>>
 CLI ..> C_DELETE_COMMENT : <<exclude>>
 CLI ..> C_STATS : <<exclude>>
+CLI ..> C_EXPORT : <<exclude>>
+CLI ..> C_IMPORT : <<exclude>>
+
+UI ..> C_EXPORT : <<exclude>>
+UI ..> C_IMPORT : <<exclude>>
+
+User --> C_EXPORT : can
+User --> C_IMPORT : can
 
 @enduml

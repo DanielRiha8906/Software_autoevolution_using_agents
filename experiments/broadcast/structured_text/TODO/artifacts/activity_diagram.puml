@@ -1,7 +1,8 @@
 @startuml
 
-start
-:Launch application;
+partition "Interactive Mode" {
+  start
+  :Launch application;
 
 repeat
   :Display task list + main menu;
@@ -35,6 +36,8 @@ repeat
       :Run delete task flow;
     case (7 — Manage comments)
       :Run comment management flow;
+    case (8 — Export tasks/comments)
+      :Run export flow;
     case (0/q — Quit)
       :Clear screen;
       stop
@@ -43,5 +46,35 @@ repeat
   endswitch
 
 repeat while (user continues)
+}
+
+partition "Export Flow" {
+  :Get file path from user;
+  :Call export_to_file(file_path);
+  :Load all tasks and comments from storage;
+  :Serialize to JSON format;
+  :Write to file;
+  :Display success with counts;
+}
+
+partition "Import Flow" {
+  :Get file path and overwrite flag;
+  :Read JSON file;
+  :Validate import data structure;
+  if (Data valid?) then (yes)
+    :Load current tasks/comments;
+    if (overwrite flag set?) then (yes)
+      :Clear existing data;
+    else (no)
+      :Keep existing data;
+    endif
+    :Merge imported tasks (skip duplicates);
+    :Merge imported comments (skip duplicates);
+    :Persist merged data;
+    :Display import summary;
+  else (no)
+    :Display validation error;
+  endif
+}
 
 @enduml

@@ -8,6 +8,7 @@ from ..services.task_manager import TaskNotFoundError
 from ..services.comments_service import CommentNotFoundError
 from ..services.todo_service import TodoService
 from ..services.statistics_service import StatisticsService
+from ..services.import_export_service import ImportExportService, ImportExportValidationError
 from ..storage.json_storage import JsonStorage
 
 _STATUS_SYMBOLS = {
@@ -22,6 +23,7 @@ class TodoCLI:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
         self._stats_service = StatisticsService(storage)
+        self._import_export_service = ImportExportService(storage)
 
     def run(self, argv: Optional[list[str]] = None) -> int:
         parser = self._build_parser()
@@ -34,7 +36,7 @@ class TodoCLI:
         except (TaskNotFoundError, CommentNotFoundError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
-        except ValueError as e:
+        except (ValueError, ImportExportValidationError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
@@ -138,6 +140,17 @@ class TodoCLI:
         # stats
         p_stats = sub.add_parser("stats", help="View task statistics")
         p_stats.set_defaults(func=self._cmd_stats)
+
+        # export
+        p_export = sub.add_parser("export", help="Export all tasks and comments to a JSON file")
+        p_export.add_argument("filepath", help="Path to the output JSON file")
+        p_export.set_defaults(func=self._cmd_export)
+
+        # import
+        p_import = sub.add_parser("import", help="Import tasks and comments from a JSON file")
+        p_import.add_argument("filepath", help="Path to the input JSON file")
+        p_import.add_argument("--overwrite", action="store_true", help="Overwrite existing tasks/comments with same IDs")
+        p_import.set_defaults(func=self._cmd_import)
 
         return parser
 
@@ -277,3 +290,35 @@ class TodoCLI:
         print(f"Completion rate:          {stats.completion_rate:.1%}")
         print("=" * 40)
         return 0
+
+    def _cmd_export(self, args: argparse.Namespace) -> int:
+        try:
+            export_data = self._import_export_service.export_to_file(args.filepath)
+            num_tasks = len(export_data.get("tasks", []))
+            num_comments = len(export_data.get("comments", []))
+            print(f"Exported {num_tasks} task(s) and {num_comments} comment(s) to {args.filepath}")
+            return 0
+        except IOError as e:
+            print(f"Error: Failed to export: {e}", file=sys.stderr)
+            return 1
+
+    def _cmd_import(self, args: argparse.Namespace) -> int:
+        try:
+            result = self._import_export_service.import_from_file(args.filepath, overwrite=args.overwrite)
+            added_tasks = len(result["added_tasks"])
+            skipped_tasks = len(result["skipped_tasks"])
+            added_comments = len(result["added_comments"])
+            skipped_comments = len(result["skipped_comments"])
+            print(f"Import complete: {added_tasks} task(s), {added_comments} comment(s) added")
+            if skipped_tasks or skipped_comments:
+                print(f"  ({skipped_tasks} task(s), {skipped_comments} comment(s) skipped - duplicates/invalid)")
+            return 0
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except ImportExportValidationError as e:
+            print(f"Error: Invalid import file: {e}", file=sys.stderr)
+            return 1
+        except IOError as e:
+            print(f"Error: Failed to import: {e}", file=sys.stderr)
+            return 1
