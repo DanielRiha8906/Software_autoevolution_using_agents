@@ -195,4 +195,4 @@ Extended `MemoryService` with a `query()` method that supports filtering memory 
 - Simplicity: AND-logic filtering (no complex query syntax)
 - CLI-first: Integrated into both interactive and command-line interfaces
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 285.2s | Cost: $0.489788 USD | Turns: 18
