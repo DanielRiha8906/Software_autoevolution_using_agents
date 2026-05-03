@@ -32,3 +32,22 @@ Duration: 90.2s | Cost: $0.185309 USD | Turns: 21
 - None conclusion handled gracefully in all methods
 
 Duration: 171.2s | Cost: $0.312369 USD | Turns: 15
+
+## Task 03: Create WorkflowRunAttempt domain model
+
+**Status:** ✅ Completed
+
+**Files Changed:**
+- `src/models/workflow_run_attempt.py` — Created new domain model with id, run_id, attempt_number, status, conclusion, created_at, and duration_seconds fields. Implemented strict CEST timezone validation and serialization support
+- `src/models/__init__.py` — Added WorkflowRunAttempt to imports and exports
+- `tests/test_workflow_run_attempt.py` — Created test suite with 8 tests covering all validation requirements, serialization, and timezone handling
+- `artifacts/class_diagram.puml` — Added WorkflowRunAttempt class and relationship to WorkflowRun
+
+**Test Results:**
+- All 73 tests pass (8 new + 65 existing)
+- Timezone validation enforces CEST (UTC+2) — rejects UTC and naive datetimes
+- attempt_number validation enforces positive integers (≥ 1)
+- Serialization round-trips preserve CEST timezone information
+- No regressions in existing tests
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
