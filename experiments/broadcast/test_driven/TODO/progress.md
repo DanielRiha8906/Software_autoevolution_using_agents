@@ -56,3 +56,62 @@ All 3 implementer candidates successfully completed the task:
 - ✓ No external dependencies
 
 Duration: 168.6s | Cost: $0.434074 USD | Turns: 32
+
+---
+
+## Task 02: Add status-related methods to Task model
+
+### Objective
+Move status logic onto the Task model with proper transition rules and `updated_at` tracking. Add methods for status transitions and state queries.
+
+### Broadcast Architecture Evaluation
+
+All 3 implementer candidates successfully completed the task identically:
+
+| Candidate | Approach | Tests Passed |
+|-----------|----------|--------------|
+| A | Methods: mark_in_progress(), mark_done(), reopen() with updated_at → CEST; Query methods: is_completed(), is_pending(), is_in_progress(), is_overdue() | 68/68 ✓ |
+| B | Methods: mark_in_progress(), mark_done(), reopen() with updated_at → CEST; Query methods: is_completed(), is_pending(), is_in_progress(), is_overdue() | 68/68 ✓ |
+| C | Methods: mark_in_progress(), mark_done(), reopen() with updated_at → CEST; Query methods: is_completed(), is_pending(), is_in_progress(), is_overdue() | 68/68 ✓ |
+
+**Winner: Candidate A** — selected as baseline implementation (all candidates were equivalent in functionality and test coverage).
+
+### Files Changed
+- `src/models/task.py` — Added 7 status-related methods
+- `tests/test_task.py` — Added 13 new test cases for Task 02 methods
+
+### Implementation Details
+
+**Added to Task model:**
+- `mark_in_progress()`: Transitions Task to IN_PROGRESS, updates `updated_at` to current CEST time
+- `mark_done()`: Transitions Task to DONE, updates `updated_at` to current CEST time
+- `reopen()`: Transitions Task from DONE to PENDING, updates `updated_at` to current CEST time
+- `is_completed()`: Returns True if status is DONE
+- `is_pending()`: Returns True if status is PENDING
+- `is_in_progress()`: Returns True if status is IN_PROGRESS
+- `is_overdue()`: Returns True if due_date is in the past (CEST comparison), False if None or future
+
+### Test Results
+- **Total tests**: 68 passed (13 new + 55 existing)
+- **New tests**: All 13 Task 02 tests passing
+  - ✓ mark_in_progress() sets status and updates updated_at
+  - ✓ mark_done() sets status and updates updated_at
+  - ✓ reopen() sets status and updates updated_at
+  - ✓ updated_at timezone remains CEST
+  - ✓ is_completed() returns correct boolean
+  - ✓ is_pending() returns correct boolean
+  - ✓ is_in_progress() returns correct boolean
+  - ✓ is_overdue() handles past, future, and None due_dates
+  - ✓ reopen() on pending task is noop or raises
+- **Existing tests**: All 55 tests remain passing (backward compatible)
+
+### Requirements Met
+- ✓ All 7 methods added to Task model
+- ✓ Each status-mutating method updates `updated_at` to current CEST time
+- ✓ `updated_at` remains timezone-aware (CEST) after mutations
+- ✓ `is_overdue()` uses CEST for time comparisons
+- ✓ All methods derive state from existing Task attributes
+- ✓ No external dependencies
+- ✓ All state-checking methods return correct booleans
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
