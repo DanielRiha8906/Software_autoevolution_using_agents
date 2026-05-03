@@ -860,4 +860,4 @@ All PlantUML diagrams updated to reflect scientific mode:
 - **use_case_diagram.puml**: Added "Perform scientific operation" use case
 - **state_diagram_interactive.puml**: Added mode switching states
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 943.8s | Cost: $1.867512 USD | Turns: 35
