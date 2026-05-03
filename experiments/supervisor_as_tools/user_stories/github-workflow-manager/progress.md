@@ -128,4 +128,4 @@ Successfully implemented the `WorkflowRunAttempt` model as a first-class object 
 - Uniqueness check: (run_id, attempt_number) pairs validated at service level
 - Backward compatibility: Missing attempts field defaults to empty list on load
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 230.8s | Cost: $0.427512 USD | Turns: 19
