@@ -18,14 +18,12 @@ if (CLI arguments provided?) then (yes)
       :Print "Added run <id>";
 
     case (list)
-      :WorkflowRunService.list_runs();
-      if (--branch?) then (yes)
-        :filter_by_branch();
-      elseif (--status?) then (yes)
-        :filter_by_status();
-      elseif (--conclusion?) then (yes)
-        :filter_by_conclusion();
+      :Parse datetime and duration args;
+      if (--has-attempts and --no-attempts?) then (yes)
+        :Print error: mutually exclusive;
+        :Exit code 1;
       endif
+      :service.query() with all filters\n(branch, status, conclusion, created-after,\ncreated-before, duration-min,\nduration-max, has-attempts);
       if (no runs?) then (yes)
         :Print "No runs found.";
       else (no)

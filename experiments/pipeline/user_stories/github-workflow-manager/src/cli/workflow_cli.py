@@ -11,6 +11,38 @@ from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 
 
+def _parse_datetime(date_str: str) -> datetime:
+    """
+    Parse a datetime string in either YYYY-MM-DD or ISO format.
+    Returns a timezone-aware UTC datetime.
+
+    Args:
+        date_str: Date string in YYYY-MM-DD or ISO format
+
+    Returns:
+        timezone-aware datetime in UTC
+    """
+    # Try ISO format first
+    try:
+        dt = datetime.fromisoformat(date_str)
+        # Ensure it's timezone-aware; if not, add UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except ValueError:
+        pass
+
+    # Try YYYY-MM-DD format
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d")
+        # Add UTC timezone
+        return dt.replace(tzinfo=timezone.utc)
+    except ValueError:
+        raise ValueError(
+            f"Could not parse date '{date_str}'. Use YYYY-MM-DD or ISO format (e.g., 2025-05-03 or 2025-05-03T10:30:00)"
+        )
+
+
 def _fmt_run(run: WorkflowRun) -> str:
     conclusion = run.conclusion.value if run.conclusion else "—"
     updated = run.updated_at.isoformat() if run.updated_at else "—"
@@ -83,6 +115,12 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[c.value for c in WorkflowConclusion],
         help="Filter by conclusion",
     )
+    list_p.add_argument("--created-after", default=None, help="Filter runs created on or after this date (YYYY-MM-DD or ISO format)")
+    list_p.add_argument("--created-before", default=None, help="Filter runs created on or before this date (YYYY-MM-DD or ISO format)")
+    list_p.add_argument("--duration-min", type=float, default=None, help="Filter runs with duration >= this value (seconds)")
+    list_p.add_argument("--duration-max", type=float, default=None, help="Filter runs with duration <= this value (seconds)")
+    list_p.add_argument("--has-attempts", action="store_true", help="Include only runs with attempts")
+    list_p.add_argument("--no-attempts", action="store_true", help="Include only runs without attempts")
 
     # detail
     detail_p = sub.add_parser("detail", help="Show details for a single run")
@@ -141,13 +179,54 @@ def run_cli(
         print(f"Added run {run.id}")
 
     elif ns.command == "list":
-        runs = service.list_runs()
-        if ns.branch:
-            runs = service.filter_by_branch(ns.branch)
-        elif ns.status:
-            runs = service.filter_by_status(WorkflowStatus(ns.status))
-        elif ns.conclusion:
-            runs = service.filter_by_conclusion(WorkflowConclusion(ns.conclusion))
+        # Validate duration arguments
+        if ns.duration_min is not None and ns.duration_min < 0:
+            print("Error: --duration-min must be non-negative.", file=sys.stderr)
+            sys.exit(1)
+        if ns.duration_max is not None and ns.duration_max < 0:
+            print("Error: --duration-max must be non-negative.", file=sys.stderr)
+            sys.exit(1)
+
+        # Check mutual exclusivity of attempt flags
+        if ns.has_attempts and ns.no_attempts:
+            print("Error: --has-attempts and --no-attempts are mutually exclusive.", file=sys.stderr)
+            sys.exit(1)
+
+        # Parse datetime arguments
+        created_after = None
+        created_before = None
+        if ns.created_after:
+            try:
+                created_after = _parse_datetime(ns.created_after)
+            except ValueError as e:
+                print(f"Error parsing --created-after: {e}", file=sys.stderr)
+                sys.exit(1)
+        if ns.created_before:
+            try:
+                created_before = _parse_datetime(ns.created_before)
+            except ValueError as e:
+                print(f"Error parsing --created-before: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        # Determine has_attempts filter value
+        has_attempts_filter = None
+        if ns.has_attempts:
+            has_attempts_filter = True
+        elif ns.no_attempts:
+            has_attempts_filter = False
+
+        # Call query method with all filters
+        runs = service.query(
+            branch=ns.branch,
+            status=WorkflowStatus(ns.status) if ns.status else None,
+            conclusion=WorkflowConclusion(ns.conclusion) if ns.conclusion else None,
+            created_after=created_after,
+            created_before=created_before,
+            duration_min=ns.duration_min,
+            duration_max=ns.duration_max,
+            has_attempts=has_attempts_filter,
+            attempt_service=attempt_service,
+        )
 
         if not runs:
             print("No runs found.")

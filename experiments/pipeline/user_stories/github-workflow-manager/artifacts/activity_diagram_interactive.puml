@@ -69,7 +69,23 @@ repeat
         :Print matching runs;
       endif
 
-    case (6 — Add workflow run attempt)
+    case (6 — Advanced filter runs)
+      :Optional branch filter;
+      :Optional status filter;
+      :Optional conclusion filter;
+      :Optional created-after date filter;
+      :Optional created-before date filter;
+      :Optional duration-min filter;
+      :Optional duration-max filter;
+      :Optional attempt presence filter;
+      :service.query() with all selected filters;
+      if (no matches?) then (yes)
+        :Print "No matching runs.";
+      else (no)
+        :Print matching runs;
+      endif
+
+    case (7 — Add workflow run attempt)
       :Prompt attempt ID (integer);
       :Prompt parent run ID (integer);
       :Prompt attempt number (positive integer);
@@ -79,7 +95,7 @@ repeat
       :WorkflowRunAttemptService.add_attempt();
       :Print "Added attempt <id>";
 
-    case (7 — List all attempts)
+    case (8 — List all attempts)
       :Choose "Sort by attempt number?";
       :WorkflowRunAttemptService.list_attempts(sorted=choice);
       if (no attempts?) then (yes)
@@ -88,7 +104,7 @@ repeat
         :Print all attempts;
       endif
 
-    case (8 — Get attempt detail)
+    case (9 — Get attempt detail)
       :Prompt attempt ID;
       :WorkflowRunAttemptService.get_attempt(attempt_id);
       if (found?) then (yes)
@@ -97,7 +113,7 @@ repeat
         :Print "No attempt found with id <id>";
       endif
 
-    case (9 — List attempts for run)
+    case (10 — List attempts for run)
       :Prompt parent run ID;
       :Choose "Sort by attempt number?";
       :WorkflowRunAttemptService.get_attempts_for_run(run_id, sorted=choice);
@@ -107,7 +123,7 @@ repeat
         :Print attempts for run;
       endif
 
-    case (10 — Exit)
+    case (11 — Exit)
       :Print "Goodbye.";
       stop
 

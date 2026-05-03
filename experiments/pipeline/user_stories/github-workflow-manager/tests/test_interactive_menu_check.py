@@ -73,6 +73,11 @@ class TestMenuStructure:
             "Get run detail",
             "Check run state",
             "Filter runs",
+            "Advanced filter runs",
+            "Add workflow run attempt",
+            "List all attempts",
+            "Get attempt detail",
+            "List attempts for run",
             "Exit"
         ]
         assert menu_labels == expected_labels
