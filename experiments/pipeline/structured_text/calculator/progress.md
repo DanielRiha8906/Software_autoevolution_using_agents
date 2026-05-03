@@ -190,4 +190,4 @@ Duration: 411.6s | Cost: $0.728537 USD | Turns: 19
 - from_dict() filters unknown fields without raising errors
 - No breaking changes to existing code paths (CalculationResult unchanged)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 370.2s | Cost: $0.609688 USD | Turns: 16
