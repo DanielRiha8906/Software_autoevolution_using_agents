@@ -182,4 +182,4 @@ Candidate A was selected as the representative solution based on being the first
 ## Test Result
 ✅ All 51 tests passing (14 WorkflowRunService tests including 8 new query tests + 37 other tests)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 596.9s | Cost: $1.289682 USD | Turns: 86
