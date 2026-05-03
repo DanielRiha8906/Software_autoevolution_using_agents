@@ -141,4 +141,4 @@ Duration: 464.1s | Cost: $1.117803 USD | Turns: 47
 ✓ All existing tests still pass
 ✓ Code compiles without syntax or import errors
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 145.9s | Cost: $0.409185 USD | Turns: 41
