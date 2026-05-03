@@ -208,3 +208,50 @@ Implemented a comprehensive programmatic query interface for filtering workflow 
 - ✅ Accessible via interactive menu option 6 "Advanced filter runs" (interactive)
 
 Duration: 581.1s | Cost: $1.261054 USD | Turns: 20
+
+## Task 06: Aggregated statistics over stored workflow runs
+
+**Status:** ✅ COMPLETED
+
+### Summary
+Implemented aggregated statistics computation over stored workflow runs, providing CI health monitoring through count by conclusion, average/min/max duration, average attempts per run, and per-status duration breakdown. Statistics are accessible via both CLI command (`stats` subcommand with optional filters) and interactive menu option (with interactive filter prompts).
+
+### Files Changed
+- **src/models/statistics_report.py** — New frozen dataclass with 6 fields: count_by_conclusion, average_duration_seconds, average_attempts_per_run, min_duration_seconds, max_duration_seconds, duration_by_status
+- **src/services/statistics_service.py** — New stateless service with calculate_statistics() method; accepts filtered run list and optional attempt service; handles empty datasets gracefully
+- **src/models/__init__.py** — Added StatisticsReport export
+- **src/cli/workflow_cli.py** — Added stats subcommand with 8 optional filter flags (--branch, --status, --conclusion, --created-after, --created-before, --duration-min, --duration-max, --has-attempts, --no-attempts); added _fmt_statistics_report() formatting function; added stats command handler
+- **src/cli/interactive_menu.py** — Added _get_statistics() interactive handler with optional filter prompts; added "Get statistics" menu option at position 7; updated dispatcher to pass both services
+- **src/__main__.py** — Added StatisticsService import for clarity
+- **tests/test_statistics_service.py** — New file with 29 unit tests covering empty datasets, single/multiple runs, min/max calculations, per-status breakdown, attempts counting, and immutability
+- **tests/test_statistics_cli_integration.py** — New file with 32 CLI integration tests covering no filters, individual filters, combined filters, attempt filters, validation, and edge cases
+- **tests/test_statistics_interactive_menu.py** — New file with 26 menu integration tests covering menu presence, filtering, input validation, and output formatting
+- **artifacts/class_diagram.puml** — Added StatisticsReport and StatisticsService classes; added dependency relationships
+- **artifacts/component_diagram.puml** — Added StatisticsService and StatisticsReport components; added wiring from CLI/menu to service
+- **artifacts/activity_diagram_main.puml** — Added stats command case with filter parsing, query execution, and statistics calculation flow
+- **artifacts/activity_diagram_interactive.puml** — Added menu option 7 "Get statistics" with filter options and report display; renumbered subsequent menu options
+
+### Test Results
+- Total tests: 87 new
+- Pass rate: 100% (87/87)
+- All acceptance criteria verified:
+  - ✅ Statistics include: count by conclusion, average duration_seconds, min/max duration_seconds, average attempts per run
+  - ✅ Report returned as frozen dataclass (immutable)
+  - ✅ Per-status breakdown of average duration included (bonus)
+  - ✅ No visualization layer added
+  - ✅ Accessible via `python -m src stats [--options]` (one-shot CLI)
+  - ✅ Accessible via interactive menu option 7 "Get statistics" (interactive)
+  - ✅ All statistics calculations verified with unit tests
+  - ✅ CLI filter validation working (mutually exclusive flags, non-negative durations, valid dates)
+  - ✅ Empty dataset handling graceful (returns valid report with 0.0/None defaults)
+
+### Acceptance Criteria Met
+- ✅ Statistics include count by conclusion, average duration_seconds, average attempts per run
+- ✅ Min and max duration_seconds included in report
+- ✅ Report returned as structured object (frozen dataclass)
+- ✅ Per-status breakdown of average duration included (bonus)
+- ✅ No visualization layer added
+- ✅ All functionality accessible via `python -m src stats [--branch] [--status] [--conclusion] [--created-after] [--created-before] [--duration-min] [--duration-max] [--has-attempts|--no-attempts]` (one-shot)
+- ✅ All functionality accessible via interactive menu option 7 "Get statistics" (interactive)
+
+Duration: 827.9s | Cost: $1.784042 USD | Turns: 22

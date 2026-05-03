@@ -9,6 +9,7 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.statistics_service import StatisticsService
 
 
 def _parse_datetime(date_str: str) -> datetime:
@@ -346,6 +347,123 @@ def _advanced_filter_menu(service: WorkflowRunService, attempt_service: Workflow
         print(_fmt_run(run))
 
 
+def _get_statistics(service: WorkflowRunService, attempt_service: WorkflowRunAttemptService) -> None:
+    """Get aggregated statistics over workflow runs with optional filtering."""
+    print("\n--- Get Statistics ---")
+
+    # Gather filter criteria
+    created_after = None
+    created_before = None
+    duration_min = None
+    duration_max = None
+    has_attempts_filter = None
+    branch = None
+    status_filter = None
+    conclusion_filter = None
+
+    # Branch filter
+    use_branch = _choose("Filter by branch?", ["Yes", "No"]) == "Yes"
+    if use_branch:
+        branch = _prompt("Branch name")
+
+    # Status filter
+    use_status = _choose("Filter by status?", ["Yes", "No"]) == "Yes"
+    if use_status:
+        status_val = _choose("Status", [s.value for s in WorkflowStatus])
+        status_filter = WorkflowStatus(status_val)
+
+    # Conclusion filter
+    use_conclusion = _choose("Filter by conclusion?", ["Yes", "No"]) == "Yes"
+    if use_conclusion:
+        conclusion_val = _choose("Conclusion", [c.value for c in WorkflowConclusion])
+        conclusion_filter = WorkflowConclusion(conclusion_val)
+
+    # Created after filter
+    use_created_after = _choose("Filter by created date (after)?", ["Yes", "No"]) == "Yes"
+    if use_created_after:
+        date_str = _prompt("Date (YYYY-MM-DD or ISO format)")
+        try:
+            created_after = _parse_datetime(date_str)
+        except ValueError as e:
+            print(f"Error parsing date: {e}")
+            return
+
+    # Created before filter
+    use_created_before = _choose("Filter by created date (before)?", ["Yes", "No"]) == "Yes"
+    if use_created_before:
+        date_str = _prompt("Date (YYYY-MM-DD or ISO format)")
+        try:
+            created_before = _parse_datetime(date_str)
+        except ValueError as e:
+            print(f"Error parsing date: {e}")
+            return
+
+    # Duration filters
+    use_duration_min = _choose("Filter by minimum duration?", ["Yes", "No"]) == "Yes"
+    if use_duration_min:
+        duration_min_str = _prompt("Minimum duration (seconds)")
+        try:
+            duration_min = float(duration_min_str)
+            if duration_min < 0:
+                print("Duration must be non-negative.")
+                return
+        except ValueError:
+            print("Duration must be a number.")
+            return
+
+    use_duration_max = _choose("Filter by maximum duration?", ["Yes", "No"]) == "Yes"
+    if use_duration_max:
+        duration_max_str = _prompt("Maximum duration (seconds)")
+        try:
+            duration_max = float(duration_max_str)
+            if duration_max < 0:
+                print("Duration must be non-negative.")
+                return
+        except ValueError:
+            print("Duration must be a number.")
+            return
+
+    # Attempt presence filter
+    use_attempts = _choose("Filter by attempt presence?", ["Yes", "No"]) == "Yes"
+    if use_attempts:
+        attempt_choice = _choose("Include runs", ["With attempts", "Without attempts"])
+        has_attempts_filter = attempt_choice == "With attempts"
+
+    # Apply query
+    runs = service.query(
+        branch=branch,
+        status=status_filter,
+        conclusion=conclusion_filter,
+        created_after=created_after,
+        created_before=created_before,
+        duration_min=duration_min,
+        duration_max=duration_max,
+        has_attempts=has_attempts_filter,
+        attempt_service=attempt_service if has_attempts_filter is not None else None,
+    )
+
+    # Calculate and display statistics
+    stats_service = StatisticsService()
+    report = stats_service.calculate_statistics(runs, attempt_service)
+
+    print("\n--- Statistics Report ---")
+    print("Count by Conclusion:")
+    if report.count_by_conclusion:
+        for conclusion, count in sorted(report.count_by_conclusion.items()):
+            print(f"  {conclusion}: {count}")
+    else:
+        print("  (none)")
+
+    print(f"\nAverage Duration: {report.average_duration_seconds:.2f} seconds")
+    print(f"Average Attempts per Run: {report.average_attempts_per_run:.2f}")
+    print(f"Min Duration: {report.min_duration_seconds if report.min_duration_seconds is not None else '—'} seconds")
+    print(f"Max Duration: {report.max_duration_seconds if report.max_duration_seconds is not None else '—'} seconds")
+
+    print("\nDuration by Status:")
+    for status, duration in sorted(report.duration_by_status.items()):
+        print(f"  {status}: {duration:.2f} seconds")
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
@@ -353,6 +471,7 @@ MENU = [
     ("Check run state", _check_run_state),
     ("Filter runs", _filter_menu),
     ("Advanced filter runs", _advanced_filter_menu),
+    ("Get statistics", _get_statistics),
     ("Add workflow run attempt", _add_attempt),
     ("List all attempts", _list_attempts),
     ("Get attempt detail", _detail_attempt),
@@ -380,7 +499,7 @@ def run_interactive(
             sys.exit(0)
         try:
             # Determine which service(s) to pass based on handler name
-            if handler.__name__ == "_advanced_filter_menu":
+            if handler.__name__ in ("_advanced_filter_menu", "_get_statistics"):
                 handler(service, attempt_service)
             elif handler.__name__.startswith("_add_attempt") or handler.__name__.startswith("_list_attempt") or handler.__name__.startswith("_detail_attempt"):
                 handler(attempt_service)

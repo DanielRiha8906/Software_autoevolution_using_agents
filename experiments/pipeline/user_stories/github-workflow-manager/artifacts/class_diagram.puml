@@ -59,6 +59,15 @@ package "models" #DDEEFF {
         +to_dict() : dict
         +{static} from_dict(data: dict) : WorkflowRunAttempt
     }
+
+    class StatisticsReport {
+        +count_by_conclusion        : dict[str, int]
+        +average_duration_seconds   : float
+        +average_attempts_per_run   : float
+        +min_duration_seconds       : Optional[float]
+        +max_duration_seconds       : Optional[float]
+        +duration_by_status         : dict[str, float]
+    }
 }
 
 package "storage" #FFF3CC {
@@ -113,6 +122,10 @@ package "services" #DDFFD4 {
         +__init__(service: WorkflowRunService)
         +track(workflow_name: str, branch: str,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  run_number: Optional[int],\n  commit_sha: Optional[str],\n  run_id: Optional[str],\n  duration_seconds: float = 0.0) : WorkflowRun
     }
+
+    class StatisticsService {
+        +calculate_statistics(runs: List[WorkflowRun],\n  attempt_service: Optional[WorkflowRunAttemptService]) : StatisticsReport
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -149,11 +162,16 @@ WorkflowRunAttemptService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunAttemptService         ..>  WorkflowRunAttempt
 WorkflowRunTracker      "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker           ..>  WorkflowRun
+StatisticsService            ..>  WorkflowRun
+StatisticsService            ..>  StatisticsReport
+StatisticsService            ..>  WorkflowRunAttemptService
 "workflow_cli"               ..>  WorkflowRunService
 "workflow_cli"               ..>  WorkflowRunAttemptService
 "workflow_cli"               ..>  WorkflowRunTracker
+"workflow_cli"               ..>  StatisticsService
 "interactive_menu"           ..>  WorkflowRunService
 "interactive_menu"           ..>  WorkflowRunAttemptService
 "interactive_menu"           ..>  WorkflowRunTracker
+"interactive_menu"           ..>  StatisticsService
 
 @enduml

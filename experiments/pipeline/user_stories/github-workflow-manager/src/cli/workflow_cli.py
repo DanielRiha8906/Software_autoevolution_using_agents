@@ -6,9 +6,11 @@ from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_run_attempt import WorkflowRunAttempt
+from ..models.statistics_report import StatisticsReport
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.statistics_service import StatisticsService
 
 
 def _parse_datetime(date_str: str) -> datetime:
@@ -70,6 +72,28 @@ def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
         f"  duration_seconds : {attempt.duration_seconds}\n"
         f"  created_at       : {attempt.created_at.isoformat()}\n"
     )
+
+
+def _fmt_statistics_report(report: StatisticsReport) -> str:
+    lines = ["--- Statistics Report ---\n"]
+
+    lines.append("Count by Conclusion:")
+    if report.count_by_conclusion:
+        for conclusion, count in sorted(report.count_by_conclusion.items()):
+            lines.append(f"  {conclusion}: {count}")
+    else:
+        lines.append("  (none)")
+
+    lines.append(f"\nAverage Duration: {report.average_duration_seconds:.2f} seconds")
+    lines.append(f"Average Attempts per Run: {report.average_attempts_per_run:.2f}")
+    lines.append(f"Min Duration: {report.min_duration_seconds if report.min_duration_seconds is not None else '—'} seconds")
+    lines.append(f"Max Duration: {report.max_duration_seconds if report.max_duration_seconds is not None else '—'} seconds")
+
+    lines.append("\nDuration by Status:")
+    for status, duration in sorted(report.duration_by_status.items()):
+        lines.append(f"  {status}: {duration:.2f} seconds")
+
+    return "\n".join(lines) + "\n"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -152,6 +176,28 @@ def build_parser() -> argparse.ArgumentParser:
     # attempt detail
     attempt_detail_p = sub.add_parser("attempt-detail", help="Show details for a single attempt")
     attempt_detail_p.add_argument("attempt_id", type=int, help="Attempt ID")
+
+    # stats
+    stats_p = sub.add_parser("stats", help="Get aggregated statistics over workflow runs")
+    stats_p.add_argument("--branch", default=None, help="Filter by branch")
+    stats_p.add_argument(
+        "--status",
+        default=None,
+        choices=[s.value for s in WorkflowStatus],
+        help="Filter by status",
+    )
+    stats_p.add_argument(
+        "--conclusion",
+        default=None,
+        choices=[c.value for c in WorkflowConclusion],
+        help="Filter by conclusion",
+    )
+    stats_p.add_argument("--created-after", default=None, help="Filter runs created on or after this date (YYYY-MM-DD or ISO format)")
+    stats_p.add_argument("--created-before", default=None, help="Filter runs created on or before this date (YYYY-MM-DD or ISO format)")
+    stats_p.add_argument("--duration-min", type=float, default=None, help="Filter runs with duration >= this value (seconds)")
+    stats_p.add_argument("--duration-max", type=float, default=None, help="Filter runs with duration <= this value (seconds)")
+    stats_p.add_argument("--has-attempts", action="store_true", help="Include only runs with attempts")
+    stats_p.add_argument("--no-attempts", action="store_true", help="Include only runs without attempts")
 
     return parser
 
@@ -300,3 +346,58 @@ def run_cli(
             print(f"No attempt found with id {ns.attempt_id}.", file=sys.stderr)
             sys.exit(1)
         print(_fmt_attempt(attempt))
+
+    elif ns.command == "stats":
+        # Validate duration arguments
+        if ns.duration_min is not None and ns.duration_min < 0:
+            print("Error: --duration-min must be non-negative.", file=sys.stderr)
+            sys.exit(1)
+        if ns.duration_max is not None and ns.duration_max < 0:
+            print("Error: --duration-max must be non-negative.", file=sys.stderr)
+            sys.exit(1)
+
+        # Check mutual exclusivity of attempt flags
+        if ns.has_attempts and ns.no_attempts:
+            print("Error: --has-attempts and --no-attempts are mutually exclusive.", file=sys.stderr)
+            sys.exit(1)
+
+        # Parse datetime arguments
+        created_after = None
+        created_before = None
+        if ns.created_after:
+            try:
+                created_after = _parse_datetime(ns.created_after)
+            except ValueError as e:
+                print(f"Error parsing --created-after: {e}", file=sys.stderr)
+                sys.exit(1)
+        if ns.created_before:
+            try:
+                created_before = _parse_datetime(ns.created_before)
+            except ValueError as e:
+                print(f"Error parsing --created-before: {e}", file=sys.stderr)
+                sys.exit(1)
+
+        # Determine has_attempts filter value
+        has_attempts_filter = None
+        if ns.has_attempts:
+            has_attempts_filter = True
+        elif ns.no_attempts:
+            has_attempts_filter = False
+
+        # Call query method with all filters
+        runs = service.query(
+            branch=ns.branch,
+            status=WorkflowStatus(ns.status) if ns.status else None,
+            conclusion=WorkflowConclusion(ns.conclusion) if ns.conclusion else None,
+            created_after=created_after,
+            created_before=created_before,
+            duration_min=ns.duration_min,
+            duration_max=ns.duration_max,
+            has_attempts=has_attempts_filter,
+            attempt_service=attempt_service,
+        )
+
+        # Calculate and print statistics
+        stats_service = StatisticsService()
+        report = stats_service.calculate_statistics(runs, attempt_service)
+        print(_fmt_statistics_report(report))

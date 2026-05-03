@@ -79,6 +79,16 @@ if (CLI arguments provided?) then (yes)
         :Exit code 1;
       endif
 
+    case (stats)
+      :Parse datetime and duration args;
+      if (--has-attempts and --no-attempts?) then (yes)
+        :Print error: mutually exclusive;
+        :Exit code 1;
+      endif
+      :service.query() with all filters\n(branch, status, conclusion, created-after,\ncreated-before, duration-min,\nduration-max, has-attempts);
+      :StatisticsService.calculate_statistics();
+      :Print statistics report\n(count_by_conclusion, average_duration,\naverage_attempts, min/max duration,\nduration_by_status);
+
   endswitch
   stop
 
