@@ -779,3 +779,206 @@ No new dependencies added. Implementation uses Python standard library:
 Winner was chosen for explicit method use, clean code, and correct implementation.
 
 Duration: 670.6s | Cost: $1.552663 USD | Turns: 40
+
+---
+
+# Task 07: Export and Import Tasks and Comments to JSON
+
+## Task Overview
+
+**User Story:** As a user who wants to back up or migrate my data, I want to export all tasks and their comments to a JSON file and import them back, so that my data is portable and not locked to a single environment.
+
+**Acceptance Criteria:**
+- ✅ All Task records with associated TaskComment records can be exported to JSON
+- ✅ Tasks and comments can be imported from JSON
+- ✅ Task IDs, statuses, due dates, and comments are preserved on import
+- ✅ Imported data is validated before being applied; invalid structure is rejected
+- ✅ Importing does not overwrite existing data unless explicitly intended
+- ✅ JSON schema matches Task.to_dict() and TaskComment.to_dict() serialization formats
+- ✅ Invalid or duplicate entries during import are skipped individually, not treated as full failure
+- ✅ Only JSON format supported; CSV and XML out of scope
+- ✅ JSON format is described in documentation
+- ✅ All new functionality accessible via python -m src (both interactive menu and one-shot CLI flag)
+
+## Implementation Results
+
+### Broadcast Architecture Evaluation
+
+| Candidate | Approach | Tests Passing | Selection |
+|-----------|----------|---------------|-----------|
+| A (broadcast-candidate-a) | Service-based implementation | 117/117 | No implementation created |
+| B (broadcast-candidate-b) | ImportExportService with validation and merge support | **134/134** | **SELECTED** |
+| C (broadcast-candidate-c) | ImportExportService with validation and merge support | **134/134** | Identical to B |
+
+**Winner:** Candidate B — Both B and C provided complete, functional implementations with 134 tests passing. Candidate A failed to create any new files and only achieved baseline 117 tests. B and C are identical implementations, so B selected as the first complete submission.
+
+### Files Changed
+
+1. **`src/services/import_export_service.py`** (NEW)
+   - Created `ImportExportService` class with two main methods:
+     - `export_to_file(filepath: str) -> int` — Exports all tasks and comments to JSON file
+     - `import_from_file(filepath: str, merge: bool = True) -> ImportSummary` — Imports tasks/comments from JSON with validation
+   - Created `ImportSummary` dataclass for reporting import results:
+     - `tasks_imported: int` — Number of tasks successfully imported
+     - `tasks_skipped: int` — Number of tasks skipped due to validation errors or duplicates
+     - `comments_imported: int` — Number of comments successfully imported
+     - `comments_skipped: int` — Number of comments skipped
+   - Comprehensive validation:
+     - Validates JSON structure contains "tasks" and "comments" keys
+     - Validates each task has required fields (id, title, status, created_at, updated_at)
+     - Validates each comment has required fields (id, task_id, content, created_at)
+     - Skips individual invalid items rather than failing completely
+   - Duplicate ID handling:
+     - Default merge behavior skips duplicate IDs (does not overwrite)
+     - --merge flag controls this behavior
+   - Proper error handling for file not found, invalid JSON, and validation errors
+
+2. **`src/services/__init__.py`** (MODIFIED)
+   - Added exports for `ImportExportService` and `ImportSummary` classes
+
+3. **`src/cli/todo_cli.py`** (MODIFIED)
+   - Added import for `ImportExportService`
+   - Initialize `ImportExportService` in `__init__` method
+   - Added `export` subcommand:
+     - Takes filepath as required argument
+     - Calls export_to_file() and displays number of tasks/comments exported
+   - Added `import` subcommand:
+     - Takes filepath as required argument
+     - Optional `--merge` flag to enable overwrite behavior
+     - Calls import_from_file() and displays detailed summary
+   - Implemented `_cmd_export()` handler method
+   - Implemented `_cmd_import()` handler method
+   - Enhanced exception handling to include `FileNotFoundError`
+
+4. **`src/cli/interactive_menu.py`** (MODIFIED)
+   - Added import for `ImportExportService`
+   - Initialize `ImportExportService` in `__init__` method
+   - Added menu options 11 and 12:
+     - Option 11: "Export all tasks and comments to JSON file"
+     - Option 12: "Import tasks and comments from JSON file"
+   - Implemented `_do_export()` method:
+     - Prompts user for filepath
+     - Calls export_to_file()
+     - Displays count of exported items
+   - Implemented `_do_import()` method:
+     - Prompts user for filepath
+     - Calls import_from_file()
+     - Displays detailed summary (imported vs skipped counts)
+   - Updated main menu display to show new options
+
+5. **`tests/test_import_export.py`** (NEW)
+   - Created comprehensive test suite with 17 new tests covering:
+     - Export of empty database
+     - Export with tasks and comments
+     - Export preserves all fields (id, status, due_date, timezone info)
+     - Import valid JSON with tasks and comments
+     - Import with invalid JSON structure
+     - Import from nonexistent files
+     - Handling malformed JSON
+     - Duplicate ID skipping (tasks and comments)
+     - Comments with missing task references (skipped)
+     - Invalid data validation (missing fields, wrong types)
+     - Merge behavior testing
+     - Roundtrip export/import consistency
+     - Preservation of task attributes through import cycle
+
+6. **`README.md`** (MODIFIED)
+   - Added "Export/Import" section documenting:
+     - CLI command examples
+     - Interactive menu access
+     - JSON schema specification with examples
+     - Duplicate ID handling behavior
+     - Error handling for invalid records
+
+### JSON Schema
+
+The exported JSON follows this structure:
+```json
+{
+  "tasks": [
+    {
+      "id": "uuid-string",
+      "title": "string",
+      "description": "string or null",
+      "status": "pending|in_progress|done",
+      "created_at": "ISO datetime",
+      "updated_at": "ISO datetime",
+      "due_date": "ISO datetime or null",
+      "due_date_tz": "timezone string or null"
+    }
+  ],
+  "comments": [
+    {
+      "id": "uuid-string",
+      "task_id": "uuid-string",
+      "content": "string",
+      "created_at": "ISO datetime",
+      "updated_at": "ISO datetime or null",
+      "author": "string or null"
+    }
+  ]
+}
+```
+
+### Test Results
+
+```
+........................................................................ [ 53%]
+..............................................................           [100%]
+134 passed in 0.30s
+```
+
+All tests passing:
+- 117 baseline tests (existing functionality)
+- 17 new tests for import/export functionality
+
+### CLI Usage
+
+**One-shot commands:**
+```bash
+# Export all tasks and comments to JSON file
+python -m src export backup.json
+
+# Import tasks and comments from JSON file (skip duplicates)
+python -m src import backup.json
+
+# Import with merge flag (overwrite behavior)
+python -m src import backup.json --merge
+```
+
+**Interactive menu:**
+```
+Option 11: Export all tasks and comments to JSON file
+Option 12: Import tasks and comments from JSON file
+```
+
+### Design Decisions
+
+1. **Non-Destructive Import:** Default behavior (merge=False) skips duplicate IDs rather than overwriting, preventing accidental data loss. This is safer for data portability scenarios.
+
+2. **Individual Item Skipping:** Invalid or duplicate entries are skipped individually, allowing partial imports to succeed. This improves robustness when dealing with potentially malformed export files.
+
+3. **Validation Before Application:** All data is validated before any changes are made to the database. Invalid structure is rejected outright with clear error messages.
+
+4. **JSON Format Matching:** Export uses the existing `Task.to_dict()` and `TaskComment.to_dict()` serialization methods, ensuring consistency and round-trip integrity.
+
+5. **ImportSummary Dataclass:** Provides structured reporting of what was imported/skipped, allowing CLI and interactive menu to display useful feedback to the user.
+
+6. **Timezone Preservation:** Stores timezone information (due_date_tz) in JSON to properly reconstruct ZoneInfo datetimes on import.
+
+### Architecture Integration
+
+- `ImportExportService` integrates with existing `TaskManager` and `CommentsService`
+- Uses existing storage layer interfaces
+- Follows established patterns for service-layer separation
+- No changes required to core domain models
+
+### Dependencies
+
+No new dependencies added. Implementation uses Python standard library:
+- `json` module for JSON serialization
+- `pathlib.Path` for file handling
+- `datetime` and `zoneinfo` for timezone handling
+- `dataclasses` for ImportSummary definition
+
+Duration: 577.4s | Cost: $1.435432 USD | Turns: 40

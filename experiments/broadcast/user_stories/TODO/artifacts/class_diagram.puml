@@ -125,6 +125,24 @@ package "services" #DDFFD4 {
         -persist() : void
     }
 
+    class ImportExportService {
+        -task_manager : TaskManager
+        -comments_service : CommentsService
+        --
+        +ImportExportService(task_manager: TaskManager, comments_service: CommentsService)
+        +export_to_file(filepath: String) : Integer
+        +import_from_file(filepath: String, merge: Boolean [0..1]) : ImportSummary
+    }
+
+    class ImportSummary {
+        +tasks_imported : Integer
+        +tasks_skipped : Integer
+        +comments_imported : Integer
+        +comments_skipped : Integer
+        +skipped_task_ids : List<String>
+        +skipped_comment_ids : List<String>
+    }
+
     class TodoService {
         -manager : TaskManager
         -comments_service : CommentsService
@@ -175,10 +193,15 @@ CommentsService --> TaskManager : task_manager
 CommentsService --> JsonStorage : storage
 CommentsService ..> TaskNotFoundError : raises
 CommentsService ..> CommentNotFoundError : raises
+ImportExportService --> TaskManager : task_manager
+ImportExportService --> CommentsService : comments_service
+ImportExportService --> ImportSummary : returns
 TodoService --> TaskManager : manager
 TodoService --> CommentsService : comments_service
 TodoService --> TaskSummary : generates
 TodoCLI --> TodoService : service
+TodoCLI --> ImportExportService : import_export
 InteractiveMenu --> TodoService : service
+InteractiveMenu --> ImportExportService : import_export
 
 @enduml

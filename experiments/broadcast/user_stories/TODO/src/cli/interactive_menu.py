@@ -5,6 +5,7 @@ from typing import Optional
 from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..services.comments_service import CommentNotFoundError
+from ..services.import_export_service import ImportExportService
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -55,6 +56,7 @@ class InteractiveMenu:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._import_export = ImportExportService(self._service._manager, self._service._comments_service)
 
     def run(self) -> None:
         while True:
@@ -89,6 +91,10 @@ class InteractiveMenu:
                 self._do_filter_by_date()
             elif choice == "10":
                 self._do_show_report()
+            elif choice == "11":
+                self._do_export()
+            elif choice == "12":
+                self._do_import()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -119,6 +125,8 @@ class InteractiveMenu:
         print("  8. Manage comments")
         print("  9. Filter tasks by date/overdue")
         print("  10. View task summary report")
+        print("  11. Export tasks and comments to JSON")
+        print("  12. Import tasks and comments from JSON")
         print("  0. Quit")
         print()
 
@@ -516,4 +524,42 @@ class InteractiveMenu:
         if report.avg_days_to_completion is not None:
             print(f"  Avg days to completion:   {report.avg_days_to_completion:.2f}")
         print()
+        input("  Press Enter to continue...")
+
+    def _do_export(self) -> None:
+        """Export tasks and comments to JSON file."""
+        _clear()
+        print("  Export tasks and comments\n")
+        filepath = _prompt("File path to export to")
+        if not filepath:
+            input("  Export cancelled. Press Enter...")
+            return
+        try:
+            count = self._import_export.export_to_file(filepath)
+            print(f"\n  Exported {count} items to {filepath}")
+        except Exception as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_import(self) -> None:
+        """Import tasks and comments from JSON file."""
+        _clear()
+        print("  Import tasks and comments\n")
+        filepath = _prompt("File path to import from")
+        if not filepath:
+            input("  Import cancelled. Press Enter...")
+            return
+        try:
+            summary = self._import_export.import_from_file(filepath, merge=True)
+            print(f"\n  Import Summary:")
+            print(f"  Tasks imported: {summary.tasks_imported}")
+            print(f"  Tasks skipped: {summary.tasks_skipped}")
+            print(f"  Comments imported: {summary.comments_imported}")
+            print(f"  Comments skipped: {summary.comments_skipped}")
+        except FileNotFoundError as e:
+            print(f"\n  Error: {e}")
+        except ValueError as e:
+            print(f"\n  Error: {e}")
+        except Exception as e:
+            print(f"\n  Error: {e}")
         input("  Press Enter to continue...")

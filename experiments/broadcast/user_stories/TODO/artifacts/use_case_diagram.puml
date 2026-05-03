@@ -20,6 +20,8 @@ rectangle "TODO Manager" {
     usecase "Edit comment" as I_COMMENT_EDIT
     usecase "Delete comment" as I_COMMENT_DELETE
     usecase "View task summary report" as I_REPORT
+    usecase "Export tasks and comments" as I_EXPORT
+    usecase "Import tasks and comments" as I_IMPORT
     usecase "Quit application" as I_QUIT
   }
 
@@ -38,6 +40,8 @@ rectangle "TODO Manager" {
     usecase "Edit comment" as C_COMMENT_EDIT
     usecase "Delete comment" as C_COMMENT_DELETE
     usecase "Display task summary report" as C_REPORT
+    usecase "Export tasks and comments" as C_EXPORT
+    usecase "Import tasks and comments" as C_IMPORT
   }
 }
 
@@ -56,6 +60,8 @@ I_COMMENTS ..> I_COMMENT_LIST : <<exclude>>
 I_COMMENTS ..> I_COMMENT_EDIT : <<exclude>>
 I_COMMENTS ..> I_COMMENT_DELETE : <<exclude>>
 UI ..> I_REPORT : <<exclude>>
+UI ..> I_EXPORT : <<exclude>>
+UI ..> I_IMPORT : <<exclude>>
 UI ..> I_QUIT   : <<exclude>>
 
 CLI ..> C_ADD    : <<exclude>>
@@ -71,5 +77,7 @@ CLI ..> C_COMMENT_LIST : <<exclude>>
 CLI ..> C_COMMENT_EDIT : <<exclude>>
 CLI ..> C_COMMENT_DELETE : <<exclude>>
 CLI ..> C_REPORT : <<exclude>>
+CLI ..> C_EXPORT : <<exclude>>
+CLI ..> C_IMPORT : <<exclude>>
 
 @enduml
