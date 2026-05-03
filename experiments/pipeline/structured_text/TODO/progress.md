@@ -537,4 +537,4 @@ Successfully implemented JSON import/export functionality for Task and TaskComme
 - Activity diagram: Added export and import flows with detailed partitions showing serialization, validation, and conflict handling
 - Use case diagram: Added two new use cases (Export/Import) for both CLI and interactive modes
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 791.5s | Cost: $1.760324 USD | Turns: 15
