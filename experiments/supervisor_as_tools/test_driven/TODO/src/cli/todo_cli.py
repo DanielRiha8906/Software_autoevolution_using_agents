@@ -1,8 +1,10 @@
 import argparse
 import sys
 from typing import Optional
+from datetime import datetime
 
 from ..models.task_status import TaskStatus
+from ..models.task import CEST
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -59,6 +61,21 @@ class TodoCLI:
             choices=["pending", "in_progress", "done"],
             help="Filter by status",
         )
+        p_list.add_argument(
+            "--overdue",
+            action="store_true",
+            help="Filter to show only overdue tasks",
+        )
+        p_list.add_argument(
+            "--due-before",
+            type=str,
+            help="List tasks due before this date (ISO 8601 format with CEST timezone, e.g., 2025-12-31T23:59:59+02:00)",
+        )
+        p_list.add_argument(
+            "--due-after",
+            type=str,
+            help="List tasks due after this date (ISO 8601 format with CEST timezone, e.g., 2025-01-01T00:00:00+02:00)",
+        )
         p_list.set_defaults(func=self._cmd_list)
 
         # show
@@ -95,21 +112,57 @@ class TodoCLI:
 
         return parser
 
+    def _parse_datetime_cest(self, date_str: str) -> datetime:
+        """Parse ISO 8601 string to CEST datetime, with validation."""
+        try:
+            dt = datetime.fromisoformat(date_str)
+        except ValueError as e:
+            raise ValueError(f"Invalid ISO 8601 format: {date_str}") from e
+
+        # Validate CEST
+        if dt.tzinfo is None:
+            raise ValueError(f"Datetime must include timezone: {date_str}")
+        if dt.tzinfo != CEST:
+            raise ValueError(f"Timezone must be CEST (UTC+2), got {dt.tzinfo}")
+        return dt
+
     def _cmd_add(self, args: argparse.Namespace) -> int:
         task = self._service.add_task(args.title, args.description)
         print(f"Added task {task.id[:8]}  {task.title}")
         return 0
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
-        status = TaskStatus(args.status) if args.status else None
-        tasks = self._service.list_tasks(status)
-        if not tasks:
+        status = None
+        if args.status:
+            status = TaskStatus(args.status)
+
+        overdue = args.overdue if args.overdue else None
+
+        due_before = None
+        if args.due_before:
+            due_before = self._parse_datetime_cest(args.due_before)
+
+        due_after = None
+        if args.due_after:
+            due_after = self._parse_datetime_cest(args.due_after)
+
+        tasks = self._service.list_tasks(
+            status=status,
+            overdue=overdue,
+            due_before=due_before,
+            due_after=due_after
+        )
+
+        # Format and print output
+        if tasks:
+            for task in tasks:
+                sym = _STATUS_SYMBOLS[task.status]
+                desc = f"  {task.description}" if task.description else ""
+                due_str = f"  Due: {task.due_date.isoformat()}" if task.due_date else ""
+                print(f"{sym} {task.id[:8]}  {task.title}{desc}{due_str}")
+        else:
             print("No tasks found.")
-            return 0
-        for task in tasks:
-            sym = _STATUS_SYMBOLS[task.status]
-            desc = f"  {task.description}" if task.description else ""
-            print(f"{sym} {task.id[:8]}  {task.title}{desc}")
+
         return 0
 
     def _cmd_show(self, args: argparse.Namespace) -> int:
