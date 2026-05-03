@@ -138,4 +138,4 @@ Duration: 351.0s | Cost: $0.614922 USD | Turns: 19
 - CLI integration verified: both `python -m src export filepath` and interactive menu options functional
 - Serialization and deserialization preserves all model data and datetime information
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 354.9s | Cost: $0.694199 USD | Turns: 23
