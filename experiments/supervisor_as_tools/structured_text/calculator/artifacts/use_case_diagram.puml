@@ -20,6 +20,8 @@ rectangle "Calculator Application" {
     usecase "View memory statistics" as UC_Statistics
     usecase "View failed operations" as UC_Failures
     usecase "Clear memory" as UC_ClearMem
+    usecase "Export memory entries" as UC_Export
+    usecase "Import memory entries" as UC_Import
 
 }
 
@@ -36,10 +38,14 @@ User --> UC_Summary
 User --> UC_Statistics
 User --> UC_Failures
 User --> UC_ClearMem
+User --> UC_Export
+User --> UC_Import
 
 UC_Calc ..> UC_Memory : <<extends>> [if available]
 UC_Calc ..> UC_Failures : <<extends>> [if available]
 UC_FilteredMemory --|> UC_Memory : specializes
 UC_Statistics --|> UC_Summary : refinement
+UC_Export --|> UC_Memory : specializes
+UC_Import --|> UC_Memory : specializes
 
 @enduml

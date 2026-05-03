@@ -6,6 +6,7 @@ from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
+from .services.memory_import_export_service import MemoryImportExportService
 from .storage.json_storage import JsonStorage
 from .storage.memory_json_storage import MemoryJsonStorage
 from .cli.calculator_cli import CalculatorCLI
@@ -41,7 +42,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A [B]] [--memory {list,detail,failures,summary,stats,clear} [ID]]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A [B]] [--memory {list,detail,failures,summary,stats,clear} [ID]] [--export-memory FILE] [--import-memory FILE]",
     )
     parser.add_argument(
         "--operation",
@@ -62,6 +63,16 @@ def main() -> None:
         help="Filter memory by execution status (use with --memory list)",
     )
     parser.add_argument(
+        "--export-memory",
+        metavar="FILE",
+        help="Export all memory entries to a JSON file",
+    )
+    parser.add_argument(
+        "--import-memory",
+        metavar="FILE",
+        help="Import memory entries from a JSON file",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="ARG",
@@ -71,6 +82,44 @@ def main() -> None:
     args = parser.parse_args()
     service, memory_service = _build_service()
     cli = CalculatorCLI(service, memory_service)
+    import_export_service = MemoryImportExportService()
+
+    # Handle export-memory flag
+    if args.export_memory:
+        entries = memory_service.retrieve_all()
+        if not entries:
+            print("No memory entries to export.", file=sys.stderr)
+            sys.exit(1)
+        try:
+            count = import_export_service.export_memory(args.export_memory, entries)
+            print(f"Exported {count} entries to {args.export_memory}")
+        except (IOError, OSError) as exc:
+            print(f"Error exporting memory: {exc}", file=sys.stderr)
+            sys.exit(1)
+        return
+
+    # Handle import-memory flag
+    if args.import_memory:
+        try:
+            entries, skipped_count, duplicate_count = import_export_service.import_from_file(
+                args.import_memory
+            )
+        except (FileNotFoundError, ValueError, IOError) as exc:
+            print(f"Error importing memory: {exc}", file=sys.stderr)
+            sys.exit(1)
+
+        if not entries:
+            print("No valid entries to import.", file=sys.stderr)
+            sys.exit(1)
+
+        # Store all entries
+        for entry in entries:
+            memory_service.store(entry)
+
+        print(f"Imported {len(entries)} entries successfully")
+        if skipped_count > 0:
+            print(f"Skipped {skipped_count} invalid entries")
+        return
 
     # Handle memory commands
     if args.memory:

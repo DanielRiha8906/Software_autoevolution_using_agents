@@ -356,3 +356,78 @@ Successfully implemented comprehensive statistics functionality for the calculat
 - New stats functionality is additive (does not alter existing behavior)
 
 Duration: 318.1s | Cost: $0.614727 USD | Turns: 25
+
+---
+
+## Task 07: Add import and export of calculation history
+
+**Status**: Completed
+
+### Summary
+Successfully implemented import/export functionality for calculation history. Added new MemoryImportExportService to handle serialization, validation, and import of MemoryEntry records with comprehensive error handling and duplicate detection. All functionality is accessible via both interactive menu and CLI flags (`--export-memory` and `--import-memory`).
+
+### Files Changed
+- `src/services/memory_import_export_service.py` — NEW: Created MemoryImportExportService with export_memory(), import_from_file(), validate_entry(), and find_duplicates() methods
+- `src/cli/calculator_cli.py` — Added export_memory_interactive() and import_memory_interactive() methods; integrated import_export_service field; updated menu with options 10-11 for export/import
+- `src/__main__.py` — Added `--export-memory FILEPATH` and `--import-memory FILEPATH` argparse arguments; added handlers for one-shot export/import modes
+- `tests/test_memory_import_export_service.py` — NEW: 40 comprehensive tests covering validation, duplicate detection, export format, and import with error handling
+- `artifacts/component_diagram.puml` — Added MemoryImportExportService component with relationships to MemoryService and MemoryJsonStorage
+- `artifacts/class_diagram.puml` — Added MemoryImportExportService class with all four methods; updated CalculatorCLI with new methods
+- `artifacts/activity_diagram.puml` — Enhanced memory branch with export/import workflows
+- `artifacts/state_diagram_interactive.puml` — Added export/import states and transitions with confirmation flows
+- `artifacts/use_case_diagram.puml` — Added "Export memory entries" and "Import memory entries" use cases
+
+### Test Results
+- Total tests: 169 (129 existing + 40 new)
+- Passed: 169
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Implementation Details
+
+**MemoryImportExportService Methods:**
+- `validate_entry(entry_dict: dict) -> bool` — Validates required fields (operation, operand_a, operand_b, success) and type correctness
+- `find_duplicates(entries: list[MemoryEntry], existing: list[MemoryEntry]) -> set[str]` — Detects duplicates by (operation, operand_a, operand_b, timestamp) tuple
+- `export_memory(filepath: str | Path, entries: list[MemoryEntry]) -> int` — Serializes entries to JSON file, returns count; overwrites existing files
+- `import_from_file(filepath: str | Path) -> tuple[list[MemoryEntry], int, int]` — Loads JSON, validates each entry independently, skips invalid entries, returns (valid_entries, skipped_count, duplicate_count)
+
+**CLI Integration - Interactive Mode:**
+- Option 10: "Export memory" — Prompts for filepath, exports all entries, shows count and confirmation message
+- Option 11: "Import memory" — Prompts for filepath, loads and validates entries, shows summary of valid/skipped/duplicates, prompts user confirmation before merging
+- Both options include cancellation capability if user chooses not to proceed
+
+**CLI Integration - One-Shot Mode:**
+- `python -m src --export-memory FILEPATH` — Exports all memory entries to JSON file (non-interactive, no confirmation)
+- `python -m src --import-memory FILEPATH` — Imports entries from JSON file, shows summary, applies all valid entries (no confirmation needed for scripting)
+
+**Export Format:**
+- JSON array structure matching MemoryEntry.to_dict() output
+- Fields: operation, operand_a, operand_b, success, timestamp, execution_time_ms, result (nullable), error_message (nullable), id
+- 2-space indentation for readability
+- File is created/overwritten without explicit confirmation in one-shot mode
+
+**Import Validation:**
+- Each entry validated independently against schema
+- Skips entries with missing required fields (operation, operand_a, operand_b, success)
+- Skips entries with invalid field types (non-numeric operands, non-string operation, non-boolean success)
+- Duplicate detection checks against existing memory (same operation/operands/timestamp)
+- Returns detailed summary: count of valid entries, skipped entries, and existing duplicates
+
+**Data Safety:**
+- Interactive import requires explicit user confirmation before applying to memory
+- Existing data preserved unless user explicitly imports
+- Invalid entries skipped gracefully (not silently—count is reported)
+- JSON parsing errors are caught and reported with context
+
+**Design Patterns:**
+- Service layer (MemoryImportExportService) handles all business logic
+- CLI layer handles user interaction (prompts, confirmations, formatting)
+- Both layers separated for testability and reusability
+- Optional fields handled explicitly (result=None, error_message=None on import)
+
+**Backward Compatibility:**
+- All 129 existing tests pass without modification
+- Memory service and existing CLI commands unchanged
+- New functionality is additive (does not alter existing behavior)
+
+Duration: 438.1s | Cost: $0.891522 USD | Turns: 14
