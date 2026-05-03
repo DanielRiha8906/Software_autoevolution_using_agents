@@ -499,4 +499,4 @@ All functionality is accessible via `python -m src`:
 - `artifacts/activity_diagram_interactive.puml`: Added step 12 for GitHub fetch workflow
 - `artifacts/activity_diagram_main.puml`: Added github-fetch CLI subcommand flow
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 508.1s | Cost: $3.770724 USD | Turns: 57
