@@ -195,4 +195,4 @@ Duration: 145.9s | Cost: $0.409185 USD | Turns: 41
 ✓ Code compiles without syntax or import errors
 ✓ Service exported from src.services module
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 284.2s | Cost: $0.525347 USD | Turns: 41
