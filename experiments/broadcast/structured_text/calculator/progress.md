@@ -126,3 +126,77 @@ All 66 tests pass, including 28+ new tests covering:
 - Accessible via interactive menu (options 5-8)
 
 Duration: 30.7s | Cost: $0.946089 USD | Turns: 8
+
+## Task 03: Introduce MemoryEntry domain class
+
+### Broadcast Evaluation
+
+Three independent implementers were spawned on separate branches to solve this task:
+
+**Candidate-A** — No changes
+- Did not identify that MemoryEntry was already implemented on main
+- Made no modifications
+- **Test result: 81/81 passed** (no change from baseline)
+
+**Candidate-B** — Export MemoryEntry from models module
+- Modified 1 file: `src/models/__init__.py`
+- Added import and export of MemoryEntry class to public API
+- **Test result: 81/81 passed**
+
+**Candidate-C** — Export MemoryEntry from models module
+- Modified 1 file: `src/models/__init__.py`
+- Added import and export of MemoryEntry class to public API (identical to B)
+- **Test result: 81/81 passed**
+
+### Winner Selection: Candidate-B
+
+**Rationale**:
+1. **Correct implementation** — Properly exported MemoryEntry from the models module, making it accessible via `from src.models import MemoryEntry`
+2. **API completeness** — Ensures MemoryEntry is part of the public API alongside Operation and CalculationResult
+3. **Minimal scope** — Only 1 file changed, focused and clean
+4. **Test coverage** — All 81 tests pass, including 15 MemoryEntry-specific tests that were already present
+
+### Files Changed
+
+- `src/models/__init__.py` — Added MemoryEntry import and export to public API
+- `artifacts/class_diagram.puml` — Added MemoryEntry class with all 8 attributes and 2 methods
+- `artifacts/component_diagram.puml` — Updated Models component to list MemoryEntry alongside other domain classes
+
+### Implementation Details
+
+The MemoryEntry domain class was already present in the codebase (in src/models/memory_entry.py). The task completion involved ensuring it's properly exported from the models module:
+
+- **Class structure**: Dataclass with 8 fields
+  - `operation_name: str` — Operation identifier
+  - `operand_a: float` — First operand
+  - `operand_b: float` — Second operand
+  - `result: Optional[float]` — Calculation result (None if failed)
+  - `success: bool` — Whether calculation succeeded
+  - `error_message: Optional[str]` — Error description if failed
+  - `execution_timestamp: str` — ISO format timestamp, auto-set on creation
+  - `execution_time_ms: float` — Execution duration in milliseconds
+
+- **Methods**:
+  - `to_dict()` — Serializes to JSON-compatible dictionary
+  - `from_dict(data)` — Deserializes from dictionary
+  - `__post_init__()` — Auto-sets execution_timestamp if not provided
+
+- **Features**:
+  - Supports both successful and failed calculations
+  - Complete serialization/deserialization for persistence
+  - Clear field names supporting querying and reporting
+  - Compatible with existing CalculationResult patterns
+
+### Test Results
+
+**Before**: 81 tests passing (38 original + 43 related/MemoryEntry tests)  
+**After**: 81 tests passing  
+
+No test regressions. All existing tests continue to pass. The 15 MemoryEntry-specific tests in test_memory_entry.py validate:
+- Successful calculation entry creation and serialization
+- Failed calculation entry handling with error messages
+- Auto-timestamp generation
+- Roundtrip serialization/deserialization
+- Various operation types and edge cases
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
