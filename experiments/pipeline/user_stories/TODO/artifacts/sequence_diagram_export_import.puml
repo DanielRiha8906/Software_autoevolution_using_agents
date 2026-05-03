@@ -1,0 +1,92 @@
+@startuml sequence_diagram_export_import
+
+title Export / Import Task Flows
+
+!define CONTROL_COLOR #FFE5E5
+!define SERVICE_COLOR #DDFFD4
+!define VALIDATOR_COLOR #E5CCFF
+!define STORAGE_COLOR #FFF3CC
+
+actor User
+participant "TodoCLI or\nInteractiveMenu" as CLI <<CONTROL_COLOR>>
+participant "TodoService" as SVC <<SERVICE_COLOR>>
+participant "ImportValidator" as Validator <<VALIDATOR_COLOR>>
+participant "TaskManager" as Manager <<SERVICE_COLOR>>
+participant "JsonStorage" as Storage <<STORAGE_COLOR>>
+database "todo_data.json" as DB
+
+== Export Flow ==
+
+User -> CLI: export_tasks(file_path)
+activate CLI
+
+CLI -> SVC: export_tasks(file_path)
+activate SVC
+
+SVC -> Manager: list_all()
+activate Manager
+Manager -> Storage: load()
+activate Storage
+Storage -> DB: read
+DB --> Storage: task data
+deactivate Storage
+Manager --> SVC: List<Task>
+deactivate Manager
+
+SVC -> SVC: Convert tasks to dicts\nand serialize to JSON
+SVC -> Storage: write JSON file
+activate Storage
+Storage -> DB: write export file
+DB --> Storage: success
+deactivate Storage
+
+SVC --> CLI: count: int
+deactivate SVC
+
+CLI --> User: "Exported N tasks to path"
+deactivate CLI
+
+== Import Flow ==
+
+User -> CLI: import_tasks(file_path, strategy)
+activate CLI
+
+CLI -> SVC: import_tasks(file_path, strategy)
+activate SVC
+
+SVC -> Validator: validate_file(file_path)
+activate Validator
+
+Validator -> Storage: read file
+activate Storage
+Storage -> DB: read import file
+DB --> Storage: JSON data
+deactivate Storage
+
+Validator -> Validator: parse JSON\nvalidate structure\nvalidate each task
+Validator --> SVC: (valid_tasks, errors)
+deactivate Validator
+
+SVC -> Manager: list_all()
+activate Manager
+Manager --> SVC: existing_ids
+deactivate Manager
+
+SVC -> SVC: For each valid task:\nCheck duplicates\nApply strategy\nReconstruct Task objects
+
+SVC -> Manager: Update _tasks dict
+activate Manager
+Manager -> Storage: persist()
+activate Storage
+Storage -> DB: write
+DB --> Storage: success
+deactivate Storage
+deactivate Manager
+
+SVC --> CLI: {imported_count, skipped_count, errors}
+deactivate SVC
+
+CLI --> User: "Import complete:\nImported: N\nSkipped: M\nErrors: E"
+deactivate CLI
+
+@enduml

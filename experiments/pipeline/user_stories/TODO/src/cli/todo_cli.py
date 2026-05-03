@@ -157,6 +157,22 @@ class TodoCLI:
         p_report = sub.add_parser("report", help="Generate task summary report")
         p_report.set_defaults(func=self._cmd_report)
 
+        # export
+        p_export = sub.add_parser("export", help="Export all tasks to JSON file")
+        p_export.add_argument("--file", help="Output file path (default: ~/.todo_export.json)")
+        p_export.set_defaults(func=self._cmd_export)
+
+        # import
+        p_import = sub.add_parser("import", help="Import tasks from JSON file")
+        p_import.add_argument("--file", required=True, help="Input file path (required)")
+        p_import.add_argument(
+            "--strategy",
+            choices=["skip", "replace"],
+            default="skip",
+            help="Duplicate handling strategy (default: skip)",
+        )
+        p_import.set_defaults(func=self._cmd_import)
+
         return parser
 
     def _parse_and_list_by_week(self, week_str: str, status: Optional[TaskStatus]) -> list:
@@ -415,3 +431,39 @@ class TodoCLI:
         else:
             print("Avg days to completion: N/A")
         return 0
+
+    def _cmd_export(self, args: argparse.Namespace) -> int:
+        file_path = getattr(args, "file", None)
+        try:
+            count = self._service.export_tasks(file_path)
+            output_path = file_path or (
+                str(__import__("pathlib").Path.home() / ".todo_export.json")
+            )
+            print(f"Exported {count} task(s) to {output_path}")
+            return 0
+        except OSError as e:
+            print(f"Error: Failed to export tasks: {e}", file=sys.stderr)
+            return 1
+
+    def _cmd_import(self, args: argparse.Namespace) -> int:
+        file_path = args.file
+        strategy = getattr(args, "strategy", "skip")
+        try:
+            result = self._service.import_tasks(file_path, strategy)
+            print(f"Import complete:")
+            print(f"  Imported: {result['imported_count']}")
+            print(f"  Skipped:  {result['skipped_count']}")
+            if result["errors"]:
+                print(f"  Errors:   {len(result['errors'])}")
+                for error in result["errors"][:5]:  # Show first 5 errors
+                    if "error" in error:
+                        print(f"    - {error['error']}")
+                if len(result["errors"]) > 5:
+                    print(f"    ... and {len(result['errors']) - 5} more error(s)")
+            return 0
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except OSError as e:
+            print(f"Error: Failed to read file: {e}", file=sys.stderr)
+            return 1

@@ -361,3 +361,116 @@ Duration: 530.7s | Cost: $1.059689 USD | Turns: 17
   - Both modes fully functional and tested
 
 Duration: 503.9s | Cost: $1.046996 USD | Turns: 14
+
+---
+
+## Task 07: Export and Import Tasks with Comments
+
+**Status:** COMPLETE ✓
+
+### Changes Made
+- **ImportValidator Class:** Created new src/services/import_validator.py:
+  - `validate_file(file_path: str)` - Validates JSON file structure, returns (validated_task_dicts, error_list)
+  - `validate_task_dict(task_dict: dict, index: int)` - Static method for individual task validation
+  - Comprehensive validation: file exists, valid JSON, array structure, required fields, enum values, ISO datetime formats
+  - Error collection: Invalid entries don't stop processing; all errors collected before import
+  - Duplicate detection within file: Tracks IDs and reports duplicates in import file itself
+
+- **TodoService (src/services/todo_service.py):**
+  - Added `export_tasks(file_path: Optional[str] = None) -> int` method:
+    - Exports all tasks to JSON file with comments embedded
+    - Creates parent directories automatically
+    - Returns count of exported tasks
+    - Default path: ~/tasks_export.json
+  - Added `import_tasks(file_path: str, duplicate_strategy: str = "skip") -> dict` method:
+    - Imports tasks from JSON with full validation before applying changes
+    - Supports "skip" (default, keeps existing) and "replace" (overwrites) strategies for duplicate IDs
+    - Filters empty comments but allows tasks to be imported
+    - Returns dict: {imported_count, skipped_count, errors: [{index, error}, ...]}
+    - Persists all changes in single write after validation
+
+- **TodoCLI (src/cli/todo_cli.py):**
+  - Added `export` subcommand with optional `--file` argument:
+    - Handler `_cmd_export()` - Exports all tasks to JSON file
+    - Output: "Exported N tasks to <filepath>"
+    - Exit code: 0 on success, 1 on error (write permissions, invalid path)
+  - Added `import` subcommand with required `--file` and optional `--strategy` arguments:
+    - Handler `_cmd_import()` - Imports tasks from JSON with validation
+    - Output: "Imported X tasks, skipped Y, errors Z" with error details if present
+    - Exit code: 0 on success/partial success, 1 on critical error (file missing, invalid JSON)
+
+- **InteractiveMenu (src/cli/interactive_menu.py):**
+  - Added menu option 10: "Export tasks" and option 11: "Import tasks"
+  - Implemented `_do_export()` handler:
+    - Prompts for file path with default ~/tasks_export.json
+    - Shows result message with count and file path
+  - Implemented `_do_import()` handler:
+    - Prompts for file path (required)
+    - Shows file validation errors if any
+    - Asks user to select duplicate handling strategy if duplicates detected
+    - Shows summary of imported/skipped/errors with detailed error list
+
+- **Bug Fix:** Fixed Task.from_dict() to handle `"comments": null` in JSON:
+  - Changed `data.get("comments", [])` to `data.get("comments") or []`
+  - Ensures comments_data is always a list, preventing iteration errors
+
+- **Diagrams (artifacts/):**
+  - Updated class_diagram.puml: Added ImportValidator class, export/import methods to TodoService, CLI handlers, menu methods
+  - Updated use_case_diagram.puml: Added Export/Import use cases for CLI and interactive modes
+  - Updated component_diagram.puml: Added Import Validator component and relationships
+  - Created sequence_diagram_export_import.puml: New diagram showing export/import flows with validation
+
+### Files Changed
+- src/services/import_validator.py (NEW)
+- src/services/todo_service.py (added export_tasks, import_tasks)
+- src/models/task.py (bug fix: comments handling)
+- src/cli/todo_cli.py (added export, import subcommands)
+- src/cli/interactive_menu.py (added options 10, 11 and handlers)
+- artifacts/class_diagram.puml
+- artifacts/use_case_diagram.puml
+- artifacts/component_diagram.puml
+- artifacts/sequence_diagram_export_import.puml (NEW)
+
+### Test Results
+**473 tests total: ALL PASSED**
+- 100 new tests for export/import functionality across 3 test files
+- 50 tests for ImportValidator and TodoService export/import methods (validation, duplicate handling, round-trip, edge cases)
+- 22 tests for TodoCLI export/import commands (argument parsing, exit codes, output format, error handling)
+- 28 tests for InteractiveMenu export/import handlers (user interactions, strategy selection, output messages)
+- 373 existing tests all still passing (no regressions)
+
+### Test Coverage Breakdown
+**Service Layer (test_import_export.py):**
+- Export: 16 tests (empty list, multiple tasks, parent directory creation, overwrite, formatting, special characters, unicode, timezone preservation)
+- Import validation: 6 tests (file existence, JSON validity, array structure, field requirements, type checking)
+- Import processing: 11 tests (valid import, empty array, missing fields, invalid enums, datetime errors, duplicate handling skip/replace, mixed valid/invalid)
+- Round-trip: 3 tests (single task, with comments, multiple statuses)
+- Comments: 2 tests (valid comments, empty comment filtering)
+- Validator: 4 tests (file validation, task dict validation, comment validation, duplicate detection)
+- Edge cases: 8 tests (special characters, unicode, large datasets, null handling, non-dict entries)
+
+**CLI Layer (test_cli_export_import.py):**
+- Export: 8 tests (default path, custom path, success exit code, error handling, parent directories, empty list, multiple tasks, output format)
+- Import: 14 tests (valid file, file requirement, missing file, default/explicit/replace strategies, output format, error display, round-trip, comments preservation, storage persistence)
+
+**Interactive Menu Layer (test_menu_export_import.py):**
+- Export: 8 tests (file path prompt, default usage, success message, error handling, empty list, descriptions/due dates, parent directories)
+- Import: 15 tests (file path prompt, strategy selection, skip/replace handling, path validation, JSON error handling, comments, persistence, round-trip)
+- UX: 5 tests (user-friendly messages, summary format, error feedback, menu continuation after errors)
+
+### Acceptance Criteria Verification
+✓ All Task records and associated TaskComment records can be exported to JSON file
+✓ Tasks and comments can be imported from JSON file
+✓ Task IDs, statuses, due dates, and comments are preserved on import
+✓ Imported data is validated before being applied; invalid structure is rejected
+✓ Importing does not overwrite existing data by default (skip strategy); optional --replace flag enables overwrite
+✓ JSON schema matches Task.to_dict() and TaskComment.to_dict() serialization formats
+✓ Invalid or duplicate entries during import are skipped individually, not treated as full failure
+✓ Only JSON format is supported; CSV and XML are out of scope
+✓ Exported comments embedded in task array, same structure as Task.to_dict()
+✓ All new functionality accessible via `python -m src`:
+  - Interactive menu: Options 10 (Export) and 11 (Import) with prompts and strategy selection
+  - CLI: `python -m src export [--file PATH]` and `python -m src import --file PATH [--strategy skip|replace]`
+  - Both modes fully functional and tested
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

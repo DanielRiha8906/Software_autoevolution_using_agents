@@ -1,5 +1,7 @@
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
+import json
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
@@ -7,6 +9,7 @@ from ..models.task_comment import TaskComment
 from ..models.task_summary_report import TaskSummaryReport
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
+from .import_validator import ImportValidator
 
 
 class TodoService:
@@ -233,3 +236,105 @@ class TodoService:
             completion_rate=completion_rate,
             avg_days_to_completion=avg_days_to_completion,
         )
+
+    def export_tasks(self, file_path: Optional[str] = None) -> int:
+        """Export all tasks to a JSON file.
+
+        Args:
+            file_path: Path to export to. If None, uses default location.
+
+        Returns:
+            int: Number of tasks exported.
+
+        Raises:
+            OSError: If file cannot be written.
+        """
+        tasks = self.list_tasks()
+        task_dicts = [t.to_dict() for t in tasks]
+
+        if file_path is None:
+            file_path = str(Path.home() / ".todo_export.json")
+
+        # Create parent directories if needed
+        file_path_obj = Path(file_path)
+        file_path_obj.parent.mkdir(parents=True, exist_ok=True)
+
+        # Write to file
+        with open(file_path, "w", encoding="utf-8") as f:
+            json.dump(task_dicts, f, indent=2, ensure_ascii=False)
+
+        return len(task_dicts)
+
+    def import_tasks(self, file_path: str, duplicate_strategy: str = "skip") -> dict:
+        """Import tasks from a JSON file with validation.
+
+        Args:
+            file_path: Path to the JSON file to import from.
+            duplicate_strategy: How to handle duplicate task IDs.
+                - "skip": Keep existing task, ignore imported one (default).
+                - "replace": Replace existing task with imported one.
+
+        Returns:
+            dict: Result dictionary with keys:
+                - imported_count: Number of tasks successfully imported.
+                - skipped_count: Number of duplicate tasks skipped.
+                - errors: List of error messages for invalid entries.
+
+        Raises:
+            ValueError: If duplicate_strategy is invalid.
+        """
+        if duplicate_strategy not in ("skip", "replace"):
+            raise ValueError("duplicate_strategy must be 'skip' or 'replace'")
+
+        validator = ImportValidator()
+        validated_tasks, validation_errors = validator.validate_file(file_path)
+
+        result = {
+            "imported_count": 0,
+            "skipped_count": 0,
+            "errors": validation_errors,
+        }
+
+        if not validated_tasks:
+            return result
+
+        # Get existing task IDs for duplicate checking
+        existing_tasks = self.list_tasks()
+        existing_ids = {t.id for t in existing_tasks}
+
+        # Import validated tasks
+        for task_dict in validated_tasks:
+            task_id = task_dict["id"]
+            is_duplicate = task_id in existing_ids
+
+            if is_duplicate and duplicate_strategy == "skip":
+                result["skipped_count"] += 1
+                continue
+
+            try:
+                # Filter out empty comments before reconstructing task
+                task_dict_copy = task_dict.copy()
+                if "comments" in task_dict_copy and task_dict_copy["comments"]:
+                    filtered_comments = [
+                        c for c in task_dict_copy["comments"]
+                        if c.get("content") and c.get("content").strip()
+                    ]
+                    task_dict_copy["comments"] = filtered_comments
+
+                # Reconstruct task from dict and add/update
+                task = Task.from_dict(task_dict_copy)
+                self._manager._tasks[task_id] = task
+
+                if is_duplicate and duplicate_strategy == "replace":
+                    # Counted as skipped when replacing
+                    result["skipped_count"] += 1
+                else:
+                    result["imported_count"] += 1
+                existing_ids.add(task_id)
+            except Exception as e:
+                result["errors"].append({"id": task_id, "error": f"Failed to import: {e}"})
+
+        # Persist all changes
+        self._manager._persist()
+
+        return result

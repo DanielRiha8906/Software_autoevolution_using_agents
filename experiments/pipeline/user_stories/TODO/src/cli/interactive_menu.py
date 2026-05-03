@@ -1,6 +1,7 @@
 import os
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from ..models.task import Task
@@ -87,6 +88,10 @@ class InteractiveMenu:
                 self._do_manage_comments(tasks)
             elif choice == "9":
                 self._do_report()
+            elif choice == "10":
+                self._do_export()
+            elif choice == "11":
+                self._do_import()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -116,6 +121,8 @@ class InteractiveMenu:
         print("  7. Delete task")
         print("  8. Manage comments")
         print("  9. View summary report")
+        print("  10. Export tasks")
+        print("  11. Import tasks")
         print("  0. Quit")
         print()
 
@@ -623,4 +630,57 @@ class InteractiveMenu:
         else:
             print("  Avg days to completion: N/A")
         print()
+        input("  Press Enter to continue...")
+
+    def _do_export(self) -> None:
+        """Export all tasks to a JSON file."""
+        _clear()
+        print("  Export Tasks\n")
+        default_path = str(Path.home() / ".todo_export.json")
+        file_path = _prompt("Output file path", default=default_path) or default_path
+        try:
+            count = self._service.export_tasks(file_path)
+            print(f"\n  Success! Exported {count} task(s) to {file_path}")
+        except OSError as e:
+            print(f"\n  Error: Failed to export tasks: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_import(self) -> None:
+        """Import tasks from a JSON file."""
+        _clear()
+        print("  Import Tasks\n")
+        file_path = _prompt("Input file path")
+        if not file_path:
+            input("  File path cannot be empty. Press Enter...")
+            return
+
+        _clear()
+        print("  Duplicate handling strategy:\n")
+        strategy_idx = _pick(
+            "Select",
+            ["skip    (keep existing, ignore import)", "replace (overwrite with imported)"],
+        )
+        if strategy_idx is None:
+            return
+
+        strategy = ["skip", "replace"][strategy_idx]
+
+        try:
+            result = self._service.import_tasks(file_path, strategy)
+            _clear()
+            print("  Import Result\n")
+            print(f"  Imported: {result['imported_count']}")
+            print(f"  Skipped:  {result['skipped_count']}")
+            if result["errors"]:
+                print(f"  Errors:   {len(result['errors'])}")
+                for error in result["errors"][:5]:  # Show first 5 errors
+                    if "error" in error:
+                        print(f"    - {error['error']}")
+                if len(result["errors"]) > 5:
+                    print(f"    ... and {len(result['errors']) - 5} more error(s)")
+            else:
+                print("  No errors.")
+        except (ValueError, OSError) as e:
+            _clear()
+            print(f"  Error: {e}")
         input("  Press Enter to continue...")
