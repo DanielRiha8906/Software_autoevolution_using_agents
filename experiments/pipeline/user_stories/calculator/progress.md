@@ -166,4 +166,4 @@ Duration: 439.1s | Cost: $0.925967 USD | Turns: 17
 - ✅ No database or external indexing system used (in-memory filtering from JsonStorage after load)
 - ✅ All functionality accessible via python -m src: interactive menu option "Filter history" (item 10) with two-stage submenu (operation selection + state selection), and one-shot CLI flags (--filter-operation and --filter-state) used with --show-history
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 565.8s | Cost: $1.062949 USD | Turns: 21
