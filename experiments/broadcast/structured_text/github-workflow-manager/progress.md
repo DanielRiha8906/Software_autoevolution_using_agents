@@ -337,4 +337,4 @@ Broadcast architecture with 3 independent implementers (candidate-a, candidate-b
 - **COULD HAVE**: ✗ Per-status breakdown of average duration not implemented (non-critical)
 - **WON'T HAVE**: ✓ No visualization layer added
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 156.3s | Cost: $1.820183 USD | Turns: 52
