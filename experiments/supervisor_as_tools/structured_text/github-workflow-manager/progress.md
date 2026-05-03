@@ -266,4 +266,4 @@ Successfully implemented comprehensive filtering capabilities for workflow runs 
 - Timezone normalization handles both naive (UTC assumed) and TZ-aware datetimes
 - ISO 8601 format supports both basic (2026-05-01T10:00:00) and extended (+02:00) formats
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 539.0s | Cost: $1.070329 USD | Turns: 14
