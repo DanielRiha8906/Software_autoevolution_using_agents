@@ -226,3 +226,50 @@ Duration: 441.1s | Cost: $0.832739 USD | Turns: 17
 - Error handling for invalid date formats with graceful fallback and user feedback
 
 Duration: 410.3s | Cost: $0.852108 USD | Turns: 19
+
+---
+
+## Task 06: Add task statistics
+
+### Status: COMPLETED ✓
+
+### Files Changed
+- `src/models/task_statistics.py` — New file with TaskStatistics dataclass (8 fields)
+- `src/models/__init__.py` — Added TaskStatistics to imports and __all__
+- `src/services/todo_service.py` — Added get_statistics() method to compute all statistics
+- `src/cli/todo_cli.py` — Added stats subcommand and _cmd_stats() handler
+- `src/cli/interactive_menu.py` — Added option 7 "View statistics" and _do_stats() method; shifted comment menu to option 8 and delete to option 9
+- `artifacts/class_diagram.puml` — Added TaskStatistics class, methods to TodoService/TodoCLI/InteractiveMenu, and relationships
+- `artifacts/use_case_diagram.puml` — Added "View statistics" use cases for both interactive and CLI modes
+- `artifacts/activity_diagram.puml` — Added statistics computation activity with detailed steps
+- `artifacts/component_diagram.puml` — Added Statistics Model component and relationship
+
+### Test Results
+- **Total tests: 150**
+- **Passed: 150**
+- **Failed: 0**
+- **Success rate: 100%**
+
+### Requirements Met
+✓ MUST: Compute total task count
+✓ MUST: Compute count per status (pending, in_progress, done)
+✓ MUST: Compute count of overdue tasks
+✓ MUST: Compute count of tasks with due date set
+✓ MUST: Return a dataclass (not dict) as structured report object
+✓ MUST: All functionality accessible via python -m src (interactive menu option 7 + stats subcommand)
+✓ SHOULD: Include completion rate as percentage (done / total)
+✓ SHOULD: Ensure deterministic output format regardless of task ordering
+✓ COULD: Include average days from creation to completion for done tasks
+
+### Implementation Summary
+- TaskStatistics dataclass with 8 fields: total_count, pending_count, in_progress_count, done_count, overdue_count, tasks_with_due_date, completion_rate (0-100%), avg_days_to_completion (Optional[float])
+- TodoService.get_statistics() iterates all tasks, counts by status using existing list operations, counts overdue using is_overdue() method, counts with due_date
+- Completion rate computed as (done_count / total_count * 100), rounded to 1 decimal place; handles zero total gracefully
+- Avg days to completion calculated as average of (updated_at - created_at).days for done tasks only; returns None if no done tasks
+- CLI integration: `python -m src stats` displays formatted statistics with proper alignment and percentage formatting
+- Interactive menu: option 7 displays statistics with "—" for missing avg_days value, waits for user to press Enter
+- All statistics computations handle empty task lists and edge cases gracefully
+- Output format is deterministic (same result for same task set every time)
+- All 150 existing tests continue to pass
+
+Duration: 394.1s | Cost: $0.784273 USD | Turns: 20

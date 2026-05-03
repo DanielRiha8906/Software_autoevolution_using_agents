@@ -149,6 +149,10 @@ class TodoCLI:
         p_comment_delete.add_argument("comment_id", help="Comment ID")
         p_comment_delete.set_defaults(func=self._cmd_comment_delete)
 
+        # stats
+        p_stats = sub.add_parser("stats", help="Show task statistics")
+        p_stats.set_defaults(func=self._cmd_stats)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -267,4 +271,19 @@ class TodoCLI:
     def _cmd_comment_delete(self, args: argparse.Namespace) -> int:
         self._service.delete_comment(args.comment_id)
         print(f"Deleted comment {args.comment_id[:8]}")
+        return 0
+
+    def _cmd_stats(self, args: argparse.Namespace) -> int:
+        stats = self._service.get_statistics()
+        avg_days_str = f"{stats.avg_days_to_completion:.1f}" if stats.avg_days_to_completion is not None else "—"
+        print("Task Statistics")
+        print("===============================")
+        print(f"Total tasks:            {stats.total_count}")
+        print(f"  Pending:              {stats.pending_count}")
+        print(f"  In Progress:          {stats.in_progress_count}")
+        print(f"  Done:                 {stats.done_count}")
+        print(f"Completion Rate:        {stats.completion_rate:.1f}%")
+        print(f"Overdue:                {stats.overdue_count}")
+        print(f"With due date:          {stats.tasks_with_due_date}")
+        print(f"Avg days to completion: {avg_days_str}")
         return 0

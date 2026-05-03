@@ -33,9 +33,17 @@ repeat
       :Run update task flow;
     case (6 — Set due date)
       :Run set due date flow;
-    case (7 — Manage comments)
+    case (7 — View statistics)
+      :Get all tasks;
+      :Count by status (pending, in-progress, done);
+      :Count overdue tasks;
+      :Count tasks with due date;
+      :Calculate completion rate;
+      :Calculate avg days to completion;
+      :Display statistics;
+    case (8 — Manage comments)
       :Run comment management flow;
-    case (8 — Delete task)
+    case (9 — Delete task)
       :Run delete task flow;
     case (0/q — Quit)
       :Clear screen;
