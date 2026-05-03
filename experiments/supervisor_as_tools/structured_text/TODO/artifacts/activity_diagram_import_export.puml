@@ -1,0 +1,77 @@
+@startuml activity_diagram_import_export
+
+title Import/Export Workflows
+
+partition "Export Workflow" {
+  start
+  :User selects export;
+  :Prompt for filepath;
+  :Retrieve all tasks from manager;
+  :Retrieve all comments for each task;
+  :Create export JSON object {tasks, comments};
+  :Create parent directories if needed;
+  :Write JSON file;
+  :Display success message;
+  :task_count, comment_count returned;
+  stop
+}
+
+partition "Import Workflow" {
+  start
+  :User selects import;
+  :Prompt for filepath;
+  if (File exists?) then (no)
+    :Error: file not found;
+    stop
+  else (yes)
+  endif
+  if (Read and parse JSON) then (invalid JSON)
+    :Error: invalid JSON syntax;
+    stop
+  else (valid)
+  endif
+  if (Required keys present: tasks, comments?) then (no)
+    :Error: missing required keys;
+    stop
+  else (yes)
+  endif
+  if (tasks is a list?) then (no)
+    :Error: tasks must be a list;
+    stop
+  else (yes)
+  endif
+  if (comments is a list?) then (no)
+    :Error: comments must be a list;
+    stop
+  else (yes)
+  endif
+  :Validate all task dicts;
+  if (All tasks valid?) then (no)
+    :Error: invalid task at index X;
+    stop
+  else (yes)
+  endif
+  :Build valid task IDs set;
+  :Validate all comment dicts;
+  if (All comments valid?) then (no)
+    :Error: invalid comment at index X;
+    stop
+  else (yes)
+  endif
+  if (overwrite=false and DB not empty?) then (yes)
+    :Error: database not empty;
+    stop
+  else (no)
+  endif
+  if (overwrite=true?) then (yes)
+    :Clear existing tasks and comments;
+  else (no)
+  endif
+  :Load tasks via _load_from_dicts();
+  :Load comments via _load_from_dicts();
+  :Display success message;
+  :task_count, comment_count, [] returned;
+  stop
+}
+
+@enduml

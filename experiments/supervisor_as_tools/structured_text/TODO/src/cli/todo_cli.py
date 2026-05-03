@@ -153,6 +153,21 @@ class TodoCLI:
         p_stats = sub.add_parser("stats", help="Show task statistics")
         p_stats.set_defaults(func=self._cmd_stats)
 
+        # export
+        p_export = sub.add_parser("export", help="Export all tasks and comments to JSON")
+        p_export.add_argument("filepath", help="Path to export file")
+        p_export.set_defaults(func=self._cmd_export)
+
+        # import
+        p_import = sub.add_parser("import", help="Import tasks and comments from JSON")
+        p_import.add_argument("filepath", help="Path to import file")
+        p_import.add_argument(
+            "--overwrite",
+            action="store_true",
+            help="Overwrite existing data (default: error if data exists)",
+        )
+        p_import.set_defaults(func=self._cmd_import)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -287,3 +302,21 @@ class TodoCLI:
         print(f"With due date:          {stats.tasks_with_due_date}")
         print(f"Avg days to completion: {avg_days_str}")
         return 0
+
+    def _cmd_export(self, args: argparse.Namespace) -> int:
+        try:
+            task_count, comment_count = self._service.export_tasks(args.filepath)
+            print(f"Exported {task_count} task(s) and {comment_count} comment(s) to {args.filepath}")
+            return 0
+        except (ValueError, OSError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
+    def _cmd_import(self, args: argparse.Namespace) -> int:
+        try:
+            task_count, comment_count, _ = self._service.import_tasks(args.filepath, args.overwrite)
+            print(f"Imported {task_count} task(s) and {comment_count} comment(s) from {args.filepath}")
+            return 0
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1

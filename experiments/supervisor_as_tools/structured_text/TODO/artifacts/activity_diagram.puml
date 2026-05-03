@@ -45,6 +45,10 @@ repeat
       :Run comment management flow;
     case (9 — Delete task)
       :Run delete task flow;
+    case (10 — Export tasks)
+      :Run export flow;
+    case (11 — Import tasks)
+      :Run import flow;
     case (0/q — Quit)
       :Clear screen;
       stop

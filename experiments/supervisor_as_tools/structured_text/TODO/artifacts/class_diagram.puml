@@ -59,6 +59,7 @@ package "storage" #FFF3CC {
         +save(tasks: List<Dictionary>) : void
         +load_comments() : List<Dictionary>
         +save_comments(comments: List<Dictionary>) : void
+        +import_data(tasks: List<Dictionary>, comments: List<Dictionary>) : void
     }
 }
 
@@ -85,6 +86,7 @@ package "services" #DDFFD4 {
         -load() : void
         -persist() : void
         -validate_due_date(dt: DateTime [0..1]) : void
+        -_load_from_dicts(task_dicts: List<Dictionary>) : void
     }
 
     class CommentsService {
@@ -99,6 +101,7 @@ package "services" #DDFFD4 {
         +delete_all_for_task(task_id: String) : void
         -load() : void
         -persist() : void
+        -_load_from_dicts(comment_dicts: List<Dictionary>) : void
     }
 
     class TodoService {
@@ -119,6 +122,8 @@ package "services" #DDFFD4 {
         +list_comments(task_id: String) : List<TaskComment>
         +delete_comment(comment_id: String) : void
         +get_statistics() : TaskStatistics
+        +export_tasks(filepath: String) : Tuple[int, int]
+        +import_tasks(filepath: String, overwrite: Boolean) : Tuple[int, int, List]
     }
 }
 

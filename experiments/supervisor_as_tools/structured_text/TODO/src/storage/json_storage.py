@@ -52,3 +52,15 @@ class JsonStorage:
         data = {"tasks": tasks, "comments": comments}
         with self._path.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
+
+    def import_data(self, tasks: list[dict], comments: list[dict]) -> None:
+        """Import tasks and comments, replacing all existing data.
+
+        Args:
+            tasks: List of task dictionaries.
+            comments: List of comment dictionaries.
+        """
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        data = {"tasks": tasks, "comments": comments}
+        with self._path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)

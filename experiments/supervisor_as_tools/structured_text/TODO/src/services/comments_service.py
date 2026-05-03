@@ -24,6 +24,15 @@ class CommentsService:
         raw = self._storage.load_comments()
         self._comments = {c["id"]: TaskComment.from_dict(c) for c in raw}
 
+    def _load_from_dicts(self, comment_dicts: list[dict]) -> None:
+        """Load comments from a list of dictionaries.
+
+        Args:
+            comment_dicts: List of comment dictionaries.
+        """
+        self._comments = {c["id"]: TaskComment.from_dict(c) for c in comment_dicts}
+        self._persist()
+
     def _persist(self) -> None:
         self._storage.save_comments([c.to_dict() for c in self._comments.values()])
 

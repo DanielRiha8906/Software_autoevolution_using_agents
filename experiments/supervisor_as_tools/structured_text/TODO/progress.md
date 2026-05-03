@@ -273,3 +273,63 @@ Duration: 410.3s | Cost: $0.852108 USD | Turns: 19
 - All 150 existing tests continue to pass
 
 Duration: 394.1s | Cost: $0.784273 USD | Turns: 20
+
+---
+
+## Task 07: Add import and export of tasks and comments
+
+### Status: COMPLETED ✓
+
+### Files Changed
+- `src/services/todo_service.py` — Added export_tasks() and import_tasks() with comprehensive validation
+- `src/storage/json_storage.py` — Added import_data() method for bulk data loading
+- `src/services/task_manager.py` — Added _load_from_dicts() for bulk task loading
+- `src/services/comments_service.py` — Added _load_from_dicts() for bulk comment loading
+- `src/cli/todo_cli.py` — Added export and import subcommands with CLI handlers
+- `src/cli/interactive_menu.py` — Added menu options 10 and 11 for export/import with handlers
+- `artifacts/class_diagram.puml` — Updated to show new export/import methods
+- `artifacts/activity_diagram.puml` — Updated to show export/import workflows
+- `artifacts/activity_diagram_import_export.puml` — New file with detailed workflows
+- `artifacts/component_diagram.puml` — Updated to show import/export infrastructure
+- `artifacts/use_case_diagram.puml` — Added export/import use cases for both modes
+
+### Test Results
+- **Total tests: 150**
+- **Passed: 150**
+- **Failed: 0**
+- **Success rate: 100%**
+
+### Requirements Met
+✓ MUST: Allow exporting all stored Task records (including associated TaskComment records) to a JSON file
+✓ MUST: Allow importing Task and TaskComment records from a JSON file
+✓ MUST: Preserve task IDs, statuses, due dates, and comments on import
+✓ MUST: Validate imported data structure before applying it
+✓ MUST: Existing stored data must not be overwritten without explicit intent
+✓ MUST: All new functionality must be accessible via python -m src (interactive menu + CLI flags)
+✓ SHOULD: Schema must match the Task.to_dict() and TaskComment.to_dict() serialization formats
+
+### Implementation Summary
+- **Export functionality:** export_tasks(filepath) exports all tasks and comments to JSON file with format: {"tasks": [...], "comments": [...]}. Returns (task_count, comment_count) tuple.
+- **Import functionality:** import_tasks(filepath, overwrite=False) imports tasks and comments from JSON file with comprehensive validation. Returns (task_count, comment_count, []) tuple.
+- **Validation:** Comprehensive checks including:
+  - File existence and JSON syntax validity
+  - Required keys ("tasks", "comments")
+  - Task fields: id, title, description, status, created_at, updated_at, due_date
+  - Comment fields: id, task_id, content, created_at
+  - Status values must be in {pending, in_progress, done}
+  - Datetime fields must be ISO 8601 parseable
+  - All comment task_ids must reference valid task ids in the import
+  - Comments cannot have empty/whitespace-only content
+- **Overwrite protection:** If database not empty and overwrite=False, raises ValueError. If overwrite=True, clears all existing data before loading.
+- **Error messages:** Exact error context with field/index information for debugging
+- **CLI commands:** 
+  - `python -m src export <filepath>` — exports to file with success message
+  - `python -m src import <filepath> [--overwrite]` — imports with optional overwrite flag
+  - Both commands return 0 on success, 1 on error
+  - Errors printed to stderr with "Error: " prefix
+- **Interactive menu:** 
+  - Option 10: Export — prompts for filepath, shows confirmation
+  - Option 11: Import — prompts for filepath, checks database state, asks for overwrite confirmation if needed
+- **Data integrity:** All task IDs, statuses, due dates, and comment IDs preserved exactly on round-trip import/export
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

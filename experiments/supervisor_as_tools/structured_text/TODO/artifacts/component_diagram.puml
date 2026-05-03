@@ -12,12 +12,14 @@ package "TODO Application" {
     package "CLI Layer" {
         component "Interactive Menu" as IM
         component "Command-line Interface\n(TodoCLI)" as CLI
+        component "Import/Export Handler" as IEH
     }
 
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
         component "Comments Service" as COM
+        component "Validation\n(import)" as VAL
     }
 
     package "Domain Model" {
@@ -29,6 +31,10 @@ package "TODO Application" {
     package "Persistence Layer" {
         component "JSON Storage\n(JsonStorage)" as Storage
     }
+
+    package "Export/Import Files" {
+        component "JSON Export/Import" as Files
+    }
 }
 
 database "todo_data.json" as DB
@@ -38,9 +44,11 @@ Main --> CLI : command mode
 
 IM --> SVC
 CLI --> SVC
+IEH --> SVC
 
 SVC --> MGR
 SVC --> COM
+SVC --> VAL : validates on import
 SVC ..> StatsModel : returns
 MGR --> Storage
 MGR ..> Model
@@ -50,5 +58,6 @@ Storage ..> Model
 Storage ..> CommentModel
 
 Storage --> DB : read/write
+SVC --> Files : export to / import from
 
 @enduml
