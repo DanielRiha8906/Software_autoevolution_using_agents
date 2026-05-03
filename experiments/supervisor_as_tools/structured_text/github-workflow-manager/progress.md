@@ -190,4 +190,4 @@ Successfully implemented `AttemptService` to manage `WorkflowRunAttempt` objects
 - "List attempts" — Show all attempts or filter by run_id
 - "Get attempt detail" — Retrieve and display specific attempt
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 356.9s | Cost: $0.691126 USD | Turns: 23
