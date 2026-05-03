@@ -15,6 +15,7 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by branch"         as I_FBRANCH
     usecase "Filter by status"         as I_FSTATUS
     usecase "Filter by conclusion"     as I_FCONCL
+    usecase "Query workflow state"     as I_QUERY
     usecase "Exit application"         as I_EXIT
   }
 
@@ -26,6 +27,7 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by status"         as C_FSTATUS
     usecase "Filter by conclusion"     as C_FCONCL
     usecase "Get run detail"           as C_DETAIL
+    usecase "Query workflow state"     as C_QUERY
   }
 }
 
@@ -36,6 +38,7 @@ UI --> I_ADD
 UI --> I_LIST
 UI --> I_DETAIL
 UI --> I_FILTER
+UI --> I_QUERY
 UI --> I_EXIT
 
 I_FILTER --> I_FBRANCH  : <<extend>>
@@ -45,6 +48,7 @@ I_FILTER --> I_FCONCL   : <<extend>>
 CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
+CLI --> C_QUERY
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>

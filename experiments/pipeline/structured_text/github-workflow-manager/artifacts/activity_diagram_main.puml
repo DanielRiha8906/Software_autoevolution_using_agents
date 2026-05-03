@@ -41,6 +41,16 @@ if (CLI arguments provided?) then (yes)
         :Exit code 1;
       endif
 
+    case (query-state)
+      :WorkflowRunService.get_run_detail(run_id);
+      if (run found?) then (yes)
+        :Query state using:\n  is_terminal()\n  is_running()\n  is_successful()\n  is_failed()\n  is_cancelled();
+        :Print workflow state;
+      else (no)
+        :Print error to stderr;
+        :Exit code 1;
+      endif
+
   endswitch
   stop
 

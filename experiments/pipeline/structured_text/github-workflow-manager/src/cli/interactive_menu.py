@@ -111,11 +111,27 @@ def _filter_menu(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
+def _query_run_state(service: WorkflowRunService) -> None:
+    run_id = _prompt("\nEnter run ID")
+    run = service.get_run_detail(run_id)
+    if run is None:
+        print(f"No run found with id '{run_id}'.")
+        return
+    print(f"\n--- Run State ---")
+    print(f"  ID        : {run.id}")
+    print(f"  Terminal  : {'yes' if run.is_terminal() else 'no'}")
+    print(f"  Running   : {'yes' if run.is_running() else 'no'}")
+    print(f"  Successful: {'yes' if run.is_successful() else 'no'}")
+    print(f"  Failed    : {'yes' if run.is_failed() else 'no'}")
+    print(f"  Cancelled : {'yes' if run.is_cancelled() else 'no'}")
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
     ("Get run detail", _detail_run),
     ("Filter runs", _filter_menu),
+    ("Query workflow state", _query_run_state),
     ("Exit", None),
 ]
 
