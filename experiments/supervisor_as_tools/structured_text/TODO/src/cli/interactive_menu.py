@@ -4,7 +4,9 @@ from typing import Optional
 from zoneinfo import ZoneInfo
 
 from ..models.task import Task
+from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
+from ..services.comments_service import CommentNotFoundError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -82,6 +84,8 @@ class InteractiveMenu:
             elif choice == "6":
                 self._do_set_due_date(tasks)
             elif choice == "7":
+                self._do_manage_comments()
+            elif choice == "8":
                 self._do_delete(tasks)
             else:
                 input("  Unknown option. Press Enter to continue...")
@@ -109,7 +113,8 @@ class InteractiveMenu:
         print("  4. Change status  (start / done / reopen)")
         print("  5. Update task    (title / description)")
         print("  6. Set due date")
-        print("  7. Delete task")
+        print("  7. Manage comments")
+        print("  8. Delete task")
         print("  0. Quit")
         print()
 
@@ -266,6 +271,125 @@ class InteractiveMenu:
                 print(f"\n  Error: Invalid date format or date is in the past. {e}")
             except TaskNotFoundError as e:
                 print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_manage_comments(self) -> None:
+        """Main menu for comment management."""
+        while True:
+            _clear()
+            print("  Manage Comments\n")
+            print("  1. View comments for a task")
+            print("  2. Add comment to a task")
+            print("  3. Delete a comment")
+            print("  0. Back")
+            print()
+            choice = input("  > ").strip().lower()
+
+            if choice in ("0", "q", "quit", "back"):
+                return
+            elif choice == "1":
+                self._do_view_comments()
+            elif choice == "2":
+                self._do_add_comment()
+            elif choice == "3":
+                self._do_delete_comment()
+            else:
+                input("  Unknown option. Press Enter to continue...")
+
+    def _do_view_comments(self) -> None:
+        """View comments for a selected task."""
+        _clear()
+        tasks = self._service.list_tasks()
+        if not tasks:
+            input("  No tasks. Press Enter...")
+            return
+        print("  View comments — pick a task:\n")
+        idx = _pick("Select", [_task_line(t) for t in tasks])
+        if idx is None:
+            return
+        task = tasks[idx]
+
+        _clear()
+        print(f"  Comments for: {task.title}\n")
+        try:
+            comments = self._service.list_comments(task.id)
+            if not comments:
+                print("  (no comments yet)")
+            else:
+                for comment in comments:
+                    print(f"  [{comment.id[:8]}] {comment.created_at.isoformat()}")
+                    print(f"    {comment.content}")
+        except TaskNotFoundError as e:
+            print(f"  Error: {e}")
+        print()
+        input("  Press Enter to continue...")
+
+    def _do_add_comment(self) -> None:
+        """Add a comment to a selected task."""
+        _clear()
+        tasks = self._service.list_tasks()
+        if not tasks:
+            input("  No tasks. Press Enter...")
+            return
+        print("  Add comment — pick a task:\n")
+        idx = _pick("Select", [_task_line(t) for t in tasks])
+        if idx is None:
+            return
+        task = tasks[idx]
+
+        _clear()
+        print(f"  Add comment to: {task.title}\n")
+        content = _prompt("Comment content")
+        if not content:
+            input("  Comment cannot be empty. Press Enter...")
+            return
+
+        try:
+            comment = self._service.add_comment(task.id, content)
+            print(f"\n  Added comment: {comment.id[:8]}")
+        except (TaskNotFoundError, ValueError) as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_delete_comment(self) -> None:
+        """Delete a selected comment."""
+        _clear()
+        tasks = self._service.list_tasks()
+        if not tasks:
+            input("  No tasks. Press Enter...")
+            return
+        print("  Delete comment — pick a task:\n")
+        idx = _pick("Select", [_task_line(t) for t in tasks])
+        if idx is None:
+            return
+        task = tasks[idx]
+
+        _clear()
+        print(f"  Comments for: {task.title}\n")
+        try:
+            comments = self._service.list_comments(task.id)
+            if not comments:
+                print("  (no comments)")
+                input("  Press Enter to continue...")
+                return
+            comment_lines = [f"[{c.id[:8]}] {c.created_at.isoformat()} — {c.content[:40]}" for c in comments]
+            cidx = _pick("Select comment to delete", comment_lines)
+            if cidx is None:
+                return
+            comment = comments[cidx]
+
+            _clear()
+            print(f"  Delete comment: {comment.content[:60]}")
+            confirm = input("  Are you sure? (y/N): ").strip().lower()
+            if confirm != "y":
+                print("  Cancelled.")
+                input("  Press Enter to continue...")
+                return
+
+            self._service.delete_comment(comment.id)
+            print(f"  Deleted comment: {comment.id[:8]}")
+        except (TaskNotFoundError, CommentNotFoundError) as e:
+            print(f"\n  Error: {e}")
         input("  Press Enter to continue...")
 
     def _do_delete(self, tasks: list[Task]) -> None:
