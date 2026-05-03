@@ -34,3 +34,22 @@ class CalculatorService:
 
     def get_history(self) -> list[MemoryEntry]:
         return self.memory_service.retrieve()
+
+    def filter_history(
+        self,
+        operations: list[str] | None = None,
+        state: str | None = None,
+    ) -> list[MemoryEntry]:
+        """Filter calculation history by operations and/or state.
+
+        Args:
+            operations: List of operation names to filter by. None or empty list means include all.
+            state: One of 'success', 'error', or 'both'. None is treated as 'both'.
+
+        Returns:
+            List of MemoryEntry objects matching all specified criteria, in chronological order.
+
+        Raises:
+            ValueError: If state is provided and not one of 'success', 'error', or 'both'.
+        """
+        return self.memory_service.filter(operations=operations, state=state)

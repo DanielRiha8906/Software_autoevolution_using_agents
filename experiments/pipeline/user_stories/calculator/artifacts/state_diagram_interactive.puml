@@ -9,8 +9,15 @@ top to bottom direction
 
 Menu --> FirstOperand : operation selected
 Menu --> Feedback : history selected
+Menu --> FilterOps : filter selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
+
+FilterOps --> FilterState : operations chosen
+FilterOps --> Menu : cancelled
+
+FilterState --> Feedback : state chosen
+FilterState --> Menu : cancelled
 
 FirstOperand --> SecondOperand : valid number
 FirstOperand --> Feedback : invalid number
