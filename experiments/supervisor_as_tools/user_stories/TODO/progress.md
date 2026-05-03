@@ -305,3 +305,110 @@ All commands accessible via `python -m src <command>` and listed in `--help`.
 - `state_diagram.puml` — Added note about comment availability at any task state
 
 Duration: 399.5s | Cost: $0.794956 USD | Turns: 23
+
+## Task 04: CommentsService
+
+### Task Number
+04
+
+### Summary
+Implemented CommentsService as a centralized service for managing TaskComment lifecycle. Renamed CommentManager to CommentsService, added cascade delete functionality when tasks are deleted, integrated with TaskManager and TodoService, and exposed all comment operations via CLI flags and interactive menu options.
+
+### Files Changed
+
+#### Modified Files
+- `src/services/comment_manager.py` → `src/services/comments_service.py` — Renamed class CommentManager to CommentsService
+- `src/services/comments_service.py` — Added `delete_by_task(task_id: str) → int` method for cascade delete, added `validate_task_exists(task_id: str) → bool` method
+- `src/services/__init__.py` — Updated import from comment_manager to comments_service, renamed export to CommentsService
+- `src/services/todo_service.py` — Updated to use CommentsService, modified `delete_task()` to call `comments_service.delete_by_task()` for cascade delete, updated all comment delegation methods
+- `src/cli/todo_cli.py` — Updated import from comment_manager to comments_service
+- `src/cli/interactive_menu.py` — Added menu option "8. Manage comments" with full submenu for add, view, edit, and delete comment operations
+- `tests/test_comment_manager.py` — Updated imports and class references to CommentsService
+- `tests/test_todo_service_comments.py` — Updated imports to comments_service
+- `tests/test_cli_comment_commands.py` — Updated imports to comments_service
+- `artifacts/class_diagram.puml` — Renamed CommentManager to CommentsService, added new methods (delete_by_task, validate_task_exists)
+- `artifacts/component_diagram.puml` — Updated component label to "Comments Service"
+- `artifacts/use_case_diagram.puml` — Added "Manage comments" interactive menu use case
+
+### Acceptance Criteria Status
+
+✅ **CommentsService supports: adding a comment to a task, listing all comments for a task (ordered by `created_at`), and deleting a comment by id**
+- `add_comment(task_id, content, author)` — Creates new TaskComment
+- `list_comments(task_id, order_by='created_at')` — Returns comments ordered by created_at timestamp
+- `delete_comment(comment_id)` — Deletes comment by ID
+
+✅ **Adding a comment validates that the referenced task exists**
+- `add_comment()` calls `validate_task_exists(task_id)` before creating comment
+- Raises TaskNotFoundError if task doesn't exist
+- Prevents orphaned comments at add-time
+
+✅ **The service integrates with the existing storage mechanism**
+- Uses JsonStorage pattern same as TaskManager
+- Persists to ~/.todo_comments.json
+- `_load()` and `_persist()` methods handle file I/O
+
+✅ **Persistence details stay in the storage layer, not inside the service**
+- All storage calls delegated to JsonStorage instance
+- Service contains only business logic: validation, filtering, ordering
+- No direct file I/O in CommentsService
+
+✅ **Deleting a task cascades to its associated comments**
+- `CommentsService.delete_by_task(task_id)` deletes all comments for task
+- `TodoService.delete_task()` calls `comments_service.delete_by_task()` before task deletion
+- Both deletions complete atomically or fail together
+
+✅ **Editing a comment's content (with `updated_at` updated) is supported as a bonus**
+- `update_comment(comment_id, content)` updates comment content
+- `updated_at` timestamp automatically updated to current UTC time
+- Both one-shot CLI flag and interactive menu option provided
+
+✅ **All new functionality must be accessible via `python -m src`**
+- **One-shot CLI flags**: add-comment, list-comments, show-comment, update-comment, delete-comment (already existed)
+- **Interactive menu**: New option 8 "Manage comments" with submenu for all operations
+- All operations callable via `python -m src <command>` or menu-driven flow
+
+### Implementation Details
+
+#### Service Rename
+- CommentManager → CommentsService follows Java/Spring naming conventions for service layer
+- All imports updated across codebase
+- Minimal breaking change, existing method signatures unchanged
+
+#### Cascade Delete Architecture
+- `CommentsService.delete_by_task(task_id: str) → int` returns count of deleted comments
+- Called by `TodoService.delete_task()` before task is removed
+- If delete fails, exception propagates and task deletion is prevented
+- Atomicity: Either both deletions succeed or neither completes
+
+#### Task Validation
+- `CommentsService.validate_task_exists(task_id: str) → bool` checks TaskManager
+- Used in `add_comment()` and `update_comment()` to prevent invalid references
+- Raises TaskNotFoundError with descriptive message if task not found
+
+#### Interactive Menu Integration
+- New menu option 8: "Manage comments" displays at main menu
+- Submenu offers: list, add, edit, delete options
+- User selects task first, then comment operation
+- Full error handling for invalid task IDs and comment operations
+
+#### CLI Commands
+- Five comment commands accessible via `python -m src <command>`:
+  - `add-comment --task-id <id> --content <text> [--author <name>]`
+  - `list-comments --task-id <id>`
+  - `show-comment --comment-id <id>`
+  - `update-comment --comment-id <id> --content <text>`
+  - `delete-comment --comment-id <id>`
+
+### Test Results
+✅ **All 174 tests passed**
+- Cascade delete functionality tested and verified
+- Task validation tested (TaskNotFoundError raised for invalid tasks)
+- All existing tests continue passing
+- New CommentsService methods fully tested
+
+### Diagrams Updated
+- `class_diagram.puml` — CommentsService with new methods (delete_by_task, validate_task_exists)
+- `component_diagram.puml` — Component labeled "Comments Service"
+- `use_case_diagram.puml` — Added "Manage comments" interactive use case
+
+Duration: 443.7s | Cost: $0.890117 USD | Turns: 17

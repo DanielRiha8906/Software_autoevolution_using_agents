@@ -1,6 +1,6 @@
 import pytest
 from src.models.task_comment import TaskComment
-from src.services.comment_manager import CommentNotFoundError
+from src.services.comments_service import CommentNotFoundError
 from src.services.task_manager import TaskNotFoundError
 from src.services.todo_service import TodoService
 from src.storage.json_storage import JsonStorage

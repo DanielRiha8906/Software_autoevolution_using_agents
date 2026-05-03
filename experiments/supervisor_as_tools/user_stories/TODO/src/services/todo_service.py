@@ -5,14 +5,14 @@ from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
-from .comment_manager import CommentManager
+from .comments_service import CommentsService
 from .task_manager import TaskManager
 
 
 class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
-        self._comment_manager = CommentManager(self._manager)
+        self._comments_service = CommentsService(self._manager)
 
     def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None) -> Task:
         if not title or not title.strip():
@@ -42,6 +42,8 @@ class TodoService:
         return self._manager.update(task_id, title=title, description=description, due_date=due_date)
 
     def delete_task(self, task_id: str) -> None:
+        # Cascade delete: remove all associated comments first
+        self._comments_service.delete_by_task(task_id)
         self._manager.delete(task_id)
 
     def mark_in_progress(self, task_id: str) -> Task:
@@ -84,16 +86,16 @@ class TodoService:
     # ── Comment management ─────────────────────────────────────────────────
 
     def add_comment(self, task_id: str, content: str) -> TaskComment:
-        return self._comment_manager.add(task_id, content)
+        return self._comments_service.add(task_id, content)
 
     def get_comment(self, comment_id: str) -> TaskComment:
-        return self._comment_manager.get(comment_id)
+        return self._comments_service.get(comment_id)
 
     def list_task_comments(self, task_id: str) -> list[TaskComment]:
-        return self._comment_manager.list_by_task(task_id)
+        return self._comments_service.list_by_task(task_id)
 
     def update_comment(self, comment_id: str, content: str) -> TaskComment:
-        return self._comment_manager.update(comment_id, content)
+        return self._comments_service.update(comment_id, content)
 
     def delete_comment(self, comment_id: str) -> None:
-        self._comment_manager.delete(comment_id)
+        self._comments_service.delete(comment_id)

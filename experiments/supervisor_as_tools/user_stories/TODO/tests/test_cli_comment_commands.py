@@ -114,7 +114,7 @@ def test_delete_comment_removes_comment(cli, capsys):
     assert "Deleted" in captured.out or "removed" in captured.out.lower()
 
     # Verify it's actually deleted
-    from src.services.comment_manager import CommentNotFoundError
+    from src.services.comments_service import CommentNotFoundError
     with pytest.raises(CommentNotFoundError):
         service.get_comment(comment.id)
 

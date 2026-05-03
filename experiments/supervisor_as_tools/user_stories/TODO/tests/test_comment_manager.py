@@ -1,6 +1,6 @@
 import pytest
 from src.models.task_comment import TaskComment
-from src.services.comment_manager import CommentManager, CommentNotFoundError
+from src.services.comments_service import CommentsService, CommentNotFoundError
 from src.services.task_manager import TaskManager, TaskNotFoundError
 from src.storage.json_storage import JsonStorage
 
@@ -14,7 +14,7 @@ def task_manager(tmp_path):
 @pytest.fixture
 def comment_manager(task_manager, tmp_path):
     storage = JsonStorage(str(tmp_path / "comments.json"))
-    return CommentManager(task_manager, storage)
+    return CommentsService(task_manager, storage)
 
 
 def test_add_creates_comment(task_manager, comment_manager):
@@ -33,12 +33,12 @@ def test_add_returns_task_comment_object(task_manager, comment_manager):
 
 def test_add_persists_to_storage(task_manager, tmp_path):
     storage_path = str(tmp_path / "comments.json")
-    m1 = CommentManager(task_manager, JsonStorage(storage_path))
+    m1 = CommentsService(task_manager, JsonStorage(storage_path))
     task = task_manager.add("Task")
     comment = m1.add(task.id, "Persisted")
 
     # Create new manager instance from same storage
-    m2 = CommentManager(task_manager, JsonStorage(storage_path))
+    m2 = CommentsService(task_manager, JsonStorage(storage_path))
     retrieved = m2.get(comment.id)
     assert retrieved.content == "Persisted"
 
@@ -159,12 +159,12 @@ def test_delete_raises_not_found(comment_manager):
 
 def test_delete_persists(task_manager, tmp_path):
     storage_path = str(tmp_path / "comments.json")
-    m1 = CommentManager(task_manager, JsonStorage(storage_path))
+    m1 = CommentsService(task_manager, JsonStorage(storage_path))
     task = task_manager.add("Task")
     comment = m1.add(task.id, "To delete")
     m1.delete(comment.id)
 
     # Verify deletion persists
-    m2 = CommentManager(task_manager, JsonStorage(storage_path))
+    m2 = CommentsService(task_manager, JsonStorage(storage_path))
     with pytest.raises(CommentNotFoundError):
         m2.get(comment.id)
