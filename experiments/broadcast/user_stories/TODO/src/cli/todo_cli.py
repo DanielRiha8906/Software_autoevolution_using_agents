@@ -3,6 +3,7 @@ import sys
 from typing import Optional
 
 from ..models.task_status import TaskStatus
+from ..services.comments_service import CommentNotFoundError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -27,7 +28,7 @@ class TodoCLI:
             return 0
         try:
             return args.func(args)
-        except TaskNotFoundError as e:
+        except (TaskNotFoundError, CommentNotFoundError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
         except ValueError as e:
@@ -113,6 +114,29 @@ class TodoCLI:
         p_is_overdue.add_argument("id", help="Task ID")
         p_is_overdue.set_defaults(func=self._cmd_is_overdue)
 
+        # add-comment
+        p_add_comment = sub.add_parser("add-comment", help="Add a comment to a task")
+        p_add_comment.add_argument("task_id", help="Task ID")
+        p_add_comment.add_argument("content", help="Comment content")
+        p_add_comment.add_argument("-a", "--author", help="Comment author")
+        p_add_comment.set_defaults(func=self._cmd_add_comment)
+
+        # list-comments
+        p_list_comments = sub.add_parser("list-comments", help="List comments for a task")
+        p_list_comments.add_argument("task_id", help="Task ID")
+        p_list_comments.set_defaults(func=self._cmd_list_comments)
+
+        # delete-comment
+        p_delete_comment = sub.add_parser("delete-comment", help="Delete a comment")
+        p_delete_comment.add_argument("comment_id", help="Comment ID")
+        p_delete_comment.set_defaults(func=self._cmd_delete_comment)
+
+        # edit-comment
+        p_edit_comment = sub.add_parser("edit-comment", help="Edit a comment")
+        p_edit_comment.add_argument("comment_id", help="Comment ID")
+        p_edit_comment.add_argument("content", help="New comment content")
+        p_edit_comment.set_defaults(func=self._cmd_edit_comment)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -186,4 +210,32 @@ class TodoCLI:
     def _cmd_is_overdue(self, args: argparse.Namespace) -> int:
         is_overdue = self._service.is_task_overdue(args.id)
         print(f"{'Yes' if is_overdue else 'No'}")
+        return 0
+
+    def _cmd_add_comment(self, args: argparse.Namespace) -> int:
+        comment = self._service.add_comment(args.task_id, args.content, args.author)
+        print(f"Added comment {comment.id[:8]} to task {args.task_id[:8]}")
+        return 0
+
+    def _cmd_list_comments(self, args: argparse.Namespace) -> int:
+        comments = self._service.list_comments(args.task_id)
+        if not comments:
+            print(f"No comments for task {args.task_id[:8]}")
+            return 0
+        for comment in comments:
+            author_str = f" by {comment.author}" if comment.author else ""
+            print(f"  {comment.id[:8]}{author_str}:")
+            print(f"    {comment.content}")
+            if comment.updated_at:
+                print(f"    (edited: {comment.updated_at.isoformat()})")
+        return 0
+
+    def _cmd_delete_comment(self, args: argparse.Namespace) -> int:
+        self._service.delete_comment(args.comment_id)
+        print(f"Deleted comment {args.comment_id[:8]}")
+        return 0
+
+    def _cmd_edit_comment(self, args: argparse.Namespace) -> int:
+        comment = self._service.edit_comment(args.comment_id, args.content)
+        print(f"Updated comment {comment.id[:8]}")
         return 0
