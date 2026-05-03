@@ -119,3 +119,53 @@ Duration: 279.6s | Cost: $0.533964 USD | Turns: 13
 - No service layer or CLI integration in this task (future work)
 
 Duration: 153.9s | Cost: $0.284884 USD | Turns: 22
+
+---
+
+## Task 04: Add CommentsService for managing TaskComments
+
+### Status: COMPLETED ✓
+
+### Files Changed
+- `src/services/comments_service.py` — New file with CommentsService class and CommentNotFoundError exception
+- `src/storage/json_storage.py` — Extended to support comments storage with load_comments() and save_comments()
+- `src/services/task_manager.py` — Added optional comments_service parameter, updated delete() for cascade
+- `src/services/todo_service.py` — Added CommentsService instantiation and public delegation methods
+- `src/services/__init__.py` — Exported CommentsService and CommentNotFoundError
+- `src/cli/todo_cli.py` — Added comment-add, comment-list, comment-delete subcommands
+- `src/cli/interactive_menu.py` — Added comment management submenu with view/add/delete options
+- `artifacts/class_diagram.puml` — Updated to show CommentsService, relationships, and exception
+- `artifacts/component_diagram.puml` — Updated to include Comments Service component
+- `artifacts/use_case_diagram.puml` — Added comment management use cases for both interactive and CLI modes
+- `artifacts/activity_diagram.puml` — Updated main menu activity to include manage comments option
+
+### Test Results
+- **Total tests: 119**
+- **Passed: 119**
+- **Failed: 0**
+- **Success rate: 100%**
+
+### Requirements Met
+✓ MUST: Implement CommentsService to manage TaskComment objects
+✓ MUST: Add a comment to a task
+✓ MUST: List all comments for a given task, ordered by created_at
+✓ MUST: Delete a comment by id
+✓ MUST: Validate that the referenced task exists before adding a comment
+✓ MUST: Integrate with the existing storage mechanism (JsonStorage)
+✓ MUST: All functionality accessible via python -m src (interactive menu + CLI flags)
+✓ SHOULD: Service responsibilities limited to TaskComment lifecycle; storage separate
+✓ SHOULD: Cascade delete — deleting a task deletes its associated comments
+
+### Implementation Summary
+- CommentsService follows TaskManager pattern: storage injection, in-memory dict, load/persist lifecycle
+- Validates task existence via TaskManager.get() before adding comments
+- Returns comments ordered by created_at (ascending)
+- JsonStorage extended to store both tasks and comments in single file: {"tasks": [...], "comments": [...]}
+- Backward compatible with old list-only format (auto-converts on load)
+- TaskManager updated to cascade delete comments when a task is deleted
+- TodoService orchestrates both services with proper initialization order (avoids circular dependencies)
+- CLI additions: comment-add <task_id> <content>, comment-list <task_id>, comment-delete <comment_id>
+- Interactive menu additions: option 7 "Manage comments" with sub-menu for view/add/delete
+- All diagrams updated to reflect new CommentsService, relationships, and exception handling
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

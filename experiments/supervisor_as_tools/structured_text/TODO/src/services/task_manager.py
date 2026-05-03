@@ -1,9 +1,12 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
+
+if TYPE_CHECKING:
+    from .comments_service import CommentsService
 
 
 class TaskNotFoundError(Exception):
@@ -11,8 +14,13 @@ class TaskNotFoundError(Exception):
 
 
 class TaskManager:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
+    def __init__(
+        self,
+        storage: Optional[JsonStorage] = None,
+        comments_service: Optional["CommentsService"] = None,
+    ) -> None:
         self._storage = storage or JsonStorage()
+        self._comments_service = comments_service
         self._tasks: dict[str, Task] = {}
         self._load()
 
@@ -65,6 +73,9 @@ class TaskManager:
 
     def delete(self, task_id: str) -> None:
         task = self.get(task_id)  # resolves prefix; raises if missing
+        # Delete associated comments if comments_service is set
+        if self._comments_service is not None:
+            self._comments_service.delete_all_for_task(task.id)
         del self._tasks[task.id]
         self._persist()
 

@@ -14,6 +14,10 @@ rectangle "TODO Manager" {
     usecase "Change task status" as I_STATUS
     usecase "Update task" as I_UPDATE
     usecase "Delete task" as I_DELETE
+    usecase "Manage comments" as I_COMMENTS
+    usecase "View comments" as I_VIEW_COMMENTS
+    usecase "Add comment" as I_ADD_COMMENT
+    usecase "Delete comment" as I_DELETE_COMMENT
     usecase "Quit application" as I_QUIT
   }
 
@@ -27,27 +31,37 @@ rectangle "TODO Manager" {
     usecase "Reopen task" as C_REOPEN
     usecase "Update task" as C_UPDATE
     usecase "Delete task" as C_DELETE
+    usecase "Add comment" as C_ADD_COMMENT
+    usecase "List comments" as C_LIST_COMMENTS
+    usecase "Delete comment" as C_DELETE_COMMENT
   }
 }
 
 User --> UI
 User --> CLI
 
-UI ..> I_ADD    : <<exclude>>
-UI ..> I_LIST   : <<exclude>>
-UI ..> I_SHOW   : <<exclude>>
-UI ..> I_STATUS : <<exclude>>
-UI ..> I_UPDATE : <<exclude>>
-UI ..> I_DELETE : <<exclude>>
-UI ..> I_QUIT   : <<exclude>>
+UI ..> I_ADD       : <<exclude>>
+UI ..> I_LIST      : <<exclude>>
+UI ..> I_SHOW      : <<exclude>>
+UI ..> I_STATUS    : <<exclude>>
+UI ..> I_UPDATE    : <<exclude>>
+UI ..> I_DELETE    : <<exclude>>
+UI ..> I_COMMENTS  : <<exclude>>
+I_COMMENTS ..> I_VIEW_COMMENTS    : <<include>>
+I_COMMENTS ..> I_ADD_COMMENT      : <<include>>
+I_COMMENTS ..> I_DELETE_COMMENT   : <<include>>
+UI ..> I_QUIT      : <<exclude>>
 
-CLI ..> C_ADD    : <<exclude>>
-CLI ..> C_LIST   : <<exclude>>
-CLI ..> C_SHOW   : <<exclude>>
-CLI ..> C_START  : <<exclude>>
-CLI ..> C_DONE   : <<exclude>>
-CLI ..> C_REOPEN : <<exclude>>
-CLI ..> C_UPDATE : <<exclude>>
-CLI ..> C_DELETE : <<exclude>>
+CLI ..> C_ADD            : <<exclude>>
+CLI ..> C_LIST           : <<exclude>>
+CLI ..> C_SHOW           : <<exclude>>
+CLI ..> C_START          : <<exclude>>
+CLI ..> C_DONE           : <<exclude>>
+CLI ..> C_REOPEN         : <<exclude>>
+CLI ..> C_UPDATE         : <<exclude>>
+CLI ..> C_DELETE         : <<exclude>>
+CLI ..> C_ADD_COMMENT    : <<exclude>>
+CLI ..> C_LIST_COMMENTS  : <<exclude>>
+CLI ..> C_DELETE_COMMENT : <<exclude>>
 
 @enduml
