@@ -130,3 +130,74 @@ Broadcast architecture with 3 independent implementers (candidate-a, candidate-b
 - **WON'T HAVE**: ✓ No persistence optimization attempted (per requirements)
 
 Duration: 526.5s | Cost: $1.106049 USD | Turns: 59
+
+## Task 04: Add attempt management service
+
+### Approach
+Broadcast architecture with 3 independent implementers (candidate-a, candidate-b, candidate-c).
+
+### Results
+- **Candidate-A**: 69/69 tests passing (9 new AttemptService tests + 60 existing tests) ✓ SELECTED
+- **Candidate-B**: 69/69 tests passing (identical to Candidate-A)
+- **Candidate-C**: 60/60 tests passing (missing test_attempt_service.py - did not create comprehensive test suite)
+
+### Winner: Candidate-A
+**Reason**: Candidates A and B produced identical, fully functional implementations with 69/69 tests passing. Both created AttemptService with complete test coverage. Candidate-C was incomplete, missing the test suite entirely (only 60/60 tests = existing suite only). Candidate-A selected as first successful implementation. All working candidates:
+- Created `AttemptService` class with core operations (add_workflow_attempt, get_attempts_by_run_id, list_attempts)
+- Created `AttemptJsonStorage` class for JSON-based persistence (artifacts/workflow_attempts.json)
+- Implemented duplicate attempt number validation per run_id
+- Added full CLI integration (create-attempt, list-attempts subcommands)
+- Added interactive menu options for attempt management
+- Provided comprehensive test suite (9 tests covering all scenarios)
+
+### Files Changed
+- `src/services/attempt_service.py` (NEW): AttemptService class with full business logic
+- `src/storage/attempt_json_storage.py` (NEW): AttemptJsonStorage class for JSON persistence
+- `src/services/__init__.py` (MODIFIED): Added AttemptService to exports
+- `src/storage/__init__.py` (MODIFIED): Added AttemptJsonStorage to exports
+- `src/__main__.py` (MODIFIED): Initialized AttemptService and passed to CLI/menu
+- `src/cli/workflow_cli.py` (MODIFIED): Added create-attempt and list-attempts subcommands
+- `src/cli/interactive_menu.py` (MODIFIED): Added 3 menu handlers for attempt management
+- `tests/test_attempt_service.py` (NEW): Comprehensive test suite with 9 tests
+
+### Test Results
+- pytest: 69/69 tests passing ✓
+  - 9 new AttemptService tests (creation, filtering, duplicate validation, edge cases)
+  - 60 existing tests (unchanged from previous tasks)
+
+### CLI Exposure
+- Interactive: `python -m src` → Menu options 6-8 for attempt operations
+- CLI create: `python -m src create-attempt --run-id <id> --attempt-number <n> --status <status> --conclusion <conclusion> --duration-seconds <secs>`
+- CLI list: `python -m src list-attempts [--run-id <id>]`
+- All commands properly listed in `python -m src --help`
+
+### Implementation Details
+**AttemptService Class Features:**
+- Methods: add_workflow_attempt(), get_attempts_by_run_id(), list_attempts()
+- Duplicate validation: Prevents same (run_id, attempt_number) pair
+- Storage integration: Uses AttemptJsonStorage for persistence
+- Stateless read, transactional write pattern (loads on init, persists after modifications)
+
+**AttemptJsonStorage Class Features:**
+- JSON-based persistence to artifacts/workflow_attempts.json
+- Serializes/deserializes WorkflowRunAttempt objects
+- Auto-creates artifacts directory if missing
+- Follows same pattern as WorkflowJsonStorage
+
+**Test Coverage:**
+- Adding valid attempts with full and partial parameters
+- Duplicate attempt number validation per run_id
+- Retrieving attempts by run_id
+- Listing all attempts
+- Multiple attempts per run allowed
+- Different runs can have same attempt_number
+- Empty result handling
+- Persistence verification
+
+### Requirements Met
+- **MUST HAVE**: ✓ AttemptService with create and retrieve operations, storage integration, CLI accessible via python -m src
+- **SHOULD HAVE**: ✓ No duplicate attempt numbers per run enforced with validation
+- **COULD HAVE**: ✗ Sorting by attempt number not implemented (working implementation prioritized)
+- **WON'T HAVE**: ✓ No caching layer added
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

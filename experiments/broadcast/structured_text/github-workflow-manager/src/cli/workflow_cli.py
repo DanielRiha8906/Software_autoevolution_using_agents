@@ -5,7 +5,9 @@ from datetime import datetime, timezone
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
+from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
+from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 
 
@@ -22,6 +24,19 @@ def _fmt_run(run: WorkflowRun) -> str:
         f"  commit_sha  : {run.commit_sha or '—'}\n"
         f"  created_at  : {run.created_at.isoformat()}\n"
         f"  updated_at  : {updated}\n"
+    )
+
+
+def _fmt_attempt(attempt: WorkflowRunAttempt) -> str:
+    conclusion = attempt.conclusion or "—"
+    return (
+        f"  id              : {attempt.id}\n"
+        f"  run_id          : {attempt.run_id}\n"
+        f"  attempt_number  : {attempt.attempt_number}\n"
+        f"  status          : {attempt.status}\n"
+        f"  conclusion      : {conclusion}\n"
+        f"  created_at      : {attempt.created_at.isoformat()}\n"
+        f"  duration_seconds: {attempt.duration_seconds}\n"
     )
 
 
@@ -82,10 +97,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="State to check",
     )
 
+    # create-attempt
+    create_attempt_p = sub.add_parser("create-attempt", help="Create a new workflow attempt")
+    create_attempt_p.add_argument("--run-id", type=int, required=True, help="Run ID")
+    create_attempt_p.add_argument("--attempt-number", type=int, required=True, help="Attempt number")
+    create_attempt_p.add_argument("--status", required=True, help="Attempt status")
+    create_attempt_p.add_argument("--conclusion", default=None, help="Attempt conclusion (optional)")
+    create_attempt_p.add_argument("--duration-seconds", type=float, default=0.0, help="Duration in seconds")
+
+    # list-attempts
+    list_attempts_p = sub.add_parser("list-attempts", help="List all attempts or attempts for a run")
+    list_attempts_p.add_argument("--run-id", type=int, default=None, help="Filter by run ID (optional)")
+
     return parser
 
 
-def run_cli(service: WorkflowRunService, args=None) -> None:
+def run_cli(service: WorkflowRunService, attempt_service: AttemptService, args=None) -> None:
     parser = build_parser()
     ns = parser.parse_args(args)
     tracker = WorkflowRunTracker(service)
@@ -144,3 +171,32 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
 
         print(f"Run {ns.run_id} is_{check_type}: {result}")
         sys.exit(0 if result else 1)
+
+    elif ns.command == "create-attempt":
+        attempt = WorkflowRunAttempt(
+            id=0,  # Will be assigned by the service if needed
+            run_id=ns.run_id,
+            attempt_number=ns.attempt_number,
+            status=ns.status,
+            conclusion=ns.conclusion,
+            created_at=datetime.now(timezone.utc),
+            duration_seconds=ns.duration_seconds,
+        )
+        try:
+            attempt_service.add_workflow_attempt(attempt)
+            print(f"Added attempt {ns.attempt_number} for run {ns.run_id}")
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "list-attempts":
+        if ns.run_id is not None:
+            attempts = attempt_service.get_attempts_by_run_id(ns.run_id)
+        else:
+            attempts = attempt_service.list_attempts()
+
+        if not attempts:
+            print("No attempts found.")
+            return
+        for attempt in attempts:
+            print(_fmt_attempt(attempt))

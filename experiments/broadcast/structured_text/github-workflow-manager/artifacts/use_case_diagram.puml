@@ -16,6 +16,9 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by status"         as I_FSTATUS
     usecase "Filter by conclusion"     as I_FCONCL
     usecase "Check run state"          as I_CHECK
+    usecase "Create attempt"           as I_CREATE_ATT
+    usecase "List attempts"            as I_LIST_ATT
+    usecase "Get attempts by run"      as I_GET_ATT
     usecase "Exit application"         as I_EXIT
   }
 
@@ -28,6 +31,9 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by conclusion"     as C_FCONCL
     usecase "Get run detail"           as C_DETAIL
     usecase "Check run state"          as C_CHECK
+    usecase "Create attempt"           as C_CREATE_ATT
+    usecase "List attempts"            as C_LIST_ATT
+    usecase "List attempts by run"     as C_GET_ATT
   }
 }
 
@@ -39,6 +45,9 @@ UI --> I_LIST
 UI --> I_DETAIL
 UI --> I_FILTER
 UI --> I_CHECK
+UI --> I_CREATE_ATT
+UI --> I_LIST_ATT
+UI --> I_GET_ATT
 UI --> I_EXIT
 
 I_FILTER --> I_FBRANCH  : <<extend>>
@@ -49,6 +58,9 @@ CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
 CLI --> C_CHECK
+CLI --> C_CREATE_ATT
+CLI --> C_LIST_ATT
+CLI --> C_GET_ATT
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>
