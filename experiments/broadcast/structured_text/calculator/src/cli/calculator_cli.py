@@ -1,10 +1,14 @@
 import sys
-from typing import Optional
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 
 from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
 from ..services.query_service import QueryService
 from ..services.statistics_service import StatisticsService
+
+if TYPE_CHECKING:
+    from ..services.history_manager import HistoryManager
 
 
 class CalculatorCLI:
@@ -24,10 +28,12 @@ class CalculatorCLI:
         service: CalculatorService,
         query_service: Optional[QueryService] = None,
         statistics_service: Optional[StatisticsService] = None,
+        history_manager: Optional["HistoryManager"] = None,
     ) -> None:
         self.service = service
         self.query_service = query_service
         self.statistics_service = statistics_service
+        self.history_manager = history_manager
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -42,7 +48,9 @@ class CalculatorCLI:
             history_opt   = len(self._MENU) + 1
             query_opt     = len(self._MENU) + 2
             stats_opt     = len(self._MENU) + 3
-            exit_opt      = len(self._MENU) + 4
+            export_opt    = len(self._MENU) + 4
+            import_opt    = len(self._MENU) + 5
+            exit_opt      = len(self._MENU) + 6
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -64,6 +72,14 @@ class CalculatorCLI:
                     self._show_statistics()
                 else:
                     print("  Statistics service not available.\n")
+                continue
+
+            if choice == str(export_opt):
+                self._export_history_interactive()
+                continue
+
+            if choice == str(import_opt):
+                self._import_history_interactive()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -104,7 +120,9 @@ class CalculatorCLI:
         print(f"  {len(self._MENU) + 1}. View history")
         print(f"  {len(self._MENU) + 2}. Query calculations")
         print(f"  {len(self._MENU) + 3}. View statistics")
-        print(f"  {len(self._MENU) + 4}. Exit")
+        print(f"  {len(self._MENU) + 4}. Export history")
+        print(f"  {len(self._MENU) + 5}. Import history")
+        print(f"  {len(self._MENU) + 6}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -188,3 +206,68 @@ class CalculatorCLI:
         print(f"  Average execution time: {report.average_execution_time_ms:.2f}ms")
         print(f"  Min execution time: {report.min_execution_time_ms:.2f}ms")
         print(f"  Max execution time: {report.max_execution_time_ms:.2f}ms\n")
+
+    def _export_history_interactive(self) -> None:
+        """Interactive menu for exporting calculation history."""
+        if self.history_manager is None:
+            print("  History manager not available.\n")
+            return
+
+        filepath = input("Enter file path to export to: ").strip()
+        if not filepath:
+            print("  Export cancelled.\n")
+            return
+
+        try:
+            count, errors = self.history_manager.export_to_file(filepath)
+            if errors:
+                print(f"\n  Warning: {len(errors)} entries could not be exported:")
+                for err in errors[:3]:
+                    print(f"    - {err}")
+                if len(errors) > 3:
+                    print(f"    ... and {len(errors) - 3} more\n")
+            print(f"  Successfully exported {count} entries to {filepath}\n")
+        except IOError as exc:
+            print(f"\n  Error exporting history: {exc}\n")
+
+    def _import_history_interactive(self) -> None:
+        """Interactive menu for importing calculation history."""
+        if self.history_manager is None:
+            print("  History manager not available.\n")
+            return
+
+        filepath = input("Enter file path to import from: ").strip()
+        if not filepath:
+            print("  Import cancelled.\n")
+            return
+
+        print("\n  Import mode:")
+        print("    1. Append to existing records (default)")
+        print("    2. Replace existing records")
+        choice = input("  Choose mode (1 or 2): ").strip()
+        mode = "replace" if choice == "2" else "append"
+
+        if mode == "replace":
+            confirm = input("  WARNING: This will replace all existing records. Continue? (y/n): ").strip().lower()
+            if confirm != "y":
+                print("  Import cancelled.\n")
+                return
+
+        try:
+            count, errors = self.history_manager.import_from_file(filepath, choice=mode)
+
+            if errors:
+                print(f"\n  Warning: {len(errors)} entries could not be imported:")
+                for err in errors[:3]:
+                    print(f"    - {err}")
+                if len(errors) > 3:
+                    print(f"    ... and {len(errors) - 3} more")
+
+            if mode == "replace":
+                print(f"\n  Successfully replaced history with {count} imported entries\n")
+            else:
+                print(f"\n  Successfully appended {count} entries to history\n")
+        except FileNotFoundError as exc:
+            print(f"\n  Error: {exc}\n")
+        except (IOError, ValueError) as exc:
+            print(f"\n  Error importing history: {exc}\n")

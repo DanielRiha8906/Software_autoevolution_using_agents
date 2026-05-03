@@ -1,10 +1,12 @@
 import argparse
+import json
 import sys
 from pathlib import Path
 
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
+from .services.history_manager import HistoryManager
 from .services.memory_service import MemoryService
 from .services.query_service import QueryService
 from .services.statistics_service import StatisticsService
@@ -13,19 +15,20 @@ from .storage.memory_storage import MemoryStorage
 from .cli.calculator_cli import CalculatorCLI
 
 
-def _build_service() -> tuple[CalculatorService, QueryService, StatisticsService]:
-    """Build and return CalculatorService, QueryService, and StatisticsService."""
+def _build_service() -> tuple[CalculatorService, QueryService, StatisticsService, HistoryManager]:
+    """Build and return CalculatorService, QueryService, StatisticsService, and HistoryManager."""
     calc_storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
     memory_storage_path = Path(__file__).parent.parent / "artifacts" / "memory.json"
 
     calc_storage = JsonStorage(calc_storage_path)
     memory_storage = MemoryStorage(memory_storage_path)
     memory_service = MemoryService(memory_storage)
+    history_manager = HistoryManager(memory_storage)
 
     calc_service = CalculatorService(Calculator(), calc_storage, memory_service)
     query_service = QueryService(memory_service)
     statistics_service = StatisticsService(memory_service)
-    return calc_service, query_service, statistics_service
+    return calc_service, query_service, statistics_service, history_manager
 
 
 def _as_number(value: str) -> float:
@@ -39,7 +42,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--query-by-operation OP] [--query-by-state STATE] [--stats]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--query-by-operation OP] [--query-by-state STATE] [--stats] [--export-history FILE] [--import-history FILE] [--append|--replace]",
     )
     parser.add_argument(
         "--operation",
@@ -69,13 +72,69 @@ def main() -> None:
         action="store_true",
         help="Display calculation statistics (operation counts, error rates, execution times)",
     )
+    parser.add_argument(
+        "--export-history",
+        metavar="FILE",
+        help="Export calculation history to a JSON file",
+    )
+    parser.add_argument(
+        "--import-history",
+        metavar="FILE",
+        help="Import calculation history from a JSON file",
+    )
+    parser.add_argument(
+        "--append",
+        action="store_true",
+        help="Append imported history to existing records (use with --import-history)",
+    )
+    parser.add_argument(
+        "--replace",
+        action="store_true",
+        help="Replace existing records with imported history (use with --import-history)",
+    )
 
     args = parser.parse_args()
-    calc_service, query_service, statistics_service = _build_service()
-    cli = CalculatorCLI(calc_service, query_service, statistics_service)
+    calc_service, query_service, statistics_service, history_manager = _build_service()
+    cli = CalculatorCLI(calc_service, query_service, statistics_service, history_manager)
 
+    # Export history mode (CLI flag)
+    if args.export_history:
+        try:
+            count, errors = history_manager.export_to_file(args.export_history)
+            if errors:
+                print(f"Warning: {len(errors)} entries could not be exported:")
+                for err in errors:
+                    print(f"  - {err}", file=sys.stderr)
+            print(f"Exported {count} entries to {args.export_history}")
+        except IOError as exc:
+            print(f"Error exporting history: {exc}", file=sys.stderr)
+            sys.exit(1)
+    # Import history mode (CLI flag)
+    elif args.import_history:
+        try:
+            choice = "append" if args.append else "replace"
+            count, errors = history_manager.import_from_file(args.import_history, choice=choice)
+
+            if errors:
+                print(f"Warning: {len(errors)} entries could not be imported:")
+                for err in errors:
+                    print(f"  - {err}", file=sys.stderr)
+
+            if choice == "replace":
+                print(f"Replaced history with {count} imported entries")
+            else:
+                print(f"Appended {count} entries to history")
+        except FileNotFoundError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
+        except json.JSONDecodeError as exc:
+            print(f"Error: Invalid JSON in file — {exc}", file=sys.stderr)
+            sys.exit(1)
+        except (IOError, ValueError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            sys.exit(1)
     # Statistics mode (CLI flag)
-    if args.stats:
+    elif args.stats:
         report = statistics_service.compute_statistics()
         print("=== Calculation Statistics ===")
         print(f"Total operations: {report.total_operations}")
