@@ -1039,4 +1039,4 @@ python -m src
 - Pagination support (100 items per page)
 - All API responses include retry-after header parsing for rate limits
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 611.9s | Cost: $1.447469 USD | Turns: 31
