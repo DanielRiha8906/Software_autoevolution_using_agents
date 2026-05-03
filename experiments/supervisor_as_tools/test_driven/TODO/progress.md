@@ -171,4 +171,4 @@ Successfully implemented CommentsService with CommentManager to manage the full 
 - use_case_diagram.puml: Added 6 comment-related use cases (3 interactive, 3 CLI)
 - activity_diagram.puml: Added 3 new menu options for comment operations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 381.7s | Cost: $0.668918 USD | Turns: 29
