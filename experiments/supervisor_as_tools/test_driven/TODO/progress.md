@@ -222,3 +222,78 @@ Successfully extended TodoService.list_tasks() to support filtering by due date 
 - All validation happens before filtering for fail-fast semantics
 
 Duration: 279.7s | Cost: $0.499929 USD | Turns: 25
+
+## Task 06: Implement TaskStatisticsService for task metrics and completion reporting
+
+### Summary
+Successfully implemented TaskStatisticsService with a TaskStatistics dataclass to compute aggregate metrics from stored task data. Added statistics computation capability with CLI command and interactive menu integration.
+
+### Files Changed
+- `src/models/task_statistics.py` - New TaskStatistics dataclass with 5 fields (total, count_per_status, overdue_count, with_due_date_count, completion_rate)
+- `src/services/statistics_service.py` - New TaskStatisticsService class with compute() method
+- `src/models/__init__.py` - Added TaskStatistics export
+- `src/services/__init__.py` - Added TaskStatisticsService export
+- `src/cli/todo_cli.py` - Added stats subcommand and _cmd_stats() handler
+- `src/cli/interactive_menu.py` - Added menu option 7 "View statistics" and _do_stats() method
+- `artifacts/class_diagram.puml` - Added TaskStatistics and TaskStatisticsService classes
+- `artifacts/component_diagram.puml` - Added StatisticsService and StatisticsModel components
+- `artifacts/activity_diagram.puml` - Added statistics option to menu flow
+
+### Test Results
+- **All 97 tests passing** ✅ (87 existing + 10 new statistics tests)
+- New TaskStatistics tests:
+  - test_report_is_dataclass - TaskStatistics is a proper dataclass
+  - test_total_count - Total count calculation
+  - test_count_per_status - Per-status counts (PENDING, IN_PROGRESS, DONE)
+  - test_overdue_count - Overdue task counting
+  - test_with_due_date_count - Tasks with due_date counting
+  - test_completion_rate - Completion rate percentage (0-100)
+  - test_empty_task_list_statistics - Empty list edge case handling
+  - test_output_is_deterministic - Idempotent compute results
+  - Additional tests for all TaskStatus values and type checking
+- Existing tests all pass (no regressions)
+
+### Implementation Details
+
+**TaskStatistics Dataclass** (src/models/task_statistics.py):
+- @dataclass with 5 fields:
+  * `total: int` - Total count of all tasks
+  * `count_per_status: dict[TaskStatus, int]` - Counts per status (all three enum values)
+  * `overdue_count: int` - Count of tasks where is_overdue() returns True
+  * `with_due_date_count: int` - Count of tasks with due_date not None
+  * `completion_rate: float` - Percentage (0-100), handles division by zero
+- Imported TaskStatus enum for type hints
+
+**TaskStatisticsService** (src/services/statistics_service.py):
+- Single-pass O(n) algorithm iterating through all tasks once
+- Constructor takes TodoService instance
+- compute() method returns TaskStatistics:
+  * Iterates through TodoService.listTasks() result
+  * Counts total tasks, per-status distribution
+  * Uses Task.is_overdue() for overdue detection
+  * Checks task.due_date is not None for due_date count
+  * Calculates completion_rate as (done_count / total * 100) if total > 0 else 0.0
+- Handles empty task list safely (all metrics return 0)
+
+**CLI Integration**:
+- New `stats` subcommand: `python -m src stats`
+- Formatted table output showing all 6 metrics
+- Returns exit code 0
+
+**Interactive Menu Integration**:
+- Menu option 7: "View statistics"
+- Displays formatted statistics report with labels
+- Supports completion rate display in percentage format
+
+**Diagrams Updated**:
+- class_diagram.puml: Added TaskStatistics dataclass and TaskStatisticsService class
+- component_diagram.puml: Added StatisticsService and StatisticsModel components
+- activity_diagram.puml: Added statistics menu option with compute flow
+
+**Edge Cases Handled**:
+- Empty task list: all metrics are 0, completion_rate is 0.0 (not NaN)
+- Mixed status distribution: count_per_status includes all TaskStatus values
+- Deterministic output: same input always produces same output
+- Overdue handling: uses existing Task.is_overdue() method
+
+Duration: 397.7s | Cost: $0.877788 USD | Turns: 19

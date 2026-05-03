@@ -5,8 +5,10 @@ from datetime import datetime
 
 from ..models.task_status import TaskStatus
 from ..models.task import CEST
+from ..models.task_statistics import TaskStatistics
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
+from ..services.statistics_service import TaskStatisticsService
 from ..storage.json_storage import JsonStorage
 
 _STATUS_SYMBOLS = {
@@ -110,6 +112,10 @@ class TodoCLI:
         p_delete.add_argument("id", help="Task ID")
         p_delete.set_defaults(func=self._cmd_delete)
 
+        # stats
+        p_stats = sub.add_parser("stats", help="View task statistics")
+        p_stats.set_defaults(func=self._cmd_stats)
+
         return parser
 
     def _parse_datetime_cest(self, date_str: str) -> datetime:
@@ -200,3 +206,21 @@ class TodoCLI:
         self._service.delete_task(args.id)
         print(f"Deleted {task.id[:8]}  {task.title}")
         return 0
+
+    def _cmd_stats(self, args: argparse.Namespace) -> int:
+        stats_service = TaskStatisticsService(self._service)
+        report = stats_service.compute()
+        self._print_statistics_report(report)
+        return 0
+
+    def _print_statistics_report(self, report: TaskStatistics) -> None:
+        """Print formatted statistics report."""
+        print("Task Statistics")
+        print("=" * 40)
+        print(f"Total tasks:           {report.total}")
+        print(f"Pending:               {report.count_per_status[TaskStatus.PENDING]}")
+        print(f"In progress:           {report.count_per_status[TaskStatus.IN_PROGRESS]}")
+        print(f"Done:                  {report.count_per_status[TaskStatus.DONE]}")
+        print(f"Overdue:               {report.overdue_count}")
+        print(f"With due date:         {report.with_due_date_count}")
+        print(f"Completion rate:       {report.completion_rate:.1f}%")

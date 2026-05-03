@@ -19,10 +19,12 @@ package "TODO Application" {
         component "Task Manager" as MGR
         component "Comments Service" as CSVC
         component "Comment Manager" as CMGR
+        component "Statistics Service" as SSVC
     }
 
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus)" as Model
+        component "Statistics Model\n(TaskStatistics)" as StatsModel
     }
 
     package "Persistence Layer" {
@@ -41,9 +43,11 @@ CLI --> SVC
 SVC --> MGR
 CSVC --> SVC
 CSVC --> CMGR
+SSVC --> SVC
 MGR --> Storage
 CMGR --> Storage
 MGR ..> Model
+SSVC ..> StatsModel
 Storage ..> Model
 
 Storage --> DB : read/write
