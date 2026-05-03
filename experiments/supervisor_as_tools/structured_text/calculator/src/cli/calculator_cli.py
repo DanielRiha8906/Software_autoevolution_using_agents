@@ -13,6 +13,12 @@ class CalculatorCLI:
         (Operation.SUBTRACT, "Subtract"),
         (Operation.MULTIPLY, "Multiply"),
         (Operation.DIVIDE,   "Divide"),
+        (Operation.SIN,      "Sin"),
+        (Operation.COS,      "Cos"),
+        (Operation.TAN,      "Tan"),
+        (Operation.LOG10,    "Log10"),
+        (Operation.LN,       "Ln"),
+        (Operation.EXP,      "Exp"),
         (Operation.SQUARE,   "Square"),
         (Operation.SQRT,     "Square root"),
         (Operation.POWER,    "Power"),
@@ -91,7 +97,7 @@ class CalculatorCLI:
                 continue
 
             # Handle unary operations (only need one operand)
-            if operation in (Operation.SQUARE, Operation.SQRT):
+            if operation in (Operation.SQUARE, Operation.SQRT, Operation.SIN, Operation.COS, Operation.TAN, Operation.LOG10, Operation.LN, Operation.EXP):
                 b = 0
             else:
                 b = self._prompt_number("Enter second number: ")

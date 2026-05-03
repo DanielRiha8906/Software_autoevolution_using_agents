@@ -31,5 +31,27 @@
     "result": null,
     "error_message": "Division by zero is not allowed",
     "id": "e270dbdc-34dc-4505-a5ed-3931121c2cc9"
+  },
+  {
+    "operation": "sin",
+    "operand_a": 1.5,
+    "operand_b": 0,
+    "success": true,
+    "timestamp": "2026-05-03T22:55:45.472033",
+    "execution_time_ms": 0.01333500000555432,
+    "result": 0.9974949866040544,
+    "error_message": null,
+    "id": "27aa9ad8-d096-4d53-aa5c-301b3d9e3121"
+  },
+  {
+    "operation": "log10",
+    "operand_a": 100.0,
+    "operand_b": 0,
+    "success": true,
+    "timestamp": "2026-05-03T22:55:46.906457",
+    "execution_time_ms": 0.009697999985291972,
+    "result": 2.0,
+    "error_message": null,
+    "id": "23389a6d-79a8-4c4a-8ebe-55b7b7fdb630"
   }
 ]

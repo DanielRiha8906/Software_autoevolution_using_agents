@@ -10,6 +10,12 @@ class Operation(Enum):
     SQRT = "sqrt"
     POWER = "power"
     MODULO = "modulo"
+    SIN = "sin"
+    COS = "cos"
+    TAN = "tan"
+    LOG10 = "log10"
+    LN = "ln"
+    EXP = "exp"
 
     @classmethod
     def from_string(cls, value: str) -> "Operation":

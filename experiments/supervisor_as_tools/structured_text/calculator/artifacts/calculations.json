@@ -74,5 +74,21 @@
     "result": 5.0,
     "timestamp": "2026-05-03T16:08:07.234312",
     "execution_time_ms": 0.0060110000390523055
+  },
+  {
+    "operation": "sin",
+    "operand_a": 1.5,
+    "operand_b": 0,
+    "result": 0.9974949866040544,
+    "timestamp": "2026-05-03T22:55:45.471622",
+    "execution_time_ms": 0.01333500000555432
+  },
+  {
+    "operation": "log10",
+    "operand_a": 100.0,
+    "operand_b": 0,
+    "result": 2.0,
+    "timestamp": "2026-05-03T22:55:46.906024",
+    "execution_time_ms": 0.009697999985291972
   }
 ]
