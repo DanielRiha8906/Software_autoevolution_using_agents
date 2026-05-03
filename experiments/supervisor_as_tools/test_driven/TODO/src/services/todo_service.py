@@ -1,14 +1,18 @@
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
 
+if TYPE_CHECKING:
+    from .comments_service import CommentsService
+
 
 class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
+        self._comments_service: Optional["CommentsService"] = None
 
     def add_task(self, title: str, description: Optional[str] = None) -> Task:
         if not title or not title.strip():
@@ -38,4 +42,6 @@ class TodoService:
         return self._manager.update(task_id, title=title, description=description)
 
     def delete_task(self, task_id: str) -> None:
+        if self._comments_service:
+            self._comments_service.delete_comments_for_task(task_id)
         self._manager.delete(task_id)

@@ -101,3 +101,74 @@ Successfully created a new TaskComment domain class with complete serialization 
 - No external dependencies beyond standard library
 
 Duration: 168.6s | Cost: $0.338451 USD | Turns: 26
+
+## Task 04: Implement CommentsService with full lifecycle management
+
+### Summary
+Successfully implemented CommentsService with CommentManager to manage the full lifecycle of TaskComment objects, including validation of task existence, cascade deletion support, and deterministic ordering by created_at.
+
+### Files Changed
+- `src/services/comment_manager.py` - New CommentManager class handling in-memory comments storage and persistence
+- `src/services/comments_service.py` - New CommentsService class with validation and business logic
+- `src/services/todo_service.py` - Added optional comments service integration for cascade delete
+- `src/services/__init__.py` - Exported new CommentManager, CommentNotFoundError, CommentsService
+- `tests/test_comments_service.py` - New test suite with 7 test functions
+- `artifacts/class_diagram.puml` - Added CommentManager and CommentsService classes
+- `artifacts/component_diagram.puml` - Added comments service components
+- `artifacts/use_case_diagram.puml` - Added comment-related use cases
+- `artifacts/activity_diagram.puml` - Added comment operations to menu flow
+
+### Test Results
+- **All 87 tests passing** ✅ (7 new CommentsService tests + 80 existing tests)
+- New tests:
+  - test_add_comment - Add comment to task
+  - test_add_empty_comment_raises - Validation on empty content
+  - test_comments_service_does_not_contain_file_io - No direct file I/O (verified)
+  - test_list_comments_ordered_by_created_at - Ordering by created_at timestamp
+  - test_delete_comment - Comment removal
+  - test_add_comment_to_nonexistent_task_raises - Task existence validation
+  - test_delete_task_cascades_to_comments - Cascade delete behavior
+- No regressions in existing tests
+
+### Implementation Details
+
+**CommentManager** (src/services/comment_manager.py):
+- Mirrors TaskManager pattern with in-memory dict[str, TaskComment] indexed by comment_id
+- Methods: add(), get(), list_by_task(), delete(), delete_all_by_task()
+- Handles loading/saving via JsonStorage (default path: ~/.todo_comments.json)
+- Supports prefix matching on comment_id (like TaskManager)
+- Raises CommentNotFoundError on missing comment lookups
+- Private methods: _load(), _persist()
+
+**CommentsService** (src/services/comments_service.py):
+- Constructor: __init__(todo_service: TodoService, storage: Optional[JsonStorage] = None)
+- Validates task existence by calling todo_service.get_task(task_id)
+- Strips whitespace from content before validation
+- Raises ValueError for empty/whitespace-only content
+- Raises TaskNotFoundError for nonexistent tasks (via TodoService)
+- Methods:
+  * add_comment(task_id: str, content: str) → TaskComment
+  * list_comments(task_id: str) → list[TaskComment] (sorted by created_at)
+  * delete_comment(comment_id: str) → None
+  * delete_comments_for_task(task_id: str) → None (for cascade delete)
+- NO file I/O or JSON serialization - all delegation to CommentManager
+- Uses TYPE_CHECKING to avoid circular imports with TodoService
+
+**TodoService Integration**:
+- Added optional _comments_service field
+- Modified delete_task() to trigger cascade delete if comments service is set
+- Maintains backward compatibility (comments service is optional)
+
+**Storage**:
+- Comments stored in separate JSON file via CommentManager
+- Default path: ~/.todo_comments.json
+- Uses existing TaskComment.to_dict()/from_dict() for serialization
+- CommentManager loads/persists independently from TaskManager
+
+**Diagrams Updated**:
+- class_diagram.puml: Added CommentManager and CommentsService classes with relationships
+- component_diagram.puml: Added comments service components and dependencies
+- use_case_diagram.puml: Added 6 comment-related use cases (3 interactive, 3 CLI)
+- activity_diagram.puml: Added 3 new menu options for comment operations
+
+Duration: 381.7s | Cost: $0.668918 USD | Turns: 29

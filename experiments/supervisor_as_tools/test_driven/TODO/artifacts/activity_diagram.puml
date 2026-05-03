@@ -20,6 +20,12 @@ repeat
       :Run update task flow;
     case (6 — Delete task)
       :Run delete task flow;
+    case (7 — Add comment)
+      :Run add comment flow;
+    case (8 — View comments)
+      :Run view comments flow;
+    case (9 — Delete comment)
+      :Run delete comment flow;
     case (0/q — Quit)
       :Clear screen;
       stop

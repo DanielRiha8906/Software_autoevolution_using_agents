@@ -55,6 +55,7 @@ package "storage" #FFF3CC {
 
 package "services" #DDFFD4 {
     exception TaskNotFoundError
+    exception CommentNotFoundError
 
     class TaskManager {
         -storage : JsonStorage
@@ -72,6 +73,20 @@ package "services" #DDFFD4 {
         -persist() : void
     }
 
+    class CommentManager {
+        -storage : JsonStorage
+        -comments : Dictionary<String, TaskComment>
+        --
+        +CommentManager(storage: JsonStorage [0..1])
+        +add(task_id: String, content: String) : TaskComment
+        +get(comment_id: String) : TaskComment
+        +list_by_task(task_id: String) : List<TaskComment>
+        +delete(comment_id: String) : void
+        +delete_all_by_task(task_id: String) : void
+        -load() : void
+        -persist() : void
+    }
+
     class TodoService {
         -manager : TaskManager
         --
@@ -84,6 +99,17 @@ package "services" #DDFFD4 {
         +reopenTask(taskId: String) : Task
         +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +deleteTask(taskId: String) : void
+    }
+
+    class CommentsService {
+        -todo_service : TodoService
+        -comment_manager : CommentManager
+        --
+        +CommentsService(todo_service: TodoService, storage: JsonStorage [0..1])
+        +add_comment(task_id: String, content: String) : TaskComment
+        +list_comments(task_id: String) : List<TaskComment>
+        +delete_comment(comment_id: String) : void
+        +delete_comments_for_task(task_id: String) : void
     }
 }
 
@@ -104,9 +130,15 @@ package "cli" #FFE5E5 {
 }
 
 Task --> TaskStatus : status
+TaskComment --> Task : references
 TaskManager --> JsonStorage : storage
 TaskManager ..> TaskNotFoundError : raises
+CommentManager --> JsonStorage : storage
+CommentManager --> TaskComment : manages
+CommentManager ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
+CommentsService --> TodoService : todo_service
+CommentsService --> CommentManager : comment_manager
 TodoCLI --> TodoService : service
 InteractiveMenu --> TodoService : service
 
