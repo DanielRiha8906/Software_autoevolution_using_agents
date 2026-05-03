@@ -330,4 +330,4 @@ Duration: 257.3s | Cost: $0.563686 USD | Turns: 59
 ✓ Accessible via python -m src (both --statistics flag and interactive menu option 10)
 ✓ UML diagrams updated (class diagram and component diagram)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 561.7s | Cost: $3.848208 USD | Turns: 36
