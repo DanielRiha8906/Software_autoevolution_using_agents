@@ -1,3 +1,5 @@
+from typing import Optional
+
 from ..models.memory_entry import MemoryEntry
 
 
@@ -26,3 +28,30 @@ class MemoryService:
             A list of all stored MemoryEntry objects.
         """
         return self._entries
+
+    def query(
+        self, operation: Optional[str] = None, success: Optional[bool] = None
+    ) -> list[MemoryEntry]:
+        """Query stored entries by operation type and/or success state.
+
+        Filters are applied with AND logic. If no filters are provided,
+        returns all stored entries.
+
+        Args:
+            operation: Filter by operation type (e.g., "add", "multiply").
+                       If None, operation filter is not applied.
+            success: Filter by success state. If None, success filter is not applied.
+
+        Returns:
+            A list of MemoryEntry objects matching the filter criteria.
+            Returns an empty list if no entries match.
+        """
+        results = self._entries
+
+        if operation is not None:
+            results = [e for e in results if e.operation == operation]
+
+        if success is not None:
+            results = [e for e in results if e.success == success]
+
+        return results

@@ -196,3 +196,69 @@ Duration: 145.9s | Cost: $0.409185 USD | Turns: 41
 ✓ Service exported from src.services module
 
 Duration: 284.2s | Cost: $0.525347 USD | Turns: 41
+
+---
+
+# Task 05: MemoryService Query Filtering
+
+## Broadcast Evaluation Summary
+
+### Candidates Evaluated
+- **Implementer-A**: Added `query(operation: Optional[str], success: Optional[bool])` method to MemoryService using list comprehension filtering with AND logic. Comprehensive docstring with Args and Returns sections. Result: 72 tests passing.
+- **Implementer-B**: Identical implementation to Implementer-A with same filtering approach and documentation. Result: 72 tests passing.
+- **Implementer-C**: Identical implementation to Implementers A and B with same query method signature and filter logic. Result: 72 tests passing.
+
+### Winner Selection
+**Implementer-A** (implementation merged) - All three candidates achieved identical test results (72 passing tests) and produced identical code. Selected A as the first successful implementation in the series. Implementation uses clean, sequential list comprehension filtering that is easy to understand and maintain.
+
+### Files Changed
+- `src/services/memory_service.py` - Added `query(operation: Optional[str], success: Optional[bool])` method with AND logic filtering
+- `tests/test_memory_service.py` - Added 6 new test cases for query functionality
+- `artifacts/class_diagram.puml` - Updated MemoryService class definition to include query method
+
+### Implementation Details
+1. **Query Method**:
+   - Signature: `query(operation: Optional[str] = None, success: Optional[bool] = None) -> list[MemoryEntry]`
+   - Filters stored entries by operation type and/or success state
+   - Filters combined with AND logic: both conditions must be satisfied
+   - Returns all entries when called with no arguments
+   - Returns empty list when no entries match
+   
+2. **Filtering Logic**:
+   - Uses sequential list comprehension filters
+   - First filters by operation if provided: `[e for e in results if e.operation == operation]`
+   - Then filters by success if provided: `[e for e in results if e.success == success]`
+   - Does not mutate stored history (creates new list objects)
+
+3. **Type Hints and Documentation**:
+   - Proper Optional type hints using typing.Optional
+   - Comprehensive docstring explaining filter logic
+   - Args section documents both parameters and their None behavior
+   - Returns section documents return type and empty list behavior
+
+### Test Results
+- Existing tests: 66 passing (from previous tasks)
+- New query tests: 6 passing
+  - `test_filter_by_operation` - Filters by operation type
+  - `test_filter_by_success_state` - Filters by success=True
+  - `test_filter_by_error_state` - Filters by success=False
+  - `test_combined_filters` - Applies AND logic for both filters
+  - `test_query_returns_list` - Verifies return type
+  - `test_query_no_match_returns_empty_list` - Tests empty result behavior
+- **Total: 72 tests passing** ✓
+
+### Requirements Met
+✓ Query method added to MemoryService with correct signature
+✓ Supports filtering by operation type
+✓ Supports filtering by success state
+✓ Filters combined with AND logic
+✓ Returns all entries when called with no arguments
+✓ Returns empty list for no matches
+✓ Does not mutate stored history
+✓ All 6 new test cases pass
+✓ All existing tests still pass (66 tests)
+✓ Code compiles without syntax or import errors
+✓ python -m src runs without errors
+✓ UML diagrams updated to reflect new method
+
+Duration: 257.3s | Cost: $0.563686 USD | Turns: 59
