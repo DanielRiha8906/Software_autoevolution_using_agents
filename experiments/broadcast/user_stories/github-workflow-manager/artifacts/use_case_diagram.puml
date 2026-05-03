@@ -11,6 +11,7 @@ rectangle "GitHub Workflow Manager" {
     usecase "Add workflow run"         as I_ADD
     usecase "List all runs"            as I_LIST
     usecase "Get run detail"           as I_DETAIL
+    usecase "Check run state"          as I_STATE
     usecase "Filter runs"              as I_FILTER
     usecase "Filter by branch"         as I_FBRANCH
     usecase "Filter by status"         as I_FSTATUS
@@ -22,10 +23,11 @@ rectangle "GitHub Workflow Manager" {
     usecase "Run one-shot CLI command" as CLI
     usecase "Add workflow run"         as C_ADD
     usecase "List runs"                as C_LIST
+    usecase "Get run detail"           as C_DETAIL
+    usecase "Check run state"          as C_STATE
     usecase "Filter by branch"         as C_FBRANCH
     usecase "Filter by status"         as C_FSTATUS
     usecase "Filter by conclusion"     as C_FCONCL
-    usecase "Get run detail"           as C_DETAIL
   }
 }
 
@@ -35,6 +37,7 @@ User --> CLI
 UI --> I_ADD
 UI --> I_LIST
 UI --> I_DETAIL
+UI --> I_STATE
 UI --> I_FILTER
 UI --> I_EXIT
 
@@ -45,6 +48,7 @@ I_FILTER --> I_FCONCL   : <<extend>>
 CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
+CLI --> C_STATE
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>

@@ -1,0 +1,34 @@
+@startuml state_diagram_workflow_run_checks
+
+title WorkflowRun State-Checking Methods
+
+skinparam state {
+  BackgroundColor #DDEEFF
+  BorderColor #3366AA
+  FontStyle bold
+}
+
+note right
+  Queued/In_progress/Waiting/Requested/Pending
+  → is_running() = TRUE
+end note
+
+[*] --> Active : status in\n{QUEUED, IN_PROGRESS,\nWAITING, REQUESTED, PENDING}
+
+Active --> Terminal : status == COMPLETED
+Active : is_running() = TRUE\nis_terminal() = FALSE
+
+Terminal --> Successful : conclusion == SUCCESS
+Terminal --> Failed : conclusion == FAILURE
+Terminal --> Cancelled : conclusion == CANCELLED
+Terminal --> Other : conclusion in {SKIPPED, TIMED_OUT,\nACTION_REQUIRED, NEUTRAL, STALE}
+
+Successful : is_terminal() = TRUE\nis_successful() = TRUE\nis_failed() = FALSE\nis_cancelled() = FALSE
+
+Failed : is_terminal() = TRUE\nis_successful() = FALSE\nis_failed() = TRUE\nis_cancelled() = FALSE
+
+Cancelled : is_terminal() = TRUE\nis_successful() = FALSE\nis_failed() = FALSE\nis_cancelled() = TRUE
+
+Other : is_terminal() = TRUE\nis_successful() = FALSE\nis_failed() = FALSE\nis_cancelled() = FALSE
+
+@enduml
