@@ -190,3 +190,76 @@ All 3 implementer candidates successfully completed the task identically:
 - ✓ No external dependencies
 
 Duration: 265.2s | Cost: $0.614835 USD | Turns: 52
+
+---
+
+## Task 05: Extend list_tasks with due date range and overdue filtering
+
+### Objective
+Extend `TodoService.list_tasks` to support `due_before`, `due_after`, and `overdue` keyword arguments that can be combined with the existing `status` filter without breaking existing behaviour.
+
+### Broadcast Architecture Evaluation
+
+All 3 implementer candidates successfully completed the task identically:
+
+| Candidate | Approach | Tests Passed |
+|-----------|----------|--------------|
+| A | Extended list_tasks signature with due_before, due_after, overdue params; Added CEST timezone validation; Implemented filtering with AND logic | 87/87 ✓ |
+| B | Extended list_tasks signature with due_before, due_after, overdue params; Added CEST timezone validation; Implemented filtering with AND logic | 87/87 ✓ |
+| C | Extended list_tasks signature with due_before, due_after, overdue params; Added CEST timezone validation; Implemented filtering with AND logic | 87/87 ✓ |
+
+**Winner: Candidate A** — selected as baseline implementation (all candidates were equivalent in functionality and test coverage).
+
+### Files Changed
+- `src/services/todo_service.py` — Extended list_tasks() with new filter parameters and validation
+- `src/cli/todo_cli.py` — Added CLI arguments --overdue, --due-before, --due-after with ISO format parsing
+
+### Implementation Details
+
+**Extended TodoService.list_tasks signature:**
+- Parameter: `due_before: Optional[datetime] = None`
+- Parameter: `due_after: Optional[datetime] = None`
+- Parameter: `overdue: bool = False`
+
+**Filtering logic:**
+- Validates that `due_before` and `due_after` are timezone-aware CEST datetimes
+- Rejects UTC or naive datetimes with ValueError
+- Filters tasks where `due_date < due_before` (excluding tasks with no due_date)
+- Filters tasks where `due_date > due_after` (excluding tasks with no due_date)
+- Filters tasks where `is_overdue()` returns True when `overdue=True`
+- Combines all filters with AND logic alongside existing status filter
+- Preserves existing status filter behavior unchanged
+
+**CLI integration:**
+- Added `--overdue` boolean flag to `list` command
+- Added `--due-before` argument accepting ISO format CEST datetime string
+- Added `--due-after` argument accepting ISO format CEST datetime string
+- Implements ISO format parsing with timezone validation
+- Provides user-friendly error messages for invalid inputs
+
+### Test Results
+- **Total tests**: 87 passed (all 87 tests in suite)
+- **New tests**: All 7 due date filtering tests passing
+  - ✓ test_filter_overdue: Returns only overdue tasks
+  - ✓ test_filter_due_before: Filters tasks before cutoff date
+  - ✓ test_filter_due_after: Filters tasks after cutoff date
+  - ✓ test_combined_status_and_overdue: Combines status and overdue filters correctly
+  - ✓ test_existing_status_filter_unchanged: Backward compatibility preserved
+  - ✓ test_due_date_filters_use_cest: Rejects UTC and naive datetimes
+  - ✓ test_results_are_task_objects: All results are Task instances
+- **Existing tests**: All 80 existing tests remain passing (backward compatible)
+
+### Requirements Met
+- ✓ Extended list_tasks with due_before, due_after, overdue parameters
+- ✓ All new parameters optional with sensible defaults (None, False)
+- ✓ Combines cleanly with existing status filter (AND logic)
+- ✓ Existing status filter behavior unchanged
+- ✓ Overdue detection uses current CEST time via Task.is_overdue()
+- ✓ due_before and due_after must be timezone-aware CEST datetimes
+- ✓ Non-CEST or naive datetimes are rejected with ValueError
+- ✓ Tasks without due_date excluded from due_before/due_after filters
+- ✓ All functionality accessible via CLI flags and interactive menu
+- ✓ python -m src list --help documents new options
+- ✓ No external dependencies
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

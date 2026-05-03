@@ -1,7 +1,9 @@
 import argparse
 import sys
 from typing import Optional
+from datetime import datetime, timezone, timedelta
 
+from ..models.task import CEST
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
@@ -59,6 +61,21 @@ class TodoCLI:
             choices=["pending", "in_progress", "done"],
             help="Filter by status",
         )
+        p_list.add_argument(
+            "--overdue",
+            action="store_true",
+            help="Show only overdue tasks",
+        )
+        p_list.add_argument(
+            "--due-before",
+            type=str,
+            help="Show tasks due before a date (ISO format, CEST timezone)",
+        )
+        p_list.add_argument(
+            "--due-after",
+            type=str,
+            help="Show tasks due after a date (ISO format, CEST timezone)",
+        )
         p_list.set_defaults(func=self._cmd_list)
 
         # show
@@ -102,7 +119,42 @@ class TodoCLI:
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
         status = TaskStatus(args.status) if args.status else None
-        tasks = self._service.list_tasks(status)
+
+        # Parse due_before if provided
+        due_before = None
+        if args.due_before:
+            try:
+                due_before = datetime.fromisoformat(args.due_before)
+                if due_before.tzinfo is None or due_before.tzinfo != CEST:
+                    print("Error: due_before must be in CEST timezone (UTC+2)", file=sys.stderr)
+                    return 1
+            except ValueError:
+                print("Error: due_before must be in ISO format", file=sys.stderr)
+                return 1
+
+        # Parse due_after if provided
+        due_after = None
+        if args.due_after:
+            try:
+                due_after = datetime.fromisoformat(args.due_after)
+                if due_after.tzinfo is None or due_after.tzinfo != CEST:
+                    print("Error: due_after must be in CEST timezone (UTC+2)", file=sys.stderr)
+                    return 1
+            except ValueError:
+                print("Error: due_after must be in ISO format", file=sys.stderr)
+                return 1
+
+        try:
+            tasks = self._service.list_tasks(
+                status=status,
+                overdue=args.overdue,
+                due_before=due_before,
+                due_after=due_after,
+            )
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
         if not tasks:
             print("No tasks found.")
             return 0
