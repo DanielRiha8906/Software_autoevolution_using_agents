@@ -66,4 +66,4 @@ Broadcast architecture with 3 independent implementers (candidate-a, candidate-b
 - **COULD HAVE**: ✓ is_cancelled() bonus method implemented
 - **WON'T HAVE**: ✓ No enum definitions modified
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 508.3s | Cost: $1.205394 USD | Turns: 88
