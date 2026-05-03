@@ -279,7 +279,7 @@ class TestMemoryFilterSubmenu:
         entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
         cli.memory_service = MagicMock()
         cli.memory_service.get_all_entries.return_value = [entry]
-        with patch("builtins.input", side_effect=["1", "5"]):
+        with patch("builtins.input", side_effect=["1", "7"]):
             cli._show_memory_filter_submenu()
         output = capsys.readouterr().out
         assert "add" in output
@@ -290,7 +290,7 @@ class TestMemoryFilterSubmenu:
         entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
         cli.memory_service = MagicMock()
         cli.memory_service.filter_by_operation.return_value = [entry]
-        with patch("builtins.input", side_effect=["2", "add", "5"]):
+        with patch("builtins.input", side_effect=["2", "add", "7"]):
             cli._show_memory_filter_submenu()
         cli.memory_service.filter_by_operation.assert_called_once_with("add")
 
@@ -300,7 +300,7 @@ class TestMemoryFilterSubmenu:
         entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
         cli.memory_service = MagicMock()
         cli.memory_service.filter_by_success.return_value = [entry]
-        with patch("builtins.input", side_effect=["3", "5"]):
+        with patch("builtins.input", side_effect=["3", "7"]):
             cli._show_memory_filter_submenu()
         cli.memory_service.filter_by_success.assert_called_once_with(True)
 
@@ -310,14 +310,14 @@ class TestMemoryFilterSubmenu:
         entry = MemoryEntry("divide", 5.0, 0.0, None, False, error_message="Division by zero")
         cli.memory_service = MagicMock()
         cli.memory_service.filter_by_success.return_value = [entry]
-        with patch("builtins.input", side_effect=["4", "5"]):
+        with patch("builtins.input", side_effect=["4", "7"]):
             cli._show_memory_filter_submenu()
         cli.memory_service.filter_by_success.assert_called_once_with(False)
 
     def test_show_memory_filter_submenu_back_option(self, capsys):
         cli, service = _make_cli()
         cli.memory_service = MagicMock()
-        with patch("builtins.input", side_effect=["5"]):
+        with patch("builtins.input", side_effect=["7"]):
             cli._show_memory_filter_submenu()
         output = capsys.readouterr().out
         assert "Memory Filter Options" in output
@@ -326,7 +326,7 @@ class TestMemoryFilterSubmenu:
         cli, service = _make_cli()
         cli.memory_service = MagicMock()
         cli.memory_service.get_all_entries.return_value = []
-        with patch("builtins.input", side_effect=["99", "5"]):
+        with patch("builtins.input", side_effect=["99", "7"]):
             cli._show_memory_filter_submenu()
         output = capsys.readouterr().out
         assert "Invalid choice" in output

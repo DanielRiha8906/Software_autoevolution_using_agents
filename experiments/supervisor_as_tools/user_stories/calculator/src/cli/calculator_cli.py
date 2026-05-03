@@ -173,7 +173,9 @@ class CalculatorCLI:
             print("    (2) Filter by operation")
             print("    (3) Filter by success")
             print("    (4) Filter by error")
-            print("    (5) Back")
+            print("    (5) Export memory")
+            print("    (6) Import memory")
+            print("    (7) Back")
             choice = input("  Choose option: ").strip()
 
             if choice == "1":
@@ -191,6 +193,10 @@ class CalculatorCLI:
                 entries = self.memory_service.filter_by_success(False)
                 self._display_memory_entries(entries)
             elif choice == "5":
+                self._export_memory_interactive()
+            elif choice == "6":
+                self._import_memory_interactive()
+            elif choice == "7":
                 break
             else:
                 print("  Invalid choice — try again.")
@@ -225,3 +231,44 @@ class CalculatorCLI:
         print(f"\nTotal errors: {stats.total_errors}")
         print(f"Error rate: {stats.error_rate:.1f}%")
         print(f"Average execution time: {stats.avg_execution_time_ms:.2f} ms\n")
+
+    def _export_memory_interactive(self) -> None:
+        """Interactively export memory entries to a file."""
+        if not self.memory_service:
+            print("\n  Memory service is not available.\n")
+            return
+
+        output_path = input("  Enter output file path: ").strip()
+        if not output_path:
+            print("  Export cancelled.\n")
+            return
+
+        try:
+            count = self.memory_service.storage.export_memory_entries(output_path)
+            print(f"\n  Exported {count} memory entries to {output_path}\n")
+        except (IOError, OSError) as exc:
+            print(f"\n  Error exporting memory entries: {exc}\n", file=sys.stderr)
+
+    def _import_memory_interactive(self) -> None:
+        """Interactively import memory entries from a file."""
+        if not self.memory_service:
+            print("\n  Memory service is not available.\n")
+            return
+
+        input_path = input("  Enter input file path: ").strip()
+        if not input_path:
+            print("  Import cancelled.\n")
+            return
+
+        overwrite_str = input("  Overwrite existing entries? (yes/no): ").strip().lower()
+        overwrite = overwrite_str in ("yes", "y")
+
+        try:
+            imported, skipped = self.memory_service.storage.import_memory_entries(
+                input_path, overwrite=overwrite
+            )
+            print(f"\n  Imported {imported} memory entries (skipped {skipped} invalid entries)\n")
+        except (FileNotFoundError, IOError, OSError) as exc:
+            print(f"\n  Error importing memory entries: {exc}\n", file=sys.stderr)
+        except Exception as exc:
+            print(f"\n  Unexpected error during import: {exc}\n", file=sys.stderr)

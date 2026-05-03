@@ -9,7 +9,7 @@ top to bottom direction
 
 Menu --> FirstOperand : operation selected
 Menu --> Feedback : history selected
-Menu --> MemoryDisplay : memory selected
+Menu --> MemoryFilterMenu : memory selected
 Menu --> StatisticsDisplay : statistics selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
@@ -25,7 +25,18 @@ Calculating --> MemoryRecord : error / record error
 
 MemoryRecord --> Feedback : memory recorded
 
+MemoryFilterMenu --> MemoryDisplay : view / filter selected
+MemoryFilterMenu --> ExportProgress : export selected
+MemoryFilterMenu --> ImportProgress : import selected
+MemoryFilterMenu --> Feedback : back selected
+
 MemoryDisplay --> Feedback : memory displayed
+
+ExportProgress --> Feedback : export complete
+ExportProgress --> Feedback : export error
+
+ImportProgress --> Feedback : import complete
+ImportProgress --> Feedback : import error
 
 StatisticsDisplay --> Feedback : statistics displayed
 

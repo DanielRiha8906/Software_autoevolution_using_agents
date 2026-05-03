@@ -65,6 +65,21 @@ def main() -> None:
         help="Display calculation statistics",
     )
     parser.add_argument(
+        "--export-memory",
+        metavar="FILE",
+        help="Export memory entries to a JSON file",
+    )
+    parser.add_argument(
+        "--import-memory",
+        metavar="FILE",
+        help="Import memory entries from a JSON file",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing entries when importing (use with --import-memory)",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -77,6 +92,28 @@ def main() -> None:
 
     if args.filter_success and args.filter_error:
         parser.error("Cannot use both --filter-success and --filter-error")
+
+    # Handle export flag
+    if args.export_memory:
+        try:
+            count = memory_service.storage.export_memory_entries(args.export_memory)
+            print(f"Exported {count} memory entries to {args.export_memory}")
+            sys.exit(0)
+        except (FileNotFoundError, IOError, OSError) as exc:
+            print(f"Error exporting memory entries: {exc}", file=sys.stderr)
+            sys.exit(1)
+
+    # Handle import flag
+    if args.import_memory:
+        try:
+            imported, skipped = memory_service.storage.import_memory_entries(
+                args.import_memory, overwrite=args.overwrite
+            )
+            print(f"Imported {imported} memory entries (skipped {skipped} invalid entries)")
+            sys.exit(0)
+        except (FileNotFoundError, IOError, OSError) as exc:
+            print(f"Error importing memory entries: {exc}", file=sys.stderr)
+            sys.exit(1)
 
     if args.statistics:
         stats = statistics_service.generate()
