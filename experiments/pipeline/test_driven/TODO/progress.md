@@ -62,4 +62,4 @@ All tests pass:
 ✅ Status filter logic unchanged
 ✅ No database query engine used (in-memory filtering)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 452.6s | Cost: $0.830710 USD | Turns: 23
