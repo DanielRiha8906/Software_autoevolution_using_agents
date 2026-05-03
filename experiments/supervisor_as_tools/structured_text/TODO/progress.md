@@ -168,4 +168,4 @@ Duration: 153.9s | Cost: $0.284884 USD | Turns: 22
 - Interactive menu additions: option 7 "Manage comments" with sub-menu for view/add/delete
 - All diagrams updated to reflect new CommentsService, relationships, and exception handling
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 441.1s | Cost: $0.832739 USD | Turns: 17
