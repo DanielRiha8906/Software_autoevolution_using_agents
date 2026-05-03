@@ -274,4 +274,4 @@ Duration: 665.1s | Cost: $1.396620 USD | Turns: 16
 - ✅ Operations already in standard mode not re-implemented
 - ✅ All new functionality accessible via `python -m src`: interactive menu items 9-14 for scientific operations, one-shot CLI flags --operation sin/cos/tan/log/ln/exp, --help lists all 14 operations
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 540.7s | Cost: $1.121241 USD | Turns: 16
