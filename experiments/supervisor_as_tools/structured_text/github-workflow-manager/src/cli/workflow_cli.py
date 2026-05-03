@@ -89,6 +89,42 @@ def build_parser() -> argparse.ArgumentParser:
         choices=[c.value for c in WorkflowConclusion],
         help="Filter by conclusion",
     )
+    list_p.add_argument("--duration-min", type=float, default=None, help="Minimum duration in seconds")
+    list_p.add_argument("--duration-max", type=float, default=None, help="Maximum duration in seconds")
+    list_p.add_argument(
+        "--created-after",
+        type=str,
+        default=None,
+        help="Filter runs created after this datetime (ISO 8601 format)",
+    )
+    list_p.add_argument(
+        "--created-before",
+        type=str,
+        default=None,
+        help="Filter runs created before this datetime (ISO 8601 format)",
+    )
+    list_p.add_argument(
+        "--updated-after",
+        type=str,
+        default=None,
+        help="Filter runs updated after this datetime (ISO 8601 format)",
+    )
+    list_p.add_argument(
+        "--updated-before",
+        type=str,
+        default=None,
+        help="Filter runs updated before this datetime (ISO 8601 format)",
+    )
+    list_p.add_argument(
+        "--has-attempts",
+        action="store_true",
+        help="Show only runs with attempts",
+    )
+    list_p.add_argument(
+        "--no-attempts",
+        action="store_true",
+        help="Show only runs without attempts",
+    )
 
     # detail
     detail_p = sub.add_parser("detail", help="Show details for a single run")
@@ -141,13 +177,110 @@ def run_cli(service: WorkflowRunService, attempt_service: AttemptService, args=N
         print(f"Added run {run.id}")
 
     elif ns.command == "list":
-        runs = service.list_runs()
-        if ns.branch:
-            runs = service.filter_by_branch(ns.branch)
-        elif ns.status:
-            runs = service.filter_by_status(WorkflowStatus(ns.status))
-        elif ns.conclusion:
-            runs = service.filter_by_conclusion(WorkflowConclusion(ns.conclusion))
+        # Validate and parse datetime flags
+        created_after = None
+        created_before = None
+        updated_after = None
+        updated_before = None
+
+        if ns.created_after:
+            try:
+                created_after = datetime.fromisoformat(ns.created_after)
+            except ValueError:
+                print(
+                    f"Invalid --created-after format: '{ns.created_after}'. Use ISO 8601 format (e.g., 2026-05-03T12:00:00).",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+        if ns.created_before:
+            try:
+                created_before = datetime.fromisoformat(ns.created_before)
+            except ValueError:
+                print(
+                    f"Invalid --created-before format: '{ns.created_before}'. Use ISO 8601 format (e.g., 2026-05-03T12:00:00).",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+        if ns.updated_after:
+            try:
+                updated_after = datetime.fromisoformat(ns.updated_after)
+            except ValueError:
+                print(
+                    f"Invalid --updated-after format: '{ns.updated_after}'. Use ISO 8601 format (e.g., 2026-05-03T12:00:00).",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+        if ns.updated_before:
+            try:
+                updated_before = datetime.fromisoformat(ns.updated_before)
+            except ValueError:
+                print(
+                    f"Invalid --updated-before format: '{ns.updated_before}'. Use ISO 8601 format (e.g., 2026-05-03T12:00:00).",
+                    file=sys.stderr,
+                )
+                sys.exit(1)
+
+        # Validate duration ranges
+        if ns.duration_min is not None and ns.duration_min < 0:
+            print(
+                f"--duration-min must be non-negative, got {ns.duration_min}.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        if ns.duration_max is not None and ns.duration_max < 0:
+            print(
+                f"--duration-max must be non-negative, got {ns.duration_max}.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        if (
+            ns.duration_min is not None
+            and ns.duration_max is not None
+            and ns.duration_min > ns.duration_max
+        ):
+            print(
+                f"--duration-min ({ns.duration_min}) must be <= --duration-max ({ns.duration_max}).",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        # Validate attempts flags
+        if ns.has_attempts and ns.no_attempts:
+            print(
+                "--has-attempts and --no-attempts cannot be used together.",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+
+        has_attempts_filter = None
+        if ns.has_attempts:
+            has_attempts_filter = True
+        elif ns.no_attempts:
+            has_attempts_filter = False
+
+        # Call filter_runs with all criteria
+        try:
+            runs = service.filter_runs(
+                attempt_service=attempt_service,
+                branch=ns.branch,
+                status=WorkflowStatus(ns.status) if ns.status else None,
+                conclusion=WorkflowConclusion(ns.conclusion) if ns.conclusion else None,
+                min_duration_seconds=ns.duration_min,
+                max_duration_seconds=ns.duration_max,
+                created_after=created_after,
+                created_before=created_before,
+                updated_after=updated_after,
+                updated_before=updated_before,
+                has_attempts=has_attempts_filter,
+            )
+        except ValueError as e:
+            print(f"Filter error: {e}", file=sys.stderr)
+            sys.exit(1)
 
         if not runs:
             print("No runs found.")

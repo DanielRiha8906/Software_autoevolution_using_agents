@@ -21,6 +21,7 @@ repeat
       :Choose conclusion (optional, 0 to skip);
       :Prompt run number (optional);
       :Prompt commit SHA (optional);
+      :Prompt duration (seconds);
       :WorkflowRunTracker.track();
       :Print "Added run <id>";
 
@@ -41,7 +42,16 @@ repeat
         :Print "No run found with id '<id>'";
       endif
 
-    case (4 — Filter runs)
+    case (4 — Check run state)
+      :Prompt run ID;
+      :WorkflowRunService.get_run_detail(run_id);
+      if (found?) then (yes)
+        :Print run details & state flags;
+      else (no)
+        :Print "No run found with id '<id>'";
+      endif
+
+    case (5 — Filter runs)
       :Choose filter type\n(branch / status / conclusion);
       if (branch?) then (yes)
         :Prompt branch name;
@@ -59,7 +69,92 @@ repeat
         :Print matching runs;
       endif
 
-    case (5 — Exit)
+    case (6 — Advanced Filter)
+      :Display advanced filter submenu;
+      repeat
+        :Choose advanced filter option;
+        switch (adv_choice)
+          case (Duration range)
+            :Prompt min duration (seconds);
+            :Prompt max duration (optional);
+            :filter_by_duration_range();
+            if (no matches?) then (yes)
+              :Print "No matching runs.";
+            else (no)
+              :Print matching runs;
+            endif
+
+          case (Created date range)
+            :Prompt created-after (ISO 8601);
+            :Prompt created-before (ISO 8601);
+            :filter_runs() with created timestamps;
+            if (no matches?) then (yes)
+              :Print "No matching runs.";
+            else (no)
+              :Print matching runs;
+            endif
+
+          case (Updated date range)
+            :Prompt updated-after (ISO 8601);
+            :Prompt updated-before (ISO 8601);
+            :filter_runs() with updated timestamps;
+            if (no matches?) then (yes)
+              :Print "No matching runs.";
+            else (no)
+              :Print matching runs;
+            endif
+
+          case (Has attempts)
+            :Choose: show with attempts / without attempts;
+            :filter_by_has_attempts();
+            if (no matches?) then (yes)
+              :Print "No matching runs.";
+            else (no)
+              :Print matching runs;
+            endif
+
+          case (Combine filters)
+            :Choose which filters to apply;
+            :Prompt all relevant filter parameters;
+            :filter_runs(...) with all criteria;
+            if (no matches?) then (yes)
+              :Print "No matching runs.";
+            else (no)
+              :Print matching runs;
+            endif
+
+          case (Back to main menu)
+            break
+        endswitch
+      repeat while (in advanced filters)
+
+    case (7 — Add attempt)
+      :Prompt run ID;
+      :Prompt attempt number;
+      :Prompt status;
+      :Prompt conclusion (optional);
+      :Prompt duration (seconds);
+      :AttemptService.create_attempt();
+      :Print "Added attempt <id>";
+
+    case (8 — List attempts)
+      :AttemptService.list_attempts();
+      if (no attempts?) then (yes)
+        :Print "No attempts recorded.";
+      else (no)
+        :Print all attempts;
+      endif
+
+    case (9 — Get attempt detail)
+      :Prompt attempt ID;
+      :AttemptService.get_attempt_detail(attempt_id);
+      if (found?) then (yes)
+        :Print attempt details;
+      else (no)
+        :Print "No attempt found with id '<id>'";
+      endif
+
+    case (10 — Exit)
       :Print "Goodbye.";
       stop
 

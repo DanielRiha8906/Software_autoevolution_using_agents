@@ -191,3 +191,79 @@ Successfully implemented `AttemptService` to manage `WorkflowRunAttempt` objects
 - "Get attempt detail" — Retrieve and display specific attempt
 
 Duration: 356.9s | Cost: $0.691126 USD | Turns: 23
+
+## Task 05: Implement Filtering Capabilities
+
+**Status:** Completed
+
+### Summary
+Successfully implemented comprehensive filtering capabilities for workflow runs including duration range, timestamp (before/after), and attempt presence filtering. Added compound filter method for combining multiple criteria. All functionality accessible via CLI flags and interactive menu. All 143 tests pass (40 new + 103 existing).
+
+### Files Changed
+- `src/services/workflow_run_service.py` — Added 8 new filter methods: filter_by_duration_range(), filter_by_created_after(), filter_by_created_before(), filter_by_updated_after(), filter_by_updated_before(), filter_by_has_attempts(), filter_runs() (compound), _normalize_datetime() (utility)
+- `src/cli/workflow_cli.py` — Added 8 new CLI flags: --duration-min, --duration-max, --created-after, --created-before, --updated-after, --updated-before, --has-attempts, --no-attempts; updated list command handler with ISO 8601 parsing and validation
+- `src/cli/interactive_menu.py` — Added 7 new functions: _prompt_datetime(), _advanced_filter_menu(), _filter_by_duration_interactive(), _filter_by_created_interactive(), _filter_by_updated_interactive(), _filter_by_attempts_interactive(), _filter_compound_interactive(); added "Advanced Filter" menu option
+- `tests/test_workflow_run_service.py` — Added 17 new service layer tests covering duration ranges, timestamp filtering, attempts filtering, compound filters, timezone handling, and validation
+- `tests/test_workflow_cli.py` — Created with 8 CLI integration tests for flag parsing, datetime validation, compound filters, and error handling
+- `tests/test_interactive_menu.py` — Created with 9 interactive menu tests for datetime parsing, menu navigation, and filter operations
+- `artifacts/class_diagram.puml` — Updated WorkflowRunService with all 8 new methods, added interactive_menu filter functions, documented dependencies
+- `artifacts/component_diagram.puml` — Added "Filtering subsystem" package with basic/advanced/compound filter components
+- `artifacts/activity_diagram_interactive.puml` — Added "Advanced Filter" menu option with 5 sub-options (duration, created, updated, attempts, combine)
+- `artifacts/use_case_diagram.puml` — Added 8 new use cases for filtering operations
+
+### Test Results
+- **Total Tests:** 143 (40 new + 103 existing)
+- **Passed:** 143
+- **Failed:** 0
+- **Status:** ✅ All tests pass
+
+### Implementation Details
+- Must Have: ✅ Duration range filtering (min/max with validation)
+- Must Have: ✅ Timestamp filtering (created/updated before or after, CEST/UTC+2 support)
+- Must Have: ✅ Attempt presence filtering (runs with/without attempts)
+- Must Have: ✅ Return filtered collections via service methods
+- Must Have: ✅ CLI flags and interactive menu integration for all filters
+- Should Have: ✅ Compound filter method combining multiple criteria with AND logic
+- Could Have: ❌ Partial string matching on fields (not implemented, not required)
+- Won't Have: ✅ No database or external index
+
+### Key Features
+- **Datetime Handling**: Automatic UTC/CEST timezone support; naive datetimes treated as UTC
+- **Error Handling**: Clear user-friendly error messages for invalid ranges, timezone parsing, or conflicting flags
+- **Validation**: Duration ranges enforce non-negative values and min <= max; timezone-aware datetime comparison
+- **CLI Integration**: All 8 new flags work with `python -m src list [flags]`; mutually exclusive --has-attempts and --no-attempts
+- **Interactive Menu**: "Advanced Filter" option allows sequential filter application with live result updates
+- **Type Safety**: Full Optional type hints and proper method signatures
+- **Compound Filtering**: filter_runs() applies all provided filters with AND logic for narrowing results
+- **Attempt Service Integration**: Graceful string/int run_id conversion for has_attempts queries
+
+### CLI Commands
+- `python -m src list --duration-min <float> --duration-max <float>` — Filter by duration range
+- `python -m src list --created-after <ISO8601> --created-before <ISO8601>` — Filter by creation date
+- `python -m src list --updated-after <ISO8601> --updated-before <ISO8601>` — Filter by update date
+- `python -m src list --has-attempts` — Show only runs with attempts
+- `python -m src list --no-attempts` — Show only runs without attempts
+- Flags can be combined for compound filtering
+
+### Interactive Menu (New)
+- "Advanced Filter" → sub-menu with 5 options:
+  - "Duration range" — Enter min/max seconds
+  - "Created date range" — Enter ISO 8601 timestamps
+  - "Updated date range" — Enter ISO 8601 timestamps
+  - "Has attempts" — Filter by presence (yes/no)
+  - "Combine filters" — Apply multiple filters in sequence
+
+### Test Coverage
+- Service layer: 17 new tests (duration, timestamps, attempts, compound, timezone, validation)
+- CLI integration: 8 new tests (flag parsing, datetime parsing, validation, error handling)
+- Interactive menu: 9 new tests (prompt validation, menu navigation, filter operations)
+- Total coverage: 40 new tests + 103 existing (no regressions)
+
+### Design Notes
+- Filtering uses in-memory operations on loaded collections (no database)
+- All filters return new lists without modifying original data
+- Compound filters apply all criteria with AND logic (intersection semantics)
+- Timezone normalization handles both naive (UTC assumed) and TZ-aware datetimes
+- ISO 8601 format supports both basic (2026-05-01T10:00:00) and extended (+02:00) formats
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
