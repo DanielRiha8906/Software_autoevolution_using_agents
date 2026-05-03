@@ -84,6 +84,17 @@ package "services" #DDFFD4 {
         Error raised when import data fails validation against schema.
     }
 
+    class GitHubFetchService {
+        -_secrets_path : Optional[str]
+        -_token : Optional[str]
+        --
+        +__init__(secrets_path: Optional[str] = None) : None
+        +resolve_token() : str
+        +fetch(owner: str, repo: str) : List[WorkflowRun]
+        -_parse_env_file(path: str) : Optional[str]
+        -_convert_to_workflow_run(gh_data: dict) : WorkflowRun
+    }
+
     class WorkflowRunService {
         -_storage : WorkflowJsonStorage
         -_runs    : List[WorkflowRun]
@@ -153,6 +164,9 @@ package "cli" #FFE5E5 {
 WorkflowRun             "1" --> "*" WorkflowRunAttempt : has
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
+GitHubFetchService     ..>  WorkflowRun : returns from fetch()
+GitHubFetchService     ..>  WorkflowStatus : converts
+GitHubFetchService     ..>  WorkflowConclusion : converts
 WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus

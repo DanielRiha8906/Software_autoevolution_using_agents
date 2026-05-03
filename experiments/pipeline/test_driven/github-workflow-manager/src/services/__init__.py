@@ -3,6 +3,7 @@ from .workflow_run_tracker import WorkflowRunTracker
 from .attempt_service import AttemptService
 from .workflow_statistics_service import WorkflowStatisticsService
 from .workflow_import_export_service import WorkflowImportExportService, SchemaValidationError
+from .github_fetch_service import GitHubFetchService
 
 __all__ = [
     "WorkflowRunService",
@@ -11,4 +12,5 @@ __all__ = [
     "WorkflowStatisticsService",
     "WorkflowImportExportService",
     "SchemaValidationError",
+    "GitHubFetchService",
 ]
