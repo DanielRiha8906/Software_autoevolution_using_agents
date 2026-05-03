@@ -168,6 +168,19 @@ package "services" #DDFFD4 {
         -_compute_attempt_statistics(runs: List[WorkflowRun]) : Tuple[int, int, int]
     }
 
+    class WorkflowDataPortabilityService {
+        -_run_service     : WorkflowRunService
+        -_attempt_service : WorkflowAttemptService
+        --
+        +__init__(run_service: WorkflowRunService,\n  attempt_service: WorkflowAttemptService)
+        +export_runs(filepath: str, runs: Optional[List[WorkflowRun]]) : int
+        +import_runs(filepath: str, skip_duplicates: bool) : Dict
+        +export_attempts(filepath: str, attempts: Optional[List[WorkflowRunAttempt]]) : int
+        +import_attempts(filepath: str, skip_duplicates: bool) : Dict
+        -_validate_run_schema(run_data: Dict) : None
+        -_validate_attempt_schema(attempt_data: Dict) : None
+    }
+
     note right of WorkflowAttemptService
         **add_attempt()** validates:
         • attempt.id is globally unique
@@ -178,6 +191,19 @@ package "services" #DDFFD4 {
         **filter_by_run_id()** returns:
         • All attempts for given run_id
         • Sorted by attempt_number (ascending)
+    end note
+
+    note right of WorkflowDataPortabilityService
+        **export_runs()** and **export_attempts()**:
+        • Exports all data if runs/attempts list is None
+        • Creates parent directories if needed
+        • Returns count of exported items
+
+        **import_runs()** and **import_attempts()**:
+        • Validates JSON schema before import
+        • Detects duplicate IDs
+        • Returns dict with:
+          imported, skipped, count, successful, failed
     end note
 }
 
@@ -248,11 +274,13 @@ WorkflowAttemptTracker     ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowAttemptService
 "workflow_cli"             ..>  WorkflowStatisticsService
+"workflow_cli"             ..>  WorkflowDataPortabilityService
 "workflow_cli"             ..>  WorkflowRunTracker
 "workflow_cli"             ..>  "timezone_converter"
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  WorkflowAttemptService
 "interactive_menu"         ..>  WorkflowStatisticsService
+"interactive_menu"         ..>  WorkflowDataPortabilityService
 "interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  "timezone_converter"
 
@@ -262,5 +290,11 @@ WorkflowStatisticsService  "1" --> "1" WorkflowAttemptService : -_attempt_servic
 WorkflowStatisticsService  ..>  WorkflowStatisticsReport : returns
 WorkflowStatisticsService  ..>  WorkflowRun
 WorkflowStatisticsService  ..>  WorkflowRunAttempt
+
+' Data portability service relationships
+WorkflowDataPortabilityService "1" --> "1" WorkflowRunService : -_run_service
+WorkflowDataPortabilityService "1" --> "1" WorkflowAttemptService : -_attempt_service
+WorkflowDataPortabilityService ..>  WorkflowRun : exports/imports
+WorkflowDataPortabilityService ..>  WorkflowRunAttempt : exports/imports
 
 @enduml

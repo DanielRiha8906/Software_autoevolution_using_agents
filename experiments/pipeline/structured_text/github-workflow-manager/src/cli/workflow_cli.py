@@ -11,6 +11,7 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_attempt_service import WorkflowAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.workflow_statistics_service import WorkflowStatisticsService
+from ..services.workflow_data_portability_service import WorkflowDataPortabilityService
 from ..utils.timezone_converter import parse_datetime_with_timezone
 
 
@@ -242,6 +243,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Output format (default: text)",
     )
 
+    # export
+    export_p = sub.add_parser("export", help="Export workflow data to JSON file")
+    export_sub = export_p.add_subparsers(dest="export_command", required=True)
+
+    export_runs_p = export_sub.add_parser("runs", help="Export all runs")
+    export_runs_p.add_argument("--output", "-o", required=True, help="Output JSON file path")
+
+    export_attempts_p = export_sub.add_parser("attempts", help="Export all attempts")
+    export_attempts_p.add_argument("--output", "-o", required=True, help="Output JSON file path")
+
+    # import
+    import_p = sub.add_parser("import", help="Import workflow data from JSON file")
+    import_sub = import_p.add_subparsers(dest="import_command", required=True)
+
+    import_runs_p = import_sub.add_parser("runs", help="Import runs from file")
+    import_runs_p.add_argument("--input", "-i", required=True, help="Input JSON file path")
+    import_runs_p.add_argument(
+        "--skip-duplicates",
+        action="store_true",
+        help="Skip runs with duplicate IDs instead of raising error",
+    )
+
+    import_attempts_p = import_sub.add_parser("attempts", help="Import attempts from file")
+    import_attempts_p.add_argument("--input", "-i", required=True, help="Input JSON file path")
+    import_attempts_p.add_argument(
+        "--skip-duplicates",
+        action="store_true",
+        help="Skip attempts with duplicate IDs instead of raising error",
+    )
+
     return parser
 
 
@@ -249,6 +280,7 @@ def run_cli(
     service: WorkflowRunService,
     attempt_service: WorkflowAttemptService = None,
     stats_service: WorkflowStatisticsService = None,
+    portability_service=None,
     args=None,
 ) -> None:
     parser = build_parser()
@@ -458,3 +490,43 @@ def run_cli(
             print(f"  Runs with Attempts: {report.runs_with_attempts}")
             print(f"  Runs without Attempts: {report.runs_with_no_attempts}")
             print(f"\nGenerated at: {report.generated_at.isoformat()}")
+
+    elif ns.command == "export":
+        if portability_service is None:
+            print("Data portability service not initialized.", file=sys.stderr)
+            sys.exit(1)
+
+        try:
+            if ns.export_command == "runs":
+                count = portability_service.export_runs(ns.output)
+                print(f"Exported {count} run(s) to {ns.output}")
+            elif ns.export_command == "attempts":
+                count = portability_service.export_attempts(ns.output)
+                print(f"Exported {count} attempt(s) to {ns.output}")
+        except Exception as e:
+            print(f"Error exporting data: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "import":
+        if portability_service is None:
+            print("Data portability service not initialized.", file=sys.stderr)
+            sys.exit(1)
+
+        try:
+            if ns.import_command == "runs":
+                result = portability_service.import_runs(ns.input, skip_duplicates=ns.skip_duplicates)
+                print(f"Imported {result['successful']} run(s)")
+                if result['skipped']:
+                    print(f"Skipped {len(result['skipped'])} duplicate run(s)")
+                if result['failed'] > 0:
+                    print(f"Failed to import {result['failed']} run(s)")
+            elif ns.import_command == "attempts":
+                result = portability_service.import_attempts(ns.input, skip_duplicates=ns.skip_duplicates)
+                print(f"Imported {result['successful']} attempt(s)")
+                if result['skipped']:
+                    print(f"Skipped {len(result['skipped'])} duplicate attempt(s)")
+                if result['failed'] > 0:
+                    print(f"Failed to import {result['failed']} attempt(s)")
+        except Exception as e:
+            print(f"Error importing data: {e}", file=sys.stderr)
+            sys.exit(1)

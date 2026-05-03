@@ -34,5 +34,29 @@
     "run_number": null,
     "commit_sha": null,
     "duration_seconds": 25.0
+  },
+  {
+    "id": "new-run-1",
+    "workflow_name": "New Test Workflow",
+    "branch": "feature",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-04T10:00:00+00:00",
+    "updated_at": null,
+    "run_number": 100,
+    "commit_sha": "abc123",
+    "duration_seconds": 75.5
+  },
+  {
+    "id": "new-run-2",
+    "workflow_name": "Another Test Workflow",
+    "branch": "develop",
+    "status": "in_progress",
+    "conclusion": null,
+    "created_at": "2026-05-04T11:00:00+00:00",
+    "updated_at": null,
+    "run_number": 101,
+    "commit_sha": "def456",
+    "duration_seconds": 45.0
   }
 ]

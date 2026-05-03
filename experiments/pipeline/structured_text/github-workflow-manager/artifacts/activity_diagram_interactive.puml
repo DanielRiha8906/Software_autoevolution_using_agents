@@ -131,6 +131,32 @@ repeat
     else (View Statistics)
       :WorkflowStatisticsService.compute_report();
       :Display statistics report:\n  total runs\n  conclusion counts\n  duration statistics\n  attempt statistics\n  generated_at;
+    else (Export/Import Data)
+      repeat
+        :Display data portability submenu:\n1. Export runs\n2. Import runs\n3. Export attempts\n4. Import attempts\n5. Back;
+        switch (portability choice)
+          case (1 — Export runs)
+            :Prompt output filepath;
+            :WorkflowDataPortabilityService.export_runs();
+            :Print count exported;
+          case (2 — Import runs)
+            :Prompt input filepath;
+            :Prompt skip duplicates (y/n);
+            :WorkflowDataPortabilityService.import_runs();
+            :Print successful/skipped/failed counts;
+          case (3 — Export attempts)
+            :Prompt output filepath;
+            :WorkflowDataPortabilityService.export_attempts();
+            :Print count exported;
+          case (4 — Import attempts)
+            :Prompt input filepath;
+            :Prompt skip duplicates (y/n);
+            :WorkflowDataPortabilityService.import_attempts();
+            :Print successful/skipped/failed counts;
+          case (5 — Back)
+            break
+        endswitch
+      repeat while (user continues in portability menu)
     endif
   endif
 

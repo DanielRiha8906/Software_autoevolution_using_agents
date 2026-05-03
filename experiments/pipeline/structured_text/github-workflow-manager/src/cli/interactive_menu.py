@@ -10,6 +10,7 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_attempt_service import WorkflowAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.workflow_statistics_service import WorkflowStatisticsService
+from ..services.workflow_data_portability_service import WorkflowDataPortabilityService
 from ..utils.timezone_converter import parse_datetime_with_timezone
 
 
@@ -476,6 +477,72 @@ def _view_statistics(stats_service: WorkflowStatisticsService) -> None:
     print(f"\nGenerated at: {report.generated_at.isoformat()}")
 
 
+def _export_runs_menu(portability_service) -> None:
+    """Export runs to a JSON file."""
+    filepath = _prompt("\nEnter output file path")
+    if not filepath:
+        print("No file path provided.")
+        return
+    try:
+        count = portability_service.export_runs(filepath)
+        print(f"Successfully exported {count} run(s) to {filepath}")
+    except Exception as e:
+        print(f"Error exporting runs: {e}")
+
+
+def _import_runs_menu(portability_service) -> None:
+    """Import runs from a JSON file."""
+    filepath = _prompt("\nEnter input file path")
+    if not filepath:
+        print("No file path provided.")
+        return
+    skip_dup = input("Skip duplicate IDs? (y/n, default n): ").strip().lower() == "y"
+    try:
+        result = portability_service.import_runs(filepath, skip_duplicates=skip_dup)
+        print(f"\nImport Results:")
+        print(f"  Total in file: {result['count']}")
+        print(f"  Successfully imported: {result['successful']}")
+        if result['skipped']:
+            print(f"  Skipped (duplicates): {len(result['skipped'])}")
+        if result['failed'] > 0:
+            print(f"  Failed: {result['failed']}")
+    except Exception as e:
+        print(f"Error importing runs: {e}")
+
+
+def _export_attempts_menu(portability_service) -> None:
+    """Export attempts to a JSON file."""
+    filepath = _prompt("\nEnter output file path")
+    if not filepath:
+        print("No file path provided.")
+        return
+    try:
+        count = portability_service.export_attempts(filepath)
+        print(f"Successfully exported {count} attempt(s) to {filepath}")
+    except Exception as e:
+        print(f"Error exporting attempts: {e}")
+
+
+def _import_attempts_menu(portability_service) -> None:
+    """Import attempts from a JSON file."""
+    filepath = _prompt("\nEnter input file path")
+    if not filepath:
+        print("No file path provided.")
+        return
+    skip_dup = input("Skip duplicate IDs? (y/n, default n): ").strip().lower() == "y"
+    try:
+        result = portability_service.import_attempts(filepath, skip_duplicates=skip_dup)
+        print(f"\nImport Results:")
+        print(f"  Total in file: {result['count']}")
+        print(f"  Successfully imported: {result['successful']}")
+        if result['skipped']:
+            print(f"  Skipped (duplicates): {len(result['skipped'])}")
+        if result['failed'] > 0:
+            print(f"  Failed: {result['failed']}")
+    except Exception as e:
+        print(f"Error importing attempts: {e}")
+
+
 def _run_menu(
     service: WorkflowRunService,
     attempt_service: Optional[WorkflowAttemptService] = None,
@@ -539,10 +606,38 @@ def _attempt_menu(
             print()
 
 
+def _portability_menu(portability_service) -> None:
+    """Data export/import menu."""
+    portability_menu = [
+        ("Export runs", lambda s: _export_runs_menu(s)),
+        ("Import runs", lambda s: _import_runs_menu(s)),
+        ("Export attempts", lambda s: _export_attempts_menu(s)),
+        ("Import attempts", lambda s: _import_attempts_menu(s)),
+        ("Back", None),
+    ]
+    print("\n--- Export/Import Data ---")
+    while True:
+        print("\n" + "=" * 44)
+        for i, (label, _) in enumerate(portability_menu, 1):
+            print(f"  {i}. {label}")
+        raw = input("\nSelect option: ").strip()
+        if not raw.isdigit() or not (1 <= int(raw) <= len(portability_menu)):
+            print("Invalid selection.")
+            continue
+        label, handler = portability_menu[int(raw) - 1]
+        if handler is None:
+            return
+        try:
+            handler(portability_service)
+        except KeyboardInterrupt:
+            print()
+
+
 MENU = [
     ("Workflow Runs", "runs"),
     ("Workflow Attempts", "attempts"),
     ("View Statistics", "statistics"),
+    ("Export/Import Data", "portability"),
     ("Exit", None),
 ]
 
@@ -551,6 +646,7 @@ def run_interactive(
     service: WorkflowRunService,
     attempt_service: Optional[WorkflowAttemptService] = None,
     stats_service: Optional[WorkflowStatisticsService] = None,
+    portability_service=None,
 ) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
@@ -578,5 +674,10 @@ def run_interactive(
                     print("Statistics service not initialized.")
                     continue
                 _view_statistics(stats_service)
+            elif submenu == "portability":
+                if portability_service is None:
+                    print("Data portability service not initialized.")
+                    continue
+                _portability_menu(portability_service)
         except KeyboardInterrupt:
             print()

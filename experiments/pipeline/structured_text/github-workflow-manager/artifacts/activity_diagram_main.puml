@@ -99,6 +99,40 @@ if (CLI arguments provided?) then (yes)
         :Print formatted text report:\n  total runs\n  conclusion counts\n  duration stats\n  attempt stats\n  generated_at;
       endif
 
+    case (export)
+      switch (export subcommand)
+        case (runs)
+          :Parse --output filepath;
+          :WorkflowDataPortabilityService.export_runs();
+          :Print count exported;
+        case (attempts)
+          :Parse --output filepath;
+          :WorkflowDataPortabilityService.export_attempts();
+          :Print count exported;
+      endswitch
+
+    case (import)
+      switch (import subcommand)
+        case (runs)
+          :Parse --input filepath, --skip-duplicates flag;
+          :WorkflowDataPortabilityService.import_runs();
+          if (import error?) then (yes)
+            :Print error to stderr;
+            :Exit code 1;
+          else (no)
+            :Print successful/skipped counts;
+          endif
+        case (attempts)
+          :Parse --input filepath, --skip-duplicates flag;
+          :WorkflowDataPortabilityService.import_attempts();
+          if (import error?) then (yes)
+            :Print error to stderr;
+            :Exit code 1;
+          else (no)
+            :Print successful/skipped counts;
+          endif
+      endswitch
+
   endswitch
   stop
 

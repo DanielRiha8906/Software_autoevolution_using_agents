@@ -5,6 +5,7 @@ from .storage.workflow_attempt_json_storage import WorkflowAttemptJsonStorage
 from .services.workflow_run_service import WorkflowRunService
 from .services.workflow_attempt_service import WorkflowAttemptService
 from .services.workflow_statistics_service import WorkflowStatisticsService
+from .services.workflow_data_portability_service import WorkflowDataPortabilityService
 from .cli.workflow_cli import run_cli
 from .cli.interactive_menu import run_interactive
 
@@ -19,11 +20,14 @@ def main() -> None:
     # Initialize statistics service
     stats_service = WorkflowStatisticsService(service, attempt_service)
 
+    # Initialize data portability service
+    portability_service = WorkflowDataPortabilityService(service, attempt_service)
+
     # No sub-command args → launch interactive menu
     if len(sys.argv) == 1:
-        run_interactive(service, attempt_service, stats_service)
+        run_interactive(service, attempt_service, stats_service, portability_service)
     else:
-        run_cli(service, attempt_service, stats_service)
+        run_cli(service, attempt_service, stats_service, portability_service)
 
 
 if __name__ == "__main__":

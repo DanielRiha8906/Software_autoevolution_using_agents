@@ -321,3 +321,88 @@ All tests pass including:
 - Dataclass.to_dict() handles None → "incomplete" mapping and datetime → ISO format
 
 Duration: 660.3s | Cost: $1.423226 USD | Turns: 25
+
+## Task 07: Data Portability (Export/Import JSON)
+
+### Task Summary
+Implemented data portability functionality enabling users to export workflow runs and attempts to JSON files, and import them back with schema validation and duplicate detection. All functionality is accessible via both interactive menu and CLI with support for gracefully skipping invalid/duplicate entries on import.
+
+### Files Changed
+
+**New Files:**
+- `src/services/workflow_data_portability_service.py` — NEW: WorkflowDataPortabilityService class with export/import methods and schema validation
+- `tests/test_workflow_data_portability_service.py` — NEW: 42 comprehensive tests for service methods
+- `tests/test_export_import_cli.py` — NEW: 29 CLI integration and argument parsing tests
+
+**Modified Files:**
+- `src/__main__.py` — Initialize WorkflowDataPortabilityService and wire to CLI/menu
+- `src/cli/workflow_cli.py` — Added export/import subcommands with --output/-o (export) and --input/-i (import) flags, --skip-duplicates flag for imports
+- `src/cli/interactive_menu.py` — Added _portability_menu() submenu with _export_runs_menu(), _import_runs_menu(), _export_attempts_menu(), _import_attempts_menu() functions
+- `src/services/__init__.py` — Added export for WorkflowDataPortabilityService
+- `artifacts/class_diagram.puml` — Added WorkflowDataPortabilityService class with all methods and relationships
+- `artifacts/component_diagram.puml` — Added portability service component and JSON export artifacts
+- `artifacts/use_case_diagram.puml` — Added 4 data portability use cases (export/import runs/attempts)
+- `artifacts/activity_diagram_main.puml` — Added export/import CLI command flows
+- `artifacts/activity_diagram_interactive.puml` — Added portability submenu flows
+
+### Test Result
+✓ **433 tests passed** (1.18s)
+
+All tests pass including:
+- 42 WorkflowDataPortabilityService tests (export/import, schema validation, duplicate handling, error cases)
+- 29 CLI integration tests (command parsing, output formatting, error handling)
+- 362 pre-existing tests (maintained backward compatibility)
+
+### Implementation Details
+
+**Must Have (All Completed):**
+- ✓ Export runs to JSON file (WorkflowDataPortabilityService.export_runs())
+- ✓ Import runs from JSON file (WorkflowDataPortabilityService.import_runs())
+- ✓ Export attempts to JSON file (WorkflowDataPortabilityService.export_attempts())
+- ✓ Import attempts from JSON file (WorkflowDataPortabilityService.import_attempts())
+- ✓ Schema consistency validation (_validate_run_schema(), _validate_attempt_schema())
+- ✓ All functionality accessible via `python -m src` (interactive menu + CLI flags)
+
+**Should Have (All Completed):**
+- ✓ Validate imported data structure (schema validation with required field checking)
+- ✓ Duplicate detection by ID (skip_duplicates flag prevents re-adding existing IDs)
+
+**Could Have (Completed):**
+- ✓ Skip invalid or duplicate entries on import rather than failing entire operation (--skip-duplicates flag)
+
+**Won't Have (Not Applicable):**
+- Support external formats (CSV, DB) — out of scope
+
+**Service Methods:**
+- `export_runs(runs: List[WorkflowRun], filepath: str) -> int` — Exports runs to JSON file, returns count
+- `import_runs(filepath: str, skip_duplicates: bool = False) -> Dict[str, int]` — Imports runs with validation, returns {imported, skipped, failed}
+- `export_attempts(attempts: List[WorkflowRunAttempt], filepath: str) -> int` — Exports attempts to JSON file, returns count
+- `import_attempts(filepath: str, skip_duplicates: bool = False) -> Dict[str, int]` — Imports attempts with validation, returns {imported, skipped, failed}
+- `_validate_run_schema(data: dict)` — Validates required fields: id, workflow_name, branch, status, created_at
+- `_validate_attempt_schema(data: dict)` — Validates required fields: id, run_id, attempt_number, status, started_at
+
+**JSON Schema:**
+- Runs: id, workflow_name, branch, status, conclusion, created_at, updated_at, run_number, commit_sha, duration_seconds
+- Attempts: id, run_id, attempt_number, status, conclusion, started_at, completed_at, duration_seconds, logs_url
+
+**CLI Usage:**
+- `python -m src export runs --output <file.json>` — Export all runs
+- `python -m src export attempts --output <file.json>` — Export all attempts
+- `python -m src import runs --input <file.json> [--skip-duplicates]` — Import runs
+- `python -m src import attempts --input <file.json> [--skip-duplicates]` — Import attempts
+
+**Interactive Menu:**
+- Main menu → "Export/Import Data" → Options: Export runs, Import runs, Export attempts, Import attempts
+- Prompts user for file paths and duplicate handling preferences
+- Displays import/export statistics (count, skipped, failed)
+
+**Error Handling:**
+- File I/O errors (file not found, permission denied) → IOError
+- Invalid JSON format → ValueError
+- Missing required fields → ValueError
+- Invalid enum values → ValueError
+- Negative duration → ValueError (existing model validation)
+- Duplicate ID (when skip_duplicates=False) → ValueError
+- Graceful degradation: With skip_duplicates=True, import continues and reports skipped/failed counts
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

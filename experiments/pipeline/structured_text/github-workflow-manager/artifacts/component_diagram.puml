@@ -25,6 +25,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunService" as SVC
     component "WorkflowAttemptService" as ASVC
     component "WorkflowStatisticsService" as STATS
+    component "WorkflowDataPortabilityService" as PORTABILITY
   }
 
   package "Persistence layer" {
@@ -32,6 +33,8 @@ package "GitHub Workflow Manager" {
     component "WorkflowAttemptJsonStorage" as ASTOR
     artifact "workflow_runs.json" as JSON_FILE
     artifact "workflow_attempts.json" as AJSON_FILE
+    artifact "exported_runs.json" as EXP_RUNS_FILE
+    artifact "exported_attempts.json" as EXP_ATTEMPTS_FILE
   }
 
   package "Domain model" {
@@ -60,6 +63,8 @@ CLI --> ASVC
 IM --> ASVC
 CLI --> STATS
 IM --> STATS
+CLI --> PORTABILITY
+IM --> PORTABILITY
 
 TRACKER --> SVC
 TRACKER --> ASVC
@@ -71,6 +76,11 @@ ASTOR --> AJSON_FILE
 
 STATS --> SVC
 STATS --> ASVC
+
+PORTABILITY --> SVC
+PORTABILITY --> ASVC
+PORTABILITY --> EXP_RUNS_FILE
+PORTABILITY --> EXP_ATTEMPTS_FILE
 
 SVC ..> RUN
 RUN --> STATUS
@@ -84,5 +94,8 @@ ATTEMPT --> CONCLUSION
 STATS ..> REPORT
 STATS ..> RUN
 STATS ..> ATTEMPT
+
+PORTABILITY ..> RUN : exports/imports
+PORTABILITY ..> ATTEMPT : exports/imports
 
 @enduml
