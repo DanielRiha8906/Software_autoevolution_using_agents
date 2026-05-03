@@ -86,3 +86,62 @@ Duration: 614.7s | Cost: $1.099172 USD | Turns: 14
 ✓ All functionality accessible via `python -m src` (interactive menu option 4 + CLI flags start/done/reopen)
 
 Duration: 496.0s | Cost: $0.844545 USD | Turns: 25
+
+---
+
+## Task 03: Task Comments
+
+**Status:** COMPLETE ✓
+
+### Changes Made
+- **TaskComment Model:** Created new src/models/task_comment.py with dataclass:
+  - Fields: `id` (UUID string, auto-generated), `task_id` (reference to parent), `content` (required, non-empty), `created_at` (timezone-aware UTC), `author` (optional), `updated_at` (optional)
+  - Validation: Rejects empty/whitespace-only content, requires timezone-aware datetimes
+  - Serialization: `to_dict()` converts datetimes to ISO 8601, `from_dict()` reconstructs from dict
+- **Task Model:** Updated src/models/task.py:
+  - Added `comments: list[TaskComment]` field with default empty list
+  - Updated `to_dict()` to serialize comments list
+  - Updated `from_dict()` to deserialize comments with backward compatibility
+- **TaskManager:** Added 3 new methods in src/services/task_manager.py:
+  - `add_comment(task_id, content, author=None)` — Creates and persists comment, validates task exists
+  - `get_comments(task_id)` — Retrieves all comments for a task
+  - `delete_comment(task_id, comment_id)` — Removes comment and persists
+- **TodoService:** Added 3 new methods in src/services/todo_service.py:
+  - `add_comment(task_id, content, author=None)` — Service-layer validation (non-empty, strips whitespace)
+  - `get_comments(task_id)` — Delegates to TaskManager
+  - `delete_comment(task_id, comment_id)` — Delegates to TaskManager
+- **Diagrams:** Updated artifacts/:
+  - class_diagram.puml: Added TaskComment class with fields/methods, updated Task with comments field, updated TaskManager/TodoService with new methods
+  - component_diagram.puml: Added TaskComment Model component and dependencies
+  - use_case_diagram.puml: Added interactive and CLI use cases for add/view/delete comments
+
+### Files Changed
+- src/models/task_comment.py (NEW)
+- src/models/task.py
+- src/models/__init__.py
+- src/services/task_manager.py
+- src/services/todo_service.py
+- artifacts/class_diagram.puml
+- artifacts/component_diagram.puml
+- artifacts/use_case_diagram.puml
+
+### Test Results
+**210 tests total: ALL PASSED**
+- 79 new TaskComment tests organized in 11 test classes
+- 28 tests for TaskComment model (creation, defaults, validation, timezone handling)
+- 8 tests for Task integration (comments field, serialization roundtrip, backward compatibility)
+- 20 tests for TaskManager (add_comment, get_comments, delete_comment with persistence)
+- 18 tests for TodoService (validation, whitespace stripping, delegation)
+- 6 integration tests (persistence across reloads, comment lifecycle, isolation)
+- 131 existing tests all still passing (no regressions)
+
+### Acceptance Criteria Verification
+✓ TaskComment has: `id` (UUID), `task_id`, `content`, `created_at` (CEST/UTC)
+✓ TaskComment serializes to/from JSON-compatible dictionary
+✓ Empty content is rejected with ValueError
+✓ TaskComment must reference valid task_id (verified via TaskManager.get())
+✓ Optional `author` attribute implemented
+✓ Optional `updated_at` attribute implemented
+✓ Rich text, markdown, and nested comments explicitly out of scope (confirmed in design, not implemented)
+
+Duration: 412.8s | Cost: $0.739845 USD | Turns: 13

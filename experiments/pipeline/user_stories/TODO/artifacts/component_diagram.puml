@@ -21,6 +21,7 @@ package "TODO Application" {
 
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus)" as Model
+        component "Task Comment Model\n(TaskComment)" as CommentModel
     }
 
     package "Persistence Layer" {
@@ -39,7 +40,9 @@ CLI --> SVC
 SVC --> MGR
 MGR --> Storage
 MGR ..> Model
+MGR ..> CommentModel
 Storage ..> Model
+Storage ..> CommentModel
 
 Storage --> DB : read/write
 

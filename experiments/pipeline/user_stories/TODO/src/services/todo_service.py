@@ -3,6 +3,7 @@ from typing import Optional
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
+from ..models.task_comment import TaskComment
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
 
@@ -49,3 +50,49 @@ class TodoService:
 
     def delete_task(self, task_id: str) -> None:
         self._manager.delete(task_id)
+
+    def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
+        """Add a comment to a task.
+
+        Args:
+            task_id: The ID of the task to comment on.
+            content: The comment content (non-empty string).
+            author: Optional author name for the comment.
+
+        Returns:
+            TaskComment: The created comment.
+
+        Raises:
+            ValueError: If content is empty.
+            TaskNotFoundError: If task is not found.
+        """
+        if not content or not content.strip():
+            raise ValueError("Comment content cannot be empty")
+        return self._manager.add_comment(task_id, content.strip(), author)
+
+    def get_comments(self, task_id: str) -> list[TaskComment]:
+        """Get all comments for a task.
+
+        Args:
+            task_id: The ID of the task.
+
+        Returns:
+            list[TaskComment]: All comments for the task.
+
+        Raises:
+            TaskNotFoundError: If task is not found.
+        """
+        return self._manager.get_comments(task_id)
+
+    def delete_comment(self, task_id: str, comment_id: str) -> None:
+        """Delete a comment from a task.
+
+        Args:
+            task_id: The ID of the task.
+            comment_id: The ID of the comment to delete.
+
+        Raises:
+            TaskNotFoundError: If task is not found.
+            ValueError: If comment is not found on the task.
+        """
+        self._manager.delete_comment(task_id, comment_id)
