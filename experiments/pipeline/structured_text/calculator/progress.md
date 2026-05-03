@@ -664,4 +664,4 @@ The import/export feature is fully accessible via:
 - Validation testing: malformed JSON, missing fields, duplicates
 - Integration testing: CLI flag combinations and interactive prompting
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 849.8s | Cost: $1.411345 USD | Turns: 20
