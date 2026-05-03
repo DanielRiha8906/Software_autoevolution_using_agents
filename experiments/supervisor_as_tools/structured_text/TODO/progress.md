@@ -39,3 +39,46 @@
 - UML diagrams updated to reflect new classes and methods
 
 Duration: 367.9s | Cost: $0.723867 USD | Turns: 18
+
+---
+
+## Task 02: Add status and due date methods to Task
+
+### Status: COMPLETED ✓
+
+### Files Changed
+- `src/models/task.py` — Added mark_in_progress(), mark_done(), reopen(), is_completed() methods
+- `tests/test_task_transitions.py` — New file with 27 unit tests for Task status methods
+- `tests/test_todo_service_transitions.py` — New file with 17 service integration tests
+- `tests/test_cli_transitions.py` — New file with 22 CLI command tests
+- `artifacts/class_diagram.puml` — Updated UML to reflect new Task methods
+
+### Test Results
+- **Total tests: 119**
+- **Passed: 119**
+- **Failed: 0**
+- **Success rate: 100%**
+
+### Requirements Met
+✓ MUST: mark_in_progress() — transitions status to IN_PROGRESS
+✓ MUST: mark_done() — transitions status to DONE
+✓ MUST: reopen() — transitions status to PENDING
+✓ MUST: is_completed() — returns True when status is DONE
+✓ MUST: is_overdue() — returns True when due_date is earlier than current CEST time
+✓ MUST: Each status-mutating method updates updated_at to current CEST time
+✓ MUST: Methods derive state strictly from existing Task attributes
+✓ MUST: All functionality accessible via python -m src (interactive menu + CLI flag)
+✓ SHOULD: Prevent invalid status transitions (silent no-op strategy)
+✓ SHOULD: Add unit tests covering all status transitions and overdue combinations
+
+### Implementation Summary
+- Four new instance methods on Task class: mark_in_progress(), mark_done(), reopen(), is_completed()
+- Invalid status transitions result in silent no-ops (idempotent behavior)
+- updated_at timestamp updated only when status actually changes
+- Timezone handling: datetime.now(ZoneInfo("Europe/Paris")).astimezone(timezone.utc)
+- 66 new tests across three test files: unit, service integration, and CLI tests
+- Existing CLI commands (start, done, reopen) already support new functionality
+- Existing service layer (TodoService.start_task, complete_task, reopen_task) fully utilized
+- All status mutations properly persist to storage via Task.to_dict/from_dict
+
+Duration: 279.6s | Cost: $0.533964 USD | Turns: 13
