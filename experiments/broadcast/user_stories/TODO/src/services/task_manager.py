@@ -67,3 +67,21 @@ class TaskManager:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
         self._persist()
+
+    def mark_in_progress(self, task_id: str) -> Task:
+        task = self.get(task_id)
+        task.mark_in_progress()
+        self._persist()
+        return task
+
+    def mark_done(self, task_id: str) -> Task:
+        task = self.get(task_id)
+        task.mark_done()
+        self._persist()
+        return task
+
+    def reopen(self, task_id: str) -> Task:
+        task = self.get(task_id)
+        task.reopen()
+        self._persist()
+        return task

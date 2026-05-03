@@ -93,6 +93,26 @@ class TodoCLI:
         p_delete.add_argument("id", help="Task ID")
         p_delete.set_defaults(func=self._cmd_delete)
 
+        # is-pending
+        p_is_pending = sub.add_parser("is-pending", help="Check if task is pending")
+        p_is_pending.add_argument("id", help="Task ID")
+        p_is_pending.set_defaults(func=self._cmd_is_pending)
+
+        # is-in-progress
+        p_is_in_progress = sub.add_parser("is-in-progress", help="Check if task is in progress")
+        p_is_in_progress.add_argument("id", help="Task ID")
+        p_is_in_progress.set_defaults(func=self._cmd_is_in_progress)
+
+        # is-completed
+        p_is_completed = sub.add_parser("is-completed", help="Check if task is completed")
+        p_is_completed.add_argument("id", help="Task ID")
+        p_is_completed.set_defaults(func=self._cmd_is_completed)
+
+        # is-overdue
+        p_is_overdue = sub.add_parser("is-overdue", help="Check if task is overdue")
+        p_is_overdue.add_argument("id", help="Task ID")
+        p_is_overdue.set_defaults(func=self._cmd_is_overdue)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -146,4 +166,24 @@ class TodoCLI:
         task = self._service.get_task(args.id)
         self._service.delete_task(args.id)
         print(f"Deleted {task.id[:8]}  {task.title}")
+        return 0
+
+    def _cmd_is_pending(self, args: argparse.Namespace) -> int:
+        is_pending = self._service.is_task_pending(args.id)
+        print(f"{'Yes' if is_pending else 'No'}")
+        return 0
+
+    def _cmd_is_in_progress(self, args: argparse.Namespace) -> int:
+        is_in_progress = self._service.is_task_in_progress(args.id)
+        print(f"{'Yes' if is_in_progress else 'No'}")
+        return 0
+
+    def _cmd_is_completed(self, args: argparse.Namespace) -> int:
+        is_completed = self._service.is_task_completed(args.id)
+        print(f"{'Yes' if is_completed else 'No'}")
+        return 0
+
+    def _cmd_is_overdue(self, args: argparse.Namespace) -> int:
+        is_overdue = self._service.is_task_overdue(args.id)
+        print(f"{'Yes' if is_overdue else 'No'}")
         return 0
