@@ -80,4 +80,4 @@ Duration: 420.3s | Cost: $0.684168 USD | Turns: 21
 - No print statements or formatting logic in module (per requirements)
 - Follows existing CalculationResult pattern for consistency
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 402.7s | Cost: $0.690665 USD | Turns: 31
