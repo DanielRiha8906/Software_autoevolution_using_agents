@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 
 class CalculatorCLI:
-    _MENU: list[tuple[Operation, str]] = [
+    _STANDARD_MENU: list[tuple[Operation, str]] = [
         (Operation.ADD,      "Add"),
         (Operation.SUBTRACT, "Subtract"),
         (Operation.MULTIPLY, "Multiply"),
@@ -23,17 +23,37 @@ class CalculatorCLI:
         (Operation.MODULO,   "Modulo"),
     ]
 
+    _SCIENTIFIC_MENU: list[tuple[Operation, str]] = [
+        (Operation.ADD,      "Add"),
+        (Operation.SUBTRACT, "Subtract"),
+        (Operation.MULTIPLY, "Multiply"),
+        (Operation.DIVIDE,   "Divide"),
+        (Operation.SQUARE,   "Square"),
+        (Operation.SQRT,     "Square root"),
+        (Operation.POWER,    "Power"),
+        (Operation.MODULO,   "Modulo"),
+        (Operation.SIN,      "Sine"),
+        (Operation.COS,      "Cosine"),
+        (Operation.TAN,      "Tangent"),
+        (Operation.LOG,      "Logarithm (base 10)"),
+        (Operation.LN,       "Natural logarithm"),
+        (Operation.EXP,      "Exponential (e^x)"),
+    ]
+
     def __init__(
         self,
         service: CalculatorService,
         query_service: Optional[QueryService] = None,
         statistics_service: Optional[StatisticsService] = None,
         history_manager: Optional["HistoryManager"] = None,
+        scientific_mode: bool = False,
     ) -> None:
         self.service = service
         self.query_service = query_service
         self.statistics_service = statistics_service
         self.history_manager = history_manager
+        self.scientific_mode = scientific_mode
+        self._MENU = self._SCIENTIFIC_MENU if scientific_mode else self._STANDARD_MENU
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -90,9 +110,15 @@ class CalculatorCLI:
             a = self._prompt_number("Enter first number: ")
             if a is None:
                 continue
-            b = self._prompt_number("Enter second number: ")
-            if b is None:
-                continue
+
+            # Scientific operations need only one operand
+            scientific_ops = {Operation.SIN, Operation.COS, Operation.TAN, Operation.LOG, Operation.LN, Operation.EXP}
+            if operation in scientific_ops:
+                b = 0.0
+            else:
+                b = self._prompt_number("Enter second number: ")
+                if b is None:
+                    continue
 
             try:
                 result = self.service.perform(operation, a, b)
@@ -165,7 +191,11 @@ class CalculatorCLI:
         choice = input("Choose option: ").strip()
 
         if choice == "1":
-            op = input("Enter operation type (add, subtract, multiply, divide, square, sqrt, power, modulo): ").strip().lower()
+            if self.scientific_mode:
+                op_help = "add, subtract, multiply, divide, square, sqrt, power, modulo, sin, cos, tan, log, ln, exp"
+            else:
+                op_help = "add, subtract, multiply, divide, square, sqrt, power, modulo"
+            op = input(f"Enter operation type ({op_help}): ").strip().lower()
             if op:
                 results = self.query_service.query_by_operation(op)
                 print("\n" + self.query_service.format_results(results) + "\n")

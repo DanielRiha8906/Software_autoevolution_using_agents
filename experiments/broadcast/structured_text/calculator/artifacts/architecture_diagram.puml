@@ -62,7 +62,10 @@ JsonStorage --> memory.json: reads/writes
 
 note right of Presentation
   CLI provides interactive menu
-  and one-shot command mode
+  and one-shot command mode.
+  Supports standard and scientific modes:
+  - Standard: 8 operations
+  - Scientific: 14 operations (adds SIN, COS, TAN, LOG, LN, EXP)
 end note
 
 note right of Services

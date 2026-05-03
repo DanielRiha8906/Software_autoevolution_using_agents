@@ -7,6 +7,12 @@ skinparam fontName Courier
 
 package "CLI Layer" {
   component [CalculatorCLI] as CLI
+  note right of CLI
+    Supports two modes:
+    - Standard (8 operations)
+    - Scientific (14 operations)
+    Mode selected via --scientific flag
+  end note
 }
 
 package "Service Layer" {
