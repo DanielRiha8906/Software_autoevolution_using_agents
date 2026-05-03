@@ -531,4 +531,4 @@ The statistics feature is now fully accessible via:
 2. **One-shot CLI:** `python -m src --statistics` displays statistics and exits
 3. **Help:** `python -m src --help` documents the --statistics flag
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 577.8s | Cost: $1.201188 USD | Turns: 15
