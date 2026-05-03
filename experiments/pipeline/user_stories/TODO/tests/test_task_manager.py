@@ -37,6 +37,7 @@ def test_list_all(manager):
 def test_list_by_status(manager):
     t1 = manager.add("A")
     t2 = manager.add("B")
+    manager.set_status(t1.id, TaskStatus.IN_PROGRESS)
     manager.set_status(t1.id, TaskStatus.DONE)
     done = manager.list_by_status(TaskStatus.DONE)
     pending = manager.list_by_status(TaskStatus.PENDING)

@@ -60,7 +60,7 @@ def test_start_done_reopen(cli, capsys):
 
     cli.run(["show", task_id])
     out = capsys.readouterr().out
-    assert "pending" in out
+    assert "in_progress" in out
 
 
 def test_show_details(cli, capsys):
