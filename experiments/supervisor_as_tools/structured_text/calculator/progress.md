@@ -280,4 +280,4 @@ Successfully implemented comprehensive querying functionality for MemoryEntry re
 - All existing memory commands work identically (list, detail, failures, summary, clear)
 - `--operation` flag still works for calculation operations (unaffected by memory filtering flag)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 361.4s | Cost: $0.646531 USD | Turns: 21
