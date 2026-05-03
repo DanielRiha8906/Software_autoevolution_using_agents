@@ -54,3 +54,74 @@
 - ✅ No external time measurement libraries used
 
 Duration: 251.5s | Cost: $0.471421 USD | Turns: 15
+
+## Task 02
+
+**Description:** Add additional mathematical operations (square, sqrt, power, modulo)
+
+**Status:** ✅ Complete
+
+### Files Changed
+
+1. `src/models/operation.py`
+   - Added 4 new Operation enum members: SQUARE, SQRT, POWER, MODULO
+
+2. `src/services/calculator.py`
+   - Added `import math`
+   - Implemented `square(a, b)` method returning a²
+   - Implemented `sqrt(a, b)` method returning √a with negative validation
+   - Implemented `power(a, b)` method returning a^b (handles negative/fractional exponents)
+   - Implemented `modulo(a, b)` method returning a % b with zero-divisor validation
+   - Updated dispatch dictionary to include all 4 new operations
+
+3. `src/models/calculation_result.py`
+   - Updated `_SYMBOLS` dictionary with symbols: ², √, ^, %
+
+4. `src/cli/calculator_cli.py`
+   - Extended `_MENU` list with 4 new menu options: Square, Square Root, Power, Modulo
+
+5. `src/__main__.py`
+   - Updated argparse `--operation` choices to include: square, sqrt, power, modulo
+   - Updated usage string and help text
+
+6. `tests/test_calculator.py`
+   - Added 43 new tests covering all new Calculator methods with edge cases
+
+7. `tests/test_calculator_service.py`
+   - Added 33 new tests covering service integration and timing
+
+8. `tests/test_cli.py`
+   - Added 14 new tests + 6 test fixes for CLI integration
+   - Updated existing tests to use correct menu option numbers (9 for history, 10 for exit)
+
+9. `artifacts/class_diagram.puml`
+   - Updated Operation enum to show all 8 members
+   - Updated Calculator class to show all 8 methods
+
+### Test Results
+
+- Total tests: 157 (90 new + 67 existing)
+- Passed: 157
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Requirements Met
+
+**Must:**
+- ✅ Implemented square(x^2), sqrt(x), power(x,y), modulo(x,y)
+- ✅ Each operation follows existing operation interface
+- ✅ Results correct for valid numeric inputs
+- ✅ Edge cases handled: sqrt(negative) raises error, modulo by zero raises error, power with negative/fractional exponents works
+- ✅ All operations accessible via `python -m src` (interactive menu + CLI flags)
+
+**Should:**
+- ✅ Existing operation patterns followed
+- ✅ Error handling consistent with existing code
+
+**Could:**
+- ⏭ Operator aliases (not implemented - straightforward but not Must)
+
+**Won't:**
+- ✅ No duplicate operations, no naming deviations
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
