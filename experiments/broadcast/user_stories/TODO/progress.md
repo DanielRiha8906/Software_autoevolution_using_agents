@@ -292,4 +292,4 @@ No new dependencies added. Implementation uses:
 - `datetime` and `zoneinfo` — standard library for timezone-aware dates
 - `typing.Optional` — standard library for optional types
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 218.8s | Cost: $0.474348 USD | Turns: 45
