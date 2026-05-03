@@ -2,6 +2,7 @@ import sys
 from typing import TYPE_CHECKING
 
 from ..models.operation import Operation
+from ..models.calculation_result import _SYMBOLS
 from ..services.calculator_service import CalculatorService
 
 if TYPE_CHECKING:
@@ -63,16 +64,32 @@ class CalculatorCLI:
                 continue
 
             try:
-                result = self.service.perform(operation, a, b)
-                print(f"\n  Result: {result}\n")
+                if self.memory_service:
+                    entry = self.memory_service.record(operation.value, a, b)
+                    if entry.success:
+                        print(f"\n  Result: {entry.result}\n")
+                    else:
+                        print(f"\n  Error: {entry.error_message}\n")
+                else:
+                    result = self.service.perform(operation, a, b)
+                    print(f"\n  Result: {result}\n")
             except ValueError as exc:
                 print(f"\n  Error: {exc}\n")
 
     def run_command(self, operation_str: str, a: float, b: float) -> None:
         try:
             operation = Operation.from_string(operation_str)
-            result = self.service.perform(operation, a, b)
-            print(result)
+            if self.memory_service:
+                entry = self.memory_service.record(operation.value, a, b)
+                if entry.success:
+                    # Format result similar to CalculationResult
+                    print(f"{a} {_SYMBOLS.get(operation.value, operation.value)} {b} = {entry.result}")
+                else:
+                    print(f"Error: {entry.error_message}", file=sys.stderr)
+                    sys.exit(1)
+            else:
+                result = self.service.perform(operation, a, b)
+                print(result)
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
