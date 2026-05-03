@@ -294,4 +294,4 @@ Duration: 723.5s | Cost: $1.516267 USD | Turns: 33
   - CLI flags: `--due-before`, `--due-after`, `--week`, `--month`, `--year`, `--overdue` on list subcommand
   - Both modes fully functional and tested
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 530.7s | Cost: $1.059689 USD | Turns: 17
