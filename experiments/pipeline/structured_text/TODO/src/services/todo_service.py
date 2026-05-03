@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
@@ -21,10 +22,39 @@ class TodoService:
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
 
-    def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
-        if status is not None:
-            return self._manager.list_by_status(status)
-        return self._manager.list_all()
+    def list_tasks(
+        self,
+        status: Optional[TaskStatus] = None,
+        due_after: Optional[datetime] = None,
+        due_before: Optional[datetime] = None,
+        overdue: Optional[bool] = None,
+    ) -> list[Task]:
+        """List tasks with optional filtering.
+
+        Args:
+            status: Filter by task status (optional).
+            due_after: Return tasks with due_date >= this datetime (optional).
+            due_before: Return tasks with due_date <= this datetime (optional).
+            overdue: If True, return only overdue tasks; if False, return only non-overdue tasks (optional).
+
+        Returns:
+            List of tasks matching all specified filters.
+
+        Raises:
+            ValueError: If due_after > due_before.
+        """
+        # Validate date range
+        if due_after is not None and due_before is not None:
+            if due_after > due_before:
+                raise ValueError("due_after cannot be after due_before")
+
+        # Delegate to manager's list_by_filter method
+        return self._manager.list_by_filter(
+            status=status,
+            due_after=due_after,
+            due_before=due_before,
+            overdue=overdue,
+        )
 
     def start_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)

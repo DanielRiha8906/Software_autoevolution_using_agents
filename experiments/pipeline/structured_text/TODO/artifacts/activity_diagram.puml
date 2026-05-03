@@ -9,7 +9,16 @@ repeat
 
   switch (choice)
     case (1 — List/filter)
-      :Run list/filter flow;
+      :Prompt user for status filter;
+      :Prompt user for due date range (due_after, due_before);
+      :Prompt user for overdue filter (all/overdue only/not-overdue only);
+      :Call TodoService.list_tasks(status, due_after, due_before, overdue);
+      partition "TaskManager.list_by_filter()" {
+        :Filter by status (if provided);
+        :Filter by due date range (if provided);
+        :Filter by overdue status (if provided);
+      }
+      :Display filtered task list;
     case (2 — Add task)
       :Run add task flow;
     case (3 — Show details)

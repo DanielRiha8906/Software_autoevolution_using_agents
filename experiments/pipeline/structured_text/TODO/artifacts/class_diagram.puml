@@ -62,6 +62,21 @@ package "storage" #FFF3CC {
     }
 }
 
+package "utils" #F0E5FF {
+    class TimezoneUtils <<utility>> {
+        --
+        +now_in_cest() : DateTime
+        +is_overdue_cest(due_date: DateTime) : Boolean
+        +utc_to_cest(dt: DateTime) : DateTime
+    }
+    note right of TimezoneUtils
+        Utility module for CEST (Europe/Paris) timezone handling.
+        now_in_cest(): Returns current time in CEST.
+        is_overdue_cest(): Checks if due_date is past current CEST time.
+        utc_to_cest(): Converts UTC or timezone-aware datetime to CEST.
+    end note
+}
+
 package "services" #DDFFD4 {
     exception TaskNotFoundError
     exception CommentNotFoundError
@@ -75,12 +90,17 @@ package "services" #DDFFD4 {
         +get(task_id: String) : Task
         +list_all() : List<Task>
         +list_by_status(status: TaskStatus) : List<Task>
+        +list_by_filter(status: TaskStatus [0..1], due_after: DateTime [0..1], due_before: DateTime [0..1], overdue: Boolean [0..1]) : List<Task>
         +update(task_id: String, title: String [0..1], description: String [0..1]) : Task
         +set_status(task_id: String, status: TaskStatus) : Task
         +delete(task_id: String) : void
         -load() : void
         -persist() : void
     }
+    note right of TaskManager
+        list_by_filter() combines status, date range, and overdue filters.
+        Raises ValueError if due_after > due_before.
+    end note
 
     class CommentManager {
         -storage : JsonStorage
@@ -104,7 +124,7 @@ package "services" #DDFFD4 {
         +TodoService(storage: JsonStorage [0..1])
         +add_task(title: String, description: String [0..1]) : Task
         +get_task(task_id: String) : Task
-        +list_tasks(status: TaskStatus [0..1]) : List<Task>
+        +list_tasks(status: TaskStatus [0..1], due_after: DateTime [0..1], due_before: DateTime [0..1], overdue: Boolean [0..1]) : List<Task>
         +start_task(task_id: String) : Task
         +complete_task(task_id: String) : Task
         +reopen_task(task_id: String) : Task

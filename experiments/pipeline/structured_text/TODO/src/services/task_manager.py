@@ -67,3 +67,57 @@ class TaskManager:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
         self._persist()
+
+    def list_by_filter(
+        self,
+        status: Optional[TaskStatus] = None,
+        due_after: Optional[datetime] = None,
+        due_before: Optional[datetime] = None,
+        overdue: Optional[bool] = None,
+    ) -> list[Task]:
+        """Filter tasks by status, due date range, and overdue status.
+
+        Args:
+            status: Filter by task status (optional).
+            due_after: Return tasks with due_date >= this datetime (optional).
+            due_before: Return tasks with due_date <= this datetime (optional).
+            overdue: If True, return only overdue tasks; if False, return only non-overdue tasks (optional).
+
+        Returns:
+            List of tasks matching all specified filters.
+
+        Raises:
+            ValueError: If due_after > due_before.
+        """
+        # Validate date range
+        if due_after is not None and due_before is not None:
+            if due_after > due_before:
+                raise ValueError("due_after cannot be after due_before")
+
+        tasks = list(self._tasks.values())
+
+        # Filter by status
+        if status is not None:
+            tasks = [t for t in tasks if t.status == status]
+
+        # Filter by due date range (tasks without due_date are excluded from range filters)
+        if due_after is not None or due_before is not None:
+            filtered_by_due = []
+            for t in tasks:
+                # Skip tasks without a due_date
+                if t.due_date is None:
+                    continue
+                # Check due_after
+                if due_after is not None and t.due_date < due_after:
+                    continue
+                # Check due_before
+                if due_before is not None and t.due_date > due_before:
+                    continue
+                filtered_by_due.append(t)
+            tasks = filtered_by_due
+
+        # Filter by overdue status
+        if overdue is not None:
+            tasks = [t for t in tasks if t.is_overdue() == overdue]
+
+        return tasks

@@ -1,36 +1,44 @@
 @startuml sequence_diagram
 
-title Cascading Deletion: Delete Task with Comments
+title List Tasks with Filtering
 
 actor User
 participant CLI as TodoCLI
 participant Service as TodoService
 participant TaskMgr as TaskManager
-participant CommentMgr as CommentManager
+participant TZ as TimezoneUtils
 database Storage as JsonStorage
 
-User -> CLI: delete <task_id>
-CLI -> Service: delete_task(task_id)
-
-Service -> TaskMgr: get(task_id)
+User -> CLI: list [--status=...] [--due-after=...] [--due-before=...] [--overdue]
+activate CLI
+CLI -> Service: list_tasks(status, due_after, due_before, overdue)
+activate Service
+Service -> TaskMgr: list_by_filter(status, due_after, due_before, overdue)
 activate TaskMgr
+
 TaskMgr -> Storage: load()
-TaskMgr --> Service: Task object
+activate Storage
+Storage --> TaskMgr: List<Task>
+deactivate Storage
+
+TaskMgr -> TaskMgr: filter_by_status(tasks, status)
+TaskMgr -> TaskMgr: filter_by_due_date(tasks, due_after, due_before)
+
+alt overdue filter is specified
+  TaskMgr -> TaskMgr: filter_by_overdue(tasks, overdue)
+  note over TaskMgr, TZ
+    Task.is_overdue() compares current UTC time
+    against task.due_date
+  end note
+end
+
+TaskMgr --> Service: List<Task> (filtered)
 deactivate TaskMgr
 
-Service -> CommentMgr: delete_all_by_task(task.id)
-activate CommentMgr
-CommentMgr -> Storage: load()
-CommentMgr -> Storage: save(filtered_comments)
-deactivate CommentMgr
+Service --> CLI: List<Task>
+deactivate Service
 
-Service -> TaskMgr: delete(task.id)
-activate TaskMgr
-TaskMgr -> Storage: load()
-TaskMgr -> Storage: save(filtered_tasks)
-deactivate TaskMgr
-
-Service --> CLI: void
-CLI -> User: Confirmation message
+CLI -> User: Display filtered task list
+deactivate CLI
 
 @enduml

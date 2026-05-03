@@ -1,5 +1,6 @@
 import argparse
 import sys
+from datetime import datetime
 from typing import Optional
 
 from ..models.task_status import TaskStatus
@@ -59,6 +60,24 @@ class TodoCLI:
             "--status",
             choices=["pending", "in_progress", "done"],
             help="Filter by status",
+        )
+        p_list.add_argument(
+            "--due-after",
+            help="Filter tasks with due_date >= this date (ISO8601 string, e.g. 2026-05-15)",
+        )
+        p_list.add_argument(
+            "--due-before",
+            help="Filter tasks with due_date <= this date (ISO8601 string, e.g. 2026-05-15)",
+        )
+        p_list.add_argument(
+            "--overdue",
+            action="store_true",
+            help="Show only overdue tasks",
+        )
+        p_list.add_argument(
+            "--not-overdue",
+            action="store_true",
+            help="Show only non-overdue tasks",
         )
         p_list.set_defaults(func=self._cmd_list)
 
@@ -130,7 +149,40 @@ class TodoCLI:
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
         status = TaskStatus(args.status) if args.status else None
-        tasks = self._service.list_tasks(status)
+
+        # Parse due_after and due_before using datetime.fromisoformat()
+        due_after = None
+        due_before = None
+        if args.due_after:
+            try:
+                due_after = datetime.fromisoformat(args.due_after)
+            except ValueError as e:
+                print(f"Error: Invalid due_after date format: {e}", file=sys.stderr)
+                return 1
+
+        if args.due_before:
+            try:
+                due_before = datetime.fromisoformat(args.due_before)
+            except ValueError as e:
+                print(f"Error: Invalid due_before date format: {e}", file=sys.stderr)
+                return 1
+
+        # Determine overdue filter
+        overdue = None
+        if args.overdue and args.not_overdue:
+            print("Error: Cannot use both --overdue and --not-overdue", file=sys.stderr)
+            return 1
+        if args.overdue:
+            overdue = True
+        elif args.not_overdue:
+            overdue = False
+
+        tasks = self._service.list_tasks(
+            status=status,
+            due_after=due_after,
+            due_before=due_before,
+            overdue=overdue,
+        )
         if not tasks:
             print("No tasks found.")
             return 0
