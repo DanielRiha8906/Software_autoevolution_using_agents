@@ -10,6 +10,10 @@ class CalculatorCLI:
         (Operation.SUBTRACT, "Subtract"),
         (Operation.MULTIPLY, "Multiply"),
         (Operation.DIVIDE,   "Divide"),
+        (Operation.SQUARE,   "Square"),
+        (Operation.SQRT,     "Square Root"),
+        (Operation.POWER,    "Power"),
+        (Operation.MODULO,   "Modulo"),
     ]
 
     def __init__(self, service: CalculatorService) -> None:
@@ -51,15 +55,15 @@ class CalculatorCLI:
             try:
                 result = self.service.perform(operation, a, b)
                 print(f"\n  Result: {result}\n")
-            except ValueError as exc:
-                print(f"\n  Error: {exc}\n")
+            except (ValueError, Exception) as exc:
+                print(f"\n  Error: {str(exc)}\n")
 
     def run_command(self, operation_str: str, a: float, b: float) -> None:
         try:
             operation = Operation.from_string(operation_str)
             result = self.service.perform(operation, a, b)
             print(result)
-        except ValueError as exc:
+        except (ValueError, Exception) as exc:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
 
