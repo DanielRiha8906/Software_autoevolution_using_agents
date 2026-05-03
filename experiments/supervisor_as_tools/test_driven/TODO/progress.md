@@ -100,4 +100,4 @@ Successfully created a new TaskComment domain class with complete serialization 
 - from_dict() deserializes from dict, restoring datetime fields from ISO 8601 strings
 - No external dependencies beyond standard library
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 168.6s | Cost: $0.338451 USD | Turns: 26
