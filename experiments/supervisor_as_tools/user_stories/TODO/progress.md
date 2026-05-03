@@ -919,4 +919,4 @@ Implemented project grouping feature allowing tasks to be organized into project
 - `use_case_diagram.puml` — Added Project Management package with 7 use cases (Create/Read/List/Update/Delete Project, Assign Task to Project, Unassign Task from Project)
 - `state_diagram.puml` — No changes (task states unaffected by projects)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 625.9s | Cost: $1.345870 USD | Turns: 27
