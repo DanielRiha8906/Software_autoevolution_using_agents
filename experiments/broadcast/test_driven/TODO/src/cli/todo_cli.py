@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 from typing import Optional
 from datetime import datetime, timezone, timedelta
@@ -8,6 +9,8 @@ from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..services.statistics_service import TaskStatisticsService
+from ..services.comments_service import CommentsService
+from ..services.import_export_service import TaskImportExportService
 from ..storage.json_storage import JsonStorage
 
 _STATUS_SYMBOLS = {
@@ -21,6 +24,8 @@ class TodoCLI:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._comments_service = CommentsService()
+        self._import_export_service = TaskImportExportService(self._service, self._comments_service)
 
     def run(self, argv: Optional[list[str]] = None) -> int:
         parser = self._build_parser()
@@ -34,6 +39,9 @@ class TodoCLI:
             print(f"Error: {e}", file=sys.stderr)
             return 1
         except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except json.JSONDecodeError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
 
@@ -114,6 +122,16 @@ class TodoCLI:
         # statistics
         p_stats = sub.add_parser("statistics", help="View task statistics")
         p_stats.set_defaults(func=self._cmd_statistics)
+
+        # export
+        p_export = sub.add_parser("export", help="Export tasks and comments to JSON")
+        p_export.add_argument("path", help="Output file path")
+        p_export.set_defaults(func=self._cmd_export)
+
+        # import
+        p_import = sub.add_parser("import", help="Import tasks and comments from JSON")
+        p_import.add_argument("path", help="Input file path")
+        p_import.set_defaults(func=self._cmd_import)
 
         return parser
 
@@ -216,3 +234,21 @@ class TodoCLI:
         print(f"Tasks with due date:   {report.with_due_date_count}")
         print(f"Overdue tasks:         {report.overdue_count}")
         return 0
+
+    def _cmd_export(self, args: argparse.Namespace) -> int:
+        try:
+            self._import_export_service.export(args.path)
+            print(f"Exported tasks and comments to {args.path}")
+            return 0
+        except IOError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
+    def _cmd_import(self, args: argparse.Namespace) -> int:
+        try:
+            self._import_export_service.import_from(args.path)
+            print(f"Imported tasks and comments from {args.path}")
+            return 0
+        except (FileNotFoundError, ValueError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1

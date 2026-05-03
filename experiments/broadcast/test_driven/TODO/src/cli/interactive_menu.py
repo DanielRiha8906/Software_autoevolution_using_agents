@@ -6,6 +6,8 @@ from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..services.statistics_service import TaskStatisticsService
+from ..services.comments_service import CommentsService
+from ..services.import_export_service import TaskImportExportService
 from ..storage.json_storage import JsonStorage
 
 _STATUS_LABEL = {
@@ -54,6 +56,8 @@ class InteractiveMenu:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._comments_service = CommentsService()
+        self._import_export_service = TaskImportExportService(self._service, self._comments_service)
 
     def run(self) -> None:
         while True:
@@ -82,6 +86,10 @@ class InteractiveMenu:
                 self._do_delete(tasks)
             elif choice == "7":
                 self._do_statistics()
+            elif choice == "8":
+                self._do_export()
+            elif choice == "9":
+                self._do_import()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -109,6 +117,8 @@ class InteractiveMenu:
         print("  5. Update task    (title / description)")
         print("  6. Delete task")
         print("  7. View statistics")
+        print("  8. Export to JSON")
+        print("  9. Import from JSON")
         print("  0. Quit")
         print()
 
@@ -285,4 +295,34 @@ class InteractiveMenu:
         print(f"  Tasks with due date:   {report.with_due_date_count}")
         print(f"  Overdue tasks:         {report.overdue_count}")
         print()
+        input("  Press Enter to continue...")
+
+    def _do_export(self) -> None:
+        _clear()
+        print("  Export tasks and comments\n")
+        path = _prompt("Export file path")
+        if not path:
+            print("  Path cannot be empty.")
+            input("  Press Enter to continue...")
+            return
+        try:
+            self._import_export_service.export(path)
+            print(f"\n  Exported to {path}")
+        except IOError as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_import(self) -> None:
+        _clear()
+        print("  Import tasks and comments\n")
+        path = _prompt("Import file path")
+        if not path:
+            print("  Path cannot be empty.")
+            input("  Press Enter to continue...")
+            return
+        try:
+            self._import_export_service.import_from(path)
+            print(f"\n  Imported from {path}")
+        except (FileNotFoundError, ValueError) as e:
+            print(f"\n  Error: {e}")
         input("  Press Enter to continue...")
