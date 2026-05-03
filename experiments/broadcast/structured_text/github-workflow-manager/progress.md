@@ -278,3 +278,63 @@ Due to worktree isolation issues, the actual implementations from worktrees coul
 - **WON'T HAVE**: ✓ No database or external index used
 
 Duration: 806.7s | Cost: $2.003995 USD | Turns: 39
+
+## Task 06: Add workflow statistics and reporting
+
+### Approach
+Broadcast architecture with 3 independent implementers (candidate-a, candidate-b, candidate-c).
+
+### Results
+- **Candidate-A**: 85/85 tests passing (missing statistics implementation in source - only .pyc cache)
+- **Candidate-B**: 85/85 tests passing (missing statistics implementation in source - only .pyc cache)
+- **Candidate-C**: 91/91 tests passing (6 new statistics tests + 85 existing) ✓ SELECTED
+
+### Winner: Candidate-C
+**Reason**: Only Candidate-C successfully created a complete working implementation with comprehensive test coverage. Candidates A and B reported 91 tests in their summaries but only the cache files were present without source code. Candidate-C:
+- Created `WorkflowStatisticsReport` dataclass with all required fields
+- Implemented `StatisticsService` for computing statistics
+- Added full CLI integration with "statistics" subcommand
+- Added interactive menu option for viewing statistics
+- Provided 6 comprehensive test cases covering all scenarios
+
+### Files Changed
+- `src/services/statistics_service.py` (NEW): WorkflowStatisticsReport dataclass and StatisticsService class
+- `src/services/__init__.py` (MODIFIED): Added exports for StatisticsService and WorkflowStatisticsReport
+- `src/cli/workflow_cli.py` (MODIFIED): Added "statistics" subcommand with handler and formatting function
+- `src/cli/interactive_menu.py` (MODIFIED): Added _statistics() function and "View statistics" menu option
+- `tests/test_statistics_service.py` (NEW): Comprehensive test suite with 6 tests
+
+### Test Results
+- pytest: 91/91 tests passing ✓
+  - 6 new statistics tests (empty state, single run, multiple runs with different conclusions/durations, attempts aggregation, dict serialization)
+  - 85 existing tests (unchanged from previous tasks)
+
+### Implementation Details
+**WorkflowStatisticsReport Class:**
+- Fields: total_runs, conclusions_count (Dict[str, int]), avg_duration_seconds, min_duration_seconds (Optional), max_duration_seconds (Optional), avg_attempts_per_run
+- Includes to_dict() method for serialization
+- All fields properly typed with Optional types for nullable values
+
+**StatisticsService Class:**
+- Constructor: Takes WorkflowRunService and AttemptService
+- compute_statistics() method:
+  - Counts total runs
+  - Counts runs grouped by conclusion (only includes conclusions with count > 0)
+  - Computes average, min, and max duration_seconds (None if no runs)
+  - Computes average attempts per run (0 if no runs)
+  - Returns WorkflowStatisticsReport dataclass
+
+**CLI Exposure:**
+- Interactive: `python -m src` → Menu option "View statistics"
+- CLI flag: `python -m src statistics`
+- Both display formatted report with all computed statistics
+
+### Requirements Met
+- **MUST HAVE**: ✓ Compute count by conclusion, average duration_seconds, average attempts per run
+- **MUST HAVE**: ✓ Return structured report object (dataclass, not dict)
+- **MUST HAVE**: ✓ Accessible via `python -m src` (both interactive menu and CLI flag)
+- **SHOULD HAVE**: ✓ Use dataclass for report, include min/max duration_seconds
+- **COULD HAVE**: ✗ Per-status breakdown of average duration not implemented (non-critical)
+- **WON'T HAVE**: ✓ No visualization layer added
+
+Duration: 156.3s | Cost: $1.820183 USD | Turns: 52

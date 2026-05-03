@@ -105,7 +105,11 @@ repeat
         :Print attempts for run;
       endif
 
-    case (9 — Exit)
+    case (9 — View statistics)
+      :StatisticsService.compute_statistics();
+      :Print statistics report\n(total_runs, conclusions_count,\navg/min/max_duration_seconds,\navg_attempts_per_run);
+
+    case (10 — Exit)
       :Print "Goodbye.";
       stop
 

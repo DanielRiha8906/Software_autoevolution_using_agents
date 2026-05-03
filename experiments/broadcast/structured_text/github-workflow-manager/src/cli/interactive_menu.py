@@ -12,6 +12,7 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.statistics_service import StatisticsService
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -230,6 +231,27 @@ def _get_attempts_by_run(attempt_service: AttemptService) -> None:
         print(_fmt_attempt(attempt))
 
 
+def _statistics(service: WorkflowRunService, attempt_service: AttemptService) -> None:
+    """Display workflow statistics and report."""
+    stats_service = StatisticsService(service, attempt_service)
+    report = stats_service.compute_statistics()
+    print("\n--- Workflow Statistics Report ---")
+    print(f"Total Runs: {report.total_runs}")
+    print(f"\nConclusions Count:")
+    if report.conclusions_count:
+        for conclusion, count in sorted(report.conclusions_count.items()):
+            print(f"  {conclusion}: {count}")
+    else:
+        print("  (no conclusions recorded)")
+    print(f"\nDuration Statistics (seconds):")
+    print(f"  Average: {report.avg_duration_seconds:.2f}")
+    min_val = f"{report.min_duration_seconds:.2f}" if report.min_duration_seconds is not None else "—"
+    max_val = f"{report.max_duration_seconds:.2f}" if report.max_duration_seconds is not None else "—"
+    print(f"  Minimum: {min_val}")
+    print(f"  Maximum: {max_val}")
+    print(f"\nAverage Attempts per Run: {report.avg_attempts_per_run:.2f}")
+
+
 MENU = [
     ("Add workflow run", lambda s, a: _add_run(s)),
     ("List all runs", lambda s, a: _list_runs(s)),
@@ -239,6 +261,7 @@ MENU = [
     ("Add workflow attempt", lambda s, a: _add_attempt(a)),
     ("List all attempts", lambda s, a: _list_attempts(a)),
     ("Get attempts for run", lambda s, a: _get_attempts_by_run(a)),
+    ("View statistics", lambda s, a: _statistics(s, a)),
     ("Exit", None),
 ]
 
