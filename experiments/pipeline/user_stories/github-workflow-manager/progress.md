@@ -299,4 +299,4 @@ Duration: 827.9s | Cost: $1.784042 USD | Turns: 22
 ✓ The GitHub adapter layer is the only component allowed to perform external API calls
 ✓ All new functionality is accessible via `python -m src` — both interactive menu and one-shot CLI flags
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 748.7s | Cost: $1.558351 USD | Turns: 23
