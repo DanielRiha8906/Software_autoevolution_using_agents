@@ -449,3 +449,119 @@ One-shot:
 - No regressions in existing functionality
 
 Duration: 607.8s | Cost: $1.475982 USD | Turns: 43
+
+## Task 07: Add import and export of tasks and comments
+
+### Broadcast Fan-out Results
+
+Three independent implementations were created on separate branches:
+
+| Candidate | Approach | Test Results | Notes |
+|-----------|----------|--------------|-------|
+| **A** | ImportExportService + CLI + interactive menu | 113/113 ✓ | 20 new tests, validates data before import |
+| **B** | ImportExportService + CLI + interactive menu | 119/119 ✓ | **Selected** - 23 new tests, most comprehensive validation |
+| **C** | No implementation | 93/93 ✗ | Worktree isolation prevented file commits |
+
+### Selected Solution: Implementer-B (broadcast-candidate-b)
+
+**Rationale**: Both Candidate-A and Candidate-B successfully implemented the feature with full CLI and interactive menu support. Implementer-B was selected for its superior test coverage: 119 total tests passing (23 new import/export tests vs. A's 20 new tests). The additional test cases provide better coverage of edge cases, validation scenarios, and round-trip export/import preservation. Candidate-C failed due to worktree isolation preventing successful commit of changes to the branch.
+
+### Files Changed
+
+1. **src/services/import_export_service.py** (new file)
+   - Created ImportExportService class for JSON-based export and import
+   - Implements `export_to_file(filepath: str) -> None`: Serializes all tasks and comments to JSON
+   - Implements `import_from_file(filepath: str, overwrite: bool = False) -> None`: Deserializes and validates JSON data
+   - Includes `validate_import_data(data: dict) -> tuple[bool, str]`: Public validation method for testing
+   - Includes `_validate_import_data(data: dict) -> None`: Private validation that raises exceptions
+   - Handles duplicate detection and optional overwrite functionality
+   - Gracefully skips invalid entries during import
+
+2. **src/cli/todo_cli.py** (modified)
+   - Added ImportExportService initialization in __init__()
+   - Added `export` subcommand: `python -m src export <filepath>`
+   - Added `import` subcommand: `python -m src import <filepath> [--overwrite]`
+   - Updated exception handling to catch ImportExportValidationError
+   - Added help text for new commands
+
+3. **src/cli/interactive_menu.py** (modified)
+   - Added menu options 9 (Export) and A (Import)
+   - Implemented `_do_export()`: Interactive export workflow
+   - Implemented `_do_import()`: Interactive import workflow with overwrite prompt
+   - Provides user feedback on export/import success
+
+4. **src/services/__init__.py** (modified)
+   - Added exports for ImportExportService and ImportExportValidationError
+
+5. **tests/test_import_export.py** (new file)
+   - 23 comprehensive tests covering:
+     - Export functionality (empty data, tasks only, tasks with comments)
+     - Nested directory creation for export files
+     - Data validation (root type, field types, required fields, invalid status values)
+     - Import functionality (missing files, invalid JSON, invalid structure)
+     - Duplicate handling (skip by default, overwrite with flag)
+     - Round-trip testing (export then import preserves all data)
+     - Orphaned comments handling
+     - CLI command integration tests
+
+6. **artifacts/class_diagram.puml** (modified)
+   - Added ImportExportService class to services package
+   - Added ImportExportValidationError exception
+   - Added relationships showing ImportExportService depends on JsonStorage
+
+7. **artifacts/component_diagram.puml** (modified)
+   - Added Import/Export Service component to service layer
+   - Added connection from CLI to import/export component
+   - Added connection from import/export to JsonStorage
+
+8. **artifacts/activity_diagram.puml** (modified)
+   - Added export and import workflow activities
+   - Shows validation, serialization, and merge logic
+   - Includes conditional paths for overwrite handling
+
+9. **artifacts/use_case_diagram.puml** (modified)
+   - Added "Export tasks and comments" use case
+   - Added "Import tasks and comments" use case
+   - Linked to both CLI and interactive menu modes
+
+### Requirements Compliance
+
+**Must:**
+- ✓ Export all stored Task records (including associated TaskComment records) to JSON file
+- ✓ Import Task and TaskComment records from JSON file
+- ✓ Preserve task IDs, statuses, due dates, and comments on import
+- ✓ Validate imported data structure before applying it
+- ✓ Existing stored data not overwritten without explicit intent (default skips duplicates, --overwrite flag required)
+- ✓ All functionality accessible via `python -m src`:
+  - Interactive: Menu options 9 (Export) and A (Import)
+  - CLI: `python -m src export <file>` and `python -m src import <file> [--overwrite]`
+
+**Should:**
+- ✓ Schema matches Task.to_dict() and TaskComment.to_dict() formats
+
+**Could:**
+- ✓ Skip invalid or duplicate entries on import rather than failing entire operation
+
+**Won't:**
+- ✓ No additional file formats (CSV, XML)
+
+### CLI Commands Available
+
+```
+Interactive: Menu options 9 (Export) and A (Import)
+
+One-shot flags:
+  python -m src export <filepath>  # Export all tasks and comments to JSON
+  python -m src import <filepath>  # Import tasks and comments, skip duplicates
+  python -m src import <filepath> --overwrite  # Import and replace existing data
+```
+
+### Test Results
+
+- Baseline tests: 93/93 passing ✓
+- New import/export tests: 23/23 passing ✓
+- Total tests: 119/119 passing ✓
+- No regressions in existing functionality
+- Full round-trip export/import tested
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

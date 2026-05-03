@@ -18,6 +18,7 @@ package "TODO Application" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
         component "Comments Service" as CMTS
+        component "Import/Export Service" as IMPEXP
     }
 
     package "Domain Model" {
@@ -36,11 +37,13 @@ Main --> CLI : command mode
 
 IM --> SVC
 CLI --> SVC
+CLI --> IMPEXP
 
 SVC --> MGR
 SVC --> CMTS
 MGR --> Storage
 CMTS --> Storage
+IMPEXP --> Storage
 MGR ..> Model
 CMTS ..> Model
 Storage ..> Model
