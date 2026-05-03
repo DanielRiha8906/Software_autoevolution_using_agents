@@ -129,6 +129,21 @@ class TaskManager:
         """Filter tasks that are overdue (due date in the past)."""
         return [t for t in self._tasks.values() if t.is_overdue()]
 
+    def list_by_project(self, project_id: str) -> list[Task]:
+        """Filter tasks by project ID."""
+        return [t for t in self._tasks.values() if t.project_id == project_id]
+
+    def list_unassigned(self) -> list[Task]:
+        """List all tasks not assigned to any project."""
+        return [t for t in self._tasks.values() if t.project_id is None]
+
+    def set_project(self, task_id: str, project_id: Optional[str]) -> Task:
+        """Assign or unassign a task to/from a project."""
+        task = self.get(task_id)
+        task.project_id = project_id
+        self._persist()
+        return task
+
     def apply_filters(self, options: FilterOptions) -> list[Task]:
         """Apply multiple filter criteria to tasks."""
         results = list(self._tasks.values())
