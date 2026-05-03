@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Optional
 
 from ..models.task import Task
@@ -84,6 +85,8 @@ class InteractiveMenu:
                 self._do_delete(tasks)
             elif choice == "8":
                 self._do_manage_comments(tasks)
+            elif choice == "9":
+                self._do_filter_by_date()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -104,7 +107,7 @@ class InteractiveMenu:
         print()
 
     def _print_main_menu(self) -> None:
-        print("  1. List / filter tasks")
+        print("  1. List / filter tasks by status")
         print("  2. Add task")
         print("  3. Show task details")
         print("  4. Change status  (start / done / reopen)")
@@ -112,6 +115,7 @@ class InteractiveMenu:
         print("  6. Check task status (pending / in progress / completed / overdue)")
         print("  7. Delete task")
         print("  8. Manage comments")
+        print("  9. Filter tasks by date/overdue")
         print("  0. Quit")
         print()
 
@@ -119,25 +123,67 @@ class InteractiveMenu:
 
     def _do_list(self) -> None:
         _clear()
-        print("  Filter by status (leave blank for all):")
+        print("  Filter by status:")
         print("  1. pending")
         print("  2. in progress")
         print("  3. done")
-        print("  0. All")
+        print("  0. All statuses")
         raw = input("  > ").strip()
         status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
         status = status_map.get(raw)
 
         _clear()
-        tasks = self._service.list_tasks(status)
-        label = f"[{_STATUS_NAME[status]}]" if status else "[all]"
+        print("  Additional filters:")
+        print("  1. Show only overdue tasks")
+        print("  2. Filter by due date range")
+        print("  0. No additional filters")
+        filter_choice = input("  > ").strip()
+
+        due_before = None
+        due_after = None
+        overdue = None
+
+        if filter_choice == "1":
+            overdue = True
+        elif filter_choice == "2":
+            _clear()
+            print("  Due date filters:\n")
+            due_after_str = _prompt("Due after (ISO datetime, e.g., 2026-01-01T00:00:00+01:00)", "")
+            if due_after_str:
+                try:
+                    due_after = datetime.fromisoformat(due_after_str)
+                except ValueError:
+                    print("  Invalid ISO datetime format, ignoring...")
+                    input("  Press Enter to continue...")
+                    return
+
+            due_before_str = _prompt("Due before (ISO datetime, e.g., 2026-12-31T23:59:59+01:00)", "")
+            if due_before_str:
+                try:
+                    due_before = datetime.fromisoformat(due_before_str)
+                except ValueError:
+                    print("  Invalid ISO datetime format, ignoring...")
+                    input("  Press Enter to continue...")
+                    return
+
+        _clear()
+        tasks = self._service.list_tasks(status=status, due_before=due_before, due_after=due_after, overdue=overdue)
+        filter_labels = []
+        if status:
+            filter_labels.append(_STATUS_NAME[status])
+        if overdue:
+            filter_labels.append("overdue")
+        if due_before or due_after:
+            filter_labels.append("date range")
+        label = f"[{' + '.join(filter_labels)}]" if filter_labels else "[all]"
         print(f"  Tasks {label}\n")
         if not tasks:
             print("  (none)")
         else:
             for task in tasks:
                 desc = f"  — {task.description}" if task.description else ""
-                print(f"  {_task_line(task)}{desc}")
+                due_str = f" (due: {task.due_date.isoformat()})" if task.due_date else ""
+                print(f"  {_task_line(task)}{desc}{due_str}")
         print()
         input("  Press Enter to continue...")
 
@@ -388,4 +434,66 @@ class InteractiveMenu:
             print(f"  Deleted comment")
         except CommentNotFoundError as e:
             print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_filter_by_date(self) -> None:
+        """Filter tasks by date range and/or overdue status."""
+        _clear()
+        print("  Filter by date/overdue\n")
+
+        # Ask about filtering options
+        print("  Filter options (leave blank to skip):")
+        print("  1. Due date before (ISO format, e.g., 2026-12-31T23:59:59+01:00)")
+        print("  2. Due date after (ISO format, e.g., 2026-01-01T00:00:00+01:00)")
+        print("  3. Show only overdue tasks")
+        print()
+
+        before_str = _prompt("Due before (optional)")
+        after_str = _prompt("Due after (optional)")
+        overdue_str = input("  Show only overdue? (y/N): ").strip().lower()
+
+        before = None
+        after = None
+        overdue = None
+
+        if before_str:
+            try:
+                before = datetime.fromisoformat(before_str)
+            except ValueError:
+                print("  Error: Invalid datetime format for 'before'")
+                input("  Press Enter to continue...")
+                return
+
+        if after_str:
+            try:
+                after = datetime.fromisoformat(after_str)
+            except ValueError:
+                print("  Error: Invalid datetime format for 'after'")
+                input("  Press Enter to continue...")
+                return
+
+        if overdue_str == "y":
+            overdue = True
+
+        _clear()
+        tasks = self._service.list_tasks(before=before, after=after, overdue=overdue)
+        label_parts = []
+        if before:
+            label_parts.append(f"before {before.isoformat()}")
+        if after:
+            label_parts.append(f"after {after.isoformat()}")
+        if overdue:
+            label_parts.append("overdue")
+
+        label = f"[{', '.join(label_parts)}]" if label_parts else "[all]"
+        print(f"  Tasks {label}\n")
+
+        if not tasks:
+            print("  (none)")
+        else:
+            for task in tasks:
+                desc = f"  — {task.description}" if task.description else ""
+                due_str = f" (due: {task.due_date.isoformat()})" if task.due_date else ""
+                print(f"  {_task_line(task)}{desc}{due_str}")
+        print()
         input("  Press Enter to continue...")

@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 from datetime import datetime, timezone
 from typing import Callable, Optional
 
-from ..models.task import Task
+from ..models.task import Task, CEST
 from ..models.task_status import TaskStatus
+from ..models.filter_options import FilterOptions
 from ..storage.json_storage import JsonStorage
 
 
@@ -93,3 +96,72 @@ class TaskManager:
         task.reopen()
         self._persist()
         return task
+
+    def list_by_date_range(
+        self,
+        before: Optional[datetime] = None,
+        after: Optional[datetime] = None
+    ) -> list[Task]:
+        """Filter tasks by due date range."""
+        results = []
+        for task in self._tasks.values():
+            if task.due_date is None:
+                continue
+
+            # Convert to CEST for consistent comparison
+            task_due = task.due_date.astimezone(CEST)
+
+            if before is not None:
+                before_cest = before.astimezone(CEST) if before.tzinfo else before.replace(tzinfo=CEST)
+                if task_due >= before_cest:
+                    continue
+
+            if after is not None:
+                after_cest = after.astimezone(CEST) if after.tzinfo else after.replace(tzinfo=CEST)
+                if task_due < after_cest:
+                    continue
+
+            results.append(task)
+
+        return results
+
+    def list_overdue(self) -> list[Task]:
+        """Filter tasks that are overdue (due date in the past)."""
+        return [t for t in self._tasks.values() if t.is_overdue()]
+
+    def apply_filters(self, options: FilterOptions) -> list[Task]:
+        """Apply multiple filter criteria to tasks."""
+        results = list(self._tasks.values())
+
+        # Filter by status if specified
+        if options.status is not None:
+            results = [t for t in results if t.status == options.status]
+
+        # Filter by due date range (excluding tasks without due dates when filtering by date)
+        if options.due_before is not None or options.due_after is not None:
+            filtered_by_date = []
+            for task in results:
+                if task.due_date is None:
+                    continue
+
+                # Convert to CEST for consistent comparison
+                task_due = task.due_date.astimezone(CEST)
+
+                if options.due_before is not None:
+                    before_cest = options.due_before.astimezone(CEST) if options.due_before.tzinfo else options.due_before.replace(tzinfo=CEST)
+                    if task_due >= before_cest:
+                        continue
+
+                if options.due_after is not None:
+                    after_cest = options.due_after.astimezone(CEST) if options.due_after.tzinfo else options.due_after.replace(tzinfo=CEST)
+                    if task_due < after_cest:
+                        continue
+
+                filtered_by_date.append(task)
+            results = filtered_by_date
+
+        # Filter by overdue status if requested
+        if options.overdue_only:
+            results = [t for t in results if t.is_overdue()]
+
+        return results
