@@ -254,4 +254,4 @@ Implemented aggregated statistics computation over stored workflow runs, providi
 - ✅ All functionality accessible via `python -m src stats [--branch] [--status] [--conclusion] [--created-after] [--created-before] [--duration-min] [--duration-max] [--has-attempts|--no-attempts]` (one-shot)
 - ✅ All functionality accessible via interactive menu option 7 "Get statistics" (interactive)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 827.9s | Cost: $1.784042 USD | Turns: 22
