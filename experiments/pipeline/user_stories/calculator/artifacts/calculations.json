@@ -90,5 +90,25 @@
     "result": 25.0,
     "timestamp": "2026-05-03T12:16:58.290857",
     "execution_time_ms": 0.012894000008145667
+  },
+  {
+    "operation": "add",
+    "operand_a": 10.0,
+    "operand_b": 20.0,
+    "result": 30.0,
+    "error": null,
+    "error_type": null,
+    "timestamp": "2026-05-03T13:11:43.011212",
+    "uuid": "c4ebe8ef-ada9-435b-8cca-b60c868586c6"
+  },
+  {
+    "operation": "divide",
+    "operand_a": 5.0,
+    "operand_b": 0.0,
+    "result": null,
+    "error": "Division by zero is not allowed",
+    "error_type": "ValueError",
+    "timestamp": "2026-05-03T13:11:45.170617",
+    "uuid": "6102d83a-7fe3-4cf7-9794-66ecf970ba0d"
   }
 ]
