@@ -196,3 +196,57 @@ Extended `MemoryService` with a `query()` method that supports filtering memory 
 - CLI-first: Integrated into both interactive and command-line interfaces
 
 Duration: 285.2s | Cost: $0.489788 USD | Turns: 18
+
+## Task 06: Statistics Service for Memory Analysis
+
+### Summary
+Implemented `StatisticsService` that computes aggregated metrics over stored calculation memory entries. The service derives operation counts, error counts, error rate (as percentage), and average execution time from `MemoryEntry` data, returning results as a structured dataclass report.
+
+### Files Changed
+- `src/models/statistics_report.py` - Created new StatisticsReport dataclass with fields: count_per_operation, total_errors, error_rate, avg_execution_time_ms
+- `src/services/statistics_service.py` - Created StatisticsService class with compute() method
+- `src/models/__init__.py` - Added StatisticsReport export
+- `src/services/__init__.py` - Added StatisticsService export
+- `src/__init__.py` - Added StatisticsService export
+- `src/__main__.py` - Added --statistics CLI flag and integration
+- `src/cli/calculator_cli.py` - Added menu option 11 "Show statistics" and display method
+- `tests/test_statistics_service.py` - Created complete test suite (6 tests)
+- `tests/test_cli.py` - Updated menu option numbers (exit moved from 11 to 12)
+- `artifacts/class_diagram.puml` - Added StatisticsReport and StatisticsService classes with relationships
+
+### Test Results
+- All 68 tests passed (6 new + 62 existing)
+- Task 06 tests: 6/6 passed
+  - test_report_is_dataclass ✓
+  - test_count_per_operation ✓
+  - test_total_errors ✓
+  - test_error_rate ✓
+  - test_average_execution_time ✓
+  - test_report_structure_is_consistent ✓
+- All existing tests: 62/62 passed (no regressions)
+- CLI test fixes applied to handle menu restructuring
+
+### Implementation Details
+- StatisticsReport is a @dataclass with 4 fields (all derived from MemoryEntry data)
+- StatisticsService takes MemoryService in constructor
+- Computation logic:
+  - count_per_operation: dict mapping operation name to count
+  - total_errors: count of entries where success=False
+  - error_rate: (total_errors / total_entries) * 100 (percentage)
+  - avg_execution_time_ms: sum of execution times / total entries
+- Handles empty history gracefully: returns zeros with empty count_per_operation dict
+- No external dependencies (uses Python standard library only)
+
+### Accessibility
+- Interactive mode: Menu option 11 "Show statistics" displays computed metrics
+- CLI mode: `python -m src --statistics` displays statistics in one-shot mode
+- Output format: Human-readable text showing all metrics with proper formatting
+- Statistics computed on-demand from current memory state (no caching)
+
+### Design Principles
+- Separation of concerns: StatisticsService is independent of calculation logic
+- Immutability: compute() does not modify memory, returns new dataclass instance
+- Robustness: Graceful handling of edge cases (empty memory, zero entries)
+- Testability: Pure computation logic with no external dependencies
+
+Duration: 336.5s | Cost: $0.609802 USD | Turns: 21

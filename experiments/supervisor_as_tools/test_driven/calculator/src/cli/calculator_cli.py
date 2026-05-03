@@ -2,8 +2,10 @@ import sys
 from typing import Optional
 
 from ..models.operation import Operation
+from ..models.statistics_report import StatisticsReport
 from ..services.calculator_service import CalculatorService
 from ..services.memory_service import MemoryService
+from ..services.statistics_service import StatisticsService
 
 
 class CalculatorCLI:
@@ -34,7 +36,8 @@ class CalculatorCLI:
 
             history_opt = len(self._MENU) + 1
             query_opt   = len(self._MENU) + 2
-            exit_opt    = len(self._MENU) + 3
+            stats_opt   = len(self._MENU) + 3
+            exit_opt    = len(self._MENU) + 4
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -46,6 +49,10 @@ class CalculatorCLI:
 
             if choice == str(query_opt):
                 self._query_history()
+                continue
+
+            if choice == str(stats_opt):
+                self._show_statistics()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -85,7 +92,8 @@ class CalculatorCLI:
             print(f"  {i}. {label}")
         print(f"  {len(self._MENU) + 1}. View history")
         print(f"  {len(self._MENU) + 2}. Query memory")
-        print(f"  {len(self._MENU) + 3}. Exit")
+        print(f"  {len(self._MENU) + 3}. Show statistics")
+        print(f"  {len(self._MENU) + 4}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -153,3 +161,20 @@ class CalculatorCLI:
 
         for entry in results:
             print(f"{entry.operation} {entry.operands} = {entry.result} (success: {entry.success}) [{entry.timestamp}]")
+
+    def _show_statistics(self) -> None:
+        """Display statistics in interactive mode."""
+        stats_service = StatisticsService(self.memory_service)
+        report = stats_service.compute()
+        self.show_statistics(report)
+
+    def show_statistics(self, report: StatisticsReport) -> None:
+        """Format and display statistics report."""
+        print("\n=== Statistics ===")
+        if not report.count_per_operation:
+            print("  No data available.\n")
+            return
+        print(f"  Operations: {report.count_per_operation}")
+        print(f"  Total errors: {report.total_errors}")
+        print(f"  Error rate: {report.error_rate:.2f}%")
+        print(f"  Average execution time: {report.avg_execution_time_ms:.2f} ms\n")

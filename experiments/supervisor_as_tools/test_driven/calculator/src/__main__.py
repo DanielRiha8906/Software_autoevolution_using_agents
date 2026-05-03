@@ -7,6 +7,7 @@ from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
+from .services.statistics_service import StatisticsService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
@@ -58,6 +59,11 @@ def main() -> None:
         help="Filter query results by success state (true for successful, false for failed)",
     )
     parser.add_argument(
+        "--statistics",
+        action="store_true",
+        help="Display statistics about calculations",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -69,7 +75,12 @@ def main() -> None:
     memory_service = MemoryService()
     cli = CalculatorCLI(service, memory_service)
 
-    if args.query:
+    if args.statistics:
+        # Statistics mode
+        stats_service = StatisticsService(memory_service)
+        report = stats_service.compute()
+        cli.show_statistics(report)
+    elif args.query:
         # Query mode
         operation_filter: Optional[str] = getattr(args, 'operation', None)
         cli.run_query(operation=operation_filter, success=args.success)
