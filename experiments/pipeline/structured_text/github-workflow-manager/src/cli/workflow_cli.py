@@ -1,4 +1,5 @@
 import argparse
+import json
 import sys
 from datetime import datetime, timezone
 
@@ -9,6 +10,7 @@ from ..models.workflow_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_attempt_service import WorkflowAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.workflow_statistics_service import WorkflowStatisticsService
 from ..utils.timezone_converter import parse_datetime_with_timezone
 
 
@@ -231,10 +233,24 @@ def build_parser() -> argparse.ArgumentParser:
     attempt_query_p = attempt_sub.add_parser("query-state", help="Query workflow attempt state")
     attempt_query_p.add_argument("attempt_id", help="Attempt ID")
 
+    # report
+    report_p = sub.add_parser("report", help="Generate workflow statistics report")
+    report_p.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+
     return parser
 
 
-def run_cli(service: WorkflowRunService, attempt_service: WorkflowAttemptService = None, args=None) -> None:
+def run_cli(
+    service: WorkflowRunService,
+    attempt_service: WorkflowAttemptService = None,
+    stats_service: WorkflowStatisticsService = None,
+    args=None,
+) -> None:
     parser = build_parser()
     ns = parser.parse_args(args)
     tracker = WorkflowRunTracker(service, attempt_service)
@@ -401,3 +417,44 @@ def run_cli(service: WorkflowRunService, attempt_service: WorkflowAttemptService
             print(f"Successful: {'yes' if attempt.is_successful() else 'no'}")
             print(f"Failed: {'yes' if attempt.is_failed() else 'no'}")
             print(f"Cancelled: {'yes' if attempt.is_cancelled() else 'no'}")
+
+    elif ns.command == "report":
+        if stats_service is None:
+            print("Statistics service not initialized.", file=sys.stderr)
+            sys.exit(1)
+
+        report = stats_service.compute_report()
+
+        if ns.format == "json":
+            print(json.dumps(report.to_dict(), indent=2))
+        else:  # text format
+            print("\n--- Workflow Statistics Report ---")
+            print(f"Total Runs: {report.total_runs}")
+            print(f"\nRuns by Conclusion:")
+            # Sort with None at the end for display
+            items = sorted(
+                report.conclusion_counts.items(),
+                key=lambda x: (x[0] is None, x[0])
+            )
+            for conclusion, count in items:
+                label = conclusion if conclusion is not None else "incomplete"
+                print(f"  {label}: {count}")
+            print(f"\nDuration Statistics (seconds):")
+            print(f"  Average: {report.average_duration_seconds:.2f}")
+            print(f"  Min: {report.min_duration_seconds}")
+            print(f"  Max: {report.max_duration_seconds}")
+            print(f"\nAverage Duration by Conclusion (seconds):")
+            # Sort with None at the end for display
+            items = sorted(
+                report.duration_by_conclusion.items(),
+                key=lambda x: (x[0] is None, x[0])
+            )
+            for conclusion, avg_duration in items:
+                label = conclusion if conclusion is not None else "incomplete"
+                print(f"  {label}: {avg_duration:.2f}")
+            print(f"\nAttempt Statistics:")
+            print(f"  Total Attempts: {report.total_attempts}")
+            print(f"  Average Attempts per Run: {report.average_attempts_per_run:.2f}")
+            print(f"  Runs with Attempts: {report.runs_with_attempts}")
+            print(f"  Runs without Attempts: {report.runs_with_no_attempts}")
+            print(f"\nGenerated at: {report.generated_at.isoformat()}")

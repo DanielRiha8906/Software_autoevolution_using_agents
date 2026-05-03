@@ -1,0 +1,35 @@
+[
+  {
+    "id": "a82d716d-dbdd-4b67-862d-94a6fcbba84b",
+    "run_id": "6dc384d0-b886-4bf4-b4fc-18536c29e791",
+    "attempt_number": 1,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-05-03T18:59:00.840304+00:00",
+    "completed_at": null,
+    "duration_seconds": 50.0,
+    "logs_url": null
+  },
+  {
+    "id": "1a33705c-0a11-4150-9b5d-662f400dd23d",
+    "run_id": "698d6dac-980e-45be-bc61-9870b68cb9ce",
+    "attempt_number": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-05-03T18:59:03.424670+00:00",
+    "completed_at": null,
+    "duration_seconds": 30.0,
+    "logs_url": null
+  },
+  {
+    "id": "4c14548c-b0fc-4a10-895e-49f6f2710812",
+    "run_id": "698d6dac-980e-45be-bc61-9870b68cb9ce",
+    "attempt_number": 2,
+    "status": "completed",
+    "conclusion": "success",
+    "started_at": "2026-05-03T18:59:05.092595+00:00",
+    "completed_at": null,
+    "duration_seconds": 40.0,
+    "logs_url": null
+  }
+]

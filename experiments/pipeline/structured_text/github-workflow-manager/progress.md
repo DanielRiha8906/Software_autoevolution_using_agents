@@ -251,3 +251,73 @@ All tests pass including:
 - External database or indexing — all filtering in-memory on service collections
 
 Duration: 826.8s | Cost: $1.795939 USD | Turns: 13
+
+## Task 06: Aggregated Statistics and Insights
+
+### Task Summary
+Implemented aggregated statistics reporting for workflow runs and attempts. The system now computes structured statistics including conclusion counts, duration averages/min/max, and per-run attempt statistics. Results are returned as a typed dataclass report and accessible via both interactive menu and CLI with optional JSON output format.
+
+### Files Changed
+
+**New Files:**
+- `src/models/workflow_statistics_report.py` — NEW: WorkflowStatisticsReport dataclass with 11 fields and to_dict() serialization method
+- `src/services/workflow_statistics_service.py` — NEW: WorkflowStatisticsService class with compute_report() method and 5 private calculation helpers
+- `tests/test_workflow_statistics_report.py` — NEW: 14 tests for dataclass construction and serialization
+- `tests/test_workflow_statistics_service.py` — NEW: 30 tests for statistics computation and edge cases
+
+**Modified Files:**
+- `src/models/__init__.py` — Added export for WorkflowStatisticsReport
+- `src/services/__init__.py` — Added export for WorkflowStatisticsService
+- `src/__main__.py` — Initialize WorkflowStatisticsService and wire to CLI/menu
+- `src/cli/workflow_cli.py` — Added report subcommand with --format flag (text/json), handler with formatted output
+- `src/cli/interactive_menu.py` — Added "View Statistics" menu option and _view_statistics() handler
+- `tests/test_workflow_cli.py` — Fixed 5 test calls to use new run_cli() signature with args keyword parameter
+- `artifacts/class_diagram.puml` — Added WorkflowStatisticsReport and WorkflowStatisticsService classes with relationships
+- `artifacts/component_diagram.puml` — Added statistics service to Service layer and report to Domain model
+- `artifacts/activity_diagram_main.puml` — Added report CLI command flow with format selection
+- `artifacts/activity_diagram_interactive.puml` — Added View Statistics menu option flow
+
+### Test Result
+✓ **362 tests passed** (0.52s)
+
+All tests pass including:
+- 14 WorkflowStatisticsReport tests (dataclass creation, serialization, None handling)
+- 30 WorkflowStatisticsService tests (computation, edge cases, all calculation methods)
+- 318 pre-existing tests (maintained backward compatibility with signature updates)
+
+### Implementation Details
+
+**Must Have (All Completed):**
+- ✓ Compute statistics: count by conclusion, average duration_seconds, average attempts per run
+- ✓ Return structured report object (WorkflowStatisticsReport dataclass, not plain dict)
+- ✓ All new functionality accessible via `python -m src` (interactive menu "View Statistics" + CLI `report` command)
+
+**Should Have (All Completed):**
+- ✓ Use dataclass/named object for report structure
+- ✓ Include min/max duration_seconds in report
+
+**Could Have (Not Implemented):**
+- Per-status breakdown of average duration — deferred for future enhancement
+
+**Won't Have (Not Applicable):**
+- Visualization layer — out of scope
+
+**Computation Algorithms:**
+- **Conclusion counts:** Group runs by conclusion.value (or None for non-terminal), count occurrences
+- **Duration statistics:** Average across all runs; min/max from all durations; per-conclusion average of runs with that conclusion
+- **Attempt statistics:** Count total attempts by querying attempt_service.filter_by_run_id() for each run; average per run; count runs with/without attempts
+- **Edge cases handled:** Zero runs (returns 0/None values), all None conclusions (grouped as "incomplete"), runs without attempts properly counted
+- **Report generation:** Generated with UTC timestamp via datetime.now(timezone.utc)
+
+**CLI Features:**
+- `python -m src report` — Human-readable formatted text output
+- `python -m src report --format json` — Valid JSON serialization for programmatic use
+- `python -m src` → menu option 3 → View Statistics display with same formatting
+
+**Service Design:**
+- Dependency injection of WorkflowRunService and WorkflowAttemptService
+- Public methods: compute_report() (all runs), compute_report_for_runs() (filtered subset)
+- Private calculation methods encapsulate each statistic computation
+- Dataclass.to_dict() handles None → "incomplete" mapping and datetime → ISO format
+
+Duration: 660.3s | Cost: $1.423226 USD | Turns: 25

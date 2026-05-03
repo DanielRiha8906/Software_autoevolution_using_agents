@@ -64,6 +64,22 @@ package "models" #DDEEFF {
         +is_failed() : bool
         +is_cancelled() : bool
     }
+
+    class WorkflowStatisticsReport {
+        +total_runs                 : int
+        +conclusion_counts          : Dict[Optional[str], int]
+        +average_duration_seconds   : float
+        +min_duration_seconds       : Optional[float]
+        +max_duration_seconds       : Optional[float]
+        +duration_by_conclusion     : Dict[Optional[str], float]
+        +total_attempts             : int
+        +average_attempts_per_run   : float
+        +runs_with_no_attempts      : int
+        +runs_with_attempts         : int
+        +generated_at               : datetime
+        --
+        +to_dict() : dict
+    }
 }
 
 package "storage" #FFF3CC {
@@ -138,6 +154,20 @@ package "services" #DDFFD4 {
         +create_attempt(run_id: str, attempt_number: int,\n  status: WorkflowStatus,\n  conclusion: Optional[WorkflowConclusion],\n  completed_at: Optional[datetime],\n  duration_seconds: float,\n  logs_url: Optional[str],\n  attempt_id: Optional[str]) : WorkflowRunAttempt
     }
 
+    class WorkflowStatisticsService {
+        -_run_service     : WorkflowRunService
+        -_attempt_service : WorkflowAttemptService
+        --
+        +__init__(workflow_run_service: WorkflowRunService,\n  workflow_attempt_service: WorkflowAttemptService)
+        +compute_report() : WorkflowStatisticsReport
+        +compute_report_for_runs(runs: List[WorkflowRun]) : WorkflowStatisticsReport
+        -_compute_conclusion_counts(runs: List[WorkflowRun]) : Dict[Optional[str], int]
+        -_compute_average_duration(runs: List[WorkflowRun]) : float
+        -_compute_min_max_duration(runs: List[WorkflowRun]) : Tuple[Optional[float], Optional[float]]
+        -_compute_duration_by_conclusion(runs: List[WorkflowRun]) : Dict[Optional[str], float]
+        -_compute_attempt_statistics(runs: List[WorkflowRun]) : Tuple[int, int, int]
+    }
+
     note right of WorkflowAttemptService
         **add_attempt()** validates:
         • attempt.id is globally unique
@@ -162,13 +192,13 @@ package "utils" #FFFFCC {
 package "cli" #FFE5E5 {
     class "workflow_cli" <<module>> {
         +build_parser() : ArgumentParser
-        +run_cli(service: WorkflowRunService, attempt_service: WorkflowAttemptService, args) : None
+        +run_cli(service: WorkflowRunService, attempt_service: WorkflowAttemptService,\n  stats_service: WorkflowStatisticsService, args) : None
         -_fmt_run(run: WorkflowRun) : str
         -_fmt_attempt(attempt: WorkflowRunAttempt) : str
     }
 
     class "interactive_menu" <<module>> {
-        +run_interactive(service: WorkflowRunService, attempt_service: Optional[WorkflowAttemptService]) : None
+        +run_interactive(service: WorkflowRunService, attempt_service: Optional[WorkflowAttemptService],\n  stats_service: Optional[WorkflowStatisticsService]) : None
         -_add_run(service: WorkflowRunService) : None
         -_list_runs(service: WorkflowRunService) : None
         -_detail_run(service: WorkflowRunService) : None
@@ -181,6 +211,7 @@ package "cli" #FFE5E5 {
         -_build_attempt_filter_criteria_menu() : dict
         -_filter_attempts_menu(attempt_service: WorkflowAttemptService) : None
         -_query_attempt_state(attempt_service: WorkflowAttemptService) : None
+        -_view_statistics(stats_service: WorkflowStatisticsService) : None
         -_run_menu(service: WorkflowRunService, attempt_service) : None
         -_attempt_menu(attempt_service: WorkflowAttemptService) : None
     }
@@ -216,11 +247,20 @@ WorkflowAttemptTracker     ..>  WorkflowRunAttempt
 ' CLI relationships
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowAttemptService
+"workflow_cli"             ..>  WorkflowStatisticsService
 "workflow_cli"             ..>  WorkflowRunTracker
 "workflow_cli"             ..>  "timezone_converter"
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  WorkflowAttemptService
+"interactive_menu"         ..>  WorkflowStatisticsService
 "interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  "timezone_converter"
+
+' Statistics service relationships
+WorkflowStatisticsService  "1" --> "1" WorkflowRunService : -_run_service
+WorkflowStatisticsService  "1" --> "1" WorkflowAttemptService : -_attempt_service
+WorkflowStatisticsService  ..>  WorkflowStatisticsReport : returns
+WorkflowStatisticsService  ..>  WorkflowRun
+WorkflowStatisticsService  ..>  WorkflowRunAttempt
 
 @enduml

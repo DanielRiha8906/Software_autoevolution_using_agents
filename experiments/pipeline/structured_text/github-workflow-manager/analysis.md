@@ -1,17 +1,25 @@
-# Task 05 - Filtering Capabilities for Workflow Runs: Analysis Report
+# Task 06 - Statistics Reporting: Analysis Report
 
 ## Task Summary
 
-Implement advanced filtering capabilities for workflow runs and attempts. Users must be able to:
+Implement a statistics computation module that generates structured reports about workflow runs and attempts. The system must:
 
-1. **Duration range filtering** — by min/max `duration_seconds`
-2. **Timestamp filtering** — by `created_at`/`updated_at` before/after (CEST/UTC+2 timezone support)
-3. **Attempts presence filtering** — runs with/without attempts
-4. **Return filtered collections** (both CLI and interactive menu)
-5. **Combine multiple filters** simultaneously
-6. **Optional:** partial string matching on fields (e.g., workflow name, branch)
+**Must Have:**
+- Compute count grouped by `conclusion` (e.g., 5 SUCCESS, 3 FAILURE, 2 CANCELLED)
+- Compute average `duration_seconds` (overall and per-conclusion)
+- Compute average number of attempts per run
+- Return a structured report object (dataclass or named object, not plain dict)
+- Expose all functionality via `python -m src` as both interactive menu option and one-shot CLI flag
 
-All functionality must be accessible via `python -m src` (interactive menu + CLI flags).
+**Should Have:**
+- Use a dataclass or named object for the report structure
+- Include min/max `duration_seconds` in the report
+
+**Could Have:**
+- Per-status breakdown of average duration (distinct from per-conclusion)
+
+**Won't Have:**
+- Visualization layer (graphs, charts)
 
 ---
 
@@ -27,10 +35,10 @@ Interface Layer (workflow_cli.py, interactive_menu.py)
     └── Interactive: multi-step menu-driven interface
     ↓
 Service Layer (WorkflowRunService, WorkflowAttemptService, Trackers)
-    ├── WorkflowRunService — CRUD + existing filters
-    ├── WorkflowAttemptService — CRUD + existing filters
-    ├── WorkflowRunTracker — high-level run facade
-    └── WorkflowAttemptTracker — high-level attempt facade
+    ├── WorkflowRunService — CRUD + filtering
+    ├── WorkflowAttemptService — CRUD + filtering
+    ├── WorkflowRunTracker — run creation facade
+    └── WorkflowAttemptTracker — attempt creation facade
     ↓
 Storage Layer (WorkflowJsonStorage, WorkflowAttemptJsonStorage)
     ├── JSON file persistence
@@ -42,332 +50,348 @@ Domain Models (WorkflowRun, WorkflowRunAttempt, enums)
     └── Type-safe enums
 ```
 
-### Artifacts Documentation
-
-- **class_diagram.puml** — Full domain model with relationships
-- **component_diagram.puml** — Layered architecture and dependencies
-- **activity_diagram_main.puml** — CLI workflow and command flow
-- **activity_diagram_interactive.puml** — Interactive menu navigation
-- **use_case_diagram.puml** — User interactions (runs and attempts)
+### Data Flow
+1. Data is loaded from JSON files via storage layer into service layer
+2. Services maintain in-memory lists and expose query/filter methods
+3. CLI and interactive menu call service methods to retrieve/filter data
+4. Statistics computation must operate on service-layer data
 
 ---
 
-## Domain Model: Workflow Runs and Attempts
+## Domain Model: Data Structures for Statistics
 
 ### WorkflowRun (src/models/workflow_run.py)
 
-**Current Fields (10):**
-- `id: str` — Unique identifier (UUID)
-- `workflow_name: str` — Workflow name
-- `branch: str` — Git branch name
-- `status: WorkflowStatus` — Enum (queued, in_progress, completed, waiting, requested, pending)
-- `conclusion: Optional[WorkflowConclusion]` — Enum or None (success, failure, cancelled, skipped, timed_out, action_required, neutral, stale)
-- `created_at: datetime` — UTC creation timestamp (required)
-- `updated_at: Optional[datetime]` — UTC update timestamp (can be None)
-- `run_number: Optional[int]` — GitHub run number
-- `commit_sha: Optional[str]` — Commit SHA
-- `duration_seconds: float` — Duration in seconds (default 0.0, non-negative)
+**Key Fields for Statistics:**
+- `conclusion: Optional[WorkflowConclusion]` — Nullable enum (success, failure, cancelled, skipped, timed_out, action_required, neutral, stale)
+- `duration_seconds: float` — Non-negative, default 0.0
+- `id: str` — Unique identifier (needed to count runs)
 
-**Key Methods:**
-- `to_dict()` / `from_dict()` — JSON serialization
-- `is_terminal()`, `is_running()`, `is_successful()`, `is_failed()`, `is_cancelled()` — State queries
-
-**Timezone Notes:**
-- Stored as UTC (via `datetime.fromisoformat()` and `isoformat()`)
-- Deserialized from ISO 8601 strings (no explicit timezone handling in current code)
-- No timezone conversion logic exists yet
+**Important Constraint:**
+- A run may have `conclusion = None` (non-terminal states: queued, in_progress, waiting, requested, pending)
+- Statistics must handle None conclusions gracefully
 
 ### WorkflowRunAttempt (src/models/workflow_attempt.py)
 
-**Current Fields (9):**
-- `id: str` — Unique identifier (UUID)
-- `run_id: str` — Foreign key to WorkflowRun
-- `attempt_number: int` — Attempt sequence number (1, 2, 3...)
-- `status: WorkflowStatus` — Same enum as runs
-- `conclusion: Optional[WorkflowConclusion]` — Same enum as runs
-- `started_at: datetime` — UTC start timestamp (required)
-- `completed_at: Optional[datetime]` — UTC completion timestamp (can be None)
-- `duration_seconds: float` — Duration in seconds (default 0.0, non-negative)
-- `logs_url: Optional[str]` — URL to logs
+**Key Fields for Statistics:**
+- `run_id: str` — Foreign key to parent run
+- `attempt_number: int` — Sequence number (1, 2, 3...)
+- `duration_seconds: float` — Non-negative, default 0.0
+- `conclusion: Optional[WorkflowConclusion]` — Same as WorkflowRun
 
-**Key Methods:**
-- `to_dict()` / `from_dict()` — JSON serialization
-- State query methods (identical to WorkflowRun)
-
-**Relationship:**
+**Important Relationship:**
 - One-to-many: 1 WorkflowRun → N WorkflowRunAttempts
-- Linked via `run_id` foreign key
-- No back-reference in WorkflowRun model (data model is unidirectional)
+- Attempts are stored separately; must query attempt service to link to runs
 
-### Enums (src/models/)
-
-**WorkflowStatus (workflow_status.py):**
-```python
-enum: queued, in_progress, completed, waiting, requested, pending
-```
+### Enums
 
 **WorkflowConclusion (workflow_conclusion.py):**
-```python
-enum: success, failure, cancelled, skipped, timed_out, action_required, neutral, stale
-```
+8 possible values: success, failure, cancelled, skipped, timed_out, action_required, neutral, stale (plus None)
+
+**WorkflowStatus (workflow_status.py):**
+6 possible values: queued, in_progress, completed, waiting, requested, pending
+(Not used for statistics grouping in must-have, but available for could-have)
 
 ---
 
-## Service Layer: Current Filtering Capabilities
+## Service Layer: Current Capabilities
 
 ### WorkflowRunService (src/services/workflow_run_service.py)
 
-**Existing Methods:**
-- `add_workflow_run(run: WorkflowRun) → WorkflowRun` — Add run (with id uniqueness validation)
-- `list_runs() → List[WorkflowRun]` — Get all runs
-- `get_run_detail(run_id: str) → Optional[WorkflowRun]` — Fetch single run by id
-- `filter_by_branch(branch: str) → List[WorkflowRun]` — Exact match on branch
-- `filter_by_status(status: WorkflowStatus) → List[WorkflowRun]` — Exact match on status
-- `filter_by_conclusion(conclusion: WorkflowConclusion) → List[WorkflowRun]` — Exact match on conclusion
-- `_persist() → None` — Sync to storage
+**Available Methods:**
+- `list_runs() → List[WorkflowRun]` — Get all runs (needed for statistics)
+- `filter_runs(...)` → List[WorkflowRun]` — Filter with multiple criteria
+- Various filter_by_* methods
 
-**Current Architecture:**
-- In-memory list `_runs` cached on init from storage
-- Filters return new lists (no mutation)
-- All operations call `_persist()` after modifications
-- No composite filtering (filters are mutually exclusive in CLI usage)
+**Data Access Pattern:**
+- Maintains in-memory `_runs: List[WorkflowRun]` (loaded from storage on init)
+- All filtering returns new lists (no mutation)
+- Direct access to runs list via `list_runs()`
 
 ### WorkflowAttemptService (src/services/workflow_attempt_service.py)
 
-**Existing Methods:**
-- `add_attempt(attempt: WorkflowRunAttempt) → WorkflowRunAttempt` — Add attempt (with dual uniqueness validation: id + (run_id, attempt_number) pair)
+**Available Methods:**
 - `list_attempts() → List[WorkflowRunAttempt]` — Get all attempts
-- `get_attempt_detail(attempt_id: str) → Optional[WorkflowRunAttempt]` — Fetch single attempt by id
-- `filter_by_run_id(run_id: str) → List[WorkflowRunAttempt]` — Get all attempts for a run (sorted by attempt_number ascending)
-- `filter_by_status(status: WorkflowStatus) → List[WorkflowRunAttempt]` — Exact match on status
-- `filter_by_conclusion(conclusion: WorkflowConclusion) → List[WorkflowRunAttempt]` — Exact match on conclusion
-- `_persist() → None` — Sync to storage
+- `filter_by_run_id(run_id: str) → List[WorkflowRunAttempt]` — Get attempts for a run (sorted by attempt_number ascending)
 
-**Current Architecture:**
-- Same pattern as WorkflowRunService: in-memory list, immutable filters, manual persistence
-
-### Tracker Classes
-
-**WorkflowRunTracker (src/services/workflow_run_tracker.py):**
-- High-level facade for creating runs with automatic UUID generation and UTC timestamping
-- `track(...)` — Creates WorkflowRun and delegates to service.add_workflow_run()
-- `create_attempt(...)` — Creates WorkflowRunAttempt and delegates to attempt_service.add_attempt()
-
-**WorkflowAttemptTracker (src/services/workflow_attempt_tracker.py):**
-- Similar facade for attempts (if separate file exists)
+**Data Access Pattern:**
+- Maintains in-memory `_attempts: List[WorkflowRunAttempt]` (loaded from storage on init)
+- Can link attempts to runs via run_id foreign key
 
 ---
 
-## CLI and Interactive Menu: Current Structure
+## Statistics Requirements Analysis
 
-### CLI Interface (src/cli/workflow_cli.py)
+### Requirement 1: Count by Conclusion
 
-**Architecture:**
-- `build_parser()` — Creates argparse.ArgumentParser with subcommands
-- `run_cli(service, attempt_service, args)` — Dispatch handler
+**What to compute:**
+- Group all runs by `conclusion` value
+- Count runs in each group
+- Handle None conclusions (non-terminal runs)
 
-**Current Subcommands (workflow runs):**
-1. `add` — Add new run (flags: --name, --branch, --status, --conclusion, --run-number, --commit-sha, --duration-seconds, --id)
-2. `list` — List runs with optional filters (flags: --branch, --status, --conclusion)
-   - Currently mutually exclusive: picks first non-None filter
-3. `detail <run_id>` — Fetch single run by id
-4. `query-state <run_id>` — Query state flags (terminal, running, successful, failed, cancelled)
-
-**Current Subcommands (attempts):**
-1. `attempt add` — Add new attempt
-2. `attempt list` — List attempts with optional filters (flags: --run-id, --status, --conclusion)
-3. `attempt detail <attempt_id>` — Fetch single attempt
-4. `attempt query-state <attempt_id>` — Query state flags
-
-**Filtering Logic (list command):**
+**Example output structure:**
 ```python
-# Current logic: mutually exclusive filters (elif chain)
-if ns.branch:
-    runs = service.filter_by_branch(ns.branch)
-elif ns.status:
-    runs = service.filter_by_status(WorkflowStatus(ns.status))
-elif ns.conclusion:
-    runs = service.filter_by_conclusion(WorkflowConclusion(ns.conclusion))
+conclusion_counts = {
+    'success': 5,
+    'failure': 3,
+    'cancelled': 2,
+    'skipped': 1,
+    None: 2  # or 'pending' if we treat non-terminal separately
+}
 ```
 
-**Output Format:**
-- `_fmt_run(run)` — Multi-line string representation
-- `_fmt_attempt(attempt)` — Multi-line string representation
+**Implementation notes:**
+- Must iterate all runs from WorkflowRunService.list_runs()
+- Group by run.conclusion field (str Enum or None)
+- Count occurrences
 
-### Interactive Menu (src/cli/interactive_menu.py)
+### Requirement 2: Average Duration Seconds
 
-**Architecture:**
-- `run_interactive(service, attempt_service)` — Main menu loop
-- `_run_menu(service)` — Submenu for workflow runs
-- `_attempt_menu(attempt_service)` — Submenu for workflow attempts
-- Menu options tied to handler functions via list of tuples
+**What to compute:**
+1. **Overall average** — mean of all run durations (or filtered subset)
+2. **Per-conclusion average** — mean duration for each conclusion group
 
-**Current Run Menu Options:**
-1. Add workflow run → `_add_run()`
-2. List all runs → `_list_runs()`
-3. Get run detail → `_detail_run()`
-4. Filter runs → `_filter_menu()` (branch/status/conclusion)
-5. Query workflow state → `_query_run_state()`
-6. Back
+**Calculation:**
+- Sum all duration_seconds values
+- Divide by count of runs
+- Handle edge case: empty list (0 runs) → return 0 or None
 
-**Current Attempt Menu Options:**
-1. Add workflow attempt → `_add_attempt()`
-2. List all attempts → `_list_attempts()`
-3. Get attempt detail → `_detail_attempt()`
-4. Filter attempts → `_filter_attempts_menu()` (run_id/status/conclusion)
-5. Query attempt state → `_query_attempt_state()`
-6. Back
+**Example output:**
+```python
+duration_stats = {
+    'overall_average': 45.5,
+    'by_conclusion': {
+        'success': 40.2,
+        'failure': 55.3,
+        'cancelled': 30.0,
+        ...
+    },
+    'min_seconds': 5.0,      # Should have (global min)
+    'max_seconds': 120.0,    # Should have (global max)
+}
+```
 
-**Filtering Logic (interactive):**
-- `_filter_menu()` — Prompts user to choose filter type, then filters
-- Currently mutually exclusive: one filter per call
-- Uses `_choose()` helper to present enum values as numbered menu
+### Requirement 3: Average Number of Attempts per Run
 
-**User Input Helpers:**
-- `_prompt(label, default)` — Text input with optional default
-- `_choose(label, options, allow_blank)` — Numbered menu selection
+**What to compute:**
+- For each run, count its associated attempts
+- Calculate mean attempts across all runs
+- Include runs with 0 attempts
 
----
+**Calculation:**
+1. Get all runs from WorkflowRunService
+2. For each run.id, query WorkflowAttemptService.filter_by_run_id(run.id)
+3. Count attempts for that run
+4. Average the counts: sum / total_runs
 
-## Storage Layer
+**Example:**
+```python
+attempts_stats = {
+    'total_attempts': 12,
+    'total_runs': 5,
+    'average_attempts_per_run': 2.4,  # 12 / 5
+    'runs_with_no_attempts': 1,
+    'runs_with_attempts': 4,
+}
+```
 
-### WorkflowJsonStorage (src/storage/workflow_json_storage.py)
+### Requirement 4: Structured Report Object
 
-- File path: typically `artifacts/workflow_runs.json`
-- `load()` → Reads JSON file, deserializes list of dicts to List[WorkflowRun]
-- `save(runs)` → Serializes List[WorkflowRun] to JSON dicts, writes to file
-- Error handling for missing/malformed JSON
+**What to design:**
+- A dataclass (not plain dict) to hold all statistics
+- Fields for all computed metrics
+- Optional: serialization methods for JSON output
 
-### WorkflowAttemptJsonStorage (src/storage/workflow_attempt_json_storage.py)
+**Proposed structure:**
+```python
+@dataclass
+class WorkflowStatisticsReport:
+    # Counts
+    total_runs: int
+    conclusion_counts: Dict[Optional[str], int]  # {conclusion_value: count}
+    
+    # Duration stats (runs)
+    average_duration_seconds: float
+    min_duration_seconds: float
+    max_duration_seconds: float
+    duration_by_conclusion: Dict[Optional[str], float]  # {conclusion: avg_duration}
+    
+    # Attempt stats
+    total_attempts: int
+    average_attempts_per_run: float
+    runs_with_no_attempts: int
+    runs_with_attempts: int
+    
+    # Metadata
+    generated_at: datetime
+    
+    def to_dict(self) -> dict:
+        """Serialize for JSON output"""
+    
+    @classmethod
+    def from_services(...) -> WorkflowStatisticsReport:
+        """Factory method to compute from services"""
+```
 
-- File path: typically `artifacts/workflow_attempts.json`
-- Same pattern as WorkflowJsonStorage but for WorkflowRunAttempt
+### Requirement 5: CLI Exposure
+
+**Current CLI structure (src/cli/workflow_cli.py):**
+- Uses argparse with subcommands (add, list, detail, query-state, attempt)
+- Each subcommand maps to a handler function in run_cli()
+
+**What needs to be added:**
+- New subcommand: `stats` or `report` or `statistics`
+- Command-line flags: `--report` or `--stats` (alternate naming)
+- Handler that calls statistics computation service
+- Output formatting (human-readable or JSON)
+
+**Example CLI usage:**
+```bash
+python -m src stats                    # Interactive: compute and display
+python -m src --report                 # One-shot CLI: return JSON
+python -m src report --format json     # JSON output
+python -m src report --format text     # Human-readable output
+```
+
+### Requirement 6: Interactive Menu Exposure
+
+**Current menu structure (src/cli/interactive_menu.py):**
+- run_interactive() displays main menu
+- _run_menu() shows options for runs
+- _attempt_menu() shows options for attempts
+
+**What needs to be added:**
+- New main menu option: "View Statistics" or "Generate Report"
+- Handler function that calls computation
+- Display results in formatted output (table or summary)
+
+**Example menu flow:**
+```
+Main Menu:
+  1. Workflow Runs
+  2. Workflow Attempts
+  3. View Statistics      <- NEW
+  4. Exit
+
+Choice: 3
+-> Computes stats for all runs/attempts
+-> Displays summary in formatted output
+-> Returns to main menu
+```
 
 ---
 
 ## Key Findings
 
-### 1. Data Structures Support All Required Fields
+### 1. Data Is Available and Accessible
 
-**For duration range filtering:**
-- Both WorkflowRun and WorkflowRunAttempt have `duration_seconds: float` field
-- Field is non-negative (validated in `from_dict()`)
-- Default is 0.0
+- WorkflowRunService.list_runs() provides all runs in memory
+- WorkflowAttemptService.list_attempts() provides all attempts
+- WorkflowAttemptService.filter_by_run_id(run_id) provides attempts per run
+- No new data fetching mechanisms needed; use existing service methods
 
-**For timestamp filtering:**
-- WorkflowRun has `created_at: datetime` (required) and `updated_at: Optional[datetime]`
-- WorkflowRunAttempt has `started_at: datetime` (required) and `completed_at: Optional[datetime]`
-- Stored as UTC via ISO 8601 strings
-- **Gap:** No explicit timezone conversion logic for CEST/UTC+2 support
+### 2. Duration and Attempt Data Is Already Stored
 
-**For attempts presence filtering:**
-- WorkflowRunAttempt.run_id points to parent run (foreign key)
-- Attempts are stored separately in WorkflowAttemptService
-- **Gap:** WorkflowRun has no back-reference to attempts; must query attempt service
+- Both WorkflowRun and WorkflowRunAttempt have `duration_seconds: float`
+- WorkflowRunAttempt.run_id links to parent run
+- No schema changes needed; statistics computation is pure calculation
 
-### 2. Service Layer Needs Extension
+### 3. Conclusion Field Handles Non-Terminal States
 
-**Current limitations:**
-- Filters are mutually exclusive in CLI (elif chain)
-- Filters do not support ranges (duration, timestamps)
-- Filters do not support presence checks (has attempts)
-- No composite filter support (combine multiple conditions)
-- Filters are specific to individual fields (no generic query builder)
+- WorkflowRun.conclusion is Optional[WorkflowConclusion]
+- Can be None for non-terminal runs (status != COMPLETED)
+- Statistics must handle None as a valid grouping key
+- **Design choice:** Group None conclusions under "pending" or "incomplete" label for clarity
 
-**Required additions:**
-- `filter_by_duration_range(min_seconds, max_seconds)` on WorkflowRunService and WorkflowAttemptService
-- `filter_by_created_at(before, after)` on WorkflowRunService
-- `filter_by_updated_at(before, after)` on WorkflowRunService
-- `filter_by_started_at(before, after)` on WorkflowAttemptService
-- `filter_by_completed_at(before, after)` on WorkflowAttemptService
-- `filter_by_has_attempts(run_id)` on WorkflowRunService (requires cross-service lookup)
-- Composite filter support (method or builder pattern)
+### 4. Service Layer Extension Location
 
-### 3. CLI/Menu Interface Needs Restructuring
+- Create a new service or utility class for statistics computation
+- Options:
+  1. **New file:** `src/services/workflow_statistics_service.py` (follows pattern)
+  2. **New file:** `src/utils/statistics_calculator.py` (lighter-weight utility)
+  3. **Extend existing:** Add method to WorkflowRunService (not ideal; violates single responsibility)
 
-**Current behavior:**
-- `list` command uses mutually exclusive filters (elif chain)
-- Interactive `_filter_menu()` forces user to choose one filter type per call
-- User must call filter multiple times to apply multiple conditions
+**Recommendation:** Create `src/services/workflow_statistics_service.py` to keep architecture consistent.
 
-**Required changes:**
-- Support multiple filter flags simultaneously (e.g., `--duration-min 10 --duration-max 100 --branch main`)
-- Composite filtering logic in CLI handler
-- Interactive menu to support multi-step filter selection
-- Timezone input handling for timestamp filters (allow user to specify CEST or UTC+2)
+### 5. CLI and Menu Need New Entry Points
 
-### 4. Timezone Handling Gap
+**CLI changes (src/cli/workflow_cli.py):**
+- Add new subparser in build_parser() for `stats` or `report` command
+- Handle in run_cli() dispatch logic
+- Output formatted results to stdout
 
-**Current state:**
-- All timestamps stored as UTC (via Python datetime.fromisoformat)
-- No explicit timezone conversion in code
-- No timezone specification in CLI or menu prompts
+**Menu changes (src/cli/interactive_menu.py):**
+- Add new main menu option (after Runs/Attempts)
+- Create handler function (e.g., _view_statistics())
+- Format and display results
 
-**Task requirement:** Support "CEST/UTC+2" timezone
-- **Ambiguity:** Should user input be in CEST and converted to UTC for storage?
-- **Assumption:** Yes — accept user input in CEST/UTC+2, convert to UTC for filtering/storage
+### 6. Report Object Should Be a Dataclass
 
-### 5. Attempts Presence Filtering
-
-**Challenge:**
-- WorkflowRun and WorkflowRunAttempt are separate data structures
-- WorkflowRun has no back-reference to attempts
-- Must query WorkflowAttemptService to check if run has attempts
-
-**Design choice:**
-- Add method to WorkflowRunService: `filter_by_has_attempts(has_attempts: bool, attempt_service: WorkflowAttemptService)`
-- Or: Add helper method on WorkflowRunTracker to enrich runs with attempt count/presence
+- Matches existing pattern (WorkflowRun, WorkflowRunAttempt are dataclasses)
+- Enables serialization/deserialization
+- Type-safe fields
+- Can add helper methods for formatting/display
 
 ---
 
 ## Ambiguities and Working Assumptions
 
-### Timezone Handling
+### Ambiguity 1: How to Handle Non-Terminal Runs
 
-**Ambiguity:** Task mentions "CEST/UTC+2" but doesn't clarify:
-- Should user input times in CEST and be converted to UTC?
-- Should filtering results be shown in CEST?
-- Are timestamps in stored JSON already UTC or CEST?
+**Ambiguity:** When grouping by conclusion, how should runs with `conclusion = None` (non-terminal) be displayed?
+- Option A: Show as separate "None" group
+- Option B: Label as "Incomplete" or "Pending"
+- Option C: Include in statistics but note they are non-terminal
 
-**Working Assumption:**
-- All stored timestamps are UTC (current code pattern)
-- User input timestamps can be specified in CEST (UTC+2)
-- Convert user input CEST → UTC for filtering/storage
-- Display timestamps in ISO 8601 (currently UTC; could be enhanced to show CEST)
-- Pytz or zoneinfo library may be needed for timezone conversions
+**Working Assumption:** 
+- Include None conclusions in grouping with a label like "incomplete" or "pending" for clarity
+- Keep internal representation as None for type safety
+- Display formatting can show a human-readable label
 
-### Filter Combination Semantics
+### Ambiguity 2: Empty Runs Edge Case
 
-**Ambiguity:** How should multiple filters combine?
-- Should `--duration-min 10 --branch main` mean "AND" (duration >= 10 AND branch == 'main')?
-- Or "OR" (duration >= 10 OR branch == 'main')?
-
-**Working Assumption:**
-- Filters combine with AND logic (all conditions must be true)
-- Most user-friendly for narrowing results
-
-### Partial String Matching
-
-**Task note:** "Could support partial string matching on fields"
-
-**Ambiguity:** Which fields? Which pattern syntax? Glob? Regex? Case-sensitive?
+**Ambiguity:** What should statistics return if there are zero runs?
+- Option A: Return all zeros
+- Option B: Return None or special "no data" object
+- Option C: Return error
 
 **Working Assumption:**
-- Optional "could have" feature
-- If implemented: case-insensitive substring matching on `workflow_name` and `branch`
-- Can be deferred to later; not blocking for "must have" requirements
+- Return report with count=0, average=0, min=None, max=None
+- No error; graceful handling of empty data
 
-### Attempts Presence Filter
+### Ambiguity 3: Scope of "Per-Status" Statistics
 
-**Ambiguity:** Should filter be:
-1. "runs WITH attempts" (run_id exists in attempts list)?
-2. "runs WITHOUT attempts" (run_id not in attempts list)?
-3. Both (toggle)?
+**Task says "Could Have: Per-status breakdown"** — distinct from per-conclusion.
+**Ambiguity:** What metrics per status?
+- Option A: Count by status (similar to conclusion)
+- Option B: Average duration by status
+- Option C: Both
 
 **Working Assumption:**
-- Support both directions via boolean flag: `filter_by_has_attempts(has_attempts: bool)`
-- In CLI: `--with-attempts` and `--without-attempts` (mutually exclusive or combined)
-- In menu: user chooses "has attempts" or "has no attempts"
+- This is "Could Have" so defer to later
+- If implemented: parallel structure to per-conclusion stats
+- Would require additional logic to group by both status and conclusion
+
+### Ambiguity 4: Should Statistics Filter Incomplete Data?
+
+**Ambiguity:** Should statistics include runs/attempts that are still in progress?
+- Option A: Include all (regardless of status/conclusion)
+- Option B: Exclude non-terminal (status != COMPLETED)
+- Option C: Separate reports for complete vs. incomplete
+
+**Working Assumption:**
+- Include all runs and attempts (complete and incomplete)
+- Non-terminal runs contribute to duration average and attempt counts
+- Separation by completion status can be added as optional filter later
+
+### Ambiguity 5: CLI Command Naming
+
+**Task doesn't specify the exact command name.**
+- Options: `stats`, `report`, `statistics`, `metrics`
+
+**Working Assumption:**
+- Use `report` as the subcommand name (shorter, clearer)
+- Keep internal class name as WorkflowStatisticsReport or StatisticsReport
 
 ---
 
@@ -375,122 +399,520 @@ elif ns.conclusion:
 
 ### IN: Must Implement
 
-1. Duration range filtering (min/max)
-2. Timestamp filtering (created/updated before/after for runs; started/completed for attempts)
-3. Presence of attempts filtering (with/without)
-4. Return filtered collections (both CLI and menu)
-5. Support combining multiple filters
-6. Timezone support (CEST/UTC+2)
-7. CLI flags and interactive menu entry points
-8. `python -m src` accessibility for all new features
+1. Count of runs grouped by conclusion value
+2. Average duration_seconds (overall and per-conclusion)
+3. Average number of attempts per run
+4. Structured report object (dataclass)
+5. Accessible via `python -m src` (both interactive menu and CLI)
+6. Both interactive (menu) and one-shot (CLI flag) access modes
 
-### OUT: Explicitly Excluded
+### IN: Should Have
 
-- GUI or graphical interface
-- Database back-end (JSON storage is requirement)
-- Real-time workflow integration (local tracking only)
-- Filtering by HTTP request (no API mode)
+1. Min/max duration_seconds in report
+2. Dataclass structure (not plain dict)
 
 ### BORDERLINE: Could Have
 
-- Partial string matching (task says "could support")
-- Additional export formats (XML, CSV)
-- Filter presets/saved filters
-- Regex pattern matching on fields
+1. Per-status breakdown of average duration
+2. Additional metrics (stddev, percentiles, etc.)
+3. Report export formats (JSON, CSV)
+4. Ability to filter statistics (e.g., stats for branch=main only)
+
+### OUT: Explicitly Excluded
+
+1. Visualization (charts, graphs)
+2. Database back-end (JSON storage only)
+3. Real-time streaming statistics
+4. Historical tracking (stats only for current data, not time-series)
+5. External API integration
 
 ---
 
-## Suggested Implementation Priorities
+## Where Statistics Should Be Computed
 
-### Priority 1: Service Layer Foundation (Highest Impact)
+### Option 1: Service Class (Recommended)
 
-1. Extend `WorkflowRunService` with range and timestamp filters:
-   - `filter_by_duration_range(min_secs, max_secs)`
-   - `filter_by_created_at_before(dt) / after(dt)`
-   - `filter_by_updated_at_before(dt) / after(dt)`
-   - `filter_by_has_attempts(has_attempts, attempt_service)`
+**File:** `src/services/workflow_statistics_service.py`
 
-2. Extend `WorkflowAttemptService` with similar methods:
-   - `filter_by_duration_range(min_secs, max_secs)`
-   - `filter_by_started_at_before(dt) / after(dt)`
-   - `filter_by_completed_at_before(dt) / after(dt)`
+**Class:**
+```python
+class WorkflowStatisticsService:
+    def __init__(
+        self,
+        workflow_run_service: WorkflowRunService,
+        workflow_attempt_service: WorkflowAttemptService,
+    ):
+        self._run_service = workflow_run_service
+        self._attempt_service = workflow_attempt_service
+    
+    def compute_report(self) -> WorkflowStatisticsReport:
+        """Compute full statistics report from all runs/attempts"""
+        ...
+    
+    def compute_report_for_runs(
+        self,
+        runs: List[WorkflowRun]
+    ) -> WorkflowStatisticsReport:
+        """Compute statistics for a filtered subset of runs"""
+        ...
+```
 
-3. Implement composite filtering (optional builder pattern or multi-method chaining)
+**Advantages:**
+- Consistent with existing architecture (follows service pattern)
+- Dependency injection of services
+- Testable in isolation
+- Can add caching/optimization later
 
-**Rationale:** Services are the core logic; everything else depends on them. Range/timestamp logic is non-trivial and must be correct at this layer.
+**Disadvantages:**
+- Slightly more code structure
 
-### Priority 2: Timezone Support (Unblocks User Input)
+### Option 2: Utility Module
 
-1. Add timezone conversion utility (accept CEST input, store UTC)
-2. Use Python `zoneinfo` or `pytz` for CEST ↔ UTC conversions
-3. Add helper functions for parsing user-supplied timestamps
+**File:** `src/utils/statistics_calculator.py`
 
-**Rationale:** Without timezone support, timestamp filters are unusable for users in CEST.
+**Functions:**
+```python
+def compute_statistics(
+    runs: List[WorkflowRun],
+    attempts: List[WorkflowRunAttempt],
+) -> WorkflowStatisticsReport:
+    ...
+```
 
-### Priority 3: CLI Enhancement (User-Facing)
+**Advantages:**
+- Simpler, lightweight
+- No class wrapping needed
+- Easier for one-shot usage
 
-1. Modify `workflow_cli.py` list command to accept all filter flags
-2. Update argparse parser to allow multiple simultaneous filters
-3. Implement AND-logic filtering in CLI handler
-4. Add timezone input support (prompt user for timezone or default to CEST)
+**Disadvantages:**
+- Mixes utilities and domain logic
+- Less aligned with existing service architecture
 
-**Rationale:** CLI is the scripting interface; must support all combinations.
-
-### Priority 4: Interactive Menu Enhancement (User-Facing)
-
-1. Extend `_filter_menu()` to offer all new filter types
-2. Support multi-step filter construction (allow user to add multiple conditions)
-3. Add prompts for duration ranges, timestamp ranges, timezone
-4. Display filter summary before executing
-
-**Rationale:** Menu should match CLI capability; iterative filter building improves UX.
-
-### Priority 5: Attempts Presence Logic (Cross-Service)
-
-1. Implement logic to query attempt service and check presence
-2. Wire into both CLI and menu
-
-**Rationale:** Depends on service layer to be complete first.
-
-### Priority 6: Testing and Validation
-
-1. Unit tests for all new filter methods
-2. Integration tests for composite filters
-3. CLI tests for filter combinations
-4. Menu interaction tests (mock input)
-
-### Priority 7: Documentation Updates (Optional Polish)
-
-1. Update README with new filter examples
-2. Update class diagram if filter methods warrant it
-3. Add activity diagram for new filter flow
+**Recommendation:** Use Option 1 (Service Class) for architectural consistency.
 
 ---
 
-## Code Locations Summary
+## Report Object Design
 
-| Component | File | Key Classes/Functions |
-|-----------|------|----------------------|
-| **Domain Models** | `src/models/workflow_run.py` | WorkflowRun |
-| | `src/models/workflow_attempt.py` | WorkflowRunAttempt |
-| | `src/models/workflow_status.py` | WorkflowStatus enum |
-| | `src/models/workflow_conclusion.py` | WorkflowConclusion enum |
-| **Services** | `src/services/workflow_run_service.py` | WorkflowRunService (filter_by_*) |
-| | `src/services/workflow_attempt_service.py` | WorkflowAttemptService (filter_by_*) |
-| | `src/services/workflow_run_tracker.py` | WorkflowRunTracker |
-| | `src/services/workflow_attempt_tracker.py` | WorkflowAttemptTracker |
-| **Storage** | `src/storage/workflow_json_storage.py` | WorkflowJsonStorage |
-| | `src/storage/workflow_attempt_json_storage.py` | WorkflowAttemptJsonStorage |
-| **CLI** | `src/cli/workflow_cli.py` | build_parser(), run_cli() |
-| **Menu** | `src/cli/interactive_menu.py` | run_interactive(), _filter_menu() |
-| **Entry** | `src/__main__.py` | main() dispatcher |
+### Recommended Dataclass Structure
+
+**File:** `src/models/workflow_statistics_report.py` (new)
+
+```python
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Dict, Optional
+
+@dataclass
+class WorkflowStatisticsReport:
+    # Run counts
+    total_runs: int
+    conclusion_counts: Dict[Optional[str], int]
+    
+    # Duration statistics
+    average_duration_seconds: float
+    min_duration_seconds: Optional[float]
+    max_duration_seconds: Optional[float]
+    duration_by_conclusion: Dict[Optional[str], float]
+    
+    # Attempt statistics
+    total_attempts: int
+    average_attempts_per_run: float
+    runs_with_no_attempts: int
+    runs_with_attempts: int
+    
+    # Metadata
+    generated_at: datetime
+    
+    def to_dict(self) -> dict:
+        """Serialize for JSON output"""
+        return {
+            'total_runs': self.total_runs,
+            'conclusion_counts': {
+                str(k) if k is not None else 'incomplete': v
+                for k, v in self.conclusion_counts.items()
+            },
+            'average_duration_seconds': self.average_duration_seconds,
+            'min_duration_seconds': self.min_duration_seconds,
+            'max_duration_seconds': self.max_duration_seconds,
+            'duration_by_conclusion': {
+                str(k) if k is not None else 'incomplete': v
+                for k, v in self.duration_by_conclusion.items()
+            },
+            'total_attempts': self.total_attempts,
+            'average_attempts_per_run': self.average_attempts_per_run,
+            'runs_with_no_attempts': self.runs_with_no_attempts,
+            'runs_with_attempts': self.runs_with_attempts,
+            'generated_at': self.generated_at.isoformat(),
+        }
+```
 
 ---
 
-## Next Steps for System Architect / Implementer
+## Files That Need to Be Modified/Created
 
-1. **Design filter composition pattern** — decide on method chaining, builder, or multi-filter method
-2. **Define timezone library** — zoneinfo (Python 3.9+) or pytz
-3. **Sketch CLI argument structure** — how to express duration ranges, timestamp ranges
-4. **Plan menu UX** — how to guide user through multi-filter selection
-5. **Mock test data** — create workflow runs and attempts with various duration/timestamp values for testing
+### New Files to Create
+
+1. **src/models/workflow_statistics_report.py** (NEW)
+   - Define WorkflowStatisticsReport dataclass
+   - Add to_dict(), from_dict() methods
+
+2. **src/services/workflow_statistics_service.py** (NEW)
+   - Define WorkflowStatisticsService class
+   - Implement compute_report() method
+   - Use WorkflowRunService and WorkflowAttemptService
+
+### Files to Modify
+
+1. **src/cli/workflow_cli.py**
+   - Add `report` subparser in build_parser()
+   - Add handler in run_cli() for report command
+   - Format and print results
+
+2. **src/cli/interactive_menu.py**
+   - Add _view_statistics() handler function
+   - Add menu option to main menu or submenu
+   - Format and display results
+
+3. **src/__main__.py**
+   - Initialize WorkflowStatisticsService
+   - Pass to both CLI and interactive menu interfaces
+
+4. **src/models/__init__.py**
+   - Export WorkflowStatisticsReport
+
+5. **src/services/__init__.py**
+   - Export WorkflowStatisticsService
+
+6. **tests/** (multiple new test files)
+   - test_workflow_statistics_service.py
+   - test_workflow_statistics_report.py
+
+7. **artifacts/class_diagram.puml**
+   - Add WorkflowStatisticsReport class
+   - Add WorkflowStatisticsService class
+   - Show relationships to other classes
+
+---
+
+## Entry Points to Modify
+
+### src/__main__.py
+
+**Current code:**
+```python
+def main() -> None:
+    storage = WorkflowJsonStorage("artifacts/workflow_runs.json")
+    service = WorkflowRunService(storage)
+    attempt_storage = WorkflowAttemptJsonStorage("artifacts/workflow_attempts.json")
+    attempt_service = WorkflowAttemptService(attempt_storage)
+    
+    if len(sys.argv) == 1:
+        run_interactive(service, attempt_service)
+    else:
+        run_cli(service, attempt_service)
+```
+
+**Changes needed:**
+```python
+def main() -> None:
+    storage = WorkflowJsonStorage("artifacts/workflow_runs.json")
+    service = WorkflowRunService(storage)
+    attempt_storage = WorkflowAttemptJsonStorage("artifacts/workflow_attempts.json")
+    attempt_service = WorkflowAttemptService(attempt_storage)
+    
+    # NEW: Initialize statistics service
+    stats_service = WorkflowStatisticsService(service, attempt_service)
+    
+    if len(sys.argv) == 1:
+        run_interactive(service, attempt_service, stats_service)
+    else:
+        run_cli(service, attempt_service, stats_service)
+```
+
+### src/cli/workflow_cli.py
+
+**Changes needed:**
+1. Import WorkflowStatisticsService
+2. Add `report` subparser in build_parser()
+3. Add handler in run_cli() dispatch (elif ns.command == "report")
+4. Format output (text or JSON)
+
+**Example CLI command to support:**
+```bash
+python -m src report                      # Compute and display
+python -m src report --format json        # JSON output
+python -m src report --format text        # Human-readable output
+```
+
+### src/cli/interactive_menu.py
+
+**Changes needed:**
+1. Import WorkflowStatisticsService
+2. Add _view_statistics() function
+3. Add menu option in main menu or runs submenu
+4. Format and display results
+
+**Example menu option:**
+```
+Main Menu:
+  1. Workflow Runs
+  2. Workflow Attempts
+  3. View Statistics        <- NEW
+  4. Exit
+```
+
+---
+
+## Calculation Details
+
+### Conclusion Counts
+
+**Algorithm:**
+```python
+def compute_conclusion_counts(runs: List[WorkflowRun]) -> Dict[Optional[str], int]:
+    counts = {}
+    for run in runs:
+        conclusion_key = run.conclusion.value if run.conclusion else None
+        counts[conclusion_key] = counts.get(conclusion_key, 0) + 1
+    return counts
+```
+
+### Average Duration
+
+**Algorithm:**
+```python
+def compute_average_duration(runs: List[WorkflowRun]) -> float:
+    if not runs:
+        return 0.0
+    return sum(r.duration_seconds for r in runs) / len(runs)
+
+def compute_duration_by_conclusion(runs: List[WorkflowRun]) -> Dict[Optional[str], float]:
+    by_conclusion = {}
+    for run in runs:
+        conclusion_key = run.conclusion.value if run.conclusion else None
+        if conclusion_key not in by_conclusion:
+            by_conclusion[conclusion_key] = []
+        by_conclusion[conclusion_key].append(run.duration_seconds)
+    
+    averages = {}
+    for conclusion_key, durations in by_conclusion.items():
+        averages[conclusion_key] = sum(durations) / len(durations) if durations else 0.0
+    return averages
+```
+
+### Min/Max Duration
+
+**Algorithm:**
+```python
+def compute_min_max_duration(runs: List[WorkflowRun]) -> (Optional[float], Optional[float]):
+    if not runs:
+        return None, None
+    durations = [r.duration_seconds for r in runs]
+    return min(durations), max(durations)
+```
+
+### Average Attempts per Run
+
+**Algorithm:**
+```python
+def compute_average_attempts_per_run(
+    runs: List[WorkflowRun],
+    attempt_service: WorkflowAttemptService
+) -> float:
+    if not runs:
+        return 0.0
+    
+    total_attempts = 0
+    runs_with_attempts = 0
+    
+    for run in runs:
+        attempts = attempt_service.filter_by_run_id(run.id)
+        total_attempts += len(attempts)
+        if attempts:
+            runs_with_attempts += 1
+    
+    return total_attempts / len(runs) if runs else 0.0
+```
+
+---
+
+## Summary of Changes
+
+| Component | File | Type | Description |
+|-----------|------|------|-------------|
+| **Models** | src/models/workflow_statistics_report.py | NEW | Dataclass for report structure |
+| **Services** | src/services/workflow_statistics_service.py | NEW | Computation logic |
+| **CLI** | src/cli/workflow_cli.py | MODIFY | Add `report` subcommand |
+| **Menu** | src/cli/interactive_menu.py | MODIFY | Add statistics menu option |
+| **Entry** | src/__main__.py | MODIFY | Initialize statistics service |
+| **Models Init** | src/models/__init__.py | MODIFY | Export WorkflowStatisticsReport |
+| **Services Init** | src/services/__init__.py | MODIFY | Export WorkflowStatisticsService |
+| **Tests** | tests/test_workflow_statistics_service.py | NEW | Unit tests for service |
+| **Tests** | tests/test_workflow_statistics_report.py | NEW | Unit tests for dataclass |
+| **Diagrams** | artifacts/class_diagram.puml | MODIFY | Add new classes |
+| **Diagrams** | artifacts/use_case_diagram.puml | MODIFY | Add statistics use case |
+
+---
+
+## Current Data Model and How Runs/Attempts Are Stored
+
+### WorkflowRun Storage Pattern
+
+**Memory:**
+- WorkflowRunService maintains `_runs: List[WorkflowRun]`
+- Loaded from JSON storage on service initialization
+- All modifications persisted via _persist() → storage.save()
+
+**JSON Format (artifacts/workflow_runs.json):**
+```json
+[
+  {
+    "id": "run-123",
+    "workflow_name": "CI",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T10:00:00",
+    "updated_at": "2026-05-03T10:05:00",
+    "run_number": 42,
+    "commit_sha": "abc123...",
+    "duration_seconds": 300.5
+  }
+]
+```
+
+### WorkflowRunAttempt Storage Pattern
+
+**Memory:**
+- WorkflowAttemptService maintains `_attempts: List[WorkflowRunAttempt]`
+- Loaded from JSON storage on service initialization
+- All modifications persisted via _persist() → storage.save()
+
+**JSON Format (artifacts/workflow_attempts.json):**
+```json
+[
+  {
+    "id": "attempt-456",
+    "run_id": "run-123",
+    "attempt_number": 1,
+    "status": "completed",
+    "conclusion": "failure",
+    "started_at": "2026-05-03T10:00:00",
+    "completed_at": "2026-05-03T10:02:30",
+    "duration_seconds": 150.0,
+    "logs_url": "https://..."
+  }
+]
+```
+
+---
+
+## Current CLI/Menu Structure
+
+### CLI Command Structure (src/cli/workflow_cli.py)
+
+**Subcommands:**
+- `add` — Add new run (required flags: --name, --branch, --status; optional: --conclusion, --id, etc.)
+- `list` — List runs with optional filters (--branch, --status, --conclusion, --duration-min, --duration-max, etc.)
+- `detail <run_id>` — Get single run
+- `query-state <run_id>` — Query terminal/running/successful/failed/cancelled flags
+- `attempt add/list/detail/query-state` — Attempt management subcommands
+
+**Entry:**
+- Parser built in build_parser()
+- Dispatch in run_cli() with ns.command if/elif chain
+- No subcommand required yet; args must start with command name
+
+### Interactive Menu Structure (src/cli/interactive_menu.py)
+
+**Main Menu Options:**
+1. Workflow Runs — submenu
+2. Workflow Attempts — submenu
+3. Exit
+
+**Runs Submenu:**
+1. Add workflow run
+2. List all runs
+3. Get run detail
+4. Advanced filter runs
+5. Query workflow state
+6. Back
+
+**Attempts Submenu:**
+1. Add workflow attempt
+2. List all attempts
+3. Get attempt detail
+4. Advanced filter attempts
+5. Query attempt state
+6. Back
+
+**Control Flow:**
+- run_interactive() loop displays menu
+- User selects option (numeric input)
+- Handler function called with service instances
+- Returns to menu after handler completes
+
+---
+
+## Implementation Notes and Edge Cases
+
+### Edge Case 1: Zero Runs
+
+**Scenario:** No runs exist in the system
+**Expected:** Report with:
+- total_runs = 0
+- All averages = 0.0
+- Min/max = None
+- conclusion_counts = {} (empty)
+
+### Edge Case 2: All Runs Have None Conclusion
+
+**Scenario:** All runs are non-terminal (in progress, queued, etc.)
+**Expected:**
+- conclusion_counts = {None: <count>}
+- duration_by_conclusion = {None: <avg>}
+
+### Edge Case 3: Runs Without Attempts
+
+**Scenario:** Some runs have no associated attempts
+**Expected:**
+- total_attempts counted correctly
+- average_attempts_per_run includes runs with 0 attempts
+- runs_with_no_attempts > 0
+
+### Edge Case 4: Runs With Different Attempt Counts
+
+**Scenario:**
+- Run A: 3 attempts
+- Run B: 1 attempt
+- Run C: 0 attempts
+- Total: 4 runs, 4 attempts
+
+**Expected:**
+- average_attempts_per_run = 4 / 4 = 1.0
+- runs_with_attempts = 2
+- runs_with_no_attempts = 1
+
+### Edge Case 5: Duration Edge Values
+
+**Scenario:** Some durations are 0.0, some are very large
+**Expected:**
+- min_duration_seconds = 0.0
+- max_duration_seconds = <max_value>
+- average includes all values fairly
+
+---
+
+## Next Steps for Implementation
+
+1. **Create WorkflowStatisticsReport dataclass** (src/models/)
+2. **Create WorkflowStatisticsService class** (src/services/)
+3. **Implement compute_report() with all calculations**
+4. **Add CLI subcommand** (workflow_cli.py)
+5. **Add interactive menu option** (interactive_menu.py)
+6. **Wire services in __main__.py**
+7. **Write comprehensive unit tests**
+8. **Update class diagram**
+9. **Test end-to-end via `python -m src`**
+

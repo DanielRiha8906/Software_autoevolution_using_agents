@@ -1,0 +1,38 @@
+[
+  {
+    "id": "6dc384d0-b886-4bf4-b4fc-18536c29e791",
+    "workflow_name": "Test CI",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "success",
+    "created_at": "2026-05-03T18:58:39.237134+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 100.5
+  },
+  {
+    "id": "698d6dac-980e-45be-bc61-9870b68cb9ce",
+    "workflow_name": "Test CI",
+    "branch": "main",
+    "status": "completed",
+    "conclusion": "failure",
+    "created_at": "2026-05-03T18:58:40.876398+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 50.0
+  },
+  {
+    "id": "7b6fa408-81fc-4cb5-a4fc-8248186a043f",
+    "workflow_name": "Test CI",
+    "branch": "dev",
+    "status": "in_progress",
+    "conclusion": null,
+    "created_at": "2026-05-03T18:58:42.427524+00:00",
+    "updated_at": null,
+    "run_number": null,
+    "commit_sha": null,
+    "duration_seconds": 25.0
+  }
+]
