@@ -58,6 +58,15 @@ package "services" #DDFFD4 {
         +calculate(op: Operation, a: float, b: float) : float
     }
 
+    class ScientificCalculator {
+        +sin(x: float) : float
+        +cos(x: float) : float
+        +tan(x: float) : float
+        +log(x: float) : float
+        +ln(x: float) : float
+        +exp(x: float) : float
+    }
+
     class CalculatorService {
         -calculator : Calculator
         -storage : JsonStorage
@@ -127,6 +136,8 @@ package "cli" #FFE5E5 {
         -showHistory() : void
     }
 }
+
+ScientificCalculator --|> Calculator : extends
 
 CalculatorCLI --> CalculatorService : service
 CalculatorService --> Calculator : calculator

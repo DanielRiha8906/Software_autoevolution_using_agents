@@ -403,3 +403,93 @@ Duration: 561.7s | Cost: $3.848208 USD | Turns: 36
 ✓ No external dependencies (uses stdlib json, pathlib, typing)
 
 Duration: 544.5s | Cost: $1.126526 USD | Turns: 64
+
+---
+
+# Task 08: ScientificCalculator Implementation
+
+## Broadcast Evaluation Summary
+
+### Candidates Evaluated
+- **Implementer-A**: Implemented ScientificCalculator extending Calculator with inheritance pattern. Created 6 scientific methods (sin, cos, tan, log, ln, exp) using math module. Proper error handling for log domain. Result: 9/9 scientific tests, 105/105 total tests.
+- **Implementer-B**: Found existing implementation on main branch (from Implementer-A's work). Verified all 9/9 scientific tests and 105/105 total tests passing.
+- **Implementer-C**: Implemented identical solution to Implementer-A using same inheritance pattern. Result: 9/9 scientific tests, 105/105 total tests.
+
+### Winner Selection
+**Implementer-A** (implementation merged) - All three candidates produced identical, correct implementations with 9/9 scientific tests passing. Selected A as primary implementation for consistency.
+
+### Files Changed
+1. **Created**: `src/services/scientific_calculator.py`
+   - ScientificCalculator class extending Calculator
+   - 6 scientific methods: sin(x), cos(x), tan(x), log(x), ln(x), exp(x)
+   - Proper error handling for log domain (raises Exception for x ≤ 0)
+   - Full docstrings for each method
+
+2. **Created**: `tests/test_scientific_calculator.py`
+   - 9 test cases covering all scientific operations
+   - Tests for error conditions (log of non-positive numbers)
+   - Tests verify standard operations still work (inheritance check)
+
+3. **Modified**: `src/__main__.py`
+   - Added --scientific flag for one-shot CLI execution
+   - Added _run_scientific(operation, x) helper function
+   - Imported ScientificCalculator class
+   - Updated help/usage text to include --scientific flag
+
+4. **Modified**: `src/cli/calculator_cli.py`
+   - Added _run_scientific_menu() for interactive scientific submenu
+   - Updated run_interactive() to handle new menu option 10
+   - Updated _print_menu() to display scientific operations option
+   - Integrated ScientificCalculator for interactive use
+
+5. **Modified**: `tests/test_cli.py`
+   - Updated all 6 interactive tests to use new menu option numbers
+   - Exit option moved from 10 to 11 (scientific operations now 10)
+   - All tests re-verified and passing
+
+6. **Modified**: `artifacts/class_diagram.puml`
+   - Added ScientificCalculator class with 6 methods
+   - Added inheritance relationship: ScientificCalculator --|> Calculator
+
+7. **Modified**: `artifacts/use_case_diagram.puml`
+   - Added "Perform scientific calculation" use case
+   - Now includes separate basic and scientific calculation use cases
+
+### Implementation Details
+1. **Inheritance Pattern**: ScientificCalculator extends Calculator, reusing all basic operations without reimplementation
+2. **Scientific Methods**: sin, cos, tan use math module directly (accept radians)
+3. **Logarithmic Functions**:
+   - log(x) returns base-10 logarithm using math.log10()
+   - Raises Exception for x ≤ 0
+   - ln(x) returns natural logarithm using math.log()
+4. **Exponential**: exp(x) returns e^x using math.exp()
+5. **Error Handling**: Domain errors properly raised as exceptions for validation
+
+### CLI Integration
+- **One-shot mode**: `python -m src --scientific {sin,cos,tan,log,ln,exp} X`
+  - Example: `python -m src --scientific sin 0` → 0.0
+  - Example: `python -m src --scientific log 100` → 2.0
+  - Example: `python -m src --scientific log 0` → Error: Logarithm is undefined for non-positive numbers
+- **Interactive mode**: Menu option 10 provides scientific operation submenu with 6 operations
+
+### Test Results
+- Scientific calculator tests: **9/9 passed**
+- Full test suite: **105/105 passed** (96 existing + 9 new)
+- CLI menu tests: All 6 updated tests passing
+- Error handling verified: log(non-positive) raises proper exceptions
+
+### Requirements Met
+✓ ScientificCalculator class created and extends Calculator
+✓ All 6 scientific methods implemented (sin, cos, tan, log, ln, exp)
+✓ Proper error handling (log raises Exception for non-positive input)
+✓ Uses only Python standard library (math module)
+✓ Reuses Calculator logic without reimplementation
+✓ Follows existing method style and conventions
+✓ All provided test cases pass
+✓ All existing tests still pass (105/105)
+✓ Code compiles without syntax or import errors
+✓ Accessible via python -m src (both --scientific flag and interactive menu)
+✓ UML diagrams updated (class diagram, use case diagram)
+✓ Interactive menu integration with submenu for scientific operations
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
