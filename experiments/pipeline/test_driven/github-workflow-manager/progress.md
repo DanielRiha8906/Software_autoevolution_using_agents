@@ -122,3 +122,53 @@ Introduced `WorkflowRunAttempt` as a first-class domain object representing indi
 5. UML Designer — Updated class and component diagrams
 
 Duration: 290.5s | Cost: $0.464970 USD | Turns: 16
+
+---
+
+## Task 04: Implement AttemptService
+
+**Status:** ✅ COMPLETE
+
+**Summary:**
+Implemented `AttemptService` as a service layer managing the lifecycle of `WorkflowRunAttempt` objects with in-memory storage. The service enforces uniqueness of `(run_id, attempt_number)` pairs and provides deterministic retrieval sorted by attempt number.
+
+**Files Changed:**
+- `src/services/attempt_service.py` — Created new AttemptService class with 2 public methods
+- `src/services/__init__.py` — Added AttemptService to imports and exports
+- `tests/test_attempt_service.py` — Created with 6 test cases (all passing)
+- `artifacts/class_diagram.puml` — Added AttemptService class and relationship to WorkflowRunAttempt
+- `artifacts/component_diagram.puml` — Added AttemptService component to service layer
+
+**Test Results:**
+- All 6 new tests: ✅ PASS
+- All 36 existing tests: ✅ PASS
+- Total: 42/42 tests passed
+
+**Implementation Details:**
+1. Added `AttemptService` class with `__init__()` initializing `self._attempts: List[WorkflowRunAttempt]`
+2. Implemented `create(attempt: WorkflowRunAttempt) -> WorkflowRunAttempt` method:
+   - Validates `(run_id, attempt_number)` uniqueness
+   - Raises `ValueError` on duplicate
+   - Stores and returns the attempt
+3. Implemented `get_by_run_id(run_id: int) -> List[WorkflowRunAttempt]` method:
+   - Filters attempts by run_id
+   - Returns list sorted by attempt_number in ascending order
+   - Returns empty list if no attempts found
+4. In-memory storage only — no file I/O, no JSON serialization
+5. No external storage dependencies
+
+**Key Features:**
+- Pure in-memory storage via Python list
+- Uniqueness constraint enforced on insert
+- Deterministic sorted retrieval by attempt_number
+- No persistence layer required
+- Clean service layer separation from storage
+
+**Pipeline Execution:**
+1. Data Analyst — Analyzed WorkflowRunAttempt model and service layer patterns
+2. System Architect — Designed in-memory service with uniqueness enforcement
+3. Programmer — Implemented AttemptService with create() and get_by_run_id() methods
+4. Pytest-Tester — Created and ran test suite (6 new tests + 36 existing all pass)
+5. UML Designer — Updated class and component diagrams
+
+Duration: 349.3s | Cost: $0.588775 USD | Turns: 17
