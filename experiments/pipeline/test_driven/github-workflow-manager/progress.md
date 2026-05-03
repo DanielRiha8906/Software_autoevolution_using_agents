@@ -456,4 +456,4 @@ Implemented `GitHubFetchService` to retrieve workflow runs directly from GitHub 
 4. Pytest-Tester — Wrote 8 tests, ran full suite (91/91 pass), found and fixed 2 bugs
 5. UML Designer — Updated class and component diagrams
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 494.2s | Cost: $0.873044 USD | Turns: 16
