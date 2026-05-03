@@ -473,4 +473,4 @@ Duration: 503.9s | Cost: $1.046996 USD | Turns: 14
   - CLI: `python -m src export [--file PATH]` and `python -m src import --file PATH [--strategy skip|replace]`
   - Both modes fully functional and tested
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 835.0s | Cost: $1.889681 USD | Turns: 18
