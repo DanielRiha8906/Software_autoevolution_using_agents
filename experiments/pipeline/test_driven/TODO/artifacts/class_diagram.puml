@@ -22,6 +22,13 @@ package "models" #DDEEFF {
         +__post_init__() : void
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : Task
+        +mark_in_progress() : void
+        +mark_done() : void
+        +reopen() : void
+        +is_completed() : bool
+        +is_pending() : bool
+        +is_in_progress() : bool
+        +is_overdue() : bool
     }
 }
 
