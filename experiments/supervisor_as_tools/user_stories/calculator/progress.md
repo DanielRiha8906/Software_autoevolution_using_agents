@@ -163,4 +163,4 @@ Duration: 578.3s | Cost: $1.043396 USD | Turns: 27
 - No breaking changes to existing CalculationService or storage APIs
 - Backward compatible with CalculationResult legacy format
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 153.5s | Cost: $0.324552 USD | Turns: 17
