@@ -726,4 +726,4 @@ One-shot flags:
 - Tasks without projects remain fully functional
 - Project deletion unassigns tasks rather than deleting them
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 808.6s | Cost: $2.048400 USD | Turns: 37
