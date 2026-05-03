@@ -93,4 +93,4 @@ All tests pass including:
 **Won't Have (Not Applicable):**
 - Enum modifications — working with existing definitions
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 371.8s | Cost: $0.673735 USD | Turns: 17
