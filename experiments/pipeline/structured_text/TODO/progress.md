@@ -738,4 +738,4 @@ All 6 diagram types updated to reflect project functionality:
 
 ### Duration, Cost, Turns
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 820.0s | Cost: $1.951108 USD | Turns: 22
