@@ -63,3 +63,39 @@ All three candidates achieved identical test scores (28/28) with equivalent impl
 ✅ All 28 tests passing (8 existing + 11 new state-checking tests + 9 other tests)
 
 Duration: 160.4s | Cost: $0.531371 USD | Turns: 51
+
+---
+
+# Task 03: Create WorkflowRunAttempt model
+
+## Broadcast Results
+
+### Candidate A
+**Approach:** Failed to create implementation. No files generated on branch broadcast-candidate-a.
+
+**Test Score:** 0/8 passed
+
+### Candidate B
+**Approach:** Created `WorkflowRunAttempt` dataclass with fields: `id`, `run_id`, `attempt_number`, `status`, `conclusion`, `created_at`, `duration_seconds`. Implemented `__post_init__()` validation to enforce `attempt_number >= 1` and CEST timezone for `created_at`. Implemented `to_dict()` and `from_dict()` with ISO serialization for proper timezone round-trip.
+
+**Test Score:** 8/8 passed
+
+### Candidate C
+**Approach:** Created identical implementation to Candidate B with all fields, validation, and serialization support. All tests passing.
+
+**Test Score:** 8/8 passed
+
+## Winner: Candidate B
+
+Candidates B and C produced identical implementations with 8/8 test passes. Candidate A failed to create the implementation. Candidate B was selected as the winner and representative solution due to being the first successful candidate.
+
+## Files Changed
+- `src/models/workflow_run_attempt.py` — New file: WorkflowRunAttempt dataclass with validation and serialization
+- `src/models/__init__.py` — Added WorkflowRunAttempt import/export
+- `tests/test_workflow_run_attempt.py` — New file: Test suite for WorkflowRunAttempt (8 tests)
+- `artifacts/class_diagram.puml` — Updated to include WorkflowRunAttempt class and relationship to WorkflowRun
+
+## Test Result
+✅ All 36 tests passing (8 new WorkflowRunAttempt tests + 28 existing tests)
+
+Duration: 215.5s | Cost: $0.493351 USD | Turns: 49
