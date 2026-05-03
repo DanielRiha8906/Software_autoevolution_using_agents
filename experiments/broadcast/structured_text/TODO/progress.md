@@ -343,4 +343,4 @@ One-shot flags:
 - No regressions in existing functionality
 - Timezone normalization verified through datetime comparison logic
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 723.9s | Cost: $1.555893 USD | Turns: 49
