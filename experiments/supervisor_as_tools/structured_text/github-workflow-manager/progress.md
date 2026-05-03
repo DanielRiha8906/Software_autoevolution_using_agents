@@ -528,4 +528,4 @@ Successfully implemented GitHub Actions integration to fetch workflow runs direc
 - Interactive menu: Prompt handling, preview display, confirmation flow, error display
 - All 163 tests pass with no regressions (140 existing + 23 signature updates)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 862.7s | Cost: $1.845942 USD | Turns: 27
