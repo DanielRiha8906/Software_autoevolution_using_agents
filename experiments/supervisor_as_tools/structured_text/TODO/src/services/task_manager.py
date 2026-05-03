@@ -93,3 +93,61 @@ class TaskManager:
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task
+
+    def list_by_due_date_range(
+        self, start: Optional[datetime] = None, end: Optional[datetime] = None, status: Optional[TaskStatus] = None
+    ) -> list[Task]:
+        """Filter tasks by due_date range (inclusive).
+
+        Args:
+            start: Lower bound (inclusive). If None, no lower bound.
+            end: Upper bound (inclusive). If None, no upper bound.
+            status: Optional status filter.
+
+        Returns:
+            List of tasks with due_date in range, excluding tasks without due_date.
+            If start > end, returns empty list.
+        """
+        if start is not None and end is not None and start > end:
+            return []
+
+        result = []
+        for task in self._tasks.values():
+            # Exclude tasks without a due_date
+            if task.due_date is None:
+                continue
+
+            # Check bounds
+            if start is not None and task.due_date < start:
+                continue
+            if end is not None and task.due_date > end:
+                continue
+
+            # Check status filter if provided
+            if status is not None and task.status != status:
+                continue
+
+            result.append(task)
+
+        return result
+
+    def list_overdue(self, status: Optional[TaskStatus] = None) -> list[Task]:
+        """Return only tasks where is_overdue() returns True.
+
+        Args:
+            status: Optional status filter.
+
+        Returns:
+            List of overdue tasks, optionally filtered by status.
+        """
+        result = []
+        for task in self._tasks.values():
+            if not task.is_overdue():
+                continue
+
+            if status is not None and task.status != status:
+                continue
+
+            result.append(task)
+
+        return result

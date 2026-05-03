@@ -122,19 +122,146 @@ class InteractiveMenu:
 
     def _do_list(self) -> None:
         _clear()
-        print("  Filter by status (leave blank for all):")
-        print("  1. pending")
-        print("  2. in progress")
-        print("  3. done")
-        print("  0. All")
-        raw = input("  > ").strip()
-        status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
-        status = status_map.get(raw)
+        print("  List Tasks — Choose filter option:\n")
+        print("  1. Filter by status")
+        print("  2. Filter by due date range")
+        print("  3. Show only overdue tasks")
+        print("  4. Combine filters (status + date range + overdue)")
+        print("  0. Show all tasks")
+        print()
+        choice = input("  > ").strip()
+
+        if choice == "0":
+            status = None
+            due_after = None
+            due_before = None
+            overdue = False
+        elif choice == "1":
+            _clear()
+            print("  Filter by status:\n")
+            print("  1. pending")
+            print("  2. in progress")
+            print("  3. done")
+            print("  0. All")
+            raw = input("  > ").strip()
+            status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
+            status = status_map.get(raw)
+            due_after = None
+            due_before = None
+            overdue = False
+        elif choice == "2":
+            _clear()
+            print("  Filter by due date range\n")
+            print("  Enter dates in format: YYYY-MM-DD HH:MM (in CEST)")
+            print("  Leave blank for no bound\n")
+            after_str = _prompt("Due after (start)")
+            before_str = _prompt("Due before (end)")
+
+            due_after = None
+            due_before = None
+            status = None
+            overdue = False
+
+            if after_str:
+                try:
+                    cest = ZoneInfo("Europe/Paris")
+                    due_after = datetime.strptime(after_str, "%Y-%m-%d %H:%M").replace(tzinfo=cest)
+                    due_after = due_after.astimezone(timezone.utc)
+                except ValueError:
+                    _clear()
+                    print("  Error: Invalid date format for due_after")
+                    input("  Press Enter to continue...")
+                    return
+
+            if before_str:
+                try:
+                    cest = ZoneInfo("Europe/Paris")
+                    due_before = datetime.strptime(before_str, "%Y-%m-%d %H:%M").replace(tzinfo=cest)
+                    due_before = due_before.astimezone(timezone.utc)
+                except ValueError:
+                    _clear()
+                    print("  Error: Invalid date format for due_before")
+                    input("  Press Enter to continue...")
+                    return
+        elif choice == "3":
+            _clear()
+            print("  Show only overdue tasks\n")
+            print("  1. All overdue")
+            print("  2. Overdue pending")
+            print("  3. Overdue in progress")
+            print("  0. Back")
+            raw = input("  > ").strip()
+            status_map = {"1": None, "2": TaskStatus.PENDING, "3": TaskStatus.IN_PROGRESS}
+            status = status_map.get(raw)
+            if raw == "0" or status is None and raw != "1":
+                return
+            due_after = None
+            due_before = None
+            overdue = True
+        elif choice == "4":
+            _clear()
+            print("  Combine filters\n")
+
+            # Status filter
+            print("  1. Filter by status:")
+            print("    1. pending")
+            print("    2. in progress")
+            print("    3. done")
+            print("    0. All")
+            raw = input("    > ").strip()
+            status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
+            status = status_map.get(raw)
+
+            # Overdue filter
+            print("\n  2. Show only overdue? (y/N): ", end="")
+            overdue = input().strip().lower() == "y"
+
+            # Date range filter
+            due_after = None
+            due_before = None
+            if not overdue:
+                print("\n  3. Filter by due date range?")
+                print("    Enter dates in format: YYYY-MM-DD HH:MM (in CEST)")
+                print("    Leave blank for no bound\n")
+                after_str = _prompt("Due after (start)", default="")
+                before_str = _prompt("Due before (end)", default="")
+
+                if after_str:
+                    try:
+                        cest = ZoneInfo("Europe/Paris")
+                        due_after = datetime.strptime(after_str, "%Y-%m-%d %H:%M").replace(tzinfo=cest)
+                        due_after = due_after.astimezone(timezone.utc)
+                    except ValueError:
+                        _clear()
+                        print("  Error: Invalid date format for due_after")
+                        input("  Press Enter to continue...")
+                        return
+
+                if before_str:
+                    try:
+                        cest = ZoneInfo("Europe/Paris")
+                        due_before = datetime.strptime(before_str, "%Y-%m-%d %H:%M").replace(tzinfo=cest)
+                        due_before = due_before.astimezone(timezone.utc)
+                    except ValueError:
+                        _clear()
+                        print("  Error: Invalid date format for due_before")
+                        input("  Press Enter to continue...")
+                        return
+        else:
+            return
 
         _clear()
-        tasks = self._service.list_tasks(status)
-        label = f"[{_STATUS_NAME[status]}]" if status else "[all]"
-        print(f"  Tasks {label}\n")
+        tasks = self._service.list_tasks(status=status, due_before=due_before, due_after=due_after, overdue=overdue)
+        filters_applied = []
+        if status:
+            filters_applied.append(_STATUS_NAME[status])
+        if due_after or due_before:
+            filters_applied.append("date range")
+        if overdue:
+            filters_applied.append("overdue")
+
+        filter_label = f" [{', '.join(filters_applied)}]" if filters_applied else " [all]"
+        print(f"  Tasks{filter_label}\n")
         if not tasks:
             print("  (none)")
         else:

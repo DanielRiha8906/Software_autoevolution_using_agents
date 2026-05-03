@@ -65,6 +65,8 @@ package "services" #DDFFD4 {
         +get(taskId: String) : Task
         +listAll() : List<Task>
         +listByStatus(status: TaskStatus) : List<Task>
+        +list_by_due_date_range(start: DateTime [0..1], end: DateTime [0..1], status: TaskStatus [0..1]) : List<Task>
+        +list_overdue(status: TaskStatus [0..1]) : List<Task>
         +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
         +setStatus(taskId: String, status: TaskStatus) : Task
         +delete(taskId: String) : void
@@ -95,7 +97,7 @@ package "services" #DDFFD4 {
         +TodoService(storage: JsonStorage [0..1])
         +addTask(title: String, description: String [0..1]) : Task
         +getTask(taskId: String) : Task
-        +listTasks(status: TaskStatus [0..1]) : List<Task>
+        +listTasks(status: TaskStatus [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1], overdue: Boolean) : List<Task>
         +startTask(taskId: String) : Task
         +completeTask(taskId: String) : Task
         +reopenTask(taskId: String) : Task
@@ -114,6 +116,7 @@ package "cli" #FFE5E5 {
         --
         +TodoCLI(storagePath: String [0..1])
         +run(argv: List<String> [0..1]) : Integer
+        -_parse_cest_datetime(date_str: String) : DateTime [0..1]
     }
 
     class InteractiveMenu {

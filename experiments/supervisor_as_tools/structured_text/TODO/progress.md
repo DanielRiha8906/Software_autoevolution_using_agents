@@ -169,3 +169,60 @@ Duration: 153.9s | Cost: $0.284884 USD | Turns: 22
 - All diagrams updated to reflect new CommentsService, relationships, and exception handling
 
 Duration: 441.1s | Cost: $0.832739 USD | Turns: 17
+
+---
+
+## Task 05: Add due date and overdue filtering to task queries
+
+### Status: COMPLETED ✓
+
+### Files Changed
+- `src/services/task_manager.py` — Added list_by_due_date_range() and list_overdue() methods
+- `src/services/todo_service.py` — Extended list_tasks() with due_before, due_after, and overdue parameters
+- `src/cli/todo_cli.py` — Added --due-before, --due-after, --overdue flags to list subcommand; added _parse_cest_datetime() helper
+- `src/cli/interactive_menu.py` — Enhanced _do_list() with submenu for filtering by status, due date range, and overdue
+- `tests/test_task_manager.py` — Added 13 new tests for filtering methods
+- `tests/test_todo_service.py` — Added 11 new tests for extended list_tasks()
+- `tests/test_todo_cli.py` — Added 8 new tests for CLI flags
+- `artifacts/class_diagram.puml` — Updated to show new filtering methods and extended signatures
+- `artifacts/use_case_diagram.puml` — Added "Filter by due date range" and "View overdue tasks" use cases
+- `artifacts/activity_diagram.puml` — Enhanced list/filter activity with detailed filter type options
+
+### Test Results
+- **Total tests: 150**
+- **Passed: 150**
+- **Failed: 0**
+- **Success rate: 100%**
+
+### Requirements Met
+✓ MUST: Extend task query interface with due date range filters (before/after datetime)
+✓ MUST: Extend task query interface with overdue status filter
+✓ MUST: Return filtered collections consistent with existing list_tasks format
+✓ MUST: Overdue detection uses current CEST time (UTC+2)
+✓ MUST: All functionality accessible via python -m src (interactive menu + CLI flags)
+✓ SHOULD: Support combining new filters with existing status filter in single call
+✓ SHOULD: Preserve existing list_tasks(status=...) behavior unchanged
+
+### Implementation Summary
+- TaskManager now provides two new methods:
+  - list_by_due_date_range(start, end, status): filters tasks by due_date range with inclusive bounds
+  - list_overdue(status): returns tasks where is_overdue() == True
+- TodoService.list_tasks() extended to accept optional parameters: due_before, due_after, overdue
+  - Filtering priority: overdue > date range > status > all
+  - Backward compatible: existing calls (no params or status only) work unchanged
+- TodoCLI.list command enhanced with three new flags:
+  - --due-before: filter tasks due on or before datetime (YYYY-MM-DD HH:MM CEST format)
+  - --due-after: filter tasks due on or after datetime
+  - --overdue: show only overdue tasks
+  - Added _parse_cest_datetime() helper to convert CEST strings to UTC
+- InteractiveMenu._do_list() expanded with submenu supporting:
+  - Option 1: Filter by status (pending/in_progress/done/all)
+  - Option 2: Filter by due date range (start/end in YYYY-MM-DD HH:MM CEST)
+  - Option 3: Show only overdue tasks
+  - Option 4: Combine filters (status + date range + overdue)
+  - Option 0: Show all tasks
+- All filtering uses CEST timezone (Europe/Paris) for user-facing dates
+- Boundary dates are inclusive; tasks without due_date excluded from range filters
+- Error handling for invalid date formats with graceful fallback and user feedback
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
