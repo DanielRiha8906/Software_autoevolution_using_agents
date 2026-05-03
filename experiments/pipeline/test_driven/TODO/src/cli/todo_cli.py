@@ -5,6 +5,7 @@ from typing import Optional
 
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
+from ..services.task_statistics_service import TaskStatisticsService
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
 
@@ -97,6 +98,10 @@ class TodoCLI:
         p_delete.add_argument("id", help="Task ID")
         p_delete.set_defaults(func=self._cmd_delete)
 
+        # statistics
+        p_stats = sub.add_parser("statistics", help="Show task statistics")
+        p_stats.set_defaults(func=self._cmd_statistics)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -177,4 +182,20 @@ class TodoCLI:
         task = self._service.get_task(args.id)
         self._service.delete_task(args.id)
         print(f"Deleted {task.id[:8]}  {task.title}")
+        return 0
+
+    def _cmd_statistics(self, args: argparse.Namespace) -> int:
+        stats_service = TaskStatisticsService(self._service)
+        stats = stats_service.compute()
+
+        print("\nTask Statistics")
+        print("=" * 40)
+        print(f"Total tasks:       {stats.total}")
+        print(f"Pending:           {stats.count_per_status.get(TaskStatus.PENDING, 0)}")
+        print(f"In Progress:       {stats.count_per_status.get(TaskStatus.IN_PROGRESS, 0)}")
+        print(f"Done:              {stats.count_per_status.get(TaskStatus.DONE, 0)}")
+        print(f"With due date:     {stats.with_due_date_count}")
+        print(f"Overdue:           {stats.overdue_count}")
+        print(f"Completion rate:   {stats.completion_rate:.1f}%")
+        print("=" * 40 + "\n")
         return 0

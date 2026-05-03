@@ -5,6 +5,7 @@ from typing import Optional
 from ..models.task import Task, CEST
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
+from ..services.task_statistics_service import TaskStatisticsService
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
 
@@ -82,6 +83,8 @@ class InteractiveMenu:
                 self._do_delete(tasks)
             elif choice == "7":
                 self._do_filter_due_date()
+            elif choice == "8":
+                self._do_statistics()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -109,6 +112,7 @@ class InteractiveMenu:
         print("  5. Update task    (title / description)")
         print("  6. Delete task")
         print("  7. Filter by due date")
+        print("  8. View statistics")
         print("  0. Quit")
         print()
 
@@ -323,3 +327,22 @@ class InteractiveMenu:
                 _clear()
                 print(f"  Error parsing date: {e}")
                 input("  Press Enter to continue...")
+
+    def _do_statistics(self) -> None:
+        _clear()
+        stats_service = TaskStatisticsService(self._service)
+        stats = stats_service.compute()
+
+        print("╔════════════════════════════════════╗")
+        print("║      Task Statistics Report        ║")
+        print("╚════════════════════════════════════╝")
+        print()
+        print(f"  Total tasks:       {stats.total}")
+        print(f"  Pending:           {stats.count_per_status.get(TaskStatus.PENDING, 0)}")
+        print(f"  In Progress:       {stats.count_per_status.get(TaskStatus.IN_PROGRESS, 0)}")
+        print(f"  Done:              {stats.count_per_status.get(TaskStatus.DONE, 0)}")
+        print(f"  With due date:     {stats.with_due_date_count}")
+        print(f"  Overdue:           {stats.overdue_count}")
+        print(f"  Completion rate:   {stats.completion_rate:.1f}%")
+        print()
+        input("  Press Enter to continue...")
