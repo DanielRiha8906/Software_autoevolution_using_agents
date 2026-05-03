@@ -50,6 +50,13 @@ else (no)
         :Apply filters to history;
         :Show filtered results;
 
+      case (Statistics)
+        :Calculate statistics from history;
+        :Show total calculations;
+        :Show error rate;
+        :Show average execution time;
+        :Show operation counts;
+
       case (Operation)
         :Read operands;
 

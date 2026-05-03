@@ -23,6 +23,7 @@ class MemoryEntry:
     result: float | None
     error: str | None
     error_type: str | None
+    execution_time_ms: float = field(default=0.0)
     timestamp: str = field(default="")
     uuid: str = field(default="")
 
@@ -41,8 +42,7 @@ class MemoryEntry:
         data.setdefault("uuid", str(uuid4()))
         data.setdefault("error", None)
         data.setdefault("error_type", None)
-        # Remove fields that don't belong to MemoryEntry (backward compat)
-        data.pop("execution_time_ms", None)
+        data.setdefault("execution_time_ms", 0.0)
         return cls(**data)
 
     def __str__(self) -> str:

@@ -131,7 +131,7 @@ class TestJsonStorageBackwardCompatibility:
         assert loaded[0].error_type is None
 
     def test_load_old_format_with_execution_time_ms(self, storage):
-        """Load old format with execution_time_ms field."""
+        """Load old format with execution_time_ms field, now preserved."""
         old_data = [
             {
                 "operation": "multiply",
@@ -150,8 +150,8 @@ class TestJsonStorageBackwardCompatibility:
         assert len(loaded) == 1
         assert loaded[0].operation == "multiply"
         assert loaded[0].result == 20
-        # execution_time_ms should be discarded during from_dict
-        assert not hasattr(loaded[0], "execution_time_ms")
+        # execution_time_ms is now preserved
+        assert loaded[0].execution_time_ms == 5.5
 
     def test_load_old_format_missing_uuid(self, storage):
         """Load old format missing UUID (generates new one)."""
@@ -314,9 +314,9 @@ class TestJsonStorageRoundTrip:
     def test_roundtrip_multiple_entries(self, storage):
         """Multiple entries survive save/load cycles."""
         entries = [
-            MemoryEntry("add", 1, 2, 3, None, None, _TS, "uuid1"),
-            MemoryEntry("divide", 5, 0, None, "error", "ValueError", _TS, "uuid2"),
-            MemoryEntry("multiply", 3, 4, 12, None, None, _TS, "uuid3"),
+            MemoryEntry("add", 1, 2, 3, None, None, timestamp=_TS, uuid="uuid1"),
+            MemoryEntry("divide", 5, 0, None, "error", "ValueError", timestamp=_TS, uuid="uuid2"),
+            MemoryEntry("multiply", 3, 4, 12, None, None, timestamp=_TS, uuid="uuid3"),
         ]
         for entry in entries:
             storage.save(entry)

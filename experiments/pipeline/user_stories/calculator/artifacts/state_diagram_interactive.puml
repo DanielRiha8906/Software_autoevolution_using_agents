@@ -10,8 +10,11 @@ top to bottom direction
 Menu --> FirstOperand : operation selected
 Menu --> Feedback : history selected
 Menu --> FilterOps : filter selected
+Menu --> Statistics : statistics selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
+
+Statistics --> Feedback : statistics calculated
 
 FilterOps --> FilterState : operations chosen
 FilterOps --> Menu : cancelled

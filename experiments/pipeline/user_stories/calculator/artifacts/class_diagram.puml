@@ -25,6 +25,7 @@ package "models" #DDEEFF {
         +result : float | None
         +error : str | None
         +error_type : str | None
+        +execution_time_ms : float
         +timestamp : str
         +uuid : str
         --
@@ -48,6 +49,18 @@ package "models" #DDEEFF {
         +__str__() : str
         ..
         note on right : Legacy; retained for compatibility
+    }
+
+    class CalculationStatistics {
+        +total_calculations : int
+        +total_errors : int
+        +error_rate_percent : float
+        +operations_count : dict[str, int]
+        +average_execution_time_ms : float
+        --
+        +__post_init__() : void
+        ..
+        note on right : Aggregated metrics from\\nMemoryEntry history
     }
 }
 
@@ -89,6 +102,15 @@ package "services" #DDFFD4 {
         ..
         note on right : Wraps results with error handling;\\nsaves via MemoryService;\\ndelegate filtering
     }
+
+    class StatisticsService {
+        -memory_service : MemoryService
+        --
+        +StatisticsService(memory_service: MemoryService)
+        +calculate_statistics() : CalculationStatistics
+        ..
+        note on right : Computes aggregated metrics\\nfrom stored calculation history
+    }
 }
 
 package "storage" #FFF3CC {
@@ -107,8 +129,9 @@ package "cli" #FFE5E5 {
     class CalculatorCLI {
         -_MENU : list[tuple[Operation, str]]
         -service : CalculatorService
+        -statistics_service : StatisticsService
         --
-        +CalculatorCLI(service: CalculatorService)
+        +CalculatorCLI(service: CalculatorService, statistics_service: StatisticsService)
         +run_interactive() : void
         +run_command(operation: str, a: float, b: float) : void
         -_print_menu() : void
@@ -119,18 +142,23 @@ package "cli" #FFE5E5 {
         -_prompt_operation_selection() : list[str] | None
         -_prompt_state_selection() : str | None
         -_show_filtered_history(operations: list[str] | None, state: str | None) : void
+        -_show_statistics() : void
     }
 }
 
 CalculatorCLI --> CalculatorService : service
+CalculatorCLI --> StatisticsService : statistics_service
 CalculatorService --> Calculator : calculator
 CalculatorService --> MemoryService : memory_service
+StatisticsService --> MemoryService : memory_service
 MemoryService --> JsonStorage : storage
 
 CalculatorService ..> MemoryEntry : create, return
+StatisticsService ..> CalculationStatistics : create, return
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 CalculatorCLI ..> MemoryEntry : receive, display
+CalculatorCLI ..> CalculationStatistics : display
 Calculator ..> Operation
 MemoryService ..> MemoryEntry : store, retrieve
 JsonStorage ..> MemoryEntry : save, load

@@ -294,8 +294,8 @@ class TestMemoryEntrySerialization:
 class TestMemoryEntryBackwardCompatibility:
     """Test backward compatibility with old JSON format."""
 
-    def test_from_dict_removes_execution_time_ms(self):
-        """Old CalculationResult format had execution_time_ms field."""
+    def test_from_dict_preserves_execution_time_ms(self):
+        """Old CalculationResult format had execution_time_ms field, now preserved."""
         data = {
             "operation": "add",
             "operand_a": 3,
@@ -307,7 +307,7 @@ class TestMemoryEntryBackwardCompatibility:
         }
         entry = MemoryEntry.from_dict(data)
         assert entry.operation == "add"
-        assert not hasattr(entry, "execution_time_ms")
+        assert entry.execution_time_ms == 5.5
 
     def test_from_dict_old_format_missing_error_fields(self):
         """Old format may not have error and error_type fields."""
@@ -324,7 +324,7 @@ class TestMemoryEntryBackwardCompatibility:
         assert entry.error_type is None
 
     def test_from_dict_old_format_with_execution_time_and_missing_errors(self):
-        """Realistic old format."""
+        """Realistic old format, execution_time_ms now preserved."""
         data = {
             "operation": "multiply",
             "operand_a": 4,
@@ -339,7 +339,7 @@ class TestMemoryEntryBackwardCompatibility:
         assert entry.result == 20
         assert entry.error is None
         assert entry.error_type is None
-        assert not hasattr(entry, "execution_time_ms")
+        assert entry.execution_time_ms == 2.1
 
     def test_from_dict_does_not_mutate_input(self):
         """from_dict should not mutate the input dictionary."""
