@@ -69,3 +69,23 @@ Duration: 134.9s | Cost: $0.266895 USD | Turns: 23
 - No regressions in existing tests
 
 Duration: 112.8s | Cost: $0.254861 USD | Turns: 22
+
+## Task 05: Implement WorkflowRunService query method with filtering
+
+**Status:** ✅ Completed
+
+**Files Changed:**
+- `src/services/workflow_run_service.py` — Updated `__init__()` constructor to accept optional `attempt_service` parameter, and implemented `query()` method supporting filters for duration range, timestamp range, and attempt presence. All filters use AND logic, with timezone validation and no type conversion for run_id lookups.
+- `tests/test_workflow_run_service.py` — Added 8 new comprehensive tests covering duration filtering, timestamp filtering (created_before/created_after), attempt presence filtering, combined filters with AND logic, and edge cases (empty results, list return type verification)
+- `artifacts/class_diagram.puml` — Updated WorkflowRunService class to show new `query()` method signature and optional dependency on AttemptService
+
+**Test Results:**
+- All 14 tests pass (8 new query tests + 6 existing service tests)
+- Duration range filtering verified with min/max bounds
+- Timezone-aware datetime filtering with proper validation
+- Attempt presence filtering correctly identifies runs with/without attempts via AttemptService
+- Combined filters with AND logic verified
+- Empty list returned when no matches (not None)
+- No regressions in existing tests
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
