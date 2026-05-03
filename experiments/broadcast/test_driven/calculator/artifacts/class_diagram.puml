@@ -73,6 +73,7 @@ package "services" #DDFFD4 {
         +MemoryService()
         +store(entry: MemoryEntry) : void
         +retrieve() : List[MemoryEntry]
+        +query(operation: String [0..1], success: Boolean [0..1]) : List[MemoryEntry]
     }
 }
 
