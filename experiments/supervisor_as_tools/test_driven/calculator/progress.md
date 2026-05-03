@@ -388,4 +388,4 @@ Implemented `ScientificCalculator` class extending Calculator with six advanced 
 - Domain validation: Logarithms validate input domains, other functions accept any float
 - CLI consistency: Both interactive and one-shot modes handle all operations uniformly
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 480.8s | Cost: $0.886181 USD | Turns: 34
