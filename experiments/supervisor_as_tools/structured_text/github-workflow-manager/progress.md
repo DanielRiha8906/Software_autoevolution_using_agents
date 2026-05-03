@@ -127,3 +127,67 @@ Successfully created the `WorkflowRunAttempt` dataclass to model individual work
 - Mutual exclusivity: 3 tests validating logical constraints
 
 Duration: 281.9s | Cost: $0.472725 USD | Turns: 22
+
+## Task 04: Implement AttemptService
+
+**Status:** Completed
+
+### Summary
+Successfully implemented `AttemptService` to manage `WorkflowRunAttempt` objects with comprehensive storage, service layer, and CLI/interactive menu integration. All 109 tests pass (12 new attempt tests + 97 existing tests).
+
+### Files Changed
+- `src/storage/attempt_json_storage.py` — Created new AttemptJsonStorage class with save/load methods (mirrors WorkflowJsonStorage pattern)
+- `src/services/attempt_service.py` — Created new AttemptService class with create_attempt, list_attempts, get_attempts_by_run_id, get_attempt_detail methods
+- `src/services/__init__.py` — Added AttemptService to exports
+- `src/__main__.py` — Integrated AttemptJsonStorage and AttemptService instances, passed to CLI/interactive handlers
+- `src/cli/workflow_cli.py` — Added 3 new commands: add-attempt, list-attempts, attempt-detail with proper argument parsing
+- `src/cli/interactive_menu.py` — Added 3 new interactive menu handlers: _add_attempt, _list_attempts, _detail_attempt
+- `tests/test_attempt_json_storage.py` — Created 3 storage tests (save/load roundtrip, JSON format, empty file handling)
+- `tests/test_attempt_service.py` — Created 7 service tests (create, composite key validation, retrieval, sorting)
+- `tests/test_attempt_validation.py` — Created 2 validation tests (composite key uniqueness, sorting by attempt_number)
+- `artifacts/class_diagram.puml` — Added AttemptJsonStorage and AttemptService classes with relationships to WorkflowRunAttempt and CLI modules
+
+### Test Results
+- **Total Tests:** 109 (12 new + 97 existing)
+- **Passed:** 109
+- **Failed:** 0
+- **Status:** ✅ All tests pass
+
+### Implementation Details
+- Must Have: ✅ Implemented AttemptService with create_attempt and retrieve_attempts_by_run_id
+- Must Have: ✅ Integrated with existing storage mechanism (mirrors WorkflowJsonStorage pattern)
+- Must Have: ✅ All functionality accessible via python -m src (CLI commands: add-attempt, list-attempts, attempt-detail; interactive menu with 3 new options)
+- Should Have: ✅ Composite key validation prevents duplicate (run_id, attempt_number) pairs
+- Could Have: ✅ Automatic sorting by attempt_number in ascending order
+- Won't Have: ✅ No caching layer implemented
+
+### Key Features
+- **Composite Key Validation**: Raises ValueError if attempting to create duplicate (run_id, attempt_number) pair
+- **Auto-incrementing IDs**: Attempt IDs assigned using max(existing ids) + 1, starting at 1
+- **Sorted Retrieval**: get_attempts_by_run_id() returns results sorted by attempt_number ascending
+- **Separate Storage**: Uses artifacts/workflow_attempts.json (distinct from workflow_runs.json)
+- **Mirror Architecture**: Follows exact pattern of WorkflowRunService for consistency
+- **CLI Integration**: Supports both one-shot commands and interactive menu options
+- **Datetime Handling**: Proper ISO format serialization and deserialization
+
+### Test Coverage
+- Service creation and ID generation: 3 tests
+- Composite key validation: 2 tests
+- Retrieval and filtering: 2 tests
+- Storage persistence: 3 tests
+- JSON format validation: 1 test
+- Empty file handling: 1 test
+- Sorting validation: 1 test
+- Plus all existing 97 tests (no regressions)
+
+### CLI Commands
+- `python -m src add-attempt --run-id <int> --attempt-number <int> --status <str> [--conclusion <str>] [--duration-seconds <float>]`
+- `python -m src list-attempts [--run-id <int>]`
+- `python -m src attempt-detail <attempt_id>`
+
+### Interactive Menu (New)
+- "Add attempt" — Create new attempt with prompted input
+- "List attempts" — Show all attempts or filter by run_id
+- "Get attempt detail" — Retrieve and display specific attempt
+
+Duration: 356.9s | Cost: $0.691126 USD | Turns: 23
