@@ -332,4 +332,4 @@ Duration: 394.1s | Cost: $0.784273 USD | Turns: 20
   - Option 11: Import — prompts for filepath, checks database state, asks for overwrite confirmation if needed
 - **Data integrity:** All task IDs, statuses, due dates, and comment IDs preserved exactly on round-trip import/export
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 465.9s | Cost: $0.993832 USD | Turns: 18
