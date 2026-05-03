@@ -99,3 +99,39 @@ Candidates B and C produced identical implementations with 8/8 test passes. Cand
 ✅ All 36 tests passing (8 new WorkflowRunAttempt tests + 28 existing tests)
 
 Duration: 215.5s | Cost: $0.493351 USD | Turns: 49
+
+---
+
+# Task 04: Implement AttemptService
+
+## Broadcast Results
+
+### Candidate A
+**Approach:** Created `AttemptService` class with in-memory list storage (`self._attempts`). Implemented `create(attempt)` method with duplicate detection on `(run_id, attempt_number)` pair, raising `ValueError` on conflicts. Implemented `get_by_run_id(run_id)` method that filters attempts and returns results sorted by `attempt_number` in ascending order. No file I/O operations as required.
+
+**Test Score:** 43/43 passed
+
+### Candidate B
+**Approach:** Created identical implementation to Candidate A. `AttemptService` uses in-memory list storage with duplicate detection for `(run_id, attempt_number)` combinations. `get_by_run_id()` filters and sorts results by `attempt_number` ascending. All tests passing.
+
+**Test Score:** 43/43 passed
+
+### Candidate C
+**Approach:** Created identical implementation to Candidates A and B. In-memory list-based storage with proper duplicate detection on `(run_id, attempt_number)` pairs. Filtering and sorting by `attempt_number` in `get_by_run_id()`. All tests passing.
+
+**Test Score:** 43/43 passed
+
+## Winner: Candidate A
+
+All three candidates achieved identical test scores (43/43) with substantially identical implementations. All correctly implement the service layer as a pure in-memory store with no file I/O, proper duplicate detection, and deterministic sorting. Candidate A was selected as the representative solution due to proper PEP 8 style (trailing newline) and being the first successful implementation.
+
+## Files Changed
+- `src/services/attempt_service.py` — New file: AttemptService class with create() and get_by_run_id() methods
+- `src/services/__init__.py` — Updated to export AttemptService
+- `tests/services/__init__.py` — Package marker file
+- `tests/services/test_attempt_service.py` — New file: Test suite for AttemptService (7 tests)
+
+## Test Result
+✅ All 43 tests passing (7 new AttemptService tests + 36 existing tests)
+
+Duration: 228.0s | Cost: $0.424625 USD | Turns: 28
