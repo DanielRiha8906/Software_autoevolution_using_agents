@@ -9,7 +9,20 @@ repeat
 
   switch (choice)
     case (1 — List/filter)
-      :Run list/filter flow;
+      :Display filter options;
+      :Wait for filter choice;
+      switch (filter_choice)
+        case (1 — By status)
+          :Select status (pending/in progress/done);
+          :Call listTasks(status);
+        case (2 — Overdue tasks)
+          :Call listTasks(overdue=true);
+        case (3 — All tasks)
+          :Call listTasks();
+        case (0 — Cancel)
+          :Return to main menu;
+      endswitch
+      :Display filtered task list;
     case (2 — Add task)
       :Run add task flow;
     case (3 — Show details)

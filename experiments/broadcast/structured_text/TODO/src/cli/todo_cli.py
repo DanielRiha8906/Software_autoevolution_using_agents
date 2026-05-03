@@ -62,6 +62,19 @@ class TodoCLI:
             choices=["pending", "in_progress", "done"],
             help="Filter by status",
         )
+        p_list.add_argument(
+            "--overdue",
+            action="store_true",
+            help="Show only overdue tasks",
+        )
+        p_list.add_argument(
+            "--due-before",
+            help="Show tasks due before this datetime (ISO 8601 format)",
+        )
+        p_list.add_argument(
+            "--due-after",
+            help="Show tasks due after this datetime (ISO 8601 format)",
+        )
         p_list.set_defaults(func=self._cmd_list)
 
         # show
@@ -136,14 +149,37 @@ class TodoCLI:
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
         status = TaskStatus(args.status) if args.status else None
-        tasks = self._service.list_tasks(status)
+        due_before = None
+        due_after = None
+
+        if args.due_before:
+            try:
+                due_before = datetime.fromisoformat(args.due_before)
+            except ValueError:
+                print(f"Error: Invalid due-before format. Use ISO 8601 format (e.g., 2024-12-31T15:00:00+02:00)", file=sys.stderr)
+                return 1
+
+        if args.due_after:
+            try:
+                due_after = datetime.fromisoformat(args.due_after)
+            except ValueError:
+                print(f"Error: Invalid due-after format. Use ISO 8601 format (e.g., 2024-12-31T15:00:00+02:00)", file=sys.stderr)
+                return 1
+
+        tasks = self._service.list_tasks(
+            status=status,
+            overdue=args.overdue,
+            due_before=due_before,
+            due_after=due_after,
+        )
         if not tasks:
             print("No tasks found.")
             return 0
         for task in tasks:
             sym = _STATUS_SYMBOLS[task.status]
             desc = f"  {task.description}" if task.description else ""
-            print(f"{sym} {task.id[:8]}  {task.title}{desc}")
+            overdue_str = " (OVERDUE)" if task.is_overdue() else ""
+            print(f"{sym} {task.id[:8]}  {task.title}{desc}{overdue_str}")
         return 0
 
     def _cmd_show(self, args: argparse.Namespace) -> int:

@@ -116,25 +116,46 @@ class InteractiveMenu:
 
     def _do_list(self) -> None:
         _clear()
-        print("  Filter by status (leave blank for all):")
-        print("  1. pending")
-        print("  2. in progress")
-        print("  3. done")
-        print("  0. All")
-        raw = input("  > ").strip()
-        status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
-        status = status_map.get(raw)
+        print("  Filter options:")
+        print("  1. By status")
+        print("  2. Overdue tasks")
+        print("  3. All tasks")
+        print("  0. Cancel")
+        print()
+        choice = input("  > ").strip()
+
+        status = None
+        overdue = False
+        label = "[all]"
+
+        if choice == "1":
+            _clear()
+            print("  Filter by status:")
+            print("  1. pending")
+            print("  2. in progress")
+            print("  3. done")
+            print("  0. All")
+            raw = input("  > ").strip()
+            status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
+            status = status_map.get(raw)
+            if status:
+                label = f"[{_STATUS_NAME[status]}]"
+        elif choice == "2":
+            overdue = True
+            label = "[overdue]"
+        elif choice == "0":
+            return
 
         _clear()
-        tasks = self._service.list_tasks(status)
-        label = f"[{_STATUS_NAME[status]}]" if status else "[all]"
+        tasks = self._service.list_tasks(status=status, overdue=overdue)
         print(f"  Tasks {label}\n")
         if not tasks:
             print("  (none)")
         else:
             for task in tasks:
                 desc = f"  — {task.description}" if task.description else ""
-                print(f"  {_task_line(task)}{desc}")
+                overdue_str = " (OVERDUE)" if task.is_overdue() else ""
+                print(f"  {_task_line(task)}{desc}{overdue_str}")
         print()
         input("  Press Enter to continue...")
 
