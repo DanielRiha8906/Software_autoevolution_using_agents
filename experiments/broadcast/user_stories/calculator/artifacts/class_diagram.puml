@@ -86,12 +86,22 @@ package "services" #DDFFD4 {
         +get_memory_history() : List<MemoryEntry>
     }
 
+    class FilterService {
+        --
+        +FilterService()
+        +filter_entries(entries: List<MemoryEntry>, operation: String [0..1], state: String [0..1]) : List<MemoryEntry>
+        +get_valid_operations(entries: List<MemoryEntry>) : List<String>
+    }
+
     class MemoryService {
         -storage : JsonStorage
+        -_filter_service : FilterService
         --
         +MemoryService(storage: JsonStorage)
         +store(entry: MemoryEntry) : void
         +retrieve() : List<MemoryEntry>
+        +filter_entries(operation: String [0..1], state: String [0..1]) : List<MemoryEntry>
+        +get_valid_operations() : List<String>
     }
 }
 
@@ -120,11 +130,13 @@ package "cli" #FFE5E5 {
         +runCommand(operation: String, a: float, b: float) : void
         +memory_retrieve_command() : void
         +memory_store_command(op: String, operands: List<float>) : void
+        +filter_command(operation: String [0..1], state: String [0..1]) : void
         -printMenu() : void
         -resolveMenuChoice(choice: String) : Operation [0..1]
         -promptNumber(prompt: String) : float [0..1]
         -showHistory() : void
         -showMemoryHistory() : void
+        -_filter_interactive() : void
     }
 }
 
@@ -133,6 +145,7 @@ CalculatorCLI --> MemoryService : memory_service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 MemoryService --> JsonStorage : storage
+MemoryService --> FilterService : _filter_service
 
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> MemoryEntry : create

@@ -333,3 +333,129 @@ Duration: 617.2s | Cost: $1.223649 USD | Turns: 31
 - **Type Safety**: Proper handling of ResultEntry and ErrorEntry polymorphism
 
 Duration: 159.90s | Cost: 1.7519339999999994 USD | Turns: 31
+
+## Task 05
+
+**Description:** Add filtering capability for stored calculations by operation type and result state.
+
+**Status:** ✅ Complete
+
+### Broadcast Evaluation
+
+**Candidate A:**
+- Approach: Separate FilterService with static methods, basic CLI integration, 17 new filter tests
+- Test Result: 126/132 passed (6 TestRunInteractive tests failed due to menu index changes)
+- Key features: Dedicated filter service, clean separation of concerns
+
+**Candidate B:**
+- Approach: FilterService with integration into MemoryService, comprehensive test suite (53 new tests), proper menu integration with all tests passing
+- Test Result: 168/168 tests passed ✅
+- Key features: Strong service integration, extensive test coverage (22 FilterService + 14 MemoryService filter + 17 CLI filter tests), all tests pass
+
+**Candidate C:**
+- Approach: FilterService with static method, retrieve_filtered() in MemoryService, menu option at position 10
+- Test Result: 137/168 tests passed (31 tests failed - retrieve_filtered method missing)
+- Key features: Attempted static method pattern but implementation incomplete
+
+**Winner:** Candidate B (168/168 tests passed - highest test count with full implementation)
+
+### Files Changed
+
+1. **src/services/filter_service.py** (NEW)
+   - FilterService class for in-memory filtering
+   - filter_entries(entries, operation, state) method supporting filtering by operation type and/or result state
+   - get_valid_operations(entries) method returns sorted list of unique operations in storage
+   - Validates state parameter ('success', 'error')
+   - Case-insensitive filtering for operations and states
+
+2. **src/services/memory_service.py** (MODIFIED)
+   - Added FilterService integration via dependency injection
+   - Added filter_entries(operation, state) method for filtering stored entries
+   - Added get_valid_operations() method to list available operations
+   - Maintains separation of concerns: filtering delegated to FilterService
+
+3. **src/cli/calculator_cli.py** (MODIFIED)
+   - Added filter_command(operation, state) for one-shot CLI mode
+   - Added _filter_interactive() for interactive filtering with input validation
+   - Updated run_interactive() to include filter menu option (option 11)
+   - Added filter validation with prompts for operation and state selection
+
+4. **src/__main__.py** (MODIFIED)
+   - Added CLI flags: --filter-op and --filter-state
+   - Both flags support combined filtering (e.g., --filter-op add --filter-state success)
+   - Updated argparse help text to document new flags
+
+5. **tests/test_filter_service.py** (NEW)
+   - 22 comprehensive tests for FilterService
+   - Tests cover filtering by operation, result state, and combinations
+   - Edge cases: empty lists, invalid states, no matches, case-insensitivity
+
+6. **tests/test_memory_service_filter.py** (NEW)
+   - 14 integration tests for MemoryService filter methods
+   - Tests persistence, reload scenarios, complex filtering
+
+7. **tests/test_cli_filter.py** (NEW)
+   - 17 tests for CLI filtering functionality
+   - Tests one-shot mode and interactive menu integration
+   - Tests error handling and validation
+
+8. **tests/test_cli.py** (MODIFIED)
+   - Updated exit option index from 11 to 12 (filter is now option 11)
+   - Updated history option index from 10 to 11
+
+### Test Results
+
+- Total tests: 168
+- Passed: 168
+- Failed: 0
+- Status: ✅ All tests pass (115 existing + 53 new filter tests)
+
+### Acceptance Criteria Met
+
+- ✅ Programmatic filtering capability available over stored calculations
+- ✅ Filtering by operation type supported (case-insensitive)
+- ✅ Filtering by result state (success vs. error) supported
+- ✅ Multiple filters can be combined in a single query
+- ✅ Results returned as MemoryEntry objects (ResultEntry or ErrorEntry)
+- ✅ Result structure consistent across all queries
+- ✅ No database or external indexing system used (pure in-memory filtering)
+- ✅ Accessible via python -m src:
+  - Interactive menu option 11: Filter calculations with validation prompts
+  - One-shot CLI: python -m src --filter-op add --filter-state success
+  - Help shows all flags: python -m src --help
+
+### Usage Examples
+
+**Interactive Mode:**
+```bash
+python -m src
+# Select option 11 from menu
+# Enter operation type (e.g., 'add') or leave blank for all
+# Enter result state (success/error) or leave blank for all
+```
+
+**One-shot Mode:**
+```bash
+python -m src --filter-op add              # Filter by operation only
+python -m src --filter-state success       # Filter by state only
+python -m src --filter-op add --filter-state success  # Combined filter
+```
+
+### Diagrams Updated
+
+- **class_diagram.puml**: Added FilterService with filter_entries() and get_valid_operations() methods
+- **component_diagram.puml**: Added FilterService component with relationships to MemoryService
+- **activity_diagram.puml**: Added filter flow to interactive menu with criteria input and result display
+- **sequence_diagram.puml**: Added filter flow showing CLI → MemoryService → FilterService → JsonStorage chain
+- **use_case_diagram.puml**: Added "Filter entries" use case connected to User actor
+- **state_diagram_interactive.puml**: Added FilterInput and FilterApply states with transitions
+
+### Architecture Improvements
+
+- **Focused Filtering Service**: FilterService provides pure filtering logic independent of storage
+- **Service Integration**: MemoryService delegates to FilterService, maintaining clean interfaces
+- **Validation**: Input validation for operation types and result states
+- **Flexibility**: Support for individual filters or combined queries
+- **No External Dependencies**: Pure in-memory filtering using Python list comprehensions
+
+Duration: 631.1s | Cost: $1.274107 USD | Turns: 31

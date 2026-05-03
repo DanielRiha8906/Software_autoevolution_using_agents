@@ -4,6 +4,7 @@ actor User
 participant CalculatorCLI
 participant CalculatorService
 participant MemoryService
+participant FilterService
 participant Calculator
 participant JsonStorage
 
@@ -68,6 +69,29 @@ MemoryService --> CalculatorCLI: done
 deactivate MemoryService
 
 CalculatorCLI -> User: confirm stored
+deactivate CalculatorCLI
+
+== Filter Flow ==
+User -> CalculatorCLI: --filter-op OP [--filter-state STATE] or interactive menu
+activate CalculatorCLI
+
+CalculatorCLI -> MemoryService: filter_entries(operation, state)
+activate MemoryService
+
+MemoryService -> JsonStorage: load_memory_all()
+activate JsonStorage
+JsonStorage --> MemoryService: list[MemoryEntry]
+deactivate JsonStorage
+
+MemoryService -> FilterService: filter_entries(entries, operation, state)
+activate FilterService
+FilterService --> MemoryService: filtered list[MemoryEntry]
+deactivate FilterService
+
+MemoryService --> CalculatorCLI: filtered results
+deactivate MemoryService
+
+CalculatorCLI -> User: display filtered entries
 deactivate CalculatorCLI
 
 @enduml

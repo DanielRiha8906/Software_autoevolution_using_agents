@@ -8,7 +8,8 @@ top to bottom direction
 [*] --> Menu
 
 Menu --> FirstOperand : operation selected
-Menu --> Feedback : history selected
+Menu --> Feedback : history/memory history selected
+Menu --> FilterInput : filter selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
@@ -20,6 +21,11 @@ SecondOperand --> Feedback : invalid number
 
 Calculating --> Feedback : success / show result
 Calculating --> Feedback : error / show error
+
+FilterInput --> FilterApply : criteria entered
+FilterApply --> Feedback : entries found / show results
+FilterApply --> Feedback : no matches
+
 Feedback --> Menu
 
 @enduml
