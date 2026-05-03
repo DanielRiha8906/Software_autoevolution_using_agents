@@ -67,6 +67,16 @@ else (no)
           case (Filter by error)
             :Filter for failed entries;
             :Show filtered entries;
+          case (Export memory)
+            :Prompt for output file path;
+            :Export memory entries to JSON file;
+            :Show export summary;
+          case (Import memory)
+            :Prompt for input file path;
+            :Prompt for overwrite option;
+            :Validate imported entries;
+            :Merge or replace storage;
+            :Show import summary;
           case (Back)
             :Return to main menu;
         endswitch

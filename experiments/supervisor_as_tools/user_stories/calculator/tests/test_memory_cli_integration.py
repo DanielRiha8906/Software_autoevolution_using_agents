@@ -233,8 +233,8 @@ class TestInteractiveMemoryOption:
         entry = MemoryEntry("add", 1.0, 2.0, 3.0, True, "id1234567890123456789012345678901", None, _TS, 1.0)
         memory_service.get_all_entries.return_value = [entry]
         cli = CalculatorCLI(MagicMock(), memory_service=memory_service)
-        # Menu option 10 = view memory, 1 = view all, 5 = back, 12 = exit
-        with patch("builtins.input", side_effect=["10", "1", "5", "12"]):
+        # Menu option 10 = view memory, 1 = view all, 7 = back, 12 = exit
+        with patch("builtins.input", side_effect=["10", "1", "7", "12"]):
             cli.run_interactive()
         captured = capsys.readouterr()
         # Should show memory entry
@@ -245,8 +245,8 @@ class TestInteractiveMemoryOption:
         memory_service = MagicMock()
         memory_service.get_all_entries.return_value = []
         cli = CalculatorCLI(MagicMock(), memory_service=memory_service)
-        # Menu option 10 = view memory, 1 = view all, 5 = back, 12 = exit
-        with patch("builtins.input", side_effect=["10", "1", "5", "12"]):
+        # Menu option 10 = view memory, 1 = view all, 7 = back, 12 = exit
+        with patch("builtins.input", side_effect=["10", "1", "7", "12"]):
             cli.run_interactive()
         captured = capsys.readouterr()
         # Option 10 should be memory

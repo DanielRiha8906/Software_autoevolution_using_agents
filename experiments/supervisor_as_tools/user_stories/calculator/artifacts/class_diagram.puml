@@ -103,8 +103,12 @@ package "storage" #FFF3CC {
         +JsonStorage(filepath: String)
         +save(result: CalculationResult | MemoryEntry) : void
         +loadAll() : List<CalculationResult | MemoryEntry>
+        +exportMemoryEntries(outputPath: String, entries: List) : int
+        +importMemoryEntries(inputPath: String, overwrite: bool) : Tuple[int, int]
         -readRaw() : List<Dictionary>
         -writeRaw(records: List<Dictionary>) : void
+        -validateMemoryEntryDict(data: Dictionary) : Tuple[bool, String]
+        -getAllMemoryEntries() : List<MemoryEntry>
     }
 }
 
@@ -128,6 +132,8 @@ package "cli" #FFE5E5 {
         -showMemoryFilterSubmenu() : void
         -displayMemoryEntries(entries: List<MemoryEntry>) : void
         -showStatistics() : void
+        -exportMemoryInteractive() : void
+        -importMemoryInteractive() : void
     }
 }
 
