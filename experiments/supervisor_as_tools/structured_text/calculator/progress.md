@@ -209,4 +209,4 @@ Successfully implemented MemoryService to manage MemoryEntry objects. The servic
 - Interactive menu structure is dynamic: same menu numbering as before when memory_service is None
 - CalculationResult and JsonStorage remain unchanged
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 504.7s | Cost: $0.880169 USD | Turns: 19
