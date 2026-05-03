@@ -5,6 +5,7 @@ from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_run import WorkflowRun
 from ..services.workflow_run_service import WorkflowRunService
+from ..services.import_export_service import WorkflowImportExportService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 
 
@@ -107,16 +108,32 @@ def _filter_menu(service: WorkflowRunService) -> None:
         print(_fmt_run(run))
 
 
+def _export_runs(import_export_service: WorkflowImportExportService) -> None:
+    print("\n--- Export Workflow Runs ---")
+    filepath = _prompt("Export file path")
+    import_export_service.export(filepath)
+    print(f"Exported to {filepath}")
+
+
+def _import_runs(import_export_service: WorkflowImportExportService) -> None:
+    print("\n--- Import Workflow Runs ---")
+    filepath = _prompt("Import file path")
+    import_export_service.import_from(filepath)
+    print(f"Imported from {filepath}")
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
     ("Get run detail", _detail_run),
     ("Filter runs", _filter_menu),
+    ("Export runs", _export_runs),
+    ("Import runs", _import_runs),
     ("Exit", None),
 ]
 
 
-def run_interactive(service: WorkflowRunService) -> None:
+def run_interactive(service: WorkflowRunService, import_export_service: WorkflowImportExportService = None) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
         print("\n" + "=" * 44)
@@ -131,6 +148,10 @@ def run_interactive(service: WorkflowRunService) -> None:
             print("Goodbye.")
             sys.exit(0)
         try:
-            handler(service)
+            # Pass import_export_service if handler requires it
+            if label in ("Export runs", "Import runs"):
+                handler(import_export_service)
+            else:
+                handler(service)
         except KeyboardInterrupt:
             print()

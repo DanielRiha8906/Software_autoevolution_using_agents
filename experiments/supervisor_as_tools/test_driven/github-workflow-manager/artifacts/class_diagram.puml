@@ -116,6 +116,14 @@ package "services" #DDFFD4 {
         +__init__(workflow_run_service: WorkflowRunService)
         +compute() : WorkflowStatisticsReport
     }
+
+    class WorkflowImportExportService {
+        -_workflow_run_service : WorkflowRunService
+        --
+        +__init__(workflow_run_service: WorkflowRunService)
+        +export(filepath: str) : None
+        +import_from(filepath: str) : None
+    }
 }
 
 package "cli" #FFE5E5 {
@@ -148,6 +156,9 @@ AttemptService       "1" --> "*" WorkflowRunAttempt       : -_attempts
 WorkflowStatisticsService "1" --> "1" WorkflowRunService  : -_workflow_run_service
 WorkflowStatisticsService      ..>  WorkflowStatisticsReport
 WorkflowStatisticsReport       ..>  WorkflowConclusion
+WorkflowImportExportService "1" --> "1" WorkflowRunService  : -_workflow_run_service
+WorkflowImportExportService    ..>  WorkflowRun
+WorkflowImportExportService    ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService
