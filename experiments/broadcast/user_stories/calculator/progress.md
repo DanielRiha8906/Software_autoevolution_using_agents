@@ -584,4 +584,4 @@ All PlantUML diagrams in artifacts/ updated to reflect Statistics component:
 - **sequence_diagram.puml**: Added Statistics Flow showing CLI → Service → Memory → Storage
 - **state_diagram_interactive.puml**: Added StatsDisplay state with transitions
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 772.2s | Cost: $1.740668 USD | Turns: 74
