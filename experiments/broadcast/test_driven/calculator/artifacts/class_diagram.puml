@@ -9,6 +9,10 @@ package "models" #DDEEFF {
         SUBTRACT
         MULTIPLY
         DIVIDE
+        SQUARE
+        SQRT
+        POWER
+        MODULO
         --
         +fromString(value: String) : Operation
         +displayName() : String
@@ -34,6 +38,10 @@ package "services" #DDFFD4 {
         +subtract(a: float, b: float) : float
         +multiply(a: float, b: float) : float
         +divide(a: float, b: float) : float
+        +square(x: float) : float
+        +sqrt(x: float) : float
+        +power(x: float, y: float) : float
+        +modulo(x: float, y: float) : float
         +calculate(op: Operation, a: float, b: float) : float
     }
 
