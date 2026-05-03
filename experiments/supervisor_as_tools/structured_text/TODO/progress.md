@@ -225,4 +225,4 @@ Duration: 441.1s | Cost: $0.832739 USD | Turns: 17
 - Boundary dates are inclusive; tasks without due_date excluded from range filters
 - Error handling for invalid date formats with graceful fallback and user feedback
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 410.3s | Cost: $0.852108 USD | Turns: 19
