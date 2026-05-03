@@ -129,4 +129,4 @@ Broadcast architecture with 3 independent implementers (candidate-a, candidate-b
 - **COULD HAVE**: ✓ duration_seconds attribute for attempt-specific execution time tracking
 - **WON'T HAVE**: ✓ No persistence optimization attempted (per requirements)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 526.5s | Cost: $1.106049 USD | Turns: 59
