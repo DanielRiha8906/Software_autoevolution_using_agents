@@ -6,6 +6,7 @@ from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
+from .services.statistics_service import StatisticsService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
@@ -81,6 +82,11 @@ def main() -> None:
         help="Filter entries by result state (success | error)",
     )
     parser.add_argument(
+        "--statistics",
+        action="store_true",
+        help="Display statistics from stored calculations",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -113,6 +119,8 @@ def main() -> None:
         cli.memory_store_command(args.memory_store, operands, result=args.result, error=args.error)
     elif args.filter_op or args.filter_state:
         cli.filter_command(operation=args.filter_op, state=args.filter_state)
+    elif args.statistics:
+        cli.statistics_command()
     elif args.memory_history:
         cli.show_memory_history_command()
     elif args.history:

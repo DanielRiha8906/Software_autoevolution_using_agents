@@ -10,25 +10,30 @@ package "Calculator Application" {
     component "CLI Interface\n(CalculatorCLI)" as CLI
     component "Calculation Service\n(CalculatorService)" as Service
     component "Memory Service\n(MemoryService)" as MemService
+    component "Statistics Service\n(StatisticsService)" as StatSvc
     component "Filter Service\n(FilterService)" as FilterSvc
     component "Calculation Engine\n(Calculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
-    component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
+    component "Domain Models\n(Operation, CalculationResult, MemoryEntry, Statistics)" as Models
 
     Main --> CLI : initializes
     Main --> Service : initializes
     Main --> MemService : initializes
+    Main --> StatSvc : initializes
 
     CLI --> Service : uses
     CLI --> MemService : uses
+    CLI --> StatSvc : uses
     Service --> Calc : uses
     Service --> Store : uses
     MemService --> Store : delegates to
     MemService --> FilterSvc : uses for filtering
+    StatSvc --> MemService : uses
 
     Service ..> Models
     MemService ..> Models
     FilterSvc ..> Models
+    StatSvc ..> Models
     Store ..> Models
 }
 

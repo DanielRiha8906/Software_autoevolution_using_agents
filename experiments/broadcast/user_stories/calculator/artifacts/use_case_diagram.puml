@@ -11,6 +11,7 @@ rectangle "Calculator Application" {
     usecase "View calculation history" as UC_History
     usecase "View memory history" as UC_MemHistory
     usecase "Filter entries" as UC_Filter
+    usecase "View statistics" as UC_Stats
     usecase "Exit application" as UC_Exit
 
 }
@@ -19,6 +20,7 @@ User --> UC_Calc
 User --> UC_History
 User --> UC_MemHistory
 User --> UC_Filter
+User --> UC_Stats
 User --> UC_Exit
 
 @enduml

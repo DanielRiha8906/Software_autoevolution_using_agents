@@ -4,6 +4,7 @@ from ..models.operation import Operation
 from ..models.memory_entry import ErrorEntry, ResultEntry
 from ..services.calculator_service import CalculatorService
 from ..services.memory_service import MemoryService
+from ..services.statistics_service import StatisticsService
 
 
 class CalculatorCLI:
@@ -21,6 +22,7 @@ class CalculatorCLI:
     def __init__(self, service: CalculatorService, memory_service: MemoryService) -> None:
         self.service = service
         self.memory_service = memory_service
+        self.statistics_service = StatisticsService(memory_service)
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -35,7 +37,8 @@ class CalculatorCLI:
             memory_history_opt = len(self._MENU) + 1
             history_opt        = len(self._MENU) + 2
             filter_opt         = len(self._MENU) + 3
-            exit_opt           = len(self._MENU) + 4
+            statistics_opt     = len(self._MENU) + 4
+            exit_opt           = len(self._MENU) + 5
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -51,6 +54,10 @@ class CalculatorCLI:
 
             if choice == str(filter_opt):
                 self._filter_interactive()
+                continue
+
+            if choice == str(statistics_opt):
+                self._show_statistics()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -150,6 +157,11 @@ class CalculatorCLI:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
 
+    def statistics_command(self) -> None:
+        """Display statistics from stored calculations (one-shot mode)."""
+        stats = self.statistics_service.compute_statistics()
+        self._print_statistics_output(stats)
+
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
@@ -161,7 +173,8 @@ class CalculatorCLI:
         print(f"  {len(self._MENU) + 1}. View memory history")
         print(f"  {len(self._MENU) + 2}. View calculation history")
         print(f"  {len(self._MENU) + 3}. Filter calculations")
-        print(f"  {len(self._MENU) + 4}. Exit")
+        print(f"  {len(self._MENU) + 4}. View statistics")
+        print(f"  {len(self._MENU) + 5}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -237,6 +250,27 @@ class CalculatorCLI:
                 self._print_memory_entry(entry)
         except ValueError as exc:
             print(f"  Error: {exc}\n")
+
+    def _show_statistics(self) -> None:
+        """Display statistics in interactive mode."""
+        stats = self.statistics_service.compute_statistics()
+        self._print_statistics_output(stats)
+
+    def _print_statistics_output(self, stats) -> None:
+        """Format and print statistics output."""
+        print("\n=== Statistics ===")
+
+        if not stats.operation_counts:
+            print("  No operations recorded yet.\n")
+            return
+
+        print("\n  Operation Counts:")
+        for op, count in sorted(stats.operation_counts.items()):
+            print(f"    {op}: {count}")
+
+        print(f"\n  Total errors: {stats.total_errors}")
+        print(f"  Error rate: {stats.error_rate_percentage:.2f}%")
+        print(f"  Average execution time: {stats.average_execution_time_ms:.2f}ms\n")
 
     def _print_memory_entry(self, entry: ResultEntry | ErrorEntry) -> None:
         """Format and print a single memory entry."""

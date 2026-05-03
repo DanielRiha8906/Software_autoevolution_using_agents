@@ -459,3 +459,129 @@ python -m src --filter-op add --filter-state success  # Combined filter
 - **No External Dependencies**: Pure in-memory filtering using Python list comprehensions
 
 Duration: 631.1s | Cost: $1.274107 USD | Turns: 31
+
+## Task 06
+
+**Description:** Create a structured statistics component derived from stored calculations, providing programmatic access to usage and error metrics.
+
+**Status:** ✅ Complete
+
+### Broadcast Evaluation
+
+All three candidates implemented identical solutions with the same structure and approach:
+
+**Candidate A, B, and C:**
+- Approach: Created Statistics dataclass with operation_counts, total_errors, error_rate_percentage, average_execution_time_ms. Created StatisticsService that computes statistics from stored MemoryEntry objects. Integrated into CLI with menu option and --statistics flag.
+- Test Result: 179/185 passed (6 test_cli.py failures due to hardcoded menu option numbers needing update from 12 to 13)
+- Key features: Proper separation of concerns, structured output, comprehensive test coverage
+
+**Winner:** Candidate A (first to complete, identical implementations tied at 179 passing tests before test fixes)
+
+### Files Changed
+
+1. **src/models/statistics.py** (NEW)
+   - Statistics dataclass with fields:
+     - operation_counts: dict[str, int] (count per operation type)
+     - total_errors: int (total failed operations)
+     - error_rate_percentage: float (errors as percentage of total)
+     - average_execution_time_ms: float (mean execution time across all operations)
+
+2. **src/models/__init__.py** (MODIFIED)
+   - Added Statistics to exports
+
+3. **src/services/statistics_service.py** (NEW)
+   - StatisticsService class that:
+     - Takes MemoryService as dependency
+     - compute_statistics() → Statistics method
+     - Derives all metrics from stored MemoryEntry objects
+     - Returns Statistics with zero values when no entries exist
+
+4. **src/services/__init__.py** (MODIFIED)
+   - Added StatisticsService to exports
+
+5. **src/cli/calculator_cli.py** (MODIFIED)
+   - Added StatisticsService initialization in __init__()
+   - Added statistics_command() for one-shot mode
+   - Added _show_statistics() for interactive menu display
+   - Added _print_statistics_output() to format statistics for display
+   - Updated run_interactive() to handle statistics menu option (option 12)
+   - Updated _print_menu() to show "View statistics" as option 12
+
+6. **src/__main__.py** (MODIFIED)
+   - Added import of StatisticsService
+   - Added --statistics CLI flag with help text
+   - Added handler to call cli.statistics_command() when flag used
+
+7. **tests/test_statistics_service.py** (NEW)
+   - 11 comprehensive unit tests for StatisticsService
+   - Tests: empty entries, single entry, mixed entries, operation counting, error rate calculation, execution time averaging, consistency, structured output
+
+8. **tests/test_statistics_integration.py** (NEW)
+   - 6 integration tests verifying statistics work with real storage
+   - Tests: stored entries, calculator service integration, CLI integration, empty memory, state reflection, multiple operations
+
+9. **tests/test_cli.py** (MODIFIED)
+   - Updated hardcoded menu option numbers from 12 (exit) to 13 (exit)
+   - Updated test_exit_choice, test_add_operation, test_invalid_choice_retries, test_invalid_number_retries, test_history_empty, test_history_shows_entries
+
+### Test Results
+
+- Total tests: 185
+- Passed: 185
+- Failed: 0
+- Status: ✅ All tests pass (17 new tests added: 11 unit + 6 integration)
+
+### Acceptance Criteria Met
+
+- ✅ Statistics component/service is introduced (StatisticsService)
+- ✅ Report includes:
+  - count per operation type (dict mapping operation names to counts)
+  - total number of errors (integer)
+  - error rate as a percentage (float, 0.0-100.0)
+  - average execution_time_ms (float)
+- ✅ All statistics derived exclusively from stored MemoryEntry data
+- ✅ Result returned as structured Statistics dataclass, not plain dictionary
+- ✅ Structure of statistics output is consistent across calls (guaranteed by dataclass)
+- ✅ No visualisation layer introduced (text-based console output only)
+- ✅ All new functionality accessible via python -m src:
+  - Interactive menu option 12: "View statistics"
+  - One-shot CLI flag: python -m src --statistics
+  - Help shows flag: python -m src --help
+
+### Usage Examples
+
+**Interactive Mode:**
+```bash
+python -m src
+# Select option 12 from menu to view statistics
+```
+
+**One-shot Mode:**
+```bash
+python -m src --statistics
+```
+
+**Output Format:**
+```
+=== Statistics ===
+
+  Operation Counts:
+    add: 5
+    divide: 2
+    
+  Total errors: 1
+  Error rate: 16.67%
+  Average execution time: 1.25ms
+```
+
+### Diagrams Updated
+
+All PlantUML diagrams in artifacts/ updated to reflect Statistics component:
+- **class_diagram.puml**: Added Statistics dataclass and StatisticsService with relationships
+- **component_diagram.puml**: Added Statistics Service component with dependencies
+- **use_case_diagram.puml**: Added "View statistics" use case
+- **activity_diagram.puml**: Added statistics case to interactive menu
+- **sequence_diagram.puml**: Added Statistics Flow showing CLI → Service → Memory → Storage
+- **state_diagram_interactive.puml**: Added StatsDisplay state with transitions
+
+Duration: 772.2s | Cost: $1.740668 USD | Turns: 74

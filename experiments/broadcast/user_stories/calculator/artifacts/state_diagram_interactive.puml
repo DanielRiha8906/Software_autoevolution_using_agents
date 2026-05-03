@@ -10,8 +10,11 @@ top to bottom direction
 Menu --> FirstOperand : operation selected
 Menu --> Feedback : history/memory history selected
 Menu --> FilterInput : filter selected
+Menu --> StatsDisplay : statistics selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
+
+StatsDisplay --> Feedback : stats displayed
 
 FirstOperand --> SecondOperand : valid number
 FirstOperand --> Feedback : invalid number

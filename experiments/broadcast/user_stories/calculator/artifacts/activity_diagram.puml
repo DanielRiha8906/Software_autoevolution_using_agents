@@ -57,6 +57,10 @@ else (no)
           :Show no match message;
         endif
 
+      case (Statistics)
+        :Compute statistics from memory;
+        :Show operation counts, error rate, avg execution time;
+
       case (Operation)
         :Read operands;
 
