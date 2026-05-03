@@ -89,3 +89,28 @@ Duration: 112.8s | Cost: $0.254861 USD | Turns: 22
 - No regressions in existing tests
 
 Duration: 219.6s | Cost: $0.440051 USD | Turns: 28
+
+## Task 06: Implement WorkflowStatisticsService for aggregated metrics
+
+**Status:** ✅ Completed
+
+**Files Changed:**
+- `src/models/workflow_statistics_report.py` — Created new frozen dataclass with 5 fields: count_by_conclusion (Dict[WorkflowConclusion, int]), avg_duration_seconds (float), min_duration_seconds (float), max_duration_seconds (float), avg_attempts_per_run (float)
+- `src/services/workflow_statistics_service.py` — Created new service class with `__init__(workflow_run_service)` and `compute() -> WorkflowStatisticsReport` method. Implements aggregation logic for success/failure distribution, duration metrics (avg/min/max), and retry behavior averaging
+- `src/services/workflow_run_service.py` — Added `@property attempt_service` to expose attempt service for statistics computation
+- `src/models/__init__.py` — Added WorkflowStatisticsReport to imports and exports
+- `src/services/__init__.py` — Added WorkflowStatisticsService to imports and exports
+- `tests/test_workflow_statistics_service.py` — Created comprehensive test suite with 7 tests covering service instantiation, report dataclass type verification, conclusion counting, duration metrics, attempt averaging, and empty data edge cases
+- `artifacts/class_diagram.puml` — Added WorkflowStatisticsReport and WorkflowStatisticsService classes with all relationships and method signatures
+
+**Test Results:**
+- All 94 tests pass (7 new statistics tests + 87 existing tests)
+- Conclusion counting correctly filters to COMPLETED status with non-null conclusions
+- Duration statistics (avg/min/max) computed over ALL runs regardless of status
+- Average attempts per run includes runs with zero attempts in denominator
+- Empty datasets return zeroed values (0.0 for floats, {} for dict) without exceptions
+- String run ID lookups correctly match attempts stored with string run_ids
+- Report is properly implemented as frozen dataclass for immutability
+- No regressions in existing tests
+
+Duration: 351.0s | Cost: $0.614922 USD | Turns: 19
