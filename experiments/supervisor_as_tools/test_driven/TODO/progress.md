@@ -222,4 +222,4 @@ Successfully extended TodoService to support creating tasks with due dates and f
 - Supports: `python -m src add "Title" --due-date "2025-12-31T23:59:59+02:00"`
 - List command already supports --overdue, --due-before, --due-after flags
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 240.0s | Cost: $0.493805 USD | Turns: 32
