@@ -300,3 +300,99 @@ All 81 tests pass, including:
   - Both models implement serialization protocol (to_dict/from_dict)
 
 Duration: 561.6s | Cost: $1.018192 USD | Turns: 29
+
+## Task 05: Add querying over stored calculations
+
+### Broadcast Evaluation
+
+Three independent implementers were spawned on separate branches to solve this task:
+
+**Candidate-A** — QueryService with interactive menu only
+- Modified 3 files + created query_service.py
+- Implemented QueryService class querying CalculationResult objects
+- Added interactive menu option for queries (option 9)
+- Did NOT implement one-shot CLI flags for querying
+- Queries return CalculationResult objects (not MemoryEntry as required)
+- **Test result: 81/81 passed**
+
+**Candidate-B** — Minimal implementation with no query functionality
+- Modified 4 files: `src/__main__.py`, `src/cli/calculator_cli.py`, `src/services/__init__.py`, `src/services/calculator_service.py`
+- No QueryService implementation
+- No query menu option
+- Only shows "View history" functionality
+- Completely fails to meet Must requirements
+- **Test result: 81/81 passed**
+
+**Candidate-C** — Complete implementation with both interactive and one-shot modes
+- Modified 5 files + created query_service.py
+- Implemented QueryService class querying MemoryEntry objects (correct model)
+- Added interactive menu option (9: "Query calculations") with 3 sub-options:
+  - Query by operation type
+  - Query by result state (success/failure/all)
+  - Query with both filters combined
+- Added one-shot CLI flags:
+  - `--query-by-operation OP` to filter by operation name
+  - `--query-by-state STATE` to filter by result state (success | failed | all)
+- Updated CalculatorService to optionally store MemoryEntry objects on both success and failure
+- Returns structured, formatted results showing all relevant details
+- **Test result: 81/81 passed**
+
+### Winner Selection: Candidate-C
+
+**Rationale**:
+1. **Correct model** — Queries MemoryEntry records as required, not CalculationResult
+2. **Complete CLI support** — Both interactive menu option (option 9) and one-shot CLI flags
+3. **Full Must requirements** — Filtering by operation type, result state, and combining filters
+4. **Proper MemoryEntry storage** — CalculatorService stores entries on both success and failure
+5. **Structured results** — format_results() provides consistent, readable output with all relevant details
+6. **CLI usability** — Interactive menu with sub-options for different query types
+7. **Backward compatible** — memory_service parameter optional in CalculatorService
+
+### Files Changed
+
+- `src/services/query_service.py` (new) — QueryService class with query(), query_by_operation(), query_by_state(), and format_results() methods
+- `src/services/calculator_service.py` — Added optional memory_service parameter, auto-stores MemoryEntry on both success and failure
+- `src/services/__init__.py` — Added QueryService to module exports
+- `src/cli/calculator_cli.py` — Added query_service parameter, new _query_interactive() method, query menu option (9)
+- `src/__main__.py` — Added --query-by-operation and --query-by-state CLI flags, query mode handler, QueryService instantiation
+- `tests/test_cli.py` — Updated menu option numbers to account for new query option
+- `artifacts/class_diagram.puml` — Added QueryService class and relationships, updated CalculatorService and CalculatorCLI
+- `artifacts/component_diagram.puml` — Added QueryService component and dependencies
+- `artifacts/architecture_diagram.puml` — Added QueryService to Service Layer and dependencies
+
+### Test Results
+
+**Before**: 81 tests passing (from previous tasks)
+**After**: 81 tests passing
+
+All existing tests continue to pass. The implementation preserves backward compatibility.
+
+### Implementation Details
+
+- **QueryService** operates on MemoryEntry objects from MemoryService
+  - `query(operation_type, result_state)` — Returns entries matching both filters (AND logic)
+  - `query_by_operation(op)` — Convenience method filtering by operation type
+  - `query_by_state(state)` — Convenience method filtering by success/failure state
+  - `format_results(entries)` — Returns human-readable output with all details
+  
+- **Result state filtering**:
+  - "success" = entry.success is True
+  - "failure" = entry.success is False
+  - "all" or None = no state filter
+  
+- **Operation type filtering**:
+  - Matches against entry.operation_name
+  - Case-sensitive lookup
+  
+- **CLI integration**:
+  - Interactive: Menu option 9 with 3 sub-options (operation, state, combined)
+  - One-shot: `python -m src --query-by-operation add --query-by-state success`
+  - Default state is "all" when not specified
+  
+- **MemoryEntry storage**:
+  - Stored on successful calculations with result value
+  - Stored on failed calculations with error_message
+  - Captures operation name, operands, timing, and timestamp
+  - Both success and failure cases tracked for complete history
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

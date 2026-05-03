@@ -12,6 +12,7 @@ package "CLI Layer" {
 package "Service Layer" {
   component [CalculatorService] as CalcService
   component [MemoryService] as MemService
+  component [QueryService] as QuerySvc
   component [Calculator] as CalcLogic
 }
 
@@ -25,12 +26,15 @@ package "Data Layer" {
 }
 
 CLI --> CalcService: uses
-CLI --> MemService: uses (future)
+CLI --> QuerySvc: uses for querying
 
 CalcService --> CalcLogic: delegates calculation
 CalcService --> Storage: stores CalculationResult
+CalcService --> MemService: optionally stores MemoryEntry
 
 MemService --> Storage: stores/retrieves MemoryEntry
+
+QuerySvc --> MemService: queries MemoryEntry
 
 Storage --> CalcFile: persists
 Storage --> MemFile: persists

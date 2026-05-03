@@ -12,6 +12,7 @@ package "Presentation Layer" as Presentation {
 package "Service Layer" as Services {
   component "CalculatorService"
   component "MemoryService"
+  component "QueryService"
   component "Calculator"
 }
 
@@ -29,14 +30,18 @@ package "Storage/Persistence" as Persistence {
 
 ' Dependencies
 Presentation --> CalculatorService: depends on
-Presentation -.-> MemoryService: depends on (future)
+Presentation --> QueryService: depends on
 
 CalculatorService --> Calculator: uses
 CalculatorService --> CalculationResult: uses
+CalculatorService --> MemoryService: optionally uses for storage
 CalculatorService --> JsonStorage: uses for persistence
 
 MemoryService --> MemoryEntry: manages
 MemoryService --> JsonStorage: uses for persistence
+
+QueryService --> MemoryService: queries
+QueryService --> MemoryEntry: filters
 
 JsonStorage --> CalculationResult: serializes
 JsonStorage --> MemoryEntry: serializes
