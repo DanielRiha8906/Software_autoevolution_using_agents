@@ -124,4 +124,4 @@ Duration: 427.1s | Cost: $0.703650 USD | Turns: 15
 - CLI integration: Menu option 10 displays memory, option 11 exits; --memory flag prints all memory entries; both modes work without history data
 - No breaking changes to existing CalculationResult or CalculatorService APIs
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 578.3s | Cost: $1.043396 USD | Turns: 27
