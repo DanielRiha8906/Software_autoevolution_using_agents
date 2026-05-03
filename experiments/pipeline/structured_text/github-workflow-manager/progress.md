@@ -250,4 +250,4 @@ All tests pass including:
 **Won't Have (Not Applicable):**
 - External database or indexing — all filtering in-memory on service collections
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 826.8s | Cost: $1.795939 USD | Turns: 13
