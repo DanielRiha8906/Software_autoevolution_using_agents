@@ -68,6 +68,7 @@ package "services" #DDFFD4 {
         +get(task_id: String) : Task
         +list_all() : List<Task>
         +list_by_status(status: TaskStatus) : List<Task>
+        +list_by_due_date_range(before: DateTime [0..1], after: DateTime [0..1], status: TaskStatus [0..1], overdue_only: Boolean) : List<Task>
         +update(task_id: String, title: String [0..1], description: String [0..1], due_date: DateTime [0..1]) : Task
         +set_status(task_id: String, status: TaskStatus) : Task
         +set_due_date(task_id: String, due_date: DateTime [0..1]) : Task
@@ -76,6 +77,9 @@ package "services" #DDFFD4 {
         +get_comments(task_id: String) : List<TaskComment>
         +delete_comment(task_id: String, comment_id: String) : void
         +edit_comment(task_id: String, comment_id: String, content: String) : TaskComment
+        -_get_week_boundaries(year: Integer, week: Integer) : Tuple<DateTime, DateTime>
+        -_get_month_boundaries(year: Integer, month: Integer) : Tuple<DateTime, DateTime>
+        -_get_year_boundaries(year: Integer) : Tuple<DateTime, DateTime>
         -load() : void
         -persist() : void
     }
@@ -86,7 +90,10 @@ package "services" #DDFFD4 {
         +TodoService(storage: JsonStorage [0..1])
         +add_task(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
         +get_task(task_id: String) : Task
-        +list_tasks(status: TaskStatus [0..1]) : List<Task>
+        +list_tasks(status: TaskStatus [0..1], before: DateTime [0..1], after: DateTime [0..1], overdue_only: Boolean) : List<Task>
+        +list_tasks_by_week(year: Integer, week: Integer, status: TaskStatus [0..1]) : List<Task>
+        +list_tasks_by_month(year: Integer, month: Integer, status: TaskStatus [0..1]) : List<Task>
+        +list_tasks_by_year(year: Integer, status: TaskStatus [0..1]) : List<Task>
         +start_task(task_id: String) : Task
         +complete_task(task_id: String) : Task
         +reopen_task(task_id: String) : Task
@@ -106,6 +113,9 @@ package "cli" #FFE5E5 {
         --
         +TodoCLI(storagePath: String [0..1])
         +run(argv: List<String> [0..1]) : Integer
+        -_parse_and_list_by_week(week: String, status: TaskStatus [0..1]) : List<Task>
+        -_parse_and_list_by_month(month: String, status: TaskStatus [0..1]) : List<Task>
+        -_parse_and_list_by_year(year: String, status: TaskStatus [0..1]) : List<Task>
     }
 
     class InteractiveMenu {
@@ -113,6 +123,12 @@ package "cli" #FFE5E5 {
         --
         +InteractiveMenu(storagePath: String [0..1])
         +run() : void
+        -_do_list() : void
+        -_do_pick_due_date_range() : Tuple<DateTime [0..1], DateTime [0..1]>
+        -_do_pick_week(status: TaskStatus [0..1]) : List<Task> [0..1]
+        -_do_pick_month(status: TaskStatus [0..1]) : List<Task> [0..1]
+        -_do_pick_year(status: TaskStatus [0..1]) : List<Task> [0..1]
+        -_display_task_list_with_summary(tasks: List<Task>, status: TaskStatus [0..1], before: DateTime [0..1], after: DateTime [0..1], overdue_only: Boolean) : void
     }
 }
 

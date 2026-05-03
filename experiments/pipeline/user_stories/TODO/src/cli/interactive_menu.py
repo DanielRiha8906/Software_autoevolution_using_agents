@@ -1,5 +1,6 @@
 import os
-from datetime import datetime
+import re
+from datetime import datetime, timezone
 from typing import Optional
 
 from ..models.task import Task
@@ -118,26 +119,212 @@ class InteractiveMenu:
     # ── actions ────────────────────────────────────────────────────────────
 
     def _do_list(self) -> None:
+        """Display filter submenu and list tasks with selected filters."""
+        status = None
+        before = None
+        after = None
+        overdue_only = False
+
+        while True:
+            _clear()
+            print("  Filter tasks:\n")
+            print("  1. Filter by status")
+            print("  2. Filter by due date range")
+            print("  3. Filter by week")
+            print("  4. Filter by month")
+            print("  5. Filter by year")
+            print("  6. Show only overdue tasks")
+            print("  7. View results")
+            print("  0. Back")
+            print()
+            choice = input("  > ").strip().lower()
+
+            if choice in ("0", "q", "quit"):
+                return
+            elif choice == "1":
+                status = self._do_pick_status()
+            elif choice == "2":
+                before, after = self._do_pick_due_date_range()
+            elif choice == "3":
+                tasks_week = self._do_pick_week(status)
+                if tasks_week is not None:
+                    self._display_task_list(tasks_week, "week filter")
+            elif choice == "4":
+                tasks_month = self._do_pick_month(status)
+                if tasks_month is not None:
+                    self._display_task_list(tasks_month, "month filter")
+            elif choice == "5":
+                tasks_year = self._do_pick_year(status)
+                if tasks_year is not None:
+                    self._display_task_list(tasks_year, "year filter")
+            elif choice == "6":
+                overdue_only = not overdue_only
+                print(f"  Overdue filter: {'enabled' if overdue_only else 'disabled'}")
+                input("  Press Enter to continue...")
+            elif choice == "7":
+                tasks = self._service.list_tasks(
+                    status=status, before=before, after=after, overdue_only=overdue_only
+                )
+                self._display_task_list_with_summary(tasks, status, before, after, overdue_only)
+
+    def _do_pick_status(self) -> Optional[TaskStatus]:
+        """Prompt user to pick a status filter."""
         _clear()
-        print("  Filter by status (leave blank for all):")
+        print("  Filter by status:\n")
         print("  1. pending")
         print("  2. in progress")
         print("  3. done")
-        print("  0. All")
+        print("  0. No status filter")
+        print()
         raw = input("  > ").strip()
         status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
-        status = status_map.get(raw)
+        return status_map.get(raw)
 
+    def _do_pick_due_date_range(self) -> tuple[Optional[datetime], Optional[datetime]]:
+        """Prompt user for due date range (before/after)."""
         _clear()
-        tasks = self._service.list_tasks(status)
-        label = f"[{_STATUS_NAME[status]}]" if status else "[all]"
-        print(f"  Tasks {label}\n")
+        print("  Filter by due date range:\n")
+        before_str = _prompt("Due before (ISO 8601, or leave blank)") or None
+        before = None
+        if before_str:
+            try:
+                before = datetime.fromisoformat(before_str)
+            except ValueError:
+                print("  Error: Invalid date format. Use ISO 8601 (e.g., 2026-05-15T23:59:59+00:00)")
+                input("  Press Enter to continue...")
+                return None, None
+
+        after_str = _prompt("Due after (ISO 8601, or leave blank)") or None
+        after = None
+        if after_str:
+            try:
+                after = datetime.fromisoformat(after_str)
+            except ValueError:
+                print("  Error: Invalid date format. Use ISO 8601 (e.g., 2026-05-01T00:00:00+00:00)")
+                input("  Press Enter to continue...")
+                return None, None
+
+        if before or after:
+            print("  Date range filter set.")
+        else:
+            print("  No date range filter applied.")
+        input("  Press Enter to continue...")
+        return before, after
+
+    def _do_pick_week(self, status: Optional[TaskStatus]) -> Optional[list[Task]]:
+        """Prompt user for ISO 8601 week and return filtered tasks."""
+        _clear()
+        print("  Filter by ISO 8601 week:\n")
+        week_str = _prompt("Week (YYYY-Www, e.g., 2026-W20)") or None
+        if not week_str:
+            return None
+
+        match = re.match(r'^(\d{4})-W(\d{2})$', week_str)
+        if not match:
+            print("  Error: Invalid format. Use YYYY-Www (e.g., 2026-W20)")
+            input("  Press Enter to continue...")
+            return None
+
+        try:
+            year = int(match.group(1))
+            week = int(match.group(2))
+            return self._service.list_tasks_by_week(year, week, status)
+        except ValueError as e:
+            print(f"  Error: {e}")
+            input("  Press Enter to continue...")
+            return None
+
+    def _do_pick_month(self, status: Optional[TaskStatus]) -> Optional[list[Task]]:
+        """Prompt user for month (YYYY-MM) and return filtered tasks."""
+        _clear()
+        print("  Filter by month:\n")
+        month_str = _prompt("Month (YYYY-MM, e.g., 2026-05)") or None
+        if not month_str:
+            return None
+
+        match = re.match(r'^(\d{4})-(\d{2})$', month_str)
+        if not match:
+            print("  Error: Invalid format. Use YYYY-MM (e.g., 2026-05)")
+            input("  Press Enter to continue...")
+            return None
+
+        try:
+            year = int(match.group(1))
+            month = int(match.group(2))
+            return self._service.list_tasks_by_month(year, month, status)
+        except ValueError as e:
+            print(f"  Error: {e}")
+            input("  Press Enter to continue...")
+            return None
+
+    def _do_pick_year(self, status: Optional[TaskStatus]) -> Optional[list[Task]]:
+        """Prompt user for year (YYYY) and return filtered tasks."""
+        _clear()
+        print("  Filter by year:\n")
+        year_str = _prompt("Year (YYYY, e.g., 2026)") or None
+        if not year_str:
+            return None
+
+        match = re.match(r'^(\d{4})$', year_str)
+        if not match:
+            print("  Error: Invalid format. Use YYYY (e.g., 2026)")
+            input("  Press Enter to continue...")
+            return None
+
+        try:
+            year = int(match.group(1))
+            return self._service.list_tasks_by_year(year, status)
+        except ValueError as e:
+            print(f"  Error: {e}")
+            input("  Press Enter to continue...")
+            return None
+
+    def _display_task_list(self, tasks: list[Task], label: str) -> None:
+        """Display a list of tasks with label."""
+        _clear()
+        print(f"  Tasks ({label})\n")
         if not tasks:
             print("  (none)")
         else:
             for task in tasks:
                 desc = f"  — {task.description}" if task.description else ""
-                print(f"  {_task_line(task)}{desc}")
+                due_str = ""
+                if task.due_date:
+                    due_str = f"  (due: {task.due_date.strftime('%Y-%m-%d')})"
+                print(f"  {_task_line(task)}{desc}{due_str}")
+        print()
+        input("  Press Enter to continue...")
+
+    def _display_task_list_with_summary(
+        self,
+        tasks: list[Task],
+        status: Optional[TaskStatus],
+        before: Optional[datetime],
+        after: Optional[datetime],
+        overdue_only: bool,
+    ) -> None:
+        """Display filtered tasks with filter summary."""
+        _clear()
+        print("  Filtered Tasks\n")
+        if status:
+            print(f"  Status: {_STATUS_NAME[status]}")
+        if after:
+            print(f"  Due after: {after.strftime('%Y-%m-%d')}")
+        if before:
+            print(f"  Due before: {before.strftime('%Y-%m-%d')}")
+        if overdue_only:
+            print("  Showing: only overdue")
+        print()
+
+        if not tasks:
+            print("  (none)")
+        else:
+            for task in tasks:
+                desc = f"  — {task.description}" if task.description else ""
+                due_str = ""
+                if task.due_date:
+                    due_str = f"  (due: {task.due_date.strftime('%Y-%m-%d')})"
+                print(f"  {_task_line(task)}{desc}{due_str}")
         print()
         input("  Press Enter to continue...")
 

@@ -1,5 +1,6 @@
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from typing import Optional
+from calendar import monthrange
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
@@ -46,6 +47,109 @@ class TaskManager:
 
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
+
+    def list_by_due_date_range(
+        self,
+        before: Optional[datetime] = None,
+        after: Optional[datetime] = None,
+        status: Optional[TaskStatus] = None,
+        overdue_only: bool = False,
+    ) -> list[Task]:
+        """Filter tasks by due date range and optional status/overdue.
+
+        Tasks with no due_date are excluded from all due date range filters.
+
+        Args:
+            before: Include only tasks with due_date <= before (or None to exclude from range check).
+            after: Include only tasks with due_date >= after (or None to exclude from range check).
+            status: If specified, include only tasks with this status.
+            overdue_only: If True, include only tasks where is_overdue() returns True.
+
+        Returns:
+            list[Task]: Filtered task list.
+        """
+        result = []
+        for task in self._tasks.values():
+            # Skip tasks with no due_date unless checking for overdue status
+            if task.due_date is None and not overdue_only:
+                continue
+
+            # Check due_date range
+            if before is not None and task.due_date > before:
+                continue
+            if after is not None and task.due_date < after:
+                continue
+
+            # Check overdue status
+            if overdue_only and not task.is_overdue():
+                continue
+
+            # Check status
+            if status is not None and task.status != status:
+                continue
+
+            result.append(task)
+        return result
+
+    def _get_week_boundaries(self, year: int, week: int) -> tuple[datetime, datetime]:
+        """Calculate start and end datetime for an ISO 8601 week.
+
+        Week 1 is the week with the first Thursday of the year (ISO 8601).
+        Weeks start on Monday and end on Sunday.
+
+        Args:
+            year: Year (e.g., 2026).
+            week: ISO week number (1-53).
+
+        Returns:
+            tuple[datetime, datetime]: (week_start, week_end) as UTC datetimes.
+
+        Raises:
+            ValueError: If week is not in 1-53.
+        """
+        if not 1 <= week <= 53:
+            raise ValueError(f"Week must be 1-53, got {week}")
+        # Get the Monday of the given ISO week
+        week_start_date = date.fromisocalendar(year, week, 1)  # Monday
+        week_start = datetime.combine(week_start_date, datetime.min.time()).replace(tzinfo=timezone.utc)
+        # Get the Sunday of the given ISO week (6 days after Monday)
+        week_end_date = date.fromisocalendar(year, week, 7)  # Sunday
+        week_end = datetime.combine(week_end_date, datetime.max.time()).replace(tzinfo=timezone.utc)
+        return week_start, week_end
+
+    def _get_month_boundaries(self, year: int, month: int) -> tuple[datetime, datetime]:
+        """Calculate start and end datetime for a calendar month.
+
+        Args:
+            year: Year (e.g., 2026).
+            month: Month (1-12).
+
+        Returns:
+            tuple[datetime, datetime]: (month_start, month_end) as UTC datetimes.
+
+        Raises:
+            ValueError: If month is not in 1-12.
+        """
+        if not 1 <= month <= 12:
+            raise ValueError(f"Month must be 1-12, got {month}")
+        month_start = datetime(year, month, 1, tzinfo=timezone.utc)
+        # Get last day of month
+        last_day = monthrange(year, month)[1]
+        month_end = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
+        return month_start, month_end
+
+    def _get_year_boundaries(self, year: int) -> tuple[datetime, datetime]:
+        """Calculate start and end datetime for a calendar year.
+
+        Args:
+            year: Year (e.g., 2026).
+
+        Returns:
+            tuple[datetime, datetime]: (year_start, year_end) as UTC datetimes.
+        """
+        year_start = datetime(year, 1, 1, tzinfo=timezone.utc)
+        year_end = datetime(year, 12, 31, 23, 59, 59, tzinfo=timezone.utc)
+        return year_start, year_end
 
     def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         task = self.get(task_id)

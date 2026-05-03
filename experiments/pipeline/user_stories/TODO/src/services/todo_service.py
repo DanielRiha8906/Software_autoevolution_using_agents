@@ -19,10 +19,90 @@ class TodoService:
             raise ValueError("due_date must be timezone-aware")
         return self._manager.add(title.strip(), description, due_date)
 
+    def list_tasks_by_week(
+        self, year: int, week: int, status: Optional[TaskStatus] = None
+    ) -> list[Task]:
+        """List tasks due in a specific ISO 8601 week.
+
+        Args:
+            year: Year (e.g., 2026).
+            week: ISO week number (1-53).
+            status: Optional status filter (TaskStatus enum or None).
+
+        Returns:
+            list[Task]: Tasks due in the specified week.
+
+        Raises:
+            ValueError: If week is not in 1-53.
+        """
+        week_start, week_end = self._manager._get_week_boundaries(year, week)
+        return self._manager.list_by_due_date_range(
+            after=week_start, before=week_end, status=status
+        )
+
+    def list_tasks_by_month(
+        self, year: int, month: int, status: Optional[TaskStatus] = None
+    ) -> list[Task]:
+        """List tasks due in a specific calendar month.
+
+        Args:
+            year: Year (e.g., 2026).
+            month: Month (1-12).
+            status: Optional status filter (TaskStatus enum or None).
+
+        Returns:
+            list[Task]: Tasks due in the specified month.
+
+        Raises:
+            ValueError: If month is not in 1-12.
+        """
+        month_start, month_end = self._manager._get_month_boundaries(year, month)
+        return self._manager.list_by_due_date_range(
+            after=month_start, before=month_end, status=status
+        )
+
+    def list_tasks_by_year(
+        self, year: int, status: Optional[TaskStatus] = None
+    ) -> list[Task]:
+        """List tasks due in a specific calendar year.
+
+        Args:
+            year: Year (e.g., 2026).
+            status: Optional status filter (TaskStatus enum or None).
+
+        Returns:
+            list[Task]: Tasks due in the specified year.
+        """
+        year_start, year_end = self._manager._get_year_boundaries(year)
+        return self._manager.list_by_due_date_range(
+            after=year_start, before=year_end, status=status
+        )
+
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
 
-    def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
+    def list_tasks(
+        self,
+        status: Optional[TaskStatus] = None,
+        before: Optional[datetime] = None,
+        after: Optional[datetime] = None,
+        overdue_only: bool = False,
+    ) -> list[Task]:
+        """List tasks with optional filtering by status and due date.
+
+        Args:
+            status: Filter by status (TaskStatus enum or None for all).
+            before: Filter tasks with due_date <= before (datetime or None).
+            after: Filter tasks with due_date >= after (datetime or None).
+            overdue_only: If True, include only overdue tasks.
+
+        Returns:
+            list[Task]: Filtered task list.
+        """
+        if before is not None or after is not None or overdue_only:
+            return self._manager.list_by_due_date_range(
+                before=before, after=after, status=status, overdue_only=overdue_only
+            )
         if status is not None:
             return self._manager.list_by_status(status)
         return self._manager.list_all()

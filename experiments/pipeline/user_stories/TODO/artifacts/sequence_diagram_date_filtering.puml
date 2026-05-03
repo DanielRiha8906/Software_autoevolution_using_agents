@@ -1,0 +1,57 @@
+@startuml sequence_diagram_date_filtering
+
+actor User
+participant "TodoCLI / Menu" as CLI
+participant "TodoService" as Service
+participant "TaskManager" as Manager
+
+autonumber
+
+User -> CLI: list --week 2026-W20
+CLI -> CLI: parse YYYY-Www format
+CLI -> Service: list_tasks_by_week(2026, 20, status)
+Service -> Manager: _get_week_boundaries(2026, 20)
+Manager -> Manager: Calculate Monday (ISO day 1) and Sunday (ISO day 7)
+Manager -> Service: Return (week_start, week_end)
+Service -> Manager: list_by_due_date_range(after=week_start, before=week_end, status=status)
+Manager -> Manager: Filter tasks by due_date range
+Manager -> Service: Return filtered tasks
+Service -> CLI: Return task list
+CLI -> User: Display tasks
+
+autonumber
+
+User -> CLI: list --month 2026-05
+CLI -> CLI: parse YYYY-MM format
+CLI -> Service: list_tasks_by_month(2026, 5, status)
+Service -> Manager: _get_month_boundaries(2026, 5)
+Manager -> Manager: Calculate 1st and last day of month
+Manager -> Service: Return (month_start, month_end)
+Service -> Manager: list_by_due_date_range(after=month_start, before=month_end, status=status)
+Manager -> Manager: Filter tasks by due_date range
+Manager -> Service: Return filtered tasks
+Service -> CLI: Return task list
+CLI -> User: Display tasks
+
+autonumber
+
+User -> CLI: list --due-before 2026-05-15T23:59:59+00:00 --due-after 2026-05-01T00:00:00+00:00
+CLI -> CLI: Parse ISO 8601 date strings
+CLI -> Service: list_tasks(before=2026-05-15T23:59:59, after=2026-05-01T00:00:00, status=status, overdue_only=false)
+Service -> Manager: list_by_due_date_range(before=..., after=..., status=..., overdue_only=...)
+Manager -> Manager: Filter tasks by date range and status
+Manager -> Service: Return filtered tasks
+Service -> CLI: Return task list
+CLI -> User: Display tasks
+
+autonumber
+
+User -> CLI: list --overdue
+CLI -> Service: list_tasks(overdue_only=true)
+Service -> Manager: list_by_due_date_range(overdue_only=true)
+Manager -> Manager: Filter only overdue tasks (due_date < now and status != DONE)
+Manager -> Service: Return filtered tasks
+Service -> CLI: Return task list
+CLI -> User: Display tasks
+
+@enduml

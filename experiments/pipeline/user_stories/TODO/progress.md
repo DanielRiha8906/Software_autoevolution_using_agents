@@ -220,3 +220,78 @@ Duration: 412.8s | Cost: $0.739845 USD | Turns: 13
   - Both modes fully functional and tested
 
 Duration: 723.5s | Cost: $1.516267 USD | Turns: 33
+
+---
+
+## Task 05: Filter Tasks by Due Date and Overdue Status
+
+**Status:** COMPLETE ✓
+
+### Changes Made
+- **TaskManager (src/services/task_manager.py):** 
+  - Added `list_by_due_date_range()` method for filtering by date range (before/after) and overdue status
+  - Added `_get_week_boundaries()` helper to calculate ISO 8601 week start/end datetimes
+  - Added `_get_month_boundaries()` helper to calculate calendar month start/end datetimes
+  - Added `_get_year_boundaries()` helper to calculate calendar year start/end datetimes
+- **TodoService (src/services/todo_service.py):**
+  - Updated `list_tasks()` signature to accept `before`, `after`, and `overdue_only` optional parameters
+  - Added `list_tasks_by_week(year, week, status=None)` convenience method for week-based filtering
+  - Added `list_tasks_by_month(year, month, status=None)` convenience method for month-based filtering
+  - Added `list_tasks_by_year(year, status=None)` convenience method for year-based filtering
+- **TodoCLI (src/cli/todo_cli.py):**
+  - Extended `list` subcommand with new flags: `--due-before`, `--due-after`, `--week`, `--month`, `--year`, `--overdue`
+  - Added `_parse_and_list_by_week()` helper for YYYY-Www format parsing
+  - Added `_parse_and_list_by_month()` helper for YYYY-MM format parsing
+  - Added `_parse_and_list_by_year()` helper for YYYY format parsing
+  - Enhanced output to display due dates for tasks matching date filters
+  - Added validation for period filter mutual exclusivity and format errors
+- **InteractiveMenu (src/cli/interactive_menu.py):**
+  - Completely redesigned `_do_list()` to show filter submenu (status, due date range, time period, overdue, combined)
+  - Added `_do_pick_status()` interactive status selection
+  - Added `_do_pick_due_date_range()` for interactive due date range input (ISO 8601 format)
+  - Added `_do_pick_week()` for interactive ISO 8601 week input (YYYY-Www)
+  - Added `_do_pick_month()` for interactive calendar month input (YYYY-MM)
+  - Added `_do_pick_year()` for interactive year input (YYYY)
+  - Added `_display_task_list()` and `_display_task_list_with_summary()` for filtered result display
+- **Diagrams (artifacts/):**
+  - Updated class_diagram.puml: Added new methods to TaskManager and TodoService
+  - Updated activity_diagram.puml: Added detailed filter submenu and period calculation flows
+  - Updated component_diagram.puml: Added Date Filtering component
+  - Created sequence_diagram_date_filtering.puml: New diagram showing date filtering scenarios
+
+### Files Changed
+- src/services/task_manager.py (4 new methods)
+- src/services/todo_service.py (4 new methods, 1 modified)
+- src/cli/todo_cli.py (6 new CLI flags, 3 helper methods)
+- src/cli/interactive_menu.py (1 redesigned method, 7 new helper methods)
+- artifacts/class_diagram.puml
+- artifacts/activity_diagram.puml
+- artifacts/component_diagram.puml
+- artifacts/sequence_diagram_date_filtering.puml (NEW)
+
+### Test Results
+**336 tests total: ALL PASSED**
+- 66 new tests for date filtering functionality
+- 10 tests for TaskManager.list_by_due_date_range() (before, after, range, status, overdue, edge cases)
+- 17 tests for TaskManager boundary calculations (valid/invalid weeks, months, years, UTC timezone)
+- 6 tests for TodoService.list_tasks() updated signature and backward compatibility
+- 8 tests for TodoService period-based convenience methods
+- 14 tests for TodoCLI date filtering flags and combined filters
+- 7 tests for TodoCLI date parsing helpers (week, month, year format validation)
+- 3 integration tests (end-to-end filtering scenarios)
+- 270 existing tests all still passing (no regressions)
+
+### Acceptance Criteria Verification
+✓ Filtering by due date range (before/after a given datetime) is supported
+✓ Filtering by week, month, year (before/after a given datetime) is supported via period methods
+✓ Filtering by overdue status is supported via `overdue_only` parameter
+✓ Filters can be combined with existing status filtering in a single call
+✓ Results are returned in the same structured format as `list_tasks`
+✓ Existing `list_tasks(status=...)` behavior remains unchanged (backward compatible)
+✓ No database or external indexing system is used (filtering via TaskManager list comprehension)
+✓ All new functionality accessible via `python -m src`:
+  - Interactive menu: Option 1 ("List / filter tasks") provides submenu for all filter types
+  - CLI flags: `--due-before`, `--due-after`, `--week`, `--month`, `--year`, `--overdue` on list subcommand
+  - Both modes fully functional and tested
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

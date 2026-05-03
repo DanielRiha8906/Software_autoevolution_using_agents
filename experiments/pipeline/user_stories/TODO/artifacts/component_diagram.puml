@@ -18,6 +18,7 @@ package "TODO Application" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
         component "Comment Management\n(add, view, edit, delete)" as CMT
+        component "Date Filtering\n(week, month, year, range)" as DateFilter
     }
 
     package "Domain Model" {
@@ -40,6 +41,8 @@ CLI --> SVC
 
 SVC --> MGR
 SVC --> CMT
+SVC --> DateFilter
+DateFilter --> MGR
 MGR --> Storage
 MGR ..> Model
 MGR ..> CommentModel

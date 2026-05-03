@@ -1,548 +1,343 @@
-# Analysis: CommentsService Implementation
+# TODO Application: Due Date Filtering Analysis
 
-**Task:** Implement a CommentsService that manages the full lifecycle of TaskComment objects.
+## Task Overview
 
-**Date:** 2026-05-03
-
----
-
-## Executive Summary
-
-The TaskComment model, data structures, and persistence layer **already exist and are fully implemented**. The primary gap is the absence of a dedicated **CommentsService** class to provide a cohesive, high-level API for comment operations. Currently, comment logic is split between TaskManager (business logic) and TodoService (validation/passthrough). CLI integration for comments is also **missing entirely** — no interactive menu options or CLI flags expose comment operations.
-
-The task requires:
-1. Creating a new `CommentsService` class in `src/services/`
-2. Adding interactive menu options for add/list/delete comments
-3. Adding CLI subcommands for add/list/delete comments
-4. Updating `__main__.py` to wire the new service and entry points
+Implement task filtering by due date and overdue status, enabling users to query tasks by:
+- Due date range (before/after datetime)
+- Time period filters (week, month, year)
+- Overdue status
+- Combined with existing status filtering
+- Access via CLI and interactive menu
 
 ---
 
-## Current State Analysis
+## Current Task Data Structure
 
-### 1. Data Model: TaskComment (Complete)
+### Task Model
+**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/models/task.py`
 
-**File:** `src/models/task_comment.py`
+**Key attributes:**
+- `id: str` — UUID, supports prefix lookup
+- `title: str` — required
+- `description: Optional[str]`
+- `status: TaskStatus` — enum (PENDING, IN_PROGRESS, DONE)
+- `created_at: datetime` — UTC timezone-aware, auto-set
+- `updated_at: datetime` — UTC timezone-aware, auto-set
+- `due_date: Optional[datetime]` — UTC timezone-aware, nullable
+- `comments: list[TaskComment]`
+
+**Existing query methods on Task:**
+- `is_pending() -> bool`
+- `is_in_progress() -> bool`
+- `is_completed() -> bool`
+- `is_overdue() -> bool` — **already implemented** (checks if `due_date < now` and not DONE)
+
+**Serialization:**
+- `to_dict()` — serializes as ISO 8601 strings
+- `from_dict(data)` — deserializes from dicts
+
+**Validation:**
+- Enforces timezone-aware datetimes on initialization (raises ValueError if `due_date.tzinfo is None`)
+
+---
+
+## Current Filtering Implementation
+
+### TodoService.list_tasks() [Main filtering entry point]
+**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/services/todo_service.py` (lines 25-28)
 
 ```python
-@dataclass
-class TaskComment:
-    content: str
-    task_id: str
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    author: Optional[str] = None
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: Optional[datetime] = None
+def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]:
+    if status is not None:
+        return self._manager.list_by_status(status)
+    return self._manager.list_all()
 ```
 
-**Status:** Fully implemented with:
-- UUID auto-generation for `id`
-- Timezone-aware `created_at` (UTC)
-- Optional `author` field
-- Optional `updated_at` for edit tracking
-- `__post_init__()` validates non-empty content (raises ValueError if empty/whitespace-only)
-- `to_dict()` and `from_dict()` serialization methods
+**Current behavior:**
+- Accepts single optional `status` parameter (TaskStatus enum)
+- Returns all tasks if status is None
+- Delegates to TaskManager for actual filtering
 
-**Task Model Integration:** The Task model already has:
-- `comments: list[TaskComment]` field (line 21 in task.py)
-- Serialization support: `to_dict()` includes comments (line 134), `from_dict()` deserializes comments (lines 141-142)
+### TaskManager filtering methods
+**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/services/task_manager.py`
 
-### 2. Storage Layer: JsonStorage (Complete)
+- `list_all()` (line 44) — returns all tasks as list
+- `list_by_status(status: TaskStatus)` (lines 47-48) — filters by status via list comprehension
 
-**File:** `src/storage/json_storage.py`
+**Pattern:** Simple list comprehensions on `self._tasks.values()`, no composition/chaining support
 
-- Handles persistence of task data (which includes comments as nested objects)
-- Comments cascade-delete when a task is deleted (because Task.to_dict() only serializes existing comment list)
-- No schema changes needed — comments are already in the JSON payload
+---
 
-**Current behavior verified by tests:** `test_task_comment.py` lines 699-705 confirm that deleting a task deletes its associated comments.
+## Where list_tasks() is Called
 
-### 3. TaskManager Service (Partial)
+### From CLI
+**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/cli/todo_cli.py`
 
-**File:** `src/services/task_manager.py`, lines 89-141
+- `_cmd_list()` (lines 143-153) — parses `--status` flag, calls `list_tasks(status)`
+  - Currently supports: `--status [pending|in_progress|done]`
+  - Displays results with status symbols and descriptions
 
-Implements three comment methods directly:
+### From Interactive Menu
+**File:** `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/user_stories/TODO/src/cli/interactive_menu.py`
+
+- `run()` (line 62) — calls `list_tasks()` with no args to display all tasks in header
+- `_do_list()` (lines 120-142) — interactive status filter menu
+  - Prompts user to select status (pending/in_progress/done/all)
+  - Calls `list_tasks(status)`
+  - Displays with line format: `[status_symbol] [id_prefix] [title] [description]`
+
+---
+
+## How Status Filtering Currently Works
+
+### In CLI (todo_cli.py)
+```python
+def _cmd_list(self, args: argparse.Namespace) -> int:
+    status = TaskStatus(args.status) if args.status else None  # Convert string to enum
+    tasks = self._service.list_tasks(status)  # Pass enum or None
+    # ... display logic
+```
+
+### In Interactive Menu (interactive_menu.py)
+```python
+status_map = {"1": TaskStatus.PENDING, "2": TaskStatus.IN_PROGRESS, "3": TaskStatus.DONE}
+status = status_map.get(raw)  # Lookup enum or None
+tasks = self._service.list_tasks(status)  # Pass enum or None
+```
+
+**Pattern:**
+1. User input (string or numeric choice) → enum conversion
+2. Pass enum or None to service
+3. Service delegates to manager's `list_by_status()`
+4. Manager uses list comprehension to filter
+
+---
+
+## Required Changes for Due Date Filtering
+
+### 1. Service Layer (TodoService)
+
+**Extend `list_tasks()` signature:**
+
+Currently:
+```python
+def list_tasks(self, status: Optional[TaskStatus] = None) -> list[Task]
+```
+
+Should become:
+```python
+def list_tasks(
+    self,
+    status: Optional[TaskStatus] = None,
+    before: Optional[datetime] = None,
+    after: Optional[datetime] = None,
+    overdue_only: bool = False
+) -> list[Task]
+```
+
+**Add helper methods for time period filtering:**
+- `list_tasks_by_week(year: int, week: int, status: Optional[TaskStatus] = None) -> list[Task]`
+- `list_tasks_by_month(year: int, month: int, status: Optional[TaskStatus] = None) -> list[Task]`
+- `list_tasks_by_year(year: int, status: Optional[TaskStatus] = None) -> list[Task]`
+
+**Or a more flexible approach:**
+```python
+def list_tasks_by_due_date_range(
+    self,
+    period_start: Optional[datetime] = None,
+    period_end: Optional[datetime] = None,
+    status: Optional[TaskStatus] = None,
+    overdue_only: bool = False
+) -> list[Task]
+```
+
+### 2. Manager Layer (TaskManager)
+
+**Add filtering methods:**
 
 ```python
-def add_comment(task_id: str, content: str, author: Optional[str] = None) -> TaskComment
-def get_comments(task_id: str) -> list[TaskComment]
-def delete_comment(task_id: str, comment_id: str) -> None
+def list_by_due_date_range(
+    self,
+    before: Optional[datetime] = None,
+    after: Optional[datetime] = None,
+    status: Optional[TaskStatus] = None,
+    overdue_only: bool = False
+) -> list[Task]:
+    """Filter tasks by due date range and optional status/overdue."""
 ```
 
-**Status:**
-- All methods work correctly
-- They validate inputs and handle errors appropriately (e.g., TaskNotFoundError, ValueError)
-- They persist changes via `_persist()`
-- **Missing feature:** `get_comments()` does NOT order by created_at (acceptance criterion requirement)
-- **Missing feature:** No edit_comment() method (acceptance criterion bonus feature)
+**Filtering logic needed:**
+- If `before` is set: include only tasks where `due_date <= before` or `due_date is None` (decision needed)
+- If `after` is set: include only tasks where `due_date >= after`
+- If `overdue_only=True`: include only tasks where `task.is_overdue()`
+- If `status` is set: include only matching status
+- Combine all conditions with AND logic
 
-### 4. TodoService (Partial)
+**Note:** The `is_overdue()` method already exists on Task, so can be leveraged
 
-**File:** `src/services/todo_service.py`, lines 54-98
+### 3. CLI Layer (TodoCLI)
 
-Delegates to TaskManager with validation:
+**Extend `_cmd_list()` argument parser:**
 
+Current:
 ```python
-def add_comment(task_id: str, content: str, author: Optional[str] = None) -> TaskComment
-def get_comments(task_id: str) -> list[TaskComment]
-def delete_comment(task_id: str, comment_id: str) -> None
+p_list.add_argument("--status", choices=["pending", "in_progress", "done"], help="Filter by status")
 ```
 
-**Status:**
-- Validates empty content (strips whitespace before delegating)
-- Correctly propagates TaskNotFoundError
-- Same gaps as TaskManager regarding ordering and edit support
-
-### 5. CLI Layer (Non-existent for Comments)
-
-**File:** `src/cli/todo_cli.py`
-
-**Status:** No comment subcommands exist. Parser covers:
-- add, list, show, start, done, reopen, update, delete, due-date
-
-**Missing:** add-comment, list-comments, delete-comment (and possibly edit-comment)
-
-### 6. Interactive Menu (Non-existent for Comments)
-
-**File:** `src/cli/interactive_menu.py`
-
-**Status:** Main menu (line 104-112) has no comment options.
-
-**Missing:** Interactive submenu options for comment add/view/delete
-
-### 7. Tests (Comprehensive for Model/Manager/Service)
-
-**File:** `tests/test_task_comment.py`
-
-**Status:** Very comprehensive — 150+ lines covering:
-- TaskComment model creation, validation, serialization
-- TaskManager.add_comment(), get_comments(), delete_comment()
-- TodoService equivalents
-- Integration tests including cascade delete
-- BUT does NOT test for:
-  - `get_comments()` ordering by created_at
-  - CLI commands for comments (no test_todo_cli.py comment tests exist)
-  - Interactive menu comment operations
-
----
-
-## Acceptance Criteria Deep Dive
-
-### Core Requirements
-
-1. **add_comment(task_id, content, author)** ✓ Exists
-   - Validates task exists ✓
-   - Integrates with storage ✓
-   - Creates TaskComment object ✓
-   - **Gap:** No dedicated CommentsService
-
-2. **list_comments(task_id)** ⚠️ Exists but **NOT ordered by created_at**
-   - Current: Returns `task.comments` in append order (which happens to be creation order if no mutations)
-   - Required: MUST order by `created_at`
-   - **Fix needed in both TaskManager.get_comments() and CommentsService**
-
-3. **delete_comment(task_id, comment_id)** ✓ Exists
-   - Works correctly ✓
-   - Persists deletion ✓
-
-4. **Task existence validation** ✓ Exists
-   - Both TaskManager and TodoService call `get(task_id)` which raises TaskNotFoundError
-
-5. **Storage integration** ✓ Exists
-   - Comments stored as part of Task JSON structure ✓
-   - No separate storage layer needed ✓
-
-6. **Cascade delete on task deletion** ✓ Exists
-   - Verified by test line 699-705
-   - When task deleted, its comment list is discarded ✓
-
-7. **Bonus: edit_comment()** ✗ Missing
-   - Should update `content` and `updated_at`
-   - Needs TaskComment mutation method or direct field access
-
-8. **CLI/Menu accessibility** ✗ Missing
-   - No interactive menu options
-   - No CLI subcommands
-   - Must add both (per Runtime & CLI Exposure Requirements)
-
----
-
-## What Needs to Be Created/Modified
-
-### 1. New File: `src/services/comments_service.py`
-
-**Purpose:** Centralized API for comment operations
-
-**Responsibilities:**
-- CRUD operations on comments
-- Input validation (delegate to models where possible)
-- Error handling (propagate TaskNotFoundError, ValueError)
-- Ordering of results (list_comments must return sorted by created_at)
-- Persist changes (delegate to storage via TaskManager)
-
-**Methods to implement:**
-- `add_comment(task_id: str, content: str, author: Optional[str] = None) -> TaskComment`
-- `list_comments(task_id: str) -> list[TaskComment]` (sorted by created_at)
-- `delete_comment(task_id: str, comment_id: str) -> None`
-- `edit_comment(task_id: str, comment_id: str, content: str) -> TaskComment` (bonus)
-
-**Dependencies:**
-- Receive `TodoService` as constructor argument (to access task_manager)
-- OR receive `TaskManager` directly
-
-**Pattern to follow:**
-- TodoService wraps TaskManager for high-level business logic
-- CommentsService could wrap TaskManager OR be a sibling service
-- **Design decision needed:** Should CommentsService be:
-  - Option A: Instantiated inside TodoService (composition)?
-  - Option B: Independent service accepting TaskManager in constructor?
-  - Option C: Static methods/module-level functions?
-  - **Assumption:** Following TodoService pattern, CommentsService receives TaskManager
-
-### 2. Modify: `src/services/task_manager.py`
-
-**Changes needed:**
-- Fix `get_comments()` to sort by created_at (line 110-123)
-- Add `edit_comment()` method for bonus feature
-
-**Current code (line 110-123):**
+Add:
 ```python
-def get_comments(self, task_id: str) -> list[TaskComment]:
-    task = self.get(task_id)
-    return task.comments  # Currently unsorted
+p_list.add_argument("--due-before", help="Due date before (ISO 8601, e.g., 2026-05-15T23:59:59+00:00)")
+p_list.add_argument("--due-after", help="Due date after (ISO 8601)")
+p_list.add_argument("--week", help="Due in week YYYY-Www (e.g., 2026-W20)")
+p_list.add_argument("--month", help="Due in month YYYY-MM (e.g., 2026-05)")
+p_list.add_argument("--year", help="Due in year YYYY (e.g., 2026)")
+p_list.add_argument("--overdue", action="store_true", help="Show only overdue tasks")
 ```
 
-**Required fix:**
-```python
-def get_comments(self, task_id: str) -> list[TaskComment]:
-    task = self.get(task_id)
-    return sorted(task.comments, key=lambda c: c.created_at)
-```
+**Implement `_cmd_list()` logic:**
+1. Parse date arguments (ISO 8601 strings → datetime objects)
+2. Convert week/month/year to date ranges
+3. Call appropriate service method
+4. Display results (extend current display to show due date if present)
 
-### 3. Modify: `src/services/todo_service.py`
+### 4. Interactive Menu Layer (InteractiveMenu)
 
-**Changes needed:**
-- Optionally: wrap/delegate to CommentsService instead of directly to TaskManager
-- OR: Update existing methods to use TaskManager's fixed `get_comments()` with sorting
-- Minimum change: Ensure consistency
+**Extend `_do_list()` menu:**
 
-**Current behavior:** Already valid, just needs TaskManager.get_comments() fix to cascade up
+Current flow:
+1. Prompt for status filter (4 options: pending/in_progress/done/all)
+2. Display filtered tasks
 
-### 4. Modify: `src/cli/todo_cli.py`
-
-**Add subcommands:**
-```
-add-comment TASK_ID CONTENT [--author AUTHOR]
-list-comments TASK_ID
-delete-comment TASK_ID COMMENT_ID
-edit-comment TASK_ID COMMENT_ID CONTENT  (bonus)
-```
-
-**Patterns to follow:**
-- Use existing command structure (add, list, show, start, done, reopen, update, delete, due-date)
-- Follow argparse pattern already established
-- Print user-friendly output with status symbols (e.g., "Added comment to task abc123")
-
-### 5. Modify: `src/cli/interactive_menu.py`
-
-**Add menu items in _print_main_menu():**
-```
-8. Manage comments  (add/view/edit/delete)
-```
-
-**Add new method (following _do_* pattern):**
-- `_do_comment_menu()` — submenu for add/list/delete/edit comment operations
-- Reuses existing `_pick()`, `_prompt()` helpers
-- Shows comment list with IDs and content previews
-
-**Integration points:**
-- Call CommentsService or TodoService comment methods
-- Update task selection flow to allow navigating to comments after viewing task
-
-### 6. Modify: `src/__main__.py`
-
-**Current (lines 1-20):**
-```python
-def main() -> None:
-    if len(sys.argv) > 1:
-        sys.exit(TodoCLI().run())
-    menu = InteractiveMenu()
-    try:
-        menu.run()
-    except KeyboardInterrupt:
-        print()
-        sys.exit(0)
-```
-
-**Status:** No changes needed
-- TodoCLI and InteractiveMenu already instantiated
-- They will be updated to support comments internally
-- Entry point remains the same
-
-### 7. Update: `src/services/__init__.py`
-
-**Current (lines 1-4):**
-```python
-from .task_manager import TaskManager, TaskNotFoundError
-from .todo_service import TodoService
-
-__all__ = ["TaskManager", "TaskNotFoundError", "TodoService"]
-```
-
-**Change:**
-```python
-from .task_manager import TaskManager, TaskNotFoundError
-from .todo_service import TodoService
-from .comments_service import CommentsService
-
-__all__ = ["TaskManager", "TaskNotFoundError", "TodoService", "CommentsService"]
-```
+New flow:
+1. Show filter submenu:
+   - Filter by status
+   - Filter by due date range
+   - Filter by time period (week/month/year)
+   - Filter by overdue only
+   - Combine filters
+2. Collect filter parameters via prompts
+3. Call service with combined filters
+4. Display results with due date column
 
 ---
 
-## Testing Implications
+## Key Implementation Details
 
-### New Tests Needed
+### Date Range Calculation
 
-**File:** `tests/test_comments_service.py` (new)
-- CommentsService instantiation
-- add_comment() with/without author
-- list_comments() returns sorted by created_at
-- delete_comment() removes comment
-- Error handling (TaskNotFoundError, ValueError)
+For week/month/year filters, need to calculate boundaries:
 
-**File:** `tests/test_todo_cli.py` (additions)
-- `add-comment` subcommand
-- `list-comments` subcommand
-- `delete-comment` subcommand
-- `edit-comment` subcommand (if implemented)
-- Error output on invalid task/comment IDs
+**Week (ISO 8601):** Week starts Monday
+- Input: "2026-W20" (week 20 of 2026)
+- Start: first day of that week (Monday)
+- End: last day of that week (Sunday at 23:59:59)
 
-**File:** `tests/test_task_manager.py` (additions)
-- Verify `get_comments()` returns sorted list
+**Month:**
+- Input: "2026-05"
+- Start: 2026-05-01 00:00:00
+- End: 2026-05-31 23:59:59
 
-### Existing Tests
+**Year:**
+- Input: "2026"
+- Start: 2026-01-01 00:00:00
+- End: 2026-12-31 23:59:59
 
-- `tests/test_task_comment.py` — All pass as-is (no changes to TaskComment model)
-- `tests/test_task.py` — No changes needed
-- `tests/test_task_manager.py` — Need to add sort verification for get_comments()
-- `tests/test_todo_service.py` — May need to verify ordering behavior
+Recommendation: Use `datetime.date.fromisocalendar()` for weeks, `calendar` module for month boundaries
 
----
+### Combining Filters
 
-## Data Structure: JSON Serialization
+All filters should be combinable (AND logic):
+- status + due_before
+- status + due_after + overdue
+- week + status
+- etc.
 
-Comments are stored **nested inside each Task** in the JSON file:
+Current implementation (`list_by_status`) is incompatible with combining filters. Need unified filtering strategy.
 
-```json
-[
-  {
-    "id": "uuid-for-task",
-    "title": "Task title",
-    "description": "...",
-    "status": "pending",
-    "created_at": "2026-05-03T...",
-    "updated_at": "2026-05-03T...",
-    "due_date": null,
-    "comments": [
-      {
-        "id": "uuid-for-comment",
-        "task_id": "uuid-for-task",
-        "content": "Comment text",
-        "author": "John",
-        "created_at": "2026-05-03T...",
-        "updated_at": null
-      }
-    ]
-  }
-]
-```
+### Display Considerations
 
-**Key points:**
-- Comments are **not a separate root-level array** — they're embedded in each Task
-- `task_id` in comment redundantly stores the parent task ID (for integrity)
-- Cascade delete happens naturally: when a task is deleted, its comments array is discarded
-- Sorting comments by `created_at` happens in-memory after load (no database index needed)
+**Current output:** `[status_symbol] [id_prefix] [title] [description]`
+
+**Consider adding due date info:**
+- Show due date inline? `[status] [id] [title] (due: 2026-05-15)`
+- Show overdue warning? Flag overdue tasks with `*` or color
+- Show count in header? "Tasks: 12 (3 overdue)"
+
+### Timezone Handling
+
+- All `due_date` fields are UTC timezone-aware
+- User input (CLI/menu) should be parsed as ISO 8601, preserving timezone
+- Comparisons (`before`, `after`, `overdue`) all use UTC `datetime.now(timezone.utc)`
+- **Already handled correctly in existing code**
 
 ---
 
-## Architecture Layers
+## Files to Modify
 
-### Current Stack
+1. **src/services/todo_service.py** — extend `list_tasks()` signature and add time-period methods
+2. **src/services/task_manager.py** — add `list_by_due_date_range()` and helper methods
+3. **src/cli/todo_cli.py** — extend `list` subcommand args, implement `_cmd_list()` date parsing logic
+4. **src/cli/interactive_menu.py** — extend `_do_list()` with date filter menu options
+5. **src/__main__.py** — no changes needed (CLI/menu wiring already in place)
 
-```
-Entry Point (__main__.py)
-    ↓
-CLI Layer (TodoCLI, InteractiveMenu)
-    ↓
-Service Layer (TodoService, TaskManager)
-    ↓
-Model Layer (Task, TaskStatus, TaskComment)
-    ↓
-Storage Layer (JsonStorage)
-    ↓
-File System (todo_data.json)
-```
-
-### After CommentsService
-
-```
-Entry Point (__main__.py)
-    ↓
-CLI Layer (TodoCLI, InteractiveMenu)  ← Add comment subcommands and menu options
-    ↓
-Service Layer (TodoService, TaskManager, CommentsService)  ← NEW SERVICE
-    ↓
-Model Layer (Task, TaskStatus, TaskComment)
-    ↓
-Storage Layer (JsonStorage)
-    ↓
-File System (todo_data.json)
-```
-
-**CommentsService positioning:**
-- Sits alongside TodoService (not nested inside it)
-- Uses TaskManager as dependency (same as TodoService does)
-- Provides high-level comment API to CLI layer
-- Handles business logic (validation, error handling, ordering)
+No model, storage, or test infrastructure changes required initially (Task and JsonStorage already support due_date).
 
 ---
 
-## Ambiguities & Assumptions
+## Ambiguities & Decisions
 
-### 1. CommentsService Constructor Signature
+1. **Null due_date handling in range filters:**
+   - Should tasks with `due_date=None` be included when filtering by date range?
+   - Assumption: No, exclude them. They are not "due" at all.
+   - Alternative: Add `include_no_due_date: bool` flag if needed later.
 
-**Unclear:** Should CommentsService accept StoragePath, TodoService, or TaskManager?
+2. **Filter combination order:**
+   - Should all filters be AND-ed? Yes.
+   - Example: `--status pending --overdue` → pending AND overdue
+   - Assumption: All filters are AND-ed together.
 
-**Assumption:** Following TodoService pattern:
-```python
-def __init__(self, storage: Optional[JsonStorage] = None):
-    self._manager = TaskManager(storage)
-```
+3. **Week/month/year boundary precision:**
+   - Should period end at 00:00:00 or 23:59:59?
+   - Assumption: End at 23:59:59 to be inclusive of whole day/month/year.
 
-OR simpler, receive TaskManager:
-```python
-def __init__(self, manager: TaskManager):
-    self._manager = manager
-```
+4. **CLI flag vs menu option naming:**
+   - CLI flags: `--due-before`, `--due-after`, `--week`, `--month`, `--year`, `--overdue`
+   - Menu: numbered or lettered options for filter type, then sub-prompts for values
+   - Assumption: Follow existing pattern (status filter is option 1 in menu).
 
-**Design decision deferred to System Architect.** Either works; second is cleaner.
-
-### 2. Ordering Implementation
-
-**Requirement:** "ordered by created_at"
-
-**Assumption:** Ascending order (oldest comments first). This is standard for discussion threads.
-
-**Alternative:** Descending (newest first, like Twitter). **System Architect to confirm.**
-
-### 3. Edit Comment Implementation
-
-**Requirement (bonus):** "Editing a comment's content (with updated_at updated)"
-
-**Ambiguity:** How should edit be exposed?
-- Option A: `CommentsService.edit_comment(task_id, comment_id, new_content) -> TaskComment`
-- Option B: Modify TaskComment in-place: `comment.content = "..."; comment.updated_at = now()`
-- Option C: CLI-only (not in service layer)
-
-**Assumption:** Option A (full service-layer support), similar to add/delete pattern.
-
-### 4. Author Field Handling
-
-**Current:** `author: Optional[str]` in TaskComment
-
-**Ambiguity:** Should CLI/menu auto-populate author from environment (e.g., git user)? Or always require explicit --author flag?
-
-**Assumption:** Always optional, default to None (no auto-detection).
-
-### 5. Comment ID Display in Menu
-
-**Ambiguity:** Comments have 36-char UUIDs. Should menu show full ID or prefix?
-
-**Assumption:** Show first 8 chars like tasks do (for consistency).
+5. **Combined filter semantics in interactive menu:**
+   - Should user be able to stack multiple filters in one session?
+   - Assumption: Yes, show a "filter summary" before displaying results.
 
 ---
 
-## Scope Boundaries
+## Integration Points
 
-### In Scope
+### Test Coverage Implications
+- Current tests focus on status filtering (test_task_manager.py, test_todo_service.py)
+- New tests needed for:
+  - Due date range filtering
+  - Week/month/year parsing and boundary calculation
+  - Overdue detection in filter context
+  - Combined filters (status + due_date)
+  - CLI date parsing and validation
+  - Interactive menu date input
 
-- [x] Create CommentsService class
-- [x] Add list_comments() with created_at ordering
-- [x] Add add_comment() with validation
-- [x] Add delete_comment() with error handling
-- [x] Bonus: edit_comment() with updated_at tracking
-- [x] CLI subcommands: add-comment, list-comments, delete-comment, (edit-comment)
-- [x] Interactive menu: comment management submenu
-- [x] Tests for CommentsService
-- [x] Update task_manager.get_comments() to sort by created_at
-
-### Out of Scope
-
-- [ ] Comment threading/replies (flat list only)
-- [ ] Comment permissions/roles (no author verification)
-- [ ] Comment search or filtering
-- [ ] Rich text/markdown in comments
-- [ ] File attachments to comments
-- [ ] Comment notifications
-- [ ] Comment history/audit trail (beyond updated_at)
-- [ ] Separate comment storage table
-- [ ] Comment pagination (load all for a task)
+### Backward Compatibility
+- Existing `list_tasks()` calls with `status=None` will still work (default behavior unchanged)
+- New parameters are optional with sensible defaults
+- CLI: existing `list` command without filters still works
 
 ---
 
-## Files to Modify/Create
+## Summary
 
-| File | Action | Reason |
-|------|--------|--------|
-| `src/services/comments_service.py` | **CREATE** | New service class |
-| `src/services/task_manager.py` | **MODIFY** | Fix get_comments() sorting, add edit_comment() |
-| `src/services/todo_service.py` | **MODIFY** | Option: delegate to CommentsService (or leave as-is) |
-| `src/services/__init__.py` | **MODIFY** | Export CommentsService |
-| `src/cli/todo_cli.py` | **MODIFY** | Add comment subcommands |
-| `src/cli/interactive_menu.py` | **MODIFY** | Add comment menu options |
-| `tests/test_comments_service.py` | **CREATE** | Test new service |
-| `tests/test_task_manager.py` | **MODIFY** | Add sort verification |
-| `tests/test_todo_cli.py` | **MODIFY** | Test CLI comment commands |
-| `artifacts/class_diagram.puml` | **MODIFY** | Show CommentsService |
-| `artifacts/component_diagram.puml` | **MODIFY** | Show CommentsService in stack |
-| `artifacts/use_case_diagram.puml` | **MODIFY** | Show comment use cases |
+The TODO application has a clean separation of concerns (models → services → CLI/menu). The Task model already includes `due_date` and `is_overdue()` logic. The filtering infrastructure in TodoService and TaskManager is currently single-purpose (status only) but follows a simple pattern that can be extended.
 
----
+**Primary work:**
+1. Extend service/manager filtering to accept date ranges and combine with status
+2. Add CLI arguments for date filtering and parse ISO 8601 input
+3. Add interactive menu options for date-based filtering
+4. Display results with due date information where relevant
 
-## Summary of Gaps
-
-| Gap | Severity | Impact | Fix |
-|-----|----------|--------|-----|
-| No CommentsService class | HIGH | Acceptance criterion | Create new service |
-| get_comments() not sorted by created_at | HIGH | Acceptance criterion | Fix in TaskManager, propagate to CommentsService |
-| No CLI comment commands | HIGH | Acceptance criterion (must be accessible via `python -m src`) | Add subcommands to TodoCLI |
-| No interactive menu for comments | HIGH | Acceptance criterion (menu option required) | Add comment submenu to InteractiveMenu |
-| No edit_comment() | MEDIUM | Bonus feature | Implement in TaskManager and CommentsService |
-| No tests for CommentsService | MEDIUM | Code quality | Write comprehensive tests |
-
----
-
-## Implementation Order (for System Architect)
-
-1. **Modify TaskManager** — Fix get_comments() sorting, add edit_comment()
-2. **Create CommentsService** — Wrap TaskManager with high-level API
-3. **Update TodoService** — Optional: delegate to CommentsService
-4. **Add CLI subcommands** — add-comment, list-comments, delete-comment, (edit-comment)
-5. **Add menu options** — Interactive comment submenu
-6. **Write tests** — CommentsService, CLI, and sorting verification
-7. **Update diagrams** — Reflect CommentsService in architecture
-
----
-
-## Key Insights
-
-1. **Infrastructure exists:** All data structures and persistence mechanisms are already in place. This is primarily a **service abstraction + CLI exposure task.**
-
-2. **Cascade delete works:** When a task is deleted, its comments are automatically discarded (no orphans).
-
-3. **Sorting is the main fix:** Most acceptance criteria are met; the key missing piece is ordering list_comments() by created_at.
-
-4. **CLI is the blocker:** Without CLI/menu wiring, the feature is incomplete per Runtime Requirements. "All new functionality must be accessible via python -m src (both as interactive menu option and CLI flag)."
-
-5. **Tests are comprehensive:** Existing test coverage for TaskComment, TaskManager, and TodoService is thorough. New tests should focus on CommentsService and CLI integration.
+**No structural changes needed** — just extend existing filtering patterns to include date-based predicates.
