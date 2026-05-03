@@ -415,4 +415,4 @@ python -m src import --input runs_backup.json
 python -m src import --input runs.json --skip-duplicates
 ```
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 691.6s | Cost: $1.627182 USD | Turns: 54
