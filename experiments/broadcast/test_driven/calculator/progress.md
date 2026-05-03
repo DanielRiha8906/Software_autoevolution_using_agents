@@ -331,3 +331,75 @@ Duration: 257.3s | Cost: $0.563686 USD | Turns: 59
 ✓ UML diagrams updated (class diagram and component diagram)
 
 Duration: 561.7s | Cost: $3.848208 USD | Turns: 36
+
+---
+
+# Task 07: Import/Export Service
+
+## Broadcast Evaluation Summary
+
+### Candidates Evaluated
+- **Implementer-A**: Created ImportExportService with pathlib-based directory creation, pretty-printed JSON (indent=2), and robust error handling for entry creation. Implemented export() and import_from() with duplicate detection and structure validation. Result: 96 tests passing.
+- **Implementer-B**: Created ImportExportService with basic file I/O, no directory creation, and standard JSON formatting. Implemented same core functionality with similar validation logic. Result: 96 tests passing.
+- **Implementer-C**: Incomplete implementation - missing test file and source file in final commit. Result: 91 tests passing (incomplete).
+
+### Winner Selection
+**Implementer-A** (implementation merged) - While all three achieved similar test counts, Candidate A provided superior implementation quality: automatic directory creation via pathlib, pretty-printed JSON for readability, and comprehensive try/except error handling for MemoryEntry creation. Production-ready code with better UX.
+
+### Files Changed
+- `src/services/import_export_service.py` - NEW: Created ImportExportService class with export() and import_from() methods
+- `tests/services/test_import_export_service.py` - NEW: Created test suite with 5 comprehensive tests
+- `src/services/__init__.py` - UPDATED: Added ImportExportService export
+- `src/__main__.py` - UPDATED: Added --import and --export CLI arguments with error handling
+- `artifacts/class_diagram.puml` - UPDATED: Added ImportExportService class and MemoryService relationship
+- `artifacts/component_diagram.puml` - UPDATED: Added Import/Export Service component and JSON file I/O
+- `artifacts/activity_diagram.puml` - UPDATED: Added import/export workflows with validation and error handling
+
+### Implementation Details
+1. **ImportExportService Class**:
+   - Constructor accepts MemoryService instance (dependency injection)
+   - `export(filepath: str)` - Exports all MemoryEntry objects as JSON list with pretty formatting (indent=2)
+   - `import_from(filepath: str)` - Imports entries from JSON with comprehensive validation
+   - Uses pathlib.Path for automatic parent directory creation (no FileNotFoundError on export)
+   - Uses MemoryEntry.to_dict() and MemoryEntry.from_dict() for serialization
+
+2. **Validation & Safety**:
+   - JSON must be a list (raises Exception if not)
+   - Each entry must be a dictionary (raises Exception if not)
+   - Required fields validation: id, operation, operands, result, success, execution_time_ms
+   - Duplicate detection by ID - existing entries are not overwritten
+   - Existing entries in memory are preserved during import (non-destructive merge)
+   - Try/except error handling for MemoryEntry creation from invalid data
+
+3. **CLI Integration**:
+   - `python -m src --export FILE` - Exports memory entries to JSON file with automatic directory creation
+   - `python -m src --import FILE` - Imports memory entries from JSON file with structure validation
+   - Proper error messages for FileNotFoundError and validation failures
+   - Exit codes for error conditions (sys.exit(1))
+
+### Test Results
+- Existing tests: 91 passing (from Task 06)
+- New ImportExportService tests: 5 passing
+  - `test_export_creates_valid_json_file` - Validates JSON export structure
+  - `test_import_loads_entries` - Verifies entries are loaded and retrievable
+  - `test_import_validates_structure` - Ensures invalid JSON raises exceptions
+  - `test_import_preserves_existing_entries` - Validates non-destructive imports
+  - `test_import_skips_duplicate_entries` - Tests duplicate detection by ID
+- **Total: 96 tests passing** ✓
+
+### Requirements Met
+✓ ImportExportService implemented with both export() and import_from() methods
+✓ Export writes valid JSON list of MemoryEntry dicts
+✓ Import validates top-level structure (must be list)
+✓ Import validates each entry is a dict with required fields
+✓ Import raises Exception for invalid schema
+✓ Duplicate entries skipped (not added again)
+✓ Import preserves already stored entries (non-destructive merge)
+✓ All 5 new test cases pass
+✓ All existing tests still pass (91 tests)
+✓ Code compiles without syntax or import errors
+✓ Accessible via python -m src (both --import and --export CLI flags)
+✓ UML diagrams updated (class diagram, component diagram, activity diagram)
+✓ No external dependencies (uses stdlib json, pathlib, typing)
+
+Duration: 544.5s | Cost: $1.126526 USD | Turns: 64

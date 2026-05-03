@@ -11,6 +11,7 @@ package "Calculator Application" {
     component "Application Service\n(CalculatorService)" as Service
     component "Memory Service\n(MemoryService)" as Memory
     component "Statistics Service\n(StatisticsService)" as Stats
+    component "Import/Export Service\n(ImportExportService)" as Import
     component "Calculation Engine\n(Calculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
@@ -25,14 +26,20 @@ package "Calculator Application" {
     Service --> Memory : manages
 
     Stats --> Memory : analyzes
+    Import --> Memory : reads/writes
+
+    Main --> Import : initializes [optional]
 
     Service ..> Models
     Store ..> Models
     Memory ..> Models
+    Import ..> Models
 }
 
 database "calculations.json" as DB
+database "Import/Export\nJSON Files" as Files
 
 Store --> DB : read/write
+Import --> Files : read/write
 
 @enduml

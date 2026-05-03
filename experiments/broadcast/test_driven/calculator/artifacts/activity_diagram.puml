@@ -6,66 +6,107 @@ skinparam activityDiamondBackgroundColor #FFF3CC
 
 start
 
-if (CLI operation provided?) then (yes)
+if (Import/Export requested?) then (yes)
 
-  :Validate operation and operands;
+  if (Import?) then (yes)
+    :Validate JSON file path;
 
-  if (Input valid?) then (yes)
-    :Perform calculation;
+    if (File exists?) then (yes)
+      :Load JSON file;
 
-    if (Calculation successful?) then (yes)
-      :Save result to history;
-      :Show result;
-      stop
+      if (Valid structure?) then (yes)
+        :Merge entries into memory;
+        :Skip duplicates;
+        :Show success message;
+        stop
+      else (no)
+        :Show JSON validation error;
+        stop
+      endif
     else (no)
-      :Show calculation error;
+      :Show file not found error;
       stop
     endif
 
-  else (no)
-    :Show usage error;
-    stop
+  else (Export?)
+    :Retrieve all entries from memory;
+
+    if (Entries exist?) then (yes)
+      :Convert to JSON format;
+      :Create parent directories;
+      :Write to file;
+      :Show success message;
+      stop
+    else (no)
+      :Show empty memory error;
+      stop
+    endif
   endif
 
 else (no)
 
-  repeat
-    :Show menu;
-    :Read user choice;
+  if (CLI operation provided?) then (yes)
 
-    switch (User choice?)
+    :Validate operation and operands;
 
-      case (Exit)
-        :Show goodbye message;
+    if (Input valid?) then (yes)
+      :Perform calculation;
+
+      if (Calculation successful?) then (yes)
+        :Save result to history;
+        :Show result;
         stop
+      else (no)
+        :Show calculation error;
+        stop
+      endif
 
-      case (History)
-        :Load calculation history;
-        :Show history;
+    else (no)
+      :Show usage error;
+      stop
+    endif
 
-      case (Operation)
-        :Read operands;
+  else (no)
 
-        if (Input valid?) then (yes)
-          :Perform calculation;
+    repeat
+      :Show menu;
+      :Read user choice;
 
-          if (Calculation successful?) then (yes)
-            :Save result to history;
-            :Show result;
+      switch (User choice?)
+
+        case (Exit)
+          :Show goodbye message;
+          stop
+
+        case (History)
+          :Load calculation history;
+          :Show history;
+
+        case (Operation)
+          :Read operands;
+
+          if (Input valid?) then (yes)
+            :Perform calculation;
+
+            if (Calculation successful?) then (yes)
+              :Save result to history;
+              :Show result;
+            else (no)
+              :Show calculation error;
+            endif
+
           else (no)
-            :Show calculation error;
+            :Show input error;
           endif
 
-        else (no)
-          :Show input error;
-        endif
+        case (Invalid choice)
+          :Show invalid choice message;
 
-      case (Invalid choice)
-        :Show invalid choice message;
+      endswitch
 
-    endswitch
+    repeat while (Menu active?) is (yes)
 
-  repeat while (Menu active?) is (yes)
+  endif
 
 endif
 
