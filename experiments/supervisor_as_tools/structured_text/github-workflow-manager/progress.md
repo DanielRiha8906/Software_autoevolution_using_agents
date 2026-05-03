@@ -126,4 +126,4 @@ Successfully created the `WorkflowRunAttempt` dataclass to model individual work
 - Helper method tests: 16 tests covering all status/conclusion combinations
 - Mutual exclusivity: 3 tests validating logical constraints
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 281.9s | Cost: $0.472725 USD | Turns: 22
