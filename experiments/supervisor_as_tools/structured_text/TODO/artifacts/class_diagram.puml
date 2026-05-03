@@ -15,12 +15,12 @@ package "models" #DDEEFF {
         +title : String
         +description : String [0..1]
         +status : TaskStatus
-        +createdAt : DateTime
-        +updatedAt : DateTime
+        +created_at : DateTime
+        +updated_at : DateTime
         +due_date : DateTime [0..1]
         --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : Task
+        +to_dict() : Dictionary
+        +from_dict(data: Dictionary) : Task
         +mark_in_progress() : void
         +mark_done() : void
         +reopen() : void
