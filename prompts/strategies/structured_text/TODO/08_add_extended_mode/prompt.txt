@@ -6,6 +6,7 @@
 - Support creating and listing projects
 - Support listing tasks filtered by project
 - Preserve existing behavior for tasks without a project assignment
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 ### Should
 - Validate that project names are not empty

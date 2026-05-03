@@ -10,3 +10,4 @@ so that I can retrieve and reuse relevant past results efficiently.
 - Results are returned as a collection of `MemoryEntry` objects.
 - The structure of returned results is consistent across all queries.
 - No database or external indexing system is used.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

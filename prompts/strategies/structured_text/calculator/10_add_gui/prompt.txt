@@ -6,10 +6,12 @@ Use `tkinter` (stdlib) as the GUI framework unless the project already has a GUI
 - Provide a GUI for performing calculations
 - GUI must support all existing standard mode operations
 - Must integrate with current calculation logic (no duplicate business logic in the UI)
+- The GUI must be launchable via `python -m src --gui`.
 
 ### Should
 - Display calculation history (MemoryEntry records) in a scrollable list
 - Ensure basic usability and clarity
+
 
 ### Could
 - Toggle between standard and scientific mode in the UI

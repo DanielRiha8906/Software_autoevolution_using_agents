@@ -73,3 +73,4 @@ def test_query_no_match_returns_empty_list(populated_service):
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
 - Stored history remains unchanged after querying.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

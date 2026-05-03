@@ -10,6 +10,7 @@ Must Have:
   - `is_failed()`
   - `is_running()`
 - Methods must derive state strictly from `status` and `conclusion`
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 Should Have:
 - `is_terminal()` and `is_running()` must be mutually exclusive

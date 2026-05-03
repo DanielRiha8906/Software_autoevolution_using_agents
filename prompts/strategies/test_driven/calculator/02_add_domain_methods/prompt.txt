@@ -72,3 +72,4 @@ def test_existing_operations_unchanged():
 - Code compiles without syntax or import errors.
 - No existing operation is duplicated or renamed.
 - All domain errors introduced in this task must be represented by raised exceptions (not error return values or special sentinel values).
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

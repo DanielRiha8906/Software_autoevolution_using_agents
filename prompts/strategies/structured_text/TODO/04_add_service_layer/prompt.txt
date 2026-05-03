@@ -8,6 +8,7 @@
   - Delete a comment by id
 - Validate that the referenced task exists before adding a comment
 - Integrate with the existing storage mechanism
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 ### Should
 - Service responsibilities must be limited to `TaskComment` lifecycle management; storage implementation must stay separate

@@ -8,3 +8,4 @@ so that attempt management is centralised and decoupled from the domain model.
 - Duplicate attempt numbers per run are prevented.
 - Attempts can be returned sorted by attempt number as a bonus.
 - No caching layer is added.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

@@ -8,6 +8,7 @@
   - Storage layer
   - Interface layer
 - Preserve existing public interfaces (function signatures, class names, return types)
+- `python -m src` must behave identically before and after the refactor — all existing functionality remains accessible.
 
 ### Should
 - Introduce abstract base classes or protocols to decouple service, storage, and interface layers

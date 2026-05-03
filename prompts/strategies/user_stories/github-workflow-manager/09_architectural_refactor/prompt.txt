@@ -9,3 +9,5 @@ so that I can change one without affecting the others.
 - Module-level `__all__` declarations can be added to make each layer's public API explicit as a bonus.
 - Domain logic is not rewritten, only reorganised.
 - File/module structure changes must remain minimal and traceable.
+- `python -m src` must behave identically before and after the refactor
+— all existing functionality remains accessible.

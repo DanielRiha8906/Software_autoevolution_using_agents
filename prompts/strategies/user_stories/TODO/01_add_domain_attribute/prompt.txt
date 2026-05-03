@@ -9,3 +9,4 @@ so that I can track deadlines and know when work is expected to be completed.
 - Dates use a timezone-aware ISO 8601 representation in CEST (UTC+2).
 - Providing an invalid datetime value is rejected before the task is saved.
 - Existing stored tasks that lack a `due_date` field load without error.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

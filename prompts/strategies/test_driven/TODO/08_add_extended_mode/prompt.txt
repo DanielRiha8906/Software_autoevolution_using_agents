@@ -98,3 +98,4 @@ def test_move_task_between_projects(services):
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
 - `Task.from_dict` handles records missing `project_id` without raising.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

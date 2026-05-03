@@ -8,3 +8,5 @@ so that I can change one without breaking the others and understand where each r
 - Abstract base classes or protocols decouple the layers from each other.
 - All existing external behaviour is preserved: public interfaces, return types, and side effects are unchanged.
 - Domain logic and calculation algorithms are not rewritten, only reorganised.
+- `python -m src` must behave identically before and after the refactor
+— all existing functionality remains accessible.

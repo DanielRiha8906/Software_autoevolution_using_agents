@@ -99,3 +99,4 @@ def test_reopen_on_pending_is_noop_or_raises():
 - All provided tests pass.
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

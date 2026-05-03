@@ -6,6 +6,7 @@
 - Ensure `due_date` is stored and persisted through the storage layer
 - Update `to_dict` and `from_dict` accordingly
 - Use a CEST (UTC+2) timezone-aware datetime representation (ISO 8601) consistently across the application
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 ### Should
 - Preserve backward compatibility with stored JSON data (tasks without a due_date field must load without error)

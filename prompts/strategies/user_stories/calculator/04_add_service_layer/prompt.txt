@@ -7,3 +7,4 @@ so that memory management is in one place and not scattered through the calculat
 - Every completed calculation (success or failure) is recorded via the service.
 - Persistence details (file I/O, serialisation) are not inside `MemoryService` — they live in a separate storage layer.
 - The service's responsibilities are limited to `MemoryEntry` lifecycle; it does not own business logic.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

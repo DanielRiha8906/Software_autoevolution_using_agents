@@ -14,3 +14,4 @@
 
 ### Won’t
 - Rewrite domain logic or calculation algorithms
+- `python -m src` must behave identically before and after the refactor — all existing functionality remains accessible.

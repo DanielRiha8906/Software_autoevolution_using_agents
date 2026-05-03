@@ -129,3 +129,4 @@ def test_no_match_returns_empty_list(svc):
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
 - Query results are deterministic and consistently ordered.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

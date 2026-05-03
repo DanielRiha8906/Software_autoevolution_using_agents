@@ -7,6 +7,7 @@
   - Count of overdue tasks
   - Count of tasks with a due date set
 - Return a dataclass (not a plain dict) as the structured report object
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 ### Should
 - Include completion rate as a percentage (done / total)

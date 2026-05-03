@@ -8,6 +8,7 @@ Must Have:
   - Export runs to JSON
   - Import runs from JSON
 - Ensure schema consistency
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 Should Have:
 - Validate imported data structure

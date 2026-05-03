@@ -159,3 +159,4 @@ def test_no_external_calls_in_import_export():
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
 - Export/import behaviour is deterministic and consistent.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

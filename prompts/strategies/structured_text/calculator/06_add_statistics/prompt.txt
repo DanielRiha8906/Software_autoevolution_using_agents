@@ -5,6 +5,7 @@
 - Provide statistics on error frequency (total errors, error rate as a percentage)
 - Compute average `execution_time_ms` across all stored entries
 - Results must be derived from stored MemoryEntry data
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 ### Should
 - Return a dataclass or named object (not a plain dict) for the report

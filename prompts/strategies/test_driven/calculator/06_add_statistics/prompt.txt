@@ -72,3 +72,4 @@ def test_report_structure_is_consistent(stats_svc):
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
 - The report type is a proper dataclass with named fields.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

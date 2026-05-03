@@ -12,3 +12,4 @@ so that my data is portable and not locked to a single environment.
 - Invalid or duplicate entries during import are skipped individually, not treated as a full failure.
 - Only JSON format is supported; CSV and XML are out of scope.
 - JSON format is described in documentation (readme.MD).
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

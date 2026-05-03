@@ -19,3 +19,5 @@ Could Have:
 
 Won’t Have:
 - Fully rewrite domain logic
+- `python -m src` must behave identically before and after the refactor
+— all existing functionality remains accessible.

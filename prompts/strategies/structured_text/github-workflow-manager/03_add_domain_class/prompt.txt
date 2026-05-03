@@ -13,7 +13,6 @@ Must Have:
   - `conclusion: Optional[str]`
   - `created_at: datetime` (CEST, UTC+2)
 - Establish relationship to `WorkflowRun`
-
 Should Have:
 - Support serialization/deserialization
 

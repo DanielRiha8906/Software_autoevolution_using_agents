@@ -10,3 +10,4 @@ so that I can programmatically retrieve relevant subsets of tasks.
 - Results are returned in the same structured format as `list_tasks`.
 - Existing `list_tasks(status=...)` behaviour remains unchanged.
 - No database or external indexing system is used.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

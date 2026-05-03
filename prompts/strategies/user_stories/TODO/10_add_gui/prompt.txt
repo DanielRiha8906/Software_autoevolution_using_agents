@@ -12,3 +12,4 @@ so that I can view, add, update, and delete tasks without typing commands.
 - Adding comments through the GUI is supported as a bonus.
 - Comment count per task in the task list is supported as a bonus.
 - No new application functionality beyond what the service layer already provides is introduced.
+- The GUI must be launchable via `python -m src --gui`.

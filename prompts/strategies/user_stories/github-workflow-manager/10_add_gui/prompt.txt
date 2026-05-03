@@ -8,3 +8,4 @@ so that I can review and manage run data without using the CLI.
 - Runs can be filtered by status or conclusion via a dropdown or input field.
 - Editing workflow runs through the GUI is supported.
 - Failed runs are highlighted in a distinct colour as a bonus.
+- The GUI must be launchable via `python -m src --gui`.

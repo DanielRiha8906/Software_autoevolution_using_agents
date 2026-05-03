@@ -15,4 +15,4 @@ Should Have:
 Could Have:
 - Highlight rows for failed runs in a distinct color
 - Support editing of workflow runs
-
+- The GUI must be launchable via `python -m src --gui`.

@@ -9,3 +9,4 @@ so that I can understand the state of my work at a glance.
 - Output format is deterministic regardless of task ordering.
 - Average days from creation to completion for done tasks is included as a bonus.
 - No charts or visualisation output are produced.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

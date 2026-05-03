@@ -14,6 +14,8 @@
   - sqrt of negative numbers must raise an error or return a defined error result
   - modulo by zero must raise an error
   - power with negative or fractional exponents must produce correct results
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
+
 
 ### Could
 - Support operator aliases (e.g., ‘^’ for power)

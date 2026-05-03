@@ -89,3 +89,4 @@ def test_attempt_service_does_not_contain_file_io():
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
 - Attempt retrieval is deterministic and ordered.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

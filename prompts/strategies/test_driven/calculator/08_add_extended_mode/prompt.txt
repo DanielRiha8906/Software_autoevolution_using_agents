@@ -74,3 +74,4 @@ def test_standard_operations_still_work():
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
 - Scientific operations are implemented without duplicating base calculator logic.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

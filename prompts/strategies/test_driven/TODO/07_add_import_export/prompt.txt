@@ -96,3 +96,4 @@ def test_import_skips_duplicates(setup, tmp_path):
 - All provided tests pass.
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

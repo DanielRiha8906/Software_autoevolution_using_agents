@@ -13,3 +13,4 @@ so that I can programmatically access usage and error metrics.
 - The result is returned as a structured object (e.g., dataclass), not a plain dictionary.
 - The structure of the statistics output is consistent across calls.
 - No visualisation layer is introduced.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

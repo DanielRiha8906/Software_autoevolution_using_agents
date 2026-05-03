@@ -28,3 +28,5 @@ Refactor the workflow manager into clearly separated components:
 - Statistics computation behaves the same.
 - GitHub fetch functionality behaves the same.
 - The codebase has clear separation of responsibilities.
+- `python -m src` must behave identically before and after the refactor 
+— all existing functionality remains accessible.

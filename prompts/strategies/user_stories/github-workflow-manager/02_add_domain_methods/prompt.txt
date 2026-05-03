@@ -9,3 +9,4 @@ so that state logic is consistent and not duplicated across the codebase.
 - `is_successful()` and `is_failed()` are mutually exclusive.
 - A convenience `is_cancelled()` method derived from `conclusion` is available as a bonus.
 - Existing enum definitions are not modified.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

@@ -69,3 +69,4 @@ def test_invalid_due_date_raises():
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
 - `Task.from_dict` handles records missing `due_date` without raising.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

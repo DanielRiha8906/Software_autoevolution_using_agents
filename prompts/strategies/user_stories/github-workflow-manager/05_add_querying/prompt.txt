@@ -10,3 +10,4 @@ so that I can retrieve relevant subsets of runs for analysis.
 - Multiple filters can be combined in a single query call.
 - Results are returned as a collection of `WorkflowRun` objects.
 - No database or external index is used.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

@@ -129,3 +129,4 @@ def test_no_requests_usage():
 - Code compiles without syntax or import errors.
 - CLI interaction is properly mocked in tests.
 - Fetch behaviour is deterministic and testable.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

@@ -8,3 +8,4 @@ so that status changes are consistent and all business rules are enforced in one
 - Methods derive state strictly from existing `Task` attributes — no external input required.
 - Invalid transitions (e.g. `reopen()` on a PENDING task) are either a no-op or raise an error.
 - `is_pending()` and `is_in_progress()` predicates are available for symmetry.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

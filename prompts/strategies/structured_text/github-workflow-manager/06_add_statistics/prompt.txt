@@ -9,6 +9,7 @@ Must Have:
   - Average `duration_seconds`
   - Average number of attempts per run
 - Return structured report object
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 Should Have:
 - Use a dataclass or named object (not a plain dict) for the report

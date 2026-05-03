@@ -22,3 +22,5 @@ Refactor the calculator into clearly separated components:
 - Existing calculator operations still behave the same.
 - Existing memory/history functionality still behaves the same.
 - The new structure has clear responsibility boundaries.
+- `python -m src` must behave identically before and after the refactor 
+— all existing functionality remains accessible.

@@ -7,6 +7,7 @@ Use `tkinter` (stdlib) as the GUI framework unless the project already has a GUI
 - Allow basic task operations: view, add, change status, delete
 - Must integrate with existing service layer logic (no duplicate business logic in the UI)
 - Highlight overdue tasks visually
+- The GUI must be launchable via `python -m src --gui`.
 
 ### Should
 - Support filtering tasks by status or project via a dropdown or input field

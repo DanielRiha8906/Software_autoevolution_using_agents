@@ -55,3 +55,4 @@ def test_gui_references_service():
 - Code compiles without syntax or import errors.
 - The GUI can be instantiated without starting the main event loop automatically.
 - Standard calculator operations are accessible through the GUI.
+- The GUI must be launchable via `python -m src --gui`.

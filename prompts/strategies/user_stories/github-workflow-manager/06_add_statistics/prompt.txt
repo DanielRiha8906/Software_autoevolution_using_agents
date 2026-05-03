@@ -8,3 +8,4 @@ so that I can understand overall success rates, durations, and retry behaviour.
 - The report is returned as a structured object (dataclass), not a plain dictionary.
 - Per-status breakdown of average duration is included as a bonus.
 - No visualisation layer is added.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

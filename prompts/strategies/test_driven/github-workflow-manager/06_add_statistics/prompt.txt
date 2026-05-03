@@ -122,3 +122,4 @@ def test_empty_data_returns_zeroed_report(tmp_path):
 - Existing tests still pass.
 - Code compiles without syntax or import errors.
 - Output is deterministic and consistent across runs.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

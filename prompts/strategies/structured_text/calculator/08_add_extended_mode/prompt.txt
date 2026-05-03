@@ -4,6 +4,7 @@
 - Introduce a scientific mode that adds the following operations: sin, cos, tan, log (base 10), ln (natural log), exp
 - Mode must extend existing functionality without breaking it
 - Switching between standard and scientific mode must be explicit
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 ### Should
 - Maintain consistency with base calculator behavior (same operation interface, same result structure)

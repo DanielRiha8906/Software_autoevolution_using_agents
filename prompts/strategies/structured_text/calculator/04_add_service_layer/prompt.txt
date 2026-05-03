@@ -4,6 +4,7 @@
 - Implement MemoryService to manage MemoryEntry objects
 - Provide basic operations (store, retrieve)
 - Ensure integration with calculation flow
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 ### Should
 - Service responsibilities should be limited to MemoryEntry lifecycle management; storage implementation must stay separate

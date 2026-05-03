@@ -9,6 +9,7 @@ Must Have:
   - By timestamp (created/updated before or after a given datetime, using CEST time, UTC+2)
   - By presence of attempts (runs with at least one attempt vs. runs with none)
 - Return filtered collections
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 Should Have:
 - Combine multiple filters in a single query call

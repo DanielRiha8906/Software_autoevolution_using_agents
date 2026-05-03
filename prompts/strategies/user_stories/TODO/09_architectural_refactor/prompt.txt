@@ -9,3 +9,5 @@ so that I can change one layer without risking unintended effects in the others.
 - Repository-style abstractions can be applied to isolate persistence from business logic as a bonus.
 - Module-level `__all__` declarations can be added to make each layer's public API explicit as a bonus.
 - Domain logic and task management algorithms are not rewritten.
+- `python -m src` must behave identically before and after the refactor
+— all existing functionality remains accessible.

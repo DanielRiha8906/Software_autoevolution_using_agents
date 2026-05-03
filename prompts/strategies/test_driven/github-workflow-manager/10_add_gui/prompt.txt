@@ -67,3 +67,4 @@ def test_gui_handles_failed_runs_visually():
 - Code compiles without syntax or import errors.
 - GUI can be instantiated without side effects.
 - No business logic exists in the GUI layer.
+- The GUI must be launchable via `python -m src --gui`.

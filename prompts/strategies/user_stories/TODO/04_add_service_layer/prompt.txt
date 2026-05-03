@@ -9,3 +9,4 @@ so that comment logic is centralised and not duplicated across the codebase.
 - Persistence details stay in the storage layer, not inside the service.
 - Deleting a task cascades to its associated comments.
 - Editing a comment's content (with `updated_at` updated) is supported as a bonus.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

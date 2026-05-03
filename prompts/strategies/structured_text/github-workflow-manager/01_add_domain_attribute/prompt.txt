@@ -8,6 +8,7 @@ Must Have:
 - Ensure value is stored and persisted in storage layer
 - Value must represent total execution time in seconds
 - Update serialization/deserialization logic accordingly
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 Should Have:
 - Validate that duration is non-negative

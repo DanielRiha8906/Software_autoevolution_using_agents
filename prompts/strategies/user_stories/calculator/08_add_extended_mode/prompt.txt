@@ -9,3 +9,4 @@ so that I can perform advanced maths without leaving the application.
 - Scientific operations use the same interface and result structure as standard operations.
 - Domain errors (e.g., `log` of a non-positive number) are handled the same way as existing edge cases (e.g., divide by zero).
 - Operations already in standard mode are not re-implemented.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.

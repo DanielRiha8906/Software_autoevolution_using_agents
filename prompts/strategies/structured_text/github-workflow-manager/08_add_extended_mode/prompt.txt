@@ -12,6 +12,7 @@ Must Have:
   2. `secrets/.env` file in the project root
   3. Prompt user to input PAT securely if neither is found
 - Do not persist a user-entered PAT unless explicitly configured
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
 
 Should Have:
 - Handle API errors gracefully (rate limits, invalid token, network issues)

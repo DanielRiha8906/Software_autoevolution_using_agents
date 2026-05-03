@@ -9,3 +9,4 @@ so that I can identify slow runs and track performance trends over time.
 - Negative values are rejected.
 - Defaults to `0.0` if not provided.
 - No external time measurement tools are used.
+- All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag.
