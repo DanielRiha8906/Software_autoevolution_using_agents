@@ -18,6 +18,7 @@ package "GitHub Workflow Manager" {
   package "Service layer" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
+    component "WorkflowQuery" as QUERY
     component "AttemptService" as ASVC
   }
 
@@ -41,11 +42,16 @@ MAIN --> IM
 
 CLI --> TRACKER
 CLI --> ASVC
+CLI --> QUERY
 IM --> TRACKER
 IM --> ASVC
+IM --> QUERY
 
 CLI --> SVC
 IM --> SVC
+
+QUERY --> ASVC
+SVC --> QUERY
 
 TRACKER --> SVC
 SVC --> STOR

@@ -18,6 +18,10 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by conclusion"     as I_FCONCL
     usecase "Create attempt"           as I_CREATE_ATT
     usecase "List attempts for run"    as I_LIST_ATT
+    usecase "Query runs (advanced)"    as I_QUERY
+    usecase "Filter by duration"       as I_FDUR
+    usecase "Filter by timestamp"      as I_FTSMP
+    usecase "Filter by attempt presence" as I_FATT
     usecase "Exit application"         as I_EXIT
   }
 
@@ -32,6 +36,10 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by conclusion"     as C_FCONCL
     usecase "Create attempt"           as C_CREATE_ATT
     usecase "List attempts for run"    as C_LIST_ATT
+    usecase "Query runs (advanced)"    as C_QUERY
+    usecase "Filter by duration"       as C_FDUR
+    usecase "Filter by timestamp"      as C_FTSMP
+    usecase "Filter by attempt presence" as C_FATT
   }
 }
 
@@ -45,11 +53,16 @@ UI --> I_STATE
 UI --> I_FILTER
 UI --> I_CREATE_ATT
 UI --> I_LIST_ATT
+UI --> I_QUERY
 UI --> I_EXIT
 
 I_FILTER --> I_FBRANCH  : <<extend>>
 I_FILTER --> I_FSTATUS  : <<extend>>
 I_FILTER --> I_FCONCL   : <<extend>>
+
+I_QUERY --> I_FDUR  : <<extend>>
+I_QUERY --> I_FTSMP  : <<extend>>
+I_QUERY --> I_FATT  : <<extend>>
 
 CLI --> C_ADD
 CLI --> C_LIST
@@ -57,9 +70,14 @@ CLI --> C_DETAIL
 CLI --> C_STATE
 CLI --> C_CREATE_ATT
 CLI --> C_LIST_ATT
+CLI --> C_QUERY
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>
 C_LIST --> C_FCONCL   : <<extend>>
+
+C_QUERY --> C_FDUR  : <<extend>>
+C_QUERY --> C_FTSMP  : <<extend>>
+C_QUERY --> C_FATT  : <<extend>>
 
 @enduml

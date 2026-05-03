@@ -96,7 +96,25 @@ repeat
         :Print all attempts (sorted by attempt_number);
       endif
 
-    case (8 — Exit)
+    case (8 — Query runs (advanced))
+      :Choose filter type\n(duration / timestamp / attempts);
+      if (duration?) then (yes)
+        :Prompt min duration (seconds);
+        :Prompt max duration (seconds);
+      elseif (timestamp?) then (yes)
+        :Prompt before timestamp (ISO format);
+        :Prompt after timestamp (ISO format);
+      else (attempts)
+        :Choose: has attempts / no attempts;
+      endif
+      :WorkflowQuery.query();
+      if (no matches?) then (yes)
+        :Print "No matching runs.";
+      else (no)
+        :Print matching runs;
+      endif
+
+    case (9 — Exit)
       :Print "Goodbye.";
       stop
 

@@ -1,9 +1,13 @@
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..storage.workflow_json_storage import WorkflowJsonStorage
+
+if TYPE_CHECKING:
+    from .workflow_query import WorkflowQuery
+    from .attempt_service import AttemptService
 
 
 class WorkflowRunService:
@@ -35,3 +39,15 @@ class WorkflowRunService:
 
     def filter_by_conclusion(self, conclusion: WorkflowConclusion) -> List[WorkflowRun]:
         return [r for r in self._runs if r.conclusion == conclusion]
+
+    def create_query(self, attempt_service: Optional["AttemptService"] = None) -> "WorkflowQuery":
+        """Create a query interface for advanced filtering.
+
+        Args:
+            attempt_service: Optional AttemptService for attempt presence filtering.
+
+        Returns:
+            A WorkflowQuery instance initialized with current runs.
+        """
+        from .workflow_query import WorkflowQuery
+        return WorkflowQuery(list(self._runs), attempt_service)

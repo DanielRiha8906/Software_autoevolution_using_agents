@@ -9,6 +9,7 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..services.workflow_run_service import WorkflowRunService
 from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.workflow_query import DurationRange, TimestampRange
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -105,6 +106,39 @@ def build_parser() -> argparse.ArgumentParser:
     attempt_list_p = sub.add_parser("attempt-list", help="List all attempts for a run")
     attempt_list_p.add_argument("--run-id", type=int, required=True, help="Run ID to filter attempts")
 
+    # query
+    query_p = sub.add_parser("query", help="Query workflow runs with advanced filtering")
+    query_p.add_argument(
+        "--min-duration",
+        type=float,
+        default=None,
+        help="Minimum duration in seconds (inclusive)",
+    )
+    query_p.add_argument(
+        "--max-duration",
+        type=float,
+        default=None,
+        help="Maximum duration in seconds (inclusive)",
+    )
+    query_p.add_argument(
+        "--created-after",
+        type=str,
+        default=None,
+        help="Filter runs created after this datetime (ISO format, exclusive)",
+    )
+    query_p.add_argument(
+        "--created-before",
+        type=str,
+        default=None,
+        help="Filter runs created before this datetime (ISO format, exclusive)",
+    )
+    query_p.add_argument(
+        "--has-attempts",
+        type=lambda x: x.lower() == "true",
+        default=None,
+        help="Filter by attempt presence (true/false)",
+    )
+
     return parser
 
 
@@ -184,3 +218,54 @@ def run_cli(workflow_service: WorkflowRunService, attempt_service: AttemptServic
         print(f"\n--- {len(attempts)} attempt(s) for run {ns.run_id} ---")
         for attempt in attempts:
             print(_fmt_attempt(attempt))
+
+    elif ns.command == "query":
+        query = workflow_service.create_query(attempt_service)
+
+        created_after = None
+        if ns.created_after:
+            try:
+                created_after = datetime.fromisoformat(ns.created_after)
+            except ValueError:
+                print(f"Error: Invalid datetime format for --created-after: {ns.created_after}", file=sys.stderr)
+                sys.exit(1)
+
+        created_before = None
+        if ns.created_before:
+            try:
+                created_before = datetime.fromisoformat(ns.created_before)
+            except ValueError:
+                print(f"Error: Invalid datetime format for --created-before: {ns.created_before}", file=sys.stderr)
+                sys.exit(1)
+
+        duration_range = None
+        if ns.min_duration is not None or ns.max_duration is not None:
+            duration_range = DurationRange(
+                min_seconds=ns.min_duration,
+                max_seconds=ns.max_duration
+            )
+
+        timestamp_range = None
+        if created_after is not None or created_before is not None:
+            timestamp_range = TimestampRange(
+                before=created_before,
+                after=created_after
+            )
+
+        try:
+            result = query.query(
+                duration_range=duration_range,
+                timestamp_range=timestamp_range,
+                has_attempts=ns.has_attempts
+            )
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+        if not result:
+            print("No runs match the query criteria.")
+            return
+
+        print(f"\n--- {len(result)} matching run(s) ---")
+        for run in result:
+            print(_fmt_run(run))

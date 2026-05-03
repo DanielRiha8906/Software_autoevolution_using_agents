@@ -88,7 +88,29 @@ package "services" #DDFFD4 {
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
         +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        +create_query(attempt_service: AttemptService) : WorkflowQuery
         -_persist() : None
+    }
+
+    class WorkflowQuery {
+        -_runs : List[WorkflowRun]
+        -_attempt_service : Optional[AttemptService]
+        --
+        +__init__(runs: List[WorkflowRun], attempt_service: Optional[AttemptService])
+        +filter_by_duration(min_seconds: Optional[float], max_seconds: Optional[float]) : List[WorkflowRun]
+        +filter_by_timestamp(before: Optional[datetime], after: Optional[datetime]) : List[WorkflowRun]
+        +filter_by_attempt_presence(has_attempts: bool) : List[WorkflowRun]
+        +query(duration_range: Optional[DurationRange], timestamp_range: Optional[TimestampRange], has_attempts: Optional[bool]) : List[WorkflowRun]
+    }
+
+    class DurationRange {
+        +min_seconds : Optional[float]
+        +max_seconds : Optional[float]
+    }
+
+    class TimestampRange {
+        +before : Optional[datetime]
+        +after : Optional[datetime]
     }
 
     class WorkflowRunTracker {
@@ -137,6 +159,11 @@ WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
+WorkflowRunService    "1" --> "1" WorkflowQuery   : creates
+WorkflowQuery              ..>  WorkflowRun
+WorkflowQuery              ..>  DurationRange
+WorkflowQuery              ..>  TimestampRange
+WorkflowQuery              ..>  AttemptService
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 AttemptService       "1" --> "1" AttemptJsonStorage   : -_storage
@@ -144,8 +171,10 @@ AttemptService            ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  AttemptService
 "workflow_cli"             ..>  WorkflowRunTracker
+"workflow_cli"             ..>  WorkflowQuery
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  AttemptService
 "interactive_menu"         ..>  WorkflowRunTracker
+"interactive_menu"         ..>  WorkflowQuery
 
 @enduml

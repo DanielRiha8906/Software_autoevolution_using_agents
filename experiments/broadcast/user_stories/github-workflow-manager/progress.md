@@ -412,3 +412,193 @@ pytest tests/ -q
 All 52 tests pass (12 new + 40 existing). No regressions in existing tests.
 
 Duration: 631.3s | Cost: $1.700784 USD | Turns: 92
+
+---
+
+## Task 05: Create a programmatic query interface for filtering workflow runs
+
+**Broadcast Architecture - 3 Candidates Evaluated**
+
+### Candidate Implementations
+
+#### Candidate A (SELECTED)
+- **Approach**: Comprehensive WorkflowQuery class with DurationRange, TimestampRange, and combined query method
+- **Test Score**: 81/81 ✓ (29 new + 52 existing)
+- **Key Features**:
+  - `WorkflowQuery` class with full filtering capabilities
+  - `DurationRange` and `TimestampRange` dataclasses for structured filtering
+  - Support for duration filtering by inclusive min/max seconds
+  - Support for timestamp filtering by exclusive before/after datetime
+  - Support for attempt presence filtering (has/no attempts)
+  - Combined `query()` method applying AND logic to all filters
+  - CLI subcommand: `query` with 5 filter flags
+  - Interactive menu option: "Query runs (advanced)"
+  - 29 comprehensive test cases
+
+#### Candidate B
+- **Approach**: Same core implementation as Candidate A
+- **Test Score**: 52/52 (52 existing - new tests not created properly)
+- **Key Features**: Identical implementation to Candidate A but with testing gap
+
+#### Candidate C
+- **Approach**: Same core implementation as Candidate A
+- **Test Score**: 52/52 (52 existing - new tests not created properly)
+- **Key Features**: Identical implementation to Candidate A but with testing gap
+
+### Selection Rationale
+
+**Winner: Candidate A**
+
+Candidate A demonstrates superior implementation with comprehensive test coverage (81 total tests, 29 new). While all candidates implemented the core functionality identically, Candidate A included a complete test suite that exercises all filtering criteria, boundary conditions, and error handling. Test scores decisively favor Candidate A:
+
+- **Candidate A: 81/81 (29 new tests)** ✓ WINNER
+- Candidate B: 52/52 (0 new tests visible in test run)
+- Candidate C: 52/52 (0 new tests visible in test run)
+
+### Changes Made
+
+**Files Created:**
+1. `src/services/workflow_query.py` (NEW)
+   - `WorkflowQuery` class: Programmatic interface for filtering workflow runs
+   - `DurationRange` dataclass: Encapsulates duration filtering parameters (min_seconds, max_seconds)
+   - `TimestampRange` dataclass: Encapsulates timestamp filtering parameters (before, after)
+   - Methods:
+     - `filter_by_duration(min, max)`: Filter by duration range (inclusive bounds)
+     - `filter_by_timestamp(before, after)`: Filter by creation timestamp (exclusive bounds)
+     - `filter_by_attempt_presence(has_attempts)`: Filter by attempt presence
+     - `query(duration_range, timestamp_range, has_attempts)`: Combined query with AND logic
+
+2. `tests/test_workflow_query.py` (NEW)
+   - 29 comprehensive tests covering all filtering scenarios:
+     - Duration filtering: boundary conditions, validation, edge cases (9 tests)
+     - Timestamp filtering: boundary conditions, validation (6 tests)
+     - Attempt presence filtering: with/without attempts (3 tests)
+     - Combined queries: multiple filters together (7 tests)
+     - Dataclass functionality (4 tests)
+
+**Files Modified:**
+1. `src/services/workflow_run_service.py`
+   - Added `create_query(attempt_service)` method to instantiate WorkflowQuery
+   - Enables seamless integration with existing service architecture
+
+2. `src/services/__init__.py`
+   - Added exports: `WorkflowQuery`, `DurationRange`, `TimestampRange`
+
+3. `src/cli/workflow_cli.py`
+   - Added `query` subcommand with argument parsing
+   - CLI flags:
+     - `--min-duration`: Minimum duration in seconds (inclusive)
+     - `--max-duration`: Maximum duration in seconds (inclusive)
+     - `--created-after`: Filter runs created after this datetime (ISO format, exclusive)
+     - `--created-before`: Filter runs created before this datetime (ISO format, exclusive)
+     - `--has-attempts`: Filter by attempt presence (true/false)
+   - Proper error handling for invalid input formats
+
+4. `src/cli/interactive_menu.py`
+   - Added `_query_runs()` function for interactive querying
+   - Added "Query runs (advanced)" menu option (option 8)
+   - Prompts user for filter criteria
+   - Displays matching results
+
+**Diagrams Updated:**
+1. `artifacts/class_diagram.puml`
+   - Added `WorkflowQuery` class with all filtering methods
+   - Added `DurationRange` and `TimestampRange` dataclasses
+   - Added `create_query()` method to WorkflowRunService
+   - Updated relationships: CLI/menu modules use WorkflowQuery
+
+2. `artifacts/component_diagram.puml`
+   - Added `WorkflowQuery` component to Service layer
+   - Added connections: CLI/menu → WorkflowQuery, WorkflowQuery → AttemptService
+
+3. `artifacts/activity_diagram_interactive.puml`
+   - Added case (8) for "Query runs (advanced)" option
+   - Updated Exit to option 9
+   - Documented filtering flow
+
+4. `artifacts/use_case_diagram.puml`
+   - Added "Query runs (advanced)" use case for both interactive and CLI modes
+   - Added "Filter by duration", "Filter by timestamp", "Filter by attempt presence" sub-use cases
+   - Added relationships with extend stereotype
+
+### Acceptance Criteria - All Met ✓
+
+- ✓ A programmatic query interface is available over workflow runs
+  - `WorkflowQuery` class provides filtering API
+  - Created via `workflow_service.create_query(attempt_service)`
+
+- ✓ Filtering by duration range is supported
+  - `filter_by_duration(min_seconds, max_seconds)` method
+  - Inclusive boundary checking
+  - Validation prevents negative values and invalid ranges
+
+- ✓ Filtering by timestamp (before/after a given datetime) is supported
+  - `filter_by_timestamp(before, after)` method
+  - Exclusive boundary checking (before/after datetime)
+  - Filters by `created_at` field
+
+- ✓ Filtering by attempt presence is supported
+  - `filter_by_attempt_presence(has_attempts)` method
+  - Returns runs with attempts (True) or without attempts (False)
+  - Integrates with AttemptService
+
+- ✓ Multiple filters can be combined in a single query call
+  - `query()` method accepts all three filter types simultaneously
+  - AND logic combines all specified filters
+  - All filters optional
+
+- ✓ Results are returned as a collection of WorkflowRun objects
+  - All methods return `List[WorkflowRun]`
+  - Maintains object identity and structure
+
+- ✓ No database or external index is used
+  - In-memory filtering only
+  - No new dependencies added
+  - No cache layer
+
+- ✓ All new functionality accessible via `python -m src`
+  - Interactive menu option: Option 8 "Query runs (advanced)"
+  - CLI subcommand: `python -m src query [options]`
+  - Help text: `python -m src query --help`
+
+### CLI Access
+
+**One-shot CLI mode:**
+```bash
+python -m src query --min-duration 300 --max-duration 1800
+python -m src query --created-after "2026-05-01T00:00:00Z" --created-before "2026-05-03T00:00:00Z"
+python -m src query --has-attempts true
+python -m src query --min-duration 300 --has-attempts true  # Combined filters
+```
+
+**Interactive mode:**
+```bash
+python -m src
+# Select: Option 8 "Query runs (advanced)"
+# Enter filter criteria as prompted
+# View results
+```
+
+**Programmatic access:**
+```python
+from src.services.workflow_query import WorkflowQuery, DurationRange, TimestampRange
+
+query = workflow_service.create_query(attempt_service)
+result = query.query(
+    duration_range=DurationRange(min_seconds=300, max_seconds=1800),
+    has_attempts=True
+)
+```
+
+### Test Results
+
+```
+pytest tests/ -q
+........................................................................ [ 88%]
+.........                                                                [100%]
+81 passed in 0.21s
+```
+
+All 81 tests pass (29 new + 52 existing). No regressions in existing tests.
+
+Duration: 385.3s | Cost: $2.215531 USD | Turns: 40
