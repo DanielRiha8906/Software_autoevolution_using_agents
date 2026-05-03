@@ -11,6 +11,7 @@ from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.workflow_query import DurationRange, TimestampRange
 from ..services.workflow_statistics_service import WorkflowStatisticsService
+from ..services.workflow_run_export_service import WorkflowRunExportService
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -179,6 +180,14 @@ def build_parser() -> argparse.ArgumentParser:
     # stats
     stats_p = sub.add_parser("stats", help="Show aggregated workflow statistics")
 
+    # export
+    export_p = sub.add_parser("export", help="Export all workflow runs to a JSON file")
+    export_p.add_argument("--filepath", required=True, help="Path to output JSON file")
+
+    # import
+    import_p = sub.add_parser("import", help="Import workflow runs from a JSON file")
+    import_p.add_argument("--filepath", required=True, help="Path to input JSON file")
+
     return parser
 
 
@@ -316,3 +325,29 @@ def run_cli(workflow_service: WorkflowRunService, attempt_service: AttemptServic
         attempts = attempt_service.list_all_attempts()
         stats = stats_service.compute_statistics(runs, attempts)
         print("\n" + _fmt_statistics(stats))
+
+    elif ns.command == "export":
+        try:
+            count = WorkflowRunExportService.export_to_file(workflow_service, ns.filepath)
+            print(f"Exported {count} workflow run(s) to {ns.filepath}")
+        except Exception as e:
+            print(f"Error exporting: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "import":
+        try:
+            imported, skips = WorkflowRunExportService.import_from_file(workflow_service, ns.filepath)
+            print(f"Imported {imported} workflow run(s) from {ns.filepath}")
+            if skips:
+                print(f"\n{len(skips)} entries skipped:")
+                for reason in skips:
+                    print(f"  - {reason}")
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error importing: {e}", file=sys.stderr)
+            sys.exit(1)

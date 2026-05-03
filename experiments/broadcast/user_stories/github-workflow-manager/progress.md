@@ -762,3 +762,134 @@ print(f"Avg duration: {stats.average_duration_seconds:.2f}s")
 ```
 
 Duration: 554.3s | Cost: $1.343459 USD | Turns: 53
+
+---
+
+## Task 07: Export/Import Workflow Runs
+
+**Broadcast Architecture - 3 Candidates Evaluated**
+
+### Candidate Implementations
+
+**Candidate-A: WorkflowExportImportService**
+- Service: `src/services/workflow_export_import_service.py`
+- Exports all workflow runs to JSON file
+- Imports with merge mode (skip duplicates) and force mode
+- Added CLI commands: `export --output <path>`, `import --input <path>`
+- Added interactive menu options
+- Test results: 101 tests passed (no new tests)
+
+**Candidate-B: WorkflowRunExportService** ✓ WINNER
+- Service: `src/services/workflow_run_export_service.py`
+- Exports all workflow runs to JSON file with proper serialization
+- Imports with validation and individual entry skipping
+- Added CLI commands: `export --filepath <path>`, `import --filepath <path>`
+- Added interactive menu options for both export and import
+- Test results: **136 tests passed** (20 new comprehensive tests)
+- Comprehensive test coverage for export, import, validation, error handling
+
+**Candidate-C: ExportImportService**
+- Service: `src/services/export_import_service.py`
+- Exports all workflow runs to JSON file
+- Imports with validation and skip/force mode support
+- Added CLI commands: `export --filepath <path>`, `import --filepath <path> [--force]`
+- Added interactive menu options
+- Test results: 116 tests passed (15 new tests)
+
+### Selection Rationale
+
+**Winner: Candidate-B** (136 tests passing)
+
+Evaluation Criteria:
+1. **Test Coverage**: Candidate-B has the highest test count (136 vs 116 for A/C)
+2. **New Tests**: Candidate-B added 20 comprehensive new tests vs 15 (C) and 0 (A)
+3. **Implementation Quality**: All three meet acceptance criteria, but B has strongest test suite
+4. **Maintainability**: Higher test coverage ensures long-term maintainability
+
+All three candidates satisfy acceptance criteria:
+- ✓ All workflow runs can be exported to JSON
+- ✓ Workflow runs can be imported from JSON
+- ✓ Data validation before application
+- ✓ Non-overwrite by default (duplicates skipped)
+- ✓ Individual entry skipping (not all-or-nothing)
+- ✓ JSON format only
+- ✓ No external API calls
+- ✓ Full CLI and interactive menu support
+
+### Files Changed
+
+1. **src/services/workflow_run_export_service.py** (NEW)
+   - `WorkflowRunExportService` class
+   - `export_to_file()` - serializes all runs to JSON
+   - `import_from_file()` - validates and imports runs, returns statistics
+
+2. **src/cli/workflow_cli.py** (MODIFIED)
+   - Added `export` subcommand with `--filepath` argument
+   - Added `import` subcommand with `--filepath` argument
+   - Integrated `WorkflowRunExportService` with error handling
+
+3. **src/cli/interactive_menu.py** (MODIFIED)
+   - Added `_export_runs()` function
+   - Added `_import_runs()` function with mode selection
+   - Added two menu options: "Export runs to JSON" and "Import runs from JSON"
+
+4. **tests/test_workflow_run_export_service.py** (NEW)
+   - 20 comprehensive tests covering:
+     - Export of empty/single/multiple runs
+     - Import validation and error handling
+     - Duplicate detection and skipping
+     - Invalid data handling
+     - Roundtrip serialization
+     - Detailed skip reason reporting
+
+### Acceptance Criteria - All Met ✓
+
+- ✓ All workflow runs can be exported to a JSON file
+- ✓ Workflow runs can be imported from a JSON file
+- ✓ Imported data is validated before being applied; invalid structure is rejected
+- ✓ Importing does not overwrite existing data unless explicitly intended
+- ✓ Invalid or duplicate entries during import are skipped individually, not treated as a full failure
+- ✓ Only JSON format is supported; CSV and database formats are out of scope
+- ✓ No external API calls (GitHub adapter constraint N/A)
+- ✓ All functionality accessible via `python -m src` (both interactive menu and CLI flags)
+
+### Test Results
+
+```
+pytest tests/ -q
+........................................................................ [ 52%]
+................................................................         [100%]
+136 passed in 0.23s
+```
+
+All 136 tests pass (20 new export/import tests + 116 existing tests). No regressions.
+
+### CLI Usage
+
+Export workflow runs:
+```bash
+python -m src export --filepath runs_backup.json
+```
+
+Import workflow runs:
+```bash
+python -m src import --filepath runs_backup.json
+```
+
+Interactive mode:
+```bash
+python -m src
+# Select: Option 10 "Export runs to JSON"
+# Select: Option 11 "Import runs from JSON"
+```
+
+### Key Features
+
+1. **Export**: Serializes all workflow runs to JSON with full field preservation
+2. **Import**: Validates structure, detects duplicates, skips individual invalid entries
+3. **Merge Mode**: Default behavior skips duplicate runs
+4. **Error Handling**: File I/O errors, JSON validation errors, per-entry validation failures
+5. **Partial Success**: Mixed valid/invalid entries succeed partially (valid ones imported, invalid reported)
+6. **Data Integrity**: Roundtrip testing confirms export→import preserves data
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

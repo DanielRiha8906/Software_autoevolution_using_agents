@@ -11,6 +11,7 @@ from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.workflow_query import DurationRange, TimestampRange
 from ..services.workflow_statistics_service import WorkflowStatisticsService
+from ..services.workflow_run_export_service import WorkflowRunExportService
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -306,6 +307,36 @@ def _view_statistics(workflow_service: WorkflowRunService, attempt_service: Atte
     print("\n" + _fmt_statistics(stats))
 
 
+def _export_runs(workflow_service: WorkflowRunService) -> None:
+    """Export all workflow runs to a JSON file."""
+    print("\n--- Export Workflow Runs ---")
+    filepath = _prompt("Output file path")
+    try:
+        count = WorkflowRunExportService.export_to_file(workflow_service, filepath)
+        print(f"\nExported {count} workflow run(s) to {filepath}")
+    except Exception as e:
+        print(f"\nError exporting: {e}")
+
+
+def _import_runs(workflow_service: WorkflowRunService) -> None:
+    """Import workflow runs from a JSON file."""
+    print("\n--- Import Workflow Runs ---")
+    filepath = _prompt("Input file path")
+    try:
+        imported, skips = WorkflowRunExportService.import_from_file(workflow_service, filepath)
+        print(f"\nImported {imported} workflow run(s) from {filepath}")
+        if skips:
+            print(f"\n{len(skips)} entries skipped:")
+            for reason in skips:
+                print(f"  - {reason}")
+    except FileNotFoundError as e:
+        print(f"\nError: {e}")
+    except ValueError as e:
+        print(f"\nError: {e}")
+    except Exception as e:
+        print(f"\nError importing: {e}")
+
+
 MENU = [
     ("Add workflow run", lambda ws, as_: _add_run(ws)),
     ("List all runs", lambda ws, as_: _list_runs(ws)),
@@ -316,6 +347,8 @@ MENU = [
     ("Create attempt", lambda ws, as_: _create_attempt(as_)),
     ("List attempts for run", lambda ws, as_: _list_attempts(as_)),
     ("View statistics", lambda ws, as_: _view_statistics(ws, as_)),
+    ("Export workflow runs", lambda ws, as_: _export_runs(ws)),
+    ("Import workflow runs", lambda ws, as_: _import_runs(ws)),
     ("Exit", None),
 ]
 

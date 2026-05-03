@@ -21,6 +21,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowQuery" as QUERY
     component "AttemptService" as ASVC
     component "WorkflowStatisticsService" as STATS
+    component "WorkflowRunExportService" as EXPORT
   }
 
   package "Persistence layer" {
@@ -28,6 +29,7 @@ package "GitHub Workflow Manager" {
     component "AttemptJsonStorage" as ASTOR
     artifact "workflow_runs.json" as JSON_FILE
     artifact "workflow_attempts.json" as ATTEMPT_FILE
+    artifact "export file (JSON)" as EXPORT_FILE
   }
 
   package "Domain model" {
@@ -46,10 +48,12 @@ CLI --> TRACKER
 CLI --> ASVC
 CLI --> QUERY
 CLI --> STATS
+CLI --> EXPORT
 IM --> TRACKER
 IM --> ASVC
 IM --> QUERY
 IM --> STATS
+IM --> EXPORT
 
 CLI --> SVC
 IM --> SVC
@@ -69,6 +73,8 @@ ASVC ..> ATTEMPT
 STATS --> SVC
 STATS --> ASVC
 STATS ..> STATS_MODEL
+EXPORT --> SVC
+EXPORT --> EXPORT_FILE
 RUN --> ATTEMPT
 RUN --> STATUS
 RUN --> CONCLUSION
