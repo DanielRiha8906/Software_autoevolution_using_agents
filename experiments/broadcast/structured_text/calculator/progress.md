@@ -125,4 +125,4 @@ All 66 tests pass, including 28+ new tests covering:
 - Accessible via `python -m src --operation {square|sqrt|power|modulo} A B`
 - Accessible via interactive menu (options 5-8)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 30.7s | Cost: $0.946089 USD | Turns: 8
