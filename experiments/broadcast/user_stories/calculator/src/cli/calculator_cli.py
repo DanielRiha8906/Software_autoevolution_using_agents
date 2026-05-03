@@ -38,7 +38,9 @@ class CalculatorCLI:
             history_opt        = len(self._MENU) + 2
             filter_opt         = len(self._MENU) + 3
             statistics_opt     = len(self._MENU) + 4
-            exit_opt           = len(self._MENU) + 5
+            export_opt         = len(self._MENU) + 5
+            import_opt         = len(self._MENU) + 6
+            exit_opt           = len(self._MENU) + 7
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -58,6 +60,14 @@ class CalculatorCLI:
 
             if choice == str(statistics_opt):
                 self._show_statistics()
+                continue
+
+            if choice == str(export_opt):
+                self._export_interactive()
+                continue
+
+            if choice == str(import_opt):
+                self._import_interactive()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -162,6 +172,37 @@ class CalculatorCLI:
         stats = self.statistics_service.compute_statistics()
         self._print_statistics_output(stats)
 
+    def export_command(self, filepath: str) -> None:
+        """Export history to a JSON file (one-shot mode).
+
+        Args:
+            filepath: Path where the JSON file will be saved
+        """
+        try:
+            self.memory_service.export_history(filepath)
+            print(f"History exported successfully to {filepath}")
+        except Exception as exc:
+            print(f"Error exporting history: {exc}", file=sys.stderr)
+            sys.exit(1)
+
+    def import_command(self, filepath: str, overwrite: bool = False) -> None:
+        """Import history from a JSON file (one-shot mode).
+
+        Args:
+            filepath: Path to the JSON file to import
+            overwrite: If True, import all entries even if IDs exist; if False (default), skip duplicates
+        """
+        try:
+            count, errors = self.memory_service.import_history(filepath, overwrite=overwrite)
+            print(f"Imported {count} entries from {filepath}")
+            if errors:
+                print(f"Skipped {len(errors)} invalid entries:")
+                for error in errors:
+                    print(f"  - {error}")
+        except (IOError, ValueError) as exc:
+            print(f"Error importing history: {exc}", file=sys.stderr)
+            sys.exit(1)
+
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
@@ -174,7 +215,9 @@ class CalculatorCLI:
         print(f"  {len(self._MENU) + 2}. View calculation history")
         print(f"  {len(self._MENU) + 3}. Filter calculations")
         print(f"  {len(self._MENU) + 4}. View statistics")
-        print(f"  {len(self._MENU) + 5}. Exit")
+        print(f"  {len(self._MENU) + 5}. Export history to JSON")
+        print(f"  {len(self._MENU) + 6}. Import history from JSON")
+        print(f"  {len(self._MENU) + 7}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -285,3 +328,42 @@ class CalculatorCLI:
                 f"  #{entry.entry_id}. {entry.operation}({operands_str}) -> ERROR: {entry.error_message} "
                 f"[{entry.timestamp}] ({entry.execution_time_ms:.2f}ms)"
             )
+
+    def _export_interactive(self) -> None:
+        """Interactive export dialog."""
+        print("\n=== Export History to JSON ===")
+        filepath = input("  Enter file path (e.g., history.json): ").strip()
+        if not filepath:
+            print("  Export cancelled.\n")
+            return
+
+        try:
+            self.memory_service.export_history(filepath)
+            entries = self.memory_service.retrieve()
+            print(f"  Exported {len(entries)} entries to {filepath}\n")
+        except Exception as exc:
+            print(f"  Error exporting history: {exc}\n")
+
+    def _import_interactive(self) -> None:
+        """Interactive import dialog."""
+        print("\n=== Import History from JSON ===")
+        filepath = input("  Enter file path to import from: ").strip()
+        if not filepath:
+            print("  Import cancelled.\n")
+            return
+
+        overwrite_input = input("  Overwrite existing entries with same ID? (y/n): ").strip().lower()
+        overwrite = overwrite_input == 'y'
+
+        try:
+            count, errors = self.memory_service.import_history(filepath, overwrite=overwrite)
+            print(f"  Imported {count} entries from {filepath}")
+            if errors:
+                print(f"  Skipped {len(errors)} invalid/duplicate entries:")
+                for error in errors[:5]:  # Show first 5 errors
+                    print(f"    - {error}")
+                if len(errors) > 5:
+                    print(f"    ... and {len(errors) - 5} more")
+            print()
+        except (IOError, ValueError) as exc:
+            print(f"  Error importing history: {exc}\n")

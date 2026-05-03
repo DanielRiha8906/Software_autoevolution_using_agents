@@ -4,6 +4,7 @@ actor User
 participant CalculatorCLI
 participant CalculatorService
 participant MemoryService
+participant HistoryExportService
 participant StatisticsService
 participant FilterService
 participant Calculator
@@ -119,6 +120,58 @@ StatisticsService --> CalculatorCLI: Statistics object
 deactivate StatisticsService
 
 CalculatorCLI -> User: display statistics
+deactivate CalculatorCLI
+
+== Export History Flow ==
+User -> CalculatorCLI: --export-history FILE or interactive menu option
+activate CalculatorCLI
+
+CalculatorCLI -> MemoryService: export_history(filepath)
+activate MemoryService
+
+MemoryService -> JsonStorage: load_memory_all()
+activate JsonStorage
+JsonStorage --> MemoryService: list[MemoryEntry]
+deactivate JsonStorage
+
+MemoryService -> HistoryExportService: export_history(entries, filepath)
+activate HistoryExportService
+
+note over HistoryExportService: serialize entries to dict\nwrite JSON file
+
+HistoryExportService --> MemoryService: done
+deactivate HistoryExportService
+
+MemoryService --> CalculatorCLI: done
+deactivate MemoryService
+
+CalculatorCLI -> User: confirm export
+deactivate CalculatorCLI
+
+== Import History Flow ==
+User -> CalculatorCLI: --import-history FILE [--overwrite] or interactive menu option
+activate CalculatorCLI
+
+CalculatorCLI -> MemoryService: import_history(filepath, overwrite)
+activate MemoryService
+
+MemoryService -> HistoryExportService: import_history(filepath, skip_duplicates, existing_ids)
+activate HistoryExportService
+
+note over HistoryExportService: read JSON file\nvalidate structure\ndeserialize entries\ncheck for duplicates
+
+HistoryExportService --> MemoryService: (entries, errors)
+deactivate HistoryExportService
+
+MemoryService -> JsonStorage: save(entry) [for each entry]
+activate JsonStorage
+JsonStorage --> MemoryService: saved
+deactivate JsonStorage
+
+MemoryService --> CalculatorCLI: (count, errors)
+deactivate MemoryService
+
+CalculatorCLI -> User: show import results
 deactivate CalculatorCLI
 
 @enduml

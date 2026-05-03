@@ -11,6 +11,8 @@ Menu --> FirstOperand : operation selected
 Menu --> Feedback : history/memory history selected
 Menu --> FilterInput : filter selected
 Menu --> StatsDisplay : statistics selected
+Menu --> ExportInput : export selected
+Menu --> ImportInput : import selected
 Menu --> Feedback : invalid choice
 Menu --> [*] : exit
 
@@ -28,6 +30,15 @@ Calculating --> Feedback : error / show error
 FilterInput --> FilterApply : criteria entered
 FilterApply --> Feedback : entries found / show results
 FilterApply --> Feedback : no matches
+
+ExportInput --> ExportPerform : filepath entered
+ExportInput --> Feedback : cancelled
+ExportPerform --> Feedback : export success/error
+
+ImportInput --> ImportOptions : filepath entered
+ImportInput --> Feedback : cancelled
+ImportOptions --> ImportPerform : overwrite option selected
+ImportPerform --> Feedback : import success/error
 
 Feedback --> Menu
 
