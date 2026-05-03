@@ -83,6 +83,21 @@ if (CLI arguments provided?) then (yes)
       :StatisticsService.compute_statistics();
       :Print statistics report\n(total_runs, conclusions_count,\navg/min/max_duration_seconds,\navg_attempts_per_run);
 
+    case (export)
+      :Read --output argument;
+      :WorkflowRunService.export_runs(output_path);
+      :Print "Exported <count> runs to <path>";
+
+    case (import)
+      :Read --input argument;
+      :Read --skip-duplicates flag (optional);
+      :WorkflowRunService.import_runs(input_path, skip_duplicates);
+      :Print "Imported <count> runs from <path>";
+      if (warnings?) then (yes)
+        :Print warning list;
+      else (no)
+      endif
+
   endswitch
   stop
 

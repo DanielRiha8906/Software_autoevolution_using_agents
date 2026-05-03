@@ -1,5 +1,7 @@
 from typing import List, Optional, Callable
 from datetime import datetime
+import json
+from pathlib import Path
 
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_status import WorkflowStatus
@@ -214,3 +216,73 @@ class WorkflowRunService:
                 result = [r for r in result if r.id not in attempt_run_ids and not (r.id.isdigit() and int(r.id) in attempt_run_ids)]
 
         return result
+
+    def export_runs(self, filepath: str) -> int:
+        """Export all workflow runs to a JSON file.
+
+        Args:
+            filepath: Path where the JSON file will be written.
+
+        Returns:
+            Number of runs exported.
+        """
+        output_path = Path(filepath)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        data = [run.to_dict() for run in self._runs]
+        output_path.write_text(json.dumps(data, indent=2))
+        return len(data)
+
+    def import_runs(self, filepath: str, skip_duplicates: bool = False) -> tuple[int, List[str]]:
+        """Import workflow runs from a JSON file.
+
+        Args:
+            filepath: Path to the JSON file to import from.
+            skip_duplicates: If True, skip runs that already exist (by ID).
+                           If False, raise ValueError on duplicate.
+
+        Returns:
+            Tuple of (number_imported, list_of_errors).
+            Errors are strings describing validation or duplicate issues.
+        """
+        input_path = Path(filepath)
+        if not input_path.exists():
+            raise FileNotFoundError(f"Import file not found: {filepath}")
+
+        try:
+            raw_data = json.loads(input_path.read_text())
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in import file: {e}")
+
+        if not isinstance(raw_data, list):
+            raise ValueError("Import file must contain a JSON array of runs")
+
+        imported_count = 0
+        errors = []
+
+        for i, item in enumerate(raw_data):
+            try:
+                # Validate structure
+                if not isinstance(item, dict):
+                    errors.append(f"Item {i}: not a dictionary")
+                    continue
+
+                # Try to deserialize
+                run = WorkflowRun.from_dict(item)
+
+                # Check for duplicates
+                if any(r.id == run.id for r in self._runs):
+                    if skip_duplicates:
+                        errors.append(f"Item {i}: run with id '{run.id}' already exists (skipped)")
+                        continue
+                    else:
+                        raise ValueError(f"Run with id '{run.id}' already exists")
+
+                self._runs.append(run)
+                imported_count += 1
+            except (KeyError, ValueError, TypeError) as e:
+                errors.append(f"Item {i}: {str(e)}")
+
+        if imported_count > 0:
+            self._persist()
+
+        return imported_count, errors
