@@ -174,7 +174,9 @@ def _add_attempt(attempt_service: WorkflowRunAttemptService) -> None:
 
 
 def _list_attempts(attempt_service: WorkflowRunAttemptService) -> None:
-    attempts = attempt_service.list_attempts()
+    sort_choice = _choose("Sort by attempt number?", ["Yes", "No"])
+    sorted_param = sort_choice == "Yes"
+    attempts = attempt_service.list_attempts(sorted=sorted_param)
     if not attempts:
         print("\nNo attempts recorded.")
         return
@@ -204,7 +206,9 @@ def _list_attempts_for_run(attempt_service: WorkflowRunAttemptService) -> None:
     except ValueError:
         print("Invalid run ID: must be an integer.")
         return
-    attempts = attempt_service.get_attempts_for_run(run_id)
+    sort_choice = _choose("Sort by attempt number?", ["Yes", "No"])
+    sorted_param = sort_choice == "Yes"
+    attempts = attempt_service.get_attempts_for_run(run_id, sorted=sorted_param)
     if not attempts:
         print(f"\nNo attempts found for run {run_id}.")
         return

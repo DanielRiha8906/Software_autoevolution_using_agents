@@ -95,9 +95,9 @@ package "services" #DDFFD4 {
         --
         +__init__(storage: WorkflowJsonStorage)
         +add_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
-        +list_attempts() : List[WorkflowRunAttempt]
+        +list_attempts(sorted: bool = True) : List[WorkflowRunAttempt]
         +get_attempt(attempt_id: int) : Optional[WorkflowRunAttempt]
-        +get_attempts_for_run(run_id: int) : List[WorkflowRunAttempt]
+        +get_attempts_for_run(run_id: int, sorted: bool = True) : List[WorkflowRunAttempt]
         -_persist() : None
     }
 
@@ -112,16 +112,22 @@ package "services" #DDFFD4 {
 package "cli" #FFE5E5 {
     class "workflow_cli" <<module>> {
         +build_parser() : ArgumentParser
-        +run_cli(service: WorkflowRunService, args) : None
+        +run_cli(service: WorkflowRunService, attempt_service: WorkflowRunAttemptService, args) : None
         -_fmt_run(run: WorkflowRun) : str
+        -_fmt_attempt(attempt: WorkflowRunAttempt) : str
     }
 
     class "interactive_menu" <<module>> {
-        +run_interactive(service: WorkflowRunService) : None
+        +run_interactive(service: WorkflowRunService, attempt_service: WorkflowRunAttemptService) : None
         -_add_run(service: WorkflowRunService) : None
         -_list_runs(service: WorkflowRunService) : None
         -_detail_run(service: WorkflowRunService) : None
         -_filter_menu(service: WorkflowRunService) : None
+        -_check_run_state(service: WorkflowRunService) : None
+        -_add_attempt(attempt_service: WorkflowRunAttemptService) : None
+        -_list_attempts(attempt_service: WorkflowRunAttemptService) : None
+        -_detail_attempt(attempt_service: WorkflowRunAttemptService) : None
+        -_list_attempts_for_run(attempt_service: WorkflowRunAttemptService) : None
     }
 }
 
@@ -137,8 +143,10 @@ WorkflowRunAttemptService         ..>  WorkflowRunAttempt
 WorkflowRunTracker      "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker           ..>  WorkflowRun
 "workflow_cli"               ..>  WorkflowRunService
+"workflow_cli"               ..>  WorkflowRunAttemptService
 "workflow_cli"               ..>  WorkflowRunTracker
 "interactive_menu"           ..>  WorkflowRunService
+"interactive_menu"           ..>  WorkflowRunAttemptService
 "interactive_menu"           ..>  WorkflowRunTracker
 
 @enduml

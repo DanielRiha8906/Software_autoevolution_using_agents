@@ -1,4 +1,5 @@
 from typing import List, Optional
+from builtins import sorted as _sorted
 
 from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..storage.workflow_json_storage import WorkflowJsonStorage
@@ -24,11 +25,17 @@ class WorkflowRunAttemptService:
         self._persist()
         return attempt
 
-    def list_attempts(self) -> List[WorkflowRunAttempt]:
-        return list(self._attempts)
+    def list_attempts(self, sorted: bool = True) -> List[WorkflowRunAttempt]:
+        attempts = list(self._attempts)
+        if sorted:
+            return _sorted(attempts, key=lambda a: a.attempt_number)
+        return attempts
 
     def get_attempt(self, attempt_id: int) -> Optional[WorkflowRunAttempt]:
         return next((a for a in self._attempts if a.id == attempt_id), None)
 
-    def get_attempts_for_run(self, run_id: int) -> List[WorkflowRunAttempt]:
-        return [a for a in self._attempts if a.run_id == run_id]
+    def get_attempts_for_run(self, run_id: int, sorted: bool = True) -> List[WorkflowRunAttempt]:
+        attempts = [a for a in self._attempts if a.run_id == run_id]
+        if sorted:
+            return _sorted(attempts, key=lambda a: a.attempt_number)
+        return attempts

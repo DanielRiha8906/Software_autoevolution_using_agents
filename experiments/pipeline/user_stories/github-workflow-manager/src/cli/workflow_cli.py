@@ -109,6 +109,7 @@ def build_parser() -> argparse.ArgumentParser:
     # attempt list
     attempt_list_p = sub.add_parser("attempt-list", help="List workflow run attempts")
     attempt_list_p.add_argument("--run-id", type=int, default=None, help="Filter by parent run ID")
+    attempt_list_p.add_argument("--no-sort", action="store_true", help="Don't sort by attempt number (default: sorted)")
 
     # attempt detail
     attempt_detail_p = sub.add_parser("attempt-detail", help="Show details for a single attempt")
@@ -202,10 +203,11 @@ def run_cli(
         print(f"Added attempt {attempt.id}")
 
     elif ns.command == "attempt-list":
+        sorted_param = not ns.no_sort
         if ns.run_id is not None:
-            attempts = attempt_service.get_attempts_for_run(ns.run_id)
+            attempts = attempt_service.get_attempts_for_run(ns.run_id, sorted=sorted_param)
         else:
-            attempts = attempt_service.list_attempts()
+            attempts = attempt_service.list_attempts(sorted=sorted_param)
 
         if not attempts:
             print("No attempts found.")

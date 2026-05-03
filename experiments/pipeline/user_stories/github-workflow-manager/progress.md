@@ -124,3 +124,45 @@ Implemented `WorkflowRunAttempt` as a first-class data model to represent indivi
 - ✅ Interactive menu options available
 
 Duration: 549.7s | Cost: $1.008832 USD | Turns: 18
+
+## Task 04: AttemptService for attempt management
+
+**Status:** ✅ COMPLETED
+
+### Summary
+Implemented bonus sorting feature for `WorkflowRunAttemptService`. The service, domain model, storage layer, and CLI integration were already complete from Task 03. Task 04 enhanced the service with optional sorting by attempt_number, added CLI flags and interactive menu prompts to control sort behavior, and extended test coverage to 97 total tests (27 new tests for sorting feature).
+
+### Files Changed
+- **src/services/workflow_run_attempt_service.py** — Enhanced `list_attempts(sorted: bool = True)` and `get_attempts_for_run(run_id, sorted: bool = True)` methods to support optional sorting by attempt_number
+- **src/cli/workflow_cli.py** — Added `--no-sort` flag to `attempt-list` command; updated handler to pass sorted parameter to service methods
+- **src/cli/interactive_menu.py** — Added sorting choice prompts in `_list_attempts()` and `_list_attempts_for_run()` functions
+- **tests/test_workflow_run_attempt.py** — Added 27 new test cases covering sorting behavior (TestSortingFeature class with 21 tests, TestCLISortingFeature class with 6 tests)
+- **artifacts/class_diagram.puml** — Updated WorkflowRunAttemptService method signatures to show sorted parameter
+- **artifacts/activity_diagram_main.puml** — Updated attempt-list command activity to show sorting flag and sorting parameter flow
+- **artifacts/activity_diagram_interactive.puml** — Updated menu options 7 and 9 to show sorting choice prompts
+- **artifacts/component_diagram.puml** — Added CLI and IM dependencies to WorkflowRunAttemptService component
+
+### Test Results
+- Total tests: 97 (27 new + 70 existing from Task 03)
+- Pass rate: 100% (97/97)
+- All acceptance criteria verified:
+  - ✅ `list_attempts()` returns sorted by attempt_number by default
+  - ✅ `list_attempts(sorted=False)` returns in insertion order
+  - ✅ `get_attempts_for_run(run_id)` returns sorted by attempt_number by default
+  - ✅ `get_attempts_for_run(run_id, sorted=False)` returns in insertion order
+  - ✅ Sorting works with filtering and edge cases (empty, single, multiple)
+  - ✅ CLI flag `--no-sort` inverts sorting behavior
+  - ✅ Interactive menu offers sorting choice for both list operations
+  - ✅ Backward compatible: default sorted=True provides sensible behavior
+
+### Acceptance Criteria Met
+- ✅ AttemptService (WorkflowRunAttemptService) supports creating and retrieving attempts
+- ✅ Service integrates with existing JSON storage mechanism
+- ✅ Duplicate attempt numbers per run prevented via (run_id, attempt_number) unique constraint
+- ✅ **Bonus: Attempts can be returned sorted by attempt number** (sorted=True default, sorted=False for insertion order)
+- ✅ No caching layer added (in-memory working set only)
+- ✅ All functionality accessible via `python -m src`:
+  - ✅ Interactive menu options 7 ("List all attempts") and 9 ("List attempts for run") with sorting choices
+  - ✅ CLI commands: `attempt-list`, `attempt-list --run-id X`, `attempt-list --no-sort`, `attempt-list --run-id X --no-sort`
+
+Duration: 489.3s | Cost: $0.997787 USD | Turns: 16
