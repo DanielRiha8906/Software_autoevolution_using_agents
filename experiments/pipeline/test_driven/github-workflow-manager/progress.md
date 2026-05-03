@@ -171,4 +171,4 @@ Implemented `AttemptService` as a service layer managing the lifecycle of `Workf
 4. Pytest-Tester — Created and ran test suite (6 new tests + 36 existing all pass)
 5. UML Designer — Updated class and component diagrams
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 349.3s | Cost: $0.588775 USD | Turns: 17
