@@ -59,7 +59,14 @@ repeat
         :Print matching runs;
       endif
 
-    case (5 — Exit)
+    case (5 — View statistics)
+      :WorkflowStatisticsService.compute();
+      :Print total runs;
+      :Print runs by conclusion;
+      :Print duration stats\n(avg, min, max);
+      :Print avg attempts per run;
+
+    case (6 — Exit)
       :Print "Goodbye.";
       stop
 

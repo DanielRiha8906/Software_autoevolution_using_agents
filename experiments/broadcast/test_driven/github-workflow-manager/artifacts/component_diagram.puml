@@ -19,6 +19,7 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
     component "AttemptService" as ATTEMPT_SVC
+    component "WorkflowStatisticsService" as STATS_SVC
   }
 
   package "Persistence layer" {
@@ -43,9 +44,14 @@ IM --> TRACKER
 CLI --> SVC
 IM --> SVC
 
+CLI --> STATS_SVC
+IM --> STATS_SVC
+
 TRACKER --> SVC
 SVC --> STOR
 STOR --> JSON_FILE
+
+STATS_SVC --> SVC
 
 SVC ..> RUN
 ATTEMPT_SVC ..> ATTEMPT

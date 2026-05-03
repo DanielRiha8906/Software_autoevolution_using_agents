@@ -183,3 +183,59 @@ Candidate A was selected as the representative solution based on being the first
 ✅ All 51 tests passing (14 WorkflowRunService tests including 8 new query tests + 37 other tests)
 
 Duration: 596.9s | Cost: $1.289682 USD | Turns: 86
+
+---
+
+# Task 06: Implement WorkflowStatisticsService
+
+## Broadcast Results
+
+### Candidate A
+**Approach:** Implemented `WorkflowStatisticsService` class with `compute()` method returning `WorkflowStatisticsReport` dataclass. Aggregates statistics by:
+- Counting runs by conclusion using dictionary
+- Computing average, minimum, and maximum duration across all runs
+- Calculating average attempts per run by summing total attempts and dividing by total run count (includes runs with zero attempts)
+- Handling empty datasets by returning report with all-zero values
+Added public `attempt_service` property to `WorkflowRunService` to expose internal `_attempt_service`.
+
+**Test Score:** 7/7 passed (new tests) + 51/51 existing = 58/58 total
+
+### Candidate B
+**Approach:** Identical implementation to Candidate A. `WorkflowStatisticsService` with `compute()` method, `WorkflowStatisticsReport` dataclass with all required fields. Same statistics aggregation logic and empty dataset handling. Also added public `attempt_service` property to `WorkflowRunService`.
+
+**Test Score:** 7/7 passed + 51 existing = 58/58 total
+
+### Candidate C
+**Approach:** Identical implementation to Candidates A and B. All tests passing with 100% convergence on implementation approach.
+
+**Test Score:** 7/7 passed + 51 existing = 58/58 total
+
+## Winner: Candidate A
+
+All three candidates achieved identical test scores (58/58 total: 7 new + 51 existing) with complete convergence on implementation. All correctly implement:
+- Dataclass-based report structure with proper type hints
+- Aggregation logic computing min, max, and average durations
+- Conclusion-based counting using dictionary mapping
+- Average attempts per run calculation including runs with zero attempts
+- Empty dataset handling with zeroed report
+- Integration with `AttemptService` for attempt counting
+
+Candidate A was selected as the representative solution based on being the first successful implementation.
+
+## Files Changed
+- `src/services/statistics_service.py` — New file: `WorkflowStatisticsReport` dataclass and `WorkflowStatisticsService` class with `compute()` method
+- `src/services/workflow_run_service.py` — Added public `attempt_service` property to expose internal `_attempt_service` instance
+- `src/__main__.py` — Updated to pass `AttemptService` instance to `WorkflowRunService` constructor
+- `src/cli/workflow_cli.py` — Added `statistics` subcommand to argparse, imports `WorkflowStatisticsService`, implements statistics command handler
+- `src/cli/interactive_menu.py` — Added `_show_statistics()` function, added "View statistics" option to menu
+- `tests/services/test_statistics_service.py` — New file: Test suite for WorkflowStatisticsService (7 tests)
+- `artifacts/class_diagram.puml` — Updated to include WorkflowStatisticsReport and WorkflowStatisticsService classes
+- `artifacts/activity_diagram_main.puml` — Added statistics command flow
+- `artifacts/activity_diagram_interactive.puml` — Added View statistics menu option
+- `artifacts/use_case_diagram.puml` — Added statistics use cases
+- `artifacts/component_diagram.puml` — Added statistics service component
+
+## Test Result
+✅ All 58 tests passing (7 new statistics tests + 51 existing tests)
+
+Duration: 348.3s | Cost: $0.769229 USD | Turns: 57

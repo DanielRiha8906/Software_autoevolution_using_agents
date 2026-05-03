@@ -73,14 +73,16 @@ package "services" #DDFFD4 {
     class WorkflowRunService {
         -_storage : WorkflowJsonStorage
         -_runs    : List[WorkflowRun]
+        -_attempt_service : Optional[AttemptService]
         --
-        +__init__(storage: WorkflowJsonStorage)
+        +__init__(storage: WorkflowJsonStorage,\n  attempt_service: Optional[AttemptService] = None)
         +add_workflow_run(run: WorkflowRun) : WorkflowRun
         +list_runs() : List[WorkflowRun]
         +get_run_detail(run_id: str) : Optional[WorkflowRun]
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
         +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        +attempt_service : Optional[AttemptService]
         -_persist() : None
     }
 
@@ -97,6 +99,21 @@ package "services" #DDFFD4 {
         +__init__()
         +create(attempt: WorkflowRunAttempt) : None
         +get_by_run_id(run_id: int) : List[WorkflowRunAttempt]
+    }
+
+    class WorkflowStatisticsReport {
+        +count_by_conclusion : Dict[WorkflowConclusion, int]
+        +avg_duration_seconds : float
+        +min_duration_seconds : float
+        +max_duration_seconds : float
+        +avg_attempts_per_run : float
+    }
+
+    class WorkflowStatisticsService {
+        -_run_service : WorkflowRunService
+        --
+        +__init__(run_service: WorkflowRunService)
+        +compute() : WorkflowStatisticsReport
     }
 }
 
@@ -120,15 +137,21 @@ WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
 WorkflowRunAttempt         ..>  WorkflowRun           : run_id
 WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
+WorkflowRunService    "1" --> "0..1" AttemptService   : -_attempt_service
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 AttemptService       "1" --> "*" WorkflowRunAttempt   : -_attempts
+WorkflowStatisticsService "1" --> "1" WorkflowRunService : -_run_service
+WorkflowStatisticsService  ..>  WorkflowStatisticsReport
+WorkflowStatisticsReport   ..>  WorkflowConclusion
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
+"workflow_cli"             ..>  WorkflowStatisticsService
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  WorkflowRunTracker
+"interactive_menu"         ..>  WorkflowStatisticsService
 
 @enduml

@@ -14,6 +14,11 @@ class WorkflowRunService:
         self._runs: List[WorkflowRun] = storage.load()
         self._attempt_service = attempt_service
 
+    @property
+    def attempt_service(self) -> Optional[AttemptService]:
+        """Get the attempt service instance."""
+        return self._attempt_service
+
     def _persist(self) -> None:
         self._storage.save(self._runs)
 
