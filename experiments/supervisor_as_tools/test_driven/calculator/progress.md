@@ -66,3 +66,48 @@ Implemented four new mathematical operations for the Calculator class following 
 - All operations support both integer and floating-point operands
 
 Duration: 278.4s | Cost: $0.567642 USD | Turns: 32
+
+## Task 03: MemoryEntry Domain Class for Calculation History
+
+### Summary
+Created a new `MemoryEntry` domain class to serve as the primary record for stored calculation history. This class captures all relevant data about a single calculation attempt and supports serialization round-trips, enabling future history persistence and analysis features.
+
+### Files Changed
+- `src/models/memory_entry.py` - Created new MemoryEntry dataclass with UUID id generation, auto-populated ISO timestamp, and serialization methods
+- `src/models/__init__.py` - Added import and export of MemoryEntry
+- `tests/test_memory_entry.py` - Created test suite with 10 test cases
+- `artifacts/class_diagram.puml` - Updated to include MemoryEntry in models package
+
+### Test Results
+- All 57 tests passed (47 existing + 10 new MemoryEntry tests)
+- All MemoryEntry tests pass:
+  - test_memory_entry_can_be_created ✓
+  - test_memory_entry_has_unique_id ✓
+  - test_memory_entry_id_is_uuid_string ✓
+  - test_memory_entry_has_timestamp ✓
+  - test_memory_entry_supports_failed_calculation ✓
+  - test_memory_entry_serializes_to_dict ✓
+  - test_memory_entry_serializes_timestamp_as_string ✓
+  - test_memory_entry_round_trips_via_dict ✓
+  - test_memory_entry_contains_no_formatting_logic ✓
+- No regressions: all existing tests still pass
+
+### Implementation Details
+- `MemoryEntry` is a dataclass with 7 fields: operation, operands, result, success, execution_time_ms, id, timestamp
+- `id` auto-generated as UUID string via uuid.uuid4() in __post_init__
+- `timestamp` auto-generated as ISO format string via datetime.now().isoformat() in __post_init__
+- `result` field typed as Optional[float] to support None for failed calculations
+- `operands` field typed as list to support variable-arity operations
+- `to_dict()` method uses dataclasses.asdict() for full serialization
+- `from_dict()` classmethod reconstructs instances with preserved id and timestamp
+- No formatting logic, print statements, or display methods
+- Follows existing CalculationResult pattern for consistency
+
+### Design Principles
+- Pure data container following domain-driven design principles
+- No presentation or formatting logic (UI layer responsibility)
+- Immutable-by-design (dataclass with no mutators)
+- Type-safe with Optional types for nullable fields
+- Serialization compatible with JSON storage layer
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
