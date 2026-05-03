@@ -50,4 +50,4 @@ Duration: 171.2s | Cost: $0.312369 USD | Turns: 15
 - Serialization round-trips preserve CEST timezone information
 - No regressions in existing tests
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 134.9s | Cost: $0.266895 USD | Turns: 23
