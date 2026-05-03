@@ -2,6 +2,8 @@ import sys
 
 from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
+from ..services.import_export_service import ImportExportService
+from ..services.memory_service import MemoryService
 
 
 class CalculatorCLI:
@@ -16,8 +18,10 @@ class CalculatorCLI:
         (Operation.MODULO,   "Modulo"),
     ]
 
-    def __init__(self, service: CalculatorService) -> None:
+    def __init__(self, service: CalculatorService, memory_service: MemoryService | None = None, import_export_service: ImportExportService | None = None) -> None:
         self.service = service
+        self.memory_service = memory_service
+        self.import_export_service = import_export_service
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -30,7 +34,9 @@ class CalculatorCLI:
             choice = input("Choose option: ").strip()
 
             history_opt = len(self._MENU) + 1
-            exit_opt    = len(self._MENU) + 2
+            export_opt  = len(self._MENU) + 2
+            import_opt  = len(self._MENU) + 3
+            exit_opt    = len(self._MENU) + 4
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -38,6 +44,14 @@ class CalculatorCLI:
 
             if choice == str(history_opt):
                 self._show_history()
+                continue
+
+            if choice == str(export_opt):
+                self._prompt_and_export()
+                continue
+
+            if choice == str(import_opt):
+                self._prompt_and_import()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -67,6 +81,36 @@ class CalculatorCLI:
             print(f"Error: {exc}", file=sys.stderr)
             sys.exit(1)
 
+    def export_memory(self, filepath: str) -> None:
+        """Export memory to JSON file.
+
+        Args:
+            filepath: Path to write JSON file to.
+        """
+        if not self.memory_service or not self.import_export_service:
+            print("Memory services not available", file=sys.stderr)
+            return
+        try:
+            self.import_export_service.export(self.memory_service, filepath)
+            print(f"Memory exported to {filepath}")
+        except Exception as exc:
+            print(f"Error exporting memory: {exc}", file=sys.stderr)
+
+    def import_memory(self, filepath: str) -> None:
+        """Import memory from JSON file.
+
+        Args:
+            filepath: Path to read JSON file from.
+        """
+        if not self.memory_service or not self.import_export_service:
+            print("Memory services not available", file=sys.stderr)
+            return
+        try:
+            self.import_export_service.import_from(self.memory_service, filepath)
+            print(f"Memory imported from {filepath}")
+        except Exception as exc:
+            print(f"Error importing memory: {exc}", file=sys.stderr)
+
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
@@ -76,7 +120,9 @@ class CalculatorCLI:
         for i, (_, label) in enumerate(self._MENU, 1):
             print(f"  {i}. {label}")
         print(f"  {len(self._MENU) + 1}. View history")
-        print(f"  {len(self._MENU) + 2}. Exit")
+        print(f"  {len(self._MENU) + 2}. Export memory")
+        print(f"  {len(self._MENU) + 3}. Import memory")
+        print(f"  {len(self._MENU) + 4}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -103,4 +149,16 @@ class CalculatorCLI:
         print()
         for i, entry in enumerate(history, 1):
             print(f"  {i}. {entry}  [{entry.timestamp}]")
+        print()
+
+    def _prompt_and_export(self) -> None:
+        filepath = input("Enter filepath to export to: ").strip()
+        if filepath:
+            self.export_memory(filepath)
+        print()
+
+    def _prompt_and_import(self) -> None:
+        filepath = input("Enter filepath to import from: ").strip()
+        if filepath:
+            self.import_memory(filepath)
         print()

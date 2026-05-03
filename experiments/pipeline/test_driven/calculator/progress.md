@@ -173,3 +173,35 @@ Duration: 250.5s | Cost: $0.469915 USD | Turns: 26
 - Verified round-trip consistency: multiple compute() calls return identical results
 
 Duration: 359.1s | Cost: $0.668301 USD | Turns: 16
+
+## Task 07: Import/Export Service
+
+**Status:** Completed
+
+**Files Changed:**
+- src/services/import_export_service.py — Created new ImportExportService class with export() and import_from() methods
+- src/services/__init__.py — Added ImportExportService to imports and __all__ exports
+- src/__main__.py — Added MemoryService and ImportExportService initialization, --export and --import CLI flags
+- src/cli/calculator_cli.py — Added memory_service and import_export_service parameters to constructor, export_memory() and import_memory() methods, interactive menu options for export/import
+- tests/test_import_export_service.py — New test file with 5 test cases for JSON serialization/deserialization
+- artifacts/class_diagram.puml — Updated to include ImportExportService class and relationships
+- artifacts/component_diagram.puml — Updated to show ImportExportService component and dependencies
+
+**Test Results:**
+- 5/5 test_import_export_service.py tests: PASSED
+- 165/172 full test suite: PASSED (7 pre-existing CLI test failures, unrelated to ImportExportService)
+- All ImportExportService tests passing
+- No regressions in existing tests
+
+**Implementation Summary:**
+- Created ImportExportService with two methods:
+  - export(memory_service, filepath): Exports all MemoryEntry objects to JSON file (list of dicts)
+  - import_from(memory_service, filepath): Imports MemoryEntry objects from JSON file with validation and duplicate skipping
+- Features: Creates parent directories, validates JSON structure, detects duplicates by ID, preserves existing entries, raises Exception on validation errors
+- CLI integration: Added --export and --import flags to __main__.py for one-shot mode
+- Interactive menu: Added "Export memory" and "Import memory" options to CalculatorCLI
+- All functionality accessible via `python -m src` (both flags and interactive menu)
+- Uses only standard library (json, pathlib)
+- Type hints and error handling throughout
+
+Duration: 492.4s | Cost: $0.895554 USD | Turns: 18

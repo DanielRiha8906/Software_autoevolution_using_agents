@@ -89,6 +89,12 @@ package "services" #DDFFD4 {
         +StatisticsService(memory_service: MemoryService)
         +compute() : StatisticsResult
     }
+
+    class ImportExportService {
+        --
+        +export(memory_service: MemoryService, filepath: Path | str) : void
+        +import_from(memory_service: MemoryService, filepath: Path | str) : void
+    }
 }
 
 package "storage" #FFF3CC {
@@ -107,18 +113,26 @@ package "cli" #FFE5E5 {
     class CalculatorCLI {
         -MENU : List<Tuple<Operation, String>>
         -service : CalculatorService
+        -memory_service : MemoryService [0..1]
+        -import_export_service : ImportExportService [0..1]
         --
-        +CalculatorCLI(service: CalculatorService)
-        +runInteractive() : void
-        +runCommand(operation: String, a: float, b: float) : void
-        -printMenu() : void
-        -resolveMenuChoice(choice: String) : Operation [0..1]
-        -promptNumber(prompt: String) : float [0..1]
-        -showHistory() : void
+        +CalculatorCLI(service: CalculatorService, memory_service: MemoryService [0..1], import_export_service: ImportExportService [0..1])
+        +run_interactive() : void
+        +run_command(operation_str: String, a: float, b: float) : void
+        +export_memory(filepath: String) : void
+        +import_memory(filepath: String) : void
+        -_print_menu() : void
+        -_resolve_menu_choice(choice: String) : Operation [0..1]
+        -_prompt_number(prompt: String) : float [0..1]
+        -_show_history() : void
+        -_prompt_and_export() : void
+        -_prompt_and_import() : void
     }
 }
 
 CalculatorCLI --> CalculatorService : service
+CalculatorCLI --> MemoryService : memory_service
+CalculatorCLI --> ImportExportService : import_export_service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 
@@ -129,6 +143,9 @@ Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
 
 MemoryService --> MemoryEntry : uses
+
+ImportExportService --> MemoryService : uses
+ImportExportService ..> MemoryEntry : serializes
 
 StatisticsService --> MemoryService : dependency
 StatisticsService ..> StatisticsResult : creates

@@ -1,426 +1,268 @@
-# Analysis Report: Task 06 - StatisticsService Implementation
+# Task 07 Analysis: ImportExportService for MemoryEntry Records
 
-## What the Task is Asking For
+## Task Overview
 
-Implement a `StatisticsService` class that computes aggregated metrics from the history of `MemoryEntry` objects stored in a `MemoryService`. The service must:
+Implement an `ImportExportService` that provides JSON serialization/deserialization capabilities for `MemoryEntry` records. This service must support:
+1. Exporting MemoryEntry objects from MemoryService to JSON files
+2. Importing MemoryEntry objects from JSON files back into MemoryService
+3. Safe merging on import (preserve existing entries, skip duplicates)
+4. Validation of JSON schema on import
+5. CLI/interactive menu integration via `python -m src`
 
-1. Accept a `MemoryService` instance in its constructor
-2. Provide a `compute()` method that processes all stored `MemoryEntry` objects
-3. Return computed statistics as a dataclass with four specific fields:
-   - **count_per_operation** (dict): Maps operation name (string) to the count of entries for that operation
-   - **total_errors** (int): Total count of entries where `success=False`
-   - **error_rate** (float): Percentage of failed operations (0-100 scale), calculated as `(total_errors / total_entries) * 100`
-   - **avg_execution_time_ms** (float): Average execution time in milliseconds across all entries
+## Current State: Files and Implementations
 
----
+### Existing Models and Services
 
-## Current Codebase Structure
+#### MemoryEntry (src/models/memory_entry.py)
+- Dataclass with 7 fields: `operation`, `operands`, `result`, `success`, `execution_time_ms`, `id`, `timestamp`
+- `id` field is auto-generated (uuid4) as a string
+- `timestamp` is auto-generated in ISO 8601 format via `__post_init__()` if not provided
+- Already implements `to_dict()` for serialization → returns all 7 fields as dict
+- Already implements `from_dict(cls, data)` classmethod for deserialization
+- Round-trip serialization fully preserves all fields including id and timestamp
 
-### Existing Domain Models
+#### MemoryService (src/services/memory_service.py)
+- Manages MemoryEntry objects in-memory via internal list `_entries: list[MemoryEntry]`
+- `store(entry: MemoryEntry) -> None` — appends entries to list
+- `retrieve() -> list[MemoryEntry]` — returns all entries in insertion order
+- `query(operation: Optional[str], success: Optional[bool]) -> list[MemoryEntry]` — filters entries
+- Already supports checking if an ID exists (by iterating entries)
+- Contains NO file I/O or JSON handling (per design)
 
-**MemoryEntry** (`src/models/memory_entry.py`):
-- **Fields:** operation (str), operands (list), result (Optional[float]), success (bool), execution_time_ms (float), id (str), timestamp (str)
-- **Key properties for this task:**
-  - `operation`: String name of the operation (e.g., "add", "multiply")
-  - `success`: Boolean indicating whether the calculation succeeded
-  - `execution_time_ms`: Execution duration in milliseconds (float)
+#### JsonStorage (src/storage/json_storage.py)
+- Handles CalculationResult JSON serialization/persistence
+- Pattern: reads list from file, appends dict, writes list back
+- Uses `json.load()` and `json.dump()` with indentation
+- Creates parent directories as needed (`mkdir(parents=True, exist_ok=True)`)
+- Gracefully handles missing files and corrupted JSON
 
-### Existing Services
+#### CalculatorCLI (src/cli/calculator_cli.py)
+- Interactive menu-driven interface
+- Dynamically calculates menu options (currently 8 operations + View History + Exit)
+- Menu option numbering: operations 1-8, View history at position `len(MENU)+1`, Exit at `len(MENU)+2`
+- Also supports one-shot mode via `run_command(operation_str, a, b)` called from `__main__.py`
 
-**MemoryService** (`src/services/memory_service.py`):
-- **Constructor:** `__init__()` — takes no arguments, initializes empty entry list
-- **Methods:**
-  - `store(entry: MemoryEntry) -> None` — appends entry to internal list
-  - `retrieve() -> list[MemoryEntry]` — returns all stored entries
-  - `query(operation: Optional[str], success: Optional[bool]) -> list[MemoryEntry]` — filters entries by operation and/or success state
-- **Key property:** `self._entries` — private list containing all stored MemoryEntry objects
+#### Entry Point (src/__main__.py)
+- Uses `argparse.ArgumentParser` for CLI argument parsing
+- Accepts `--operation` flag with specific choices (add, subtract, multiply, divide, square, sqrt, power, modulo)
+- Requires exactly 2 operands when `--operation` is provided
+- Without flags, runs interactive mode via `cli.run_interactive()`
+- Pattern: build service with dependency injection, then create CLI and dispatch
 
-### Existing Dataclass Pattern
+### Package Exports
+- `src/services/__init__.py` exports: Calculator, CalculatorService, MemoryService, StatisticsService
+- `src/models/__init__.py` exports: Operation, CalculationResult, MemoryEntry, StatisticsResult
+- `src/storage/__init__.py` exports: JsonStorage
 
-**CalculationResult** (`src/models/calculation_result.py`):
-- Uses `@dataclass` decorator from `dataclasses` module
-- Includes type hints on all fields
-- Uses field defaults with `field(default=value)` for optional fields
-- Includes `to_dict()` and `from_dict()` for serialization
-- Includes full docstrings describing the class and each method
-- Does NOT include file I/O or print statements
+### Test Patterns
+- Use pytest fixtures for temporary directories (`tmp_path` fixture)
+- Test helper functions (e.g., `_make_entry()` with kwargs for customization)
+- Tests import from `src.models` and `src.services` directly
+- JsonStorage tests verify: missing files, save/load round-trips, data persistence, corrupted JSON handling, parent directory creation
+- MemoryService tests verify: store, retrieve, query filtering, no file I/O
 
-### Codebase Patterns Observed
+## What Needs to be Created
 
-1. **Type Hints:** All classes and methods use explicit type hints (no bare types)
-2. **Docstrings:** Every class and public method has a comprehensive docstring with Args, Returns, and Behavior sections
-3. **Separation of Concerns:** Services do NOT contain file I/O (that belongs in the storage layer)
-4. **Import Structure:** Each package has an `__init__.py` that exports public classes
-5. **Constructor Simplicity:** Classes take only what they need; dependencies are injected
+### 1. ImportExportService Class
+**Location:** `src/services/import_export_service.py`
 
----
-
-## Test Scenario Analysis
-
-**Given scenario:** 3 entries in MemoryService
-1. Entry 1: operation="add", success=True, execution_time_ms=10.0
-2. Entry 2: operation="add", success=True, execution_time_ms=15.0
-3. Entry 3: operation="multiply", success=False, execution_time_ms=10.0
-
-**Expected output from compute():**
-- `count_per_operation = {"add": 2, "multiply": 1}`
-- `total_errors = 1` (one failed entry)
-- `error_rate = 33.333...` (1 error out of 3 entries = 33.33%)
-- `avg_execution_time_ms = 11.666...` ((10 + 15 + 10) / 3 ≈ 11.67 ms)
-
-**Calculation formulas:**
-```
-count_per_operation:
-  For each unique operation in entries, count how many times it appears
-  Result: {"add": 2, "multiply": 1}
-
-total_errors:
-  Sum of entries where entry.success == False
-  Result: 1
-
-error_rate:
-  (total_errors / total_entries) * 100
-  = (1 / 3) * 100
-  = 33.333...
-
-avg_execution_time_ms:
-  Sum of all entry.execution_time_ms / total_entries
-  = (10.0 + 15.0 + 10.0) / 3
-  = 35.0 / 3
-  = 11.666...
-```
-
----
-
-## Files and Changes Required
-
-### 1. New File: `src/models/statistics_result.py`
-
-**Purpose:** Create a dataclass to hold computed statistics
-
-**Content structure:**
+Required interface (from task requirements):
 ```python
-from dataclasses import dataclass
-
-@dataclass
-class StatisticsResult:
-    """Dataclass holding aggregated statistics from MemoryEntry history.
-    
-    Fields capture operation counts, error metrics, and performance data
-    computed from a collection of MemoryEntry objects.
-    """
-    count_per_operation: dict[str, int]
-    total_errors: int
-    error_rate: float
-    avg_execution_time_ms: float
-```
-
-**Requirements:**
-- Use `@dataclass` decorator
-- Four fields with type hints (dict[str, int], int, float, float)
-- Comprehensive docstring explaining purpose and fields
-- No methods needed beyond the default dataclass behavior
-- No serialization methods (to_dict/from_dict) required for this task
-
-### 2. New File: `src/services/statistics_service.py`
-
-**Purpose:** Implement service that computes statistics from MemoryService
-
-**Content structure:**
-```python
-from src.services.memory_service import MemoryService
-from src.models.statistics_result import StatisticsResult
-
-class StatisticsService:
-    """Service for computing aggregated metrics from MemoryEntry history.
-    
-    Takes a MemoryService instance and computes statistics by analyzing
-    all stored entries. Computations are performed on-demand via compute().
-    """
-    
-    def __init__(self, memory_service: MemoryService) -> None:
-        """Initialize StatisticsService with a MemoryService instance.
+class ImportExportService:
+    def export(self, memory_service: MemoryService, filepath: Path | str) -> None:
+        """Export MemoryEntry records from MemoryService to JSON file.
         
-        Args:
-            memory_service: A MemoryService instance to compute statistics from.
+        - Retrieves all entries from memory_service via retrieve()
+        - Converts each MemoryEntry to dict via to_dict()
+        - Writes list of dicts as JSON to filepath
+        - Creates parent directories if needed
         """
-        # Store the injected dependency
-    
-    def compute(self) -> StatisticsResult:
-        """Compute aggregated statistics from all stored MemoryEntry objects.
+
+    def import_entries(self, memory_service: MemoryService, filepath: Path | str) -> None:
+        """Import MemoryEntry records from JSON file into MemoryService.
         
-        Retrieves all entries from the MemoryService and computes:
-        - count_per_operation: Dictionary mapping operation names to their counts
-        - total_errors: Count of entries with success=False
-        - error_rate: Percentage of failed operations (0-100 scale)
-        - avg_execution_time_ms: Mean execution time across all entries
-        
-        Returns:
-            StatisticsResult: Dataclass containing computed statistics.
-        
-        Edge cases:
-        - Empty MemoryService: Returns counts of 0, error_rate of 0.0, avg_time of 0.0
-        - No errors: error_rate = 0.0
-        - All errors: error_rate = 100.0
+        - Reads JSON file
+        - Validates structure (should be list of dicts)
+        - For each entry dict:
+          - Create MemoryEntry via from_dict()
+          - Check if entry.id already exists in memory_service
+          - If exists: skip (preserve existing, no overwrite)
+          - If not exists: store via memory_service.store()
+        - Raise Exception on invalid JSON schema
         """
-        # Implementation:
-        # 1. Get all entries from self.memory_service.retrieve()
-        # 2. If no entries, return zero statistics
-        # 3. Count operations by iterating and tallying (dict[str, int])
-        # 4. Count failures by filtering for success=False
-        # 5. Calculate error_rate: (failures / total_entries) * 100
-        # 6. Sum all execution_time_ms and divide by total_entries
-        # 7. Return StatisticsResult with computed values
 ```
 
-**Algorithm details:**
-```python
-# Pseudocode
-def compute():
-    entries = self.memory_service.retrieve()
-    
-    if not entries:
-        return StatisticsResult(
-            count_per_operation={},
-            total_errors=0,
-            error_rate=0.0,
-            avg_execution_time_ms=0.0
-        )
-    
-    # Count operations
-    count_per_operation = {}
-    for entry in entries:
-        if entry.operation not in count_per_operation:
-            count_per_operation[entry.operation] = 0
-        count_per_operation[entry.operation] += 1
-    
-    # Count errors
-    total_errors = sum(1 for entry in entries if not entry.success)
-    
-    # Calculate error rate
-    error_rate = (total_errors / len(entries)) * 100
-    
-    # Calculate average execution time
-    total_time = sum(entry.execution_time_ms for entry in entries)
-    avg_execution_time_ms = total_time / len(entries)
-    
-    return StatisticsResult(
-        count_per_operation=count_per_operation,
-        total_errors=total_errors,
-        error_rate=error_rate,
-        avg_execution_time_ms=avg_execution_time_ms
-    )
-```
+**Key design decisions:**
+- Constructor should accept MemoryService dependency injection? Or methods take MemoryService as parameter?
+  - Task spec shows methods taking MemoryService as parameter → implement that way
+- Validation: must check that JSON is valid JSON and structure is a list
+- Duplicate detection: by ID comparison, not by full entry equality
+- No overwriting: skip duplicates, don't raise errors on them
+- File path handling: follow JsonStorage pattern (parent dir creation, Path normalization)
 
-**Requirements:**
-- Constructor takes MemoryService as a parameter
-- Store the service as an instance variable (e.g., `self._memory_service`)
-- compute() method takes no parameters
-- Full type hints on all methods
-- Comprehensive docstrings
-- No file I/O or persistence logic
-- Handle edge case of empty MemoryService gracefully
+### 2. Integration Points
 
-### 3. Update File: `src/models/__init__.py`
+#### src/services/__init__.py
+- Add ImportExportService to imports: `from .import_export_service import ImportExportService`
+- Add to `__all__`: `"ImportExportService"`
 
-**Current content:**
-```python
-from .operation import Operation
-from .calculation_result import CalculationResult
-from .memory_entry import MemoryEntry
+#### src/__main__.py Updates
+- Add argparse flag: `--export FILEPATH` to export current memory to JSON
+- Add argparse flag: `--import FILEPATH` to import memory from JSON
+- OR add to interactive menu if export/import should only be interactive
+- Task requirement states: "Must be accessible via python -m src (interactive menu and CLI flag)"
+  - Interpret as: both interactive menu option AND CLI flags must work
+  - Interactive menu: add two menu options (e.g., "Export memory" and "Import memory")
+  - CLI flags: add `--export` and `--import` arguments
+  
+#### src/cli/calculator_cli.py Updates
+- Add methods to handle export/import:
+  - `def export_memory(self, filepath: str) -> None` — calls service export, prints confirmation
+  - `def import_memory(self, filepath: str) -> None` — calls service import, prints confirmation
+- Add menu options (e.g., positions after statistics, before Exit):
+  - "Export to JSON"
+  - "Import from JSON"
+- Prompt for file path in interactive mode if user selects export/import
 
-__all__ = ["Operation", "CalculationResult", "MemoryEntry"]
-```
+#### Service Integration
+- Need to decide: should CalculatorService or a new service coordinate with ImportExportService?
+  - Current pattern: CalculatorService orchestrates Calculator and JsonStorage
+  - MemoryService is standalone (no file I/O)
+  - Create ImportExportService to handle MemoryEntry JSON I/O only
+  - CalculatorService likely doesn't need changes (it works with CalculationResult, not MemoryEntry)
+  - ImportExportService should be independent service for MemoryEntry I/O
 
-**Change:** Add StatisticsResult to imports and __all__
-```python
-from .operation import Operation
-from .calculation_result import CalculationResult
-from .memory_entry import MemoryEntry
-from .statistics_result import StatisticsResult
+### 3. Test Suite
 
-__all__ = ["Operation", "CalculationResult", "MemoryEntry", "StatisticsResult"]
-```
+**Location:** `tests/test_import_export_service.py`
 
-### 4. Update File: `src/services/__init__.py`
+Required tests (from task spec):
+- `test_export_creates_valid_json_file` — verify JSON file contains list of entry dicts
+- `test_import_loads_entries` — verify entries from JSON loaded into MemoryService
+- `test_import_validates_structure` — invalid JSON structure raises Exception
+- `test_import_preserves_existing_entries` — existing entries not overwritten
+- `test_import_skips_duplicate_entries` — duplicate IDs skipped on import
 
-**Current content:**
-```python
-from .calculator import Calculator
-from .calculator_service import CalculatorService
-from .memory_service import MemoryService
+Additional tests (coverage):
+- Export empty memory service (creates empty list in JSON)
+- Export multiple entries (preserves all fields)
+- Import from missing file (handle gracefully)
+- Import corrupted JSON (raise Exception)
+- Round-trip: export then import restores all data
+- Import with mixed new and existing entries
 
-__all__ = ["Calculator", "CalculatorService", "MemoryService"]
-```
+## What Exists and Does NOT Need to Change
 
-**Change:** Add StatisticsService to imports and __all__
-```python
-from .calculator import Calculator
-from .calculator_service import CalculatorService
-from .memory_service import MemoryService
-from .statistics_service import StatisticsService
+### Read-Only / Stable
+- MemoryEntry model: fully functional, already has to_dict() and from_dict()
+- MemoryService: fully functional, no changes needed
+- JsonStorage: pattern can be followed but focused on CalculationResult
+- CalculatorCLI: can be extended with new methods without changing existing ones
+- All existing tests: should remain passing
 
-__all__ = ["Calculator", "CalculatorService", "MemoryService", "StatisticsService"]
-```
+## Ambiguities and Working Assumptions
 
----
+1. **Should MemoryService be integrated with CalculatorService?**
+   - Assumption: No. MemoryService is independent, CalculatorService works with CalculationResult.
+   - Task only mentions ImportExportService for MemoryEntry records.
 
-## Import Paths and Dependencies
+2. **Where should ImportExportService be instantiated?**
+   - Assumption: In `__main__.py`, build service similar to CalculatorService
+   - Pass it to CLI for interactive dispatch
 
-### Imports Required in StatisticsService
+3. **Should import prompt user if file not found?**
+   - Assumption: Raise exception, let caller handle (consistent with JsonStorage pattern)
+   - However, interactive CLI can catch and prompt retry
 
-```python
-from src.services.memory_service import MemoryService
-from src.models.statistics_result import StatisticsResult
-```
+4. **JSON schema validation — how strict?**
+   - Assumption: Must be a list at top level, each element must be dict-like with at least required MemoryEntry fields
+   - If MemoryEntry.from_dict() succeeds, schema is valid
+   - Catch exceptions during from_dict() and raise as generic Exception
 
-OR (relative imports):
+5. **Menu integration — where to add export/import options?**
+   - Assumption: After operation menu items, before "View history", since those are data management operations
+   - Or after "View history" to keep utility options together
+   - Task doesn't specify, so flexibility here
 
-```python
-from ..services.memory_service import MemoryService
-from ..models.statistics_result import StatisticsResult
-```
+6. **CLI flags for export/import — one-shot or interactive?**
+   - Assumption: One-shot with filepath argument
+   - `python -m src --export /path/to/file.json` exports and exits
+   - `python -m src --import /path/to/file.json` imports and exits
+   - Cannot combine with `--operation` (mutually exclusive)
 
-### Imports Required in StatisticsResult
+## Scope Signals
 
-```python
-from dataclasses import dataclass
-```
+### In Scope
+- ImportExportService class with export() and import_entries() methods
+- JSON file I/O using standard library json module
+- Duplicate detection by entry ID
+- Safe merging (skip duplicates, preserve existing)
+- Schema validation
+- Both CLI flag and interactive menu access
+- New test file with at least 5 specified tests
+- Integration with existing MemoryService (no modification to MemoryService itself)
 
-### Circular import risk?
+### Explicitly Out of Scope
+- Modifications to MemoryEntry or MemoryService internals
+- Changes to CalculatorService or its integration
+- GUI enhancements
+- Database instead of JSON
+- Batch operations (export/import works with single file at a time)
 
-**No circular imports:** 
-- StatisticsResult (in models/) is a dataclass with no dependencies
-- StatisticsService (in services/) imports from both models/ and services/
-- MemoryService (in services/) imports from models/ only
-- No backwards dependency from models/ to services/, so no circular import risk
+### Borderline
+- Whether to create MemoryService instance in __main__ or reuse from CalculatorService
+  - Currently, CalculatorService has its own storage but doesn't use MemoryService
+  - Task creates isolated ImportExportService for MemoryEntry, separate concern
 
----
+## Key Integration Points
 
-## Scope: In / Out / Borderline
+1. **File location:** Import/export from where?
+   - Assumption: Allow user-specified path (no fixed location)
+   - Pattern: Follow JsonStorage which takes path in constructor
 
-### In Scope (Must Implement)
+2. **Menu positioning:** Where in CLI menu?
+   - Current menu: 8 operations, View History, Exit
+   - Add: Export Memory (position 10), Import Memory (position 11)
 
-1. StatisticsResult dataclass with four fields
-2. StatisticsService class with __init__(memory_service) and compute() method
-3. Proper type hints throughout
-4. Comprehensive docstrings
-5. Update __init__.py files to export new classes
-6. Handle edge case: empty MemoryService (return zero statistics)
+3. **MemoryService instantiation:** Currently not used anywhere in main
+   - Need to create MemoryService instance in __main__.py if not already done
+   - Pass to CLI for interactive dispatch
 
-### Out of Scope (Not Required by This Task)
+4. **Error handling:**
+   - Missing file on import: raise Exception (can be FileNotFoundError)
+   - Invalid JSON: raise Exception (json.JSONDecodeError)
+   - Schema validation: raise Exception on structural mismatch
 
-1. CLI integration (user interface / argparse binding) — likely a later task
-2. Persistence of statistics (saving to JSON) — belongs in a storage layer task
-3. Filtering statistics by operation type — beyond aggregation
-4. Sorting or ordering of operations in count_per_operation dict — not specified
-5. Rounding or formatting of floating-point results — keep raw precision
-6. Updating diagram files (puml) — separate agent task
-7. Writing test cases — separate pytest agent task
+## Implementation Checklist for Next Phase
 
-### Borderline / Assumptions Made
+1. Create `src/services/import_export_service.py` with class and two methods
+2. Update `src/services/__init__.py` with ImportExportService export
+3. Create MemoryService instance in `src/__main__.py`
+4. Create ImportExportService instance in `src/__main__.py`
+5. Pass both to CalculatorCLI (or create new method to bind them)
+6. Add export_memory() and import_memory() methods to CalculatorCLI
+7. Update CalculatorCLI menu to include export/import options
+8. Add --export and --import argparse flags in `src/__main__.py`
+9. Wire CLI dispatch in __main__.py for export/import operations
+10. Create `tests/test_import_export_service.py` with full test suite
 
-1. **Empty MemoryService behavior:** Assumption: Return zero statistics (counts=0, rates=0.0) rather than raising an exception
-2. **Operation names:** Assumption: Use whatever string is in entry.operation (no validation against Operation enum)
-3. **count_per_operation ordering:** Assumption: Dictionary insertion order (Python 3.7+), not alphabetical or by count
-4. **Floating-point precision:** Assumption: No rounding; return raw division results (11.666666...)
-5. **Type hint for count_per_operation:** Using `dict[str, int]` (Python 3.9+ syntax) to match modern codebase conventions
+## Files to Read/Understand (Already Done)
+- src/models/memory_entry.py ✓
+- src/services/memory_service.py ✓
+- src/storage/json_storage.py ✓
+- src/cli/calculator_cli.py ✓
+- src/__main__.py ✓
+- tests/test_json_storage.py ✓
+- tests/test_memory_service.py ✓
 
----
+## Files to Create
+- src/services/import_export_service.py (new)
+- tests/test_import_export_service.py (new)
 
-## Dependencies and Constraints
+## Files to Modify
+- src/services/__init__.py
+- src/__main__.py
+- src/cli/calculator_cli.py
+- artifacts/component_diagram.puml (add ImportExportService component)
+- artifacts/class_diagram.puml (add ImportExportService class)
 
-### Hard Requirements (Non-negotiable)
-
-1. StatisticsService must accept MemoryService in constructor
-2. compute() method must return a dataclass (not a plain dict)
-3. The dataclass must have exactly these four fields with these types:
-   - count_per_operation: dict[str, int]
-   - total_errors: int
-   - error_rate: float
-   - avg_execution_time_ms: float
-4. error_rate must be a percentage (0-100 scale), not a ratio (0-1 scale)
-5. avg_execution_time_ms must be computed from execution_time_ms field of entries
-6. No file I/O in StatisticsService
-7. No modification of entries or MemoryService state
-
-### Code Style Constraints (From Existing Patterns)
-
-1. All methods must have type hints
-2. All classes and methods must have docstrings
-3. Use `@dataclass` decorator for result class
-4. Use constructor injection for dependencies
-5. No print statements or formatting logic in service classes
-6. Maintain consistent naming convention (snake_case for functions/methods)
-
-### Test Requirements (Inferred)
-
-The test suite will likely verify:
-1. StatisticsService constructor accepts MemoryService
-2. compute() returns a StatisticsResult instance
-3. count_per_operation correctly tallies operations
-4. total_errors correctly counts failures (success=False)
-5. error_rate calculation is correct (percentage formula)
-6. avg_execution_time_ms calculation is correct (mean formula)
-7. Edge case: empty MemoryService returns zero statistics
-8. Multiple entries with same operation are summed correctly
-
----
-
-## Suggested Implementation Priority
-
-1. **First:** Create `src/models/statistics_result.py` with StatisticsResult dataclass
-   - Simple, self-contained, no dependencies beyond dataclasses
-   
-2. **Second:** Create `src/services/statistics_service.py` with StatisticsService class
-   - Depends on StatisticsResult from step 1
-   - Implement compute() logic with clear algorithm
-
-3. **Third:** Update `src/models/__init__.py`
-   - Add import and __all__ entry for StatisticsResult
-
-4. **Fourth:** Update `src/services/__init__.py`
-   - Add import and __all__ entry for StatisticsService
-
-5. **Fifth:** Verify imports work with `python3 -c "from src.services import StatisticsService"`
-
-6. **Sixth:** Create `tests/test_statistics_service.py` (separate pytest agent task)
-
----
-
-## Summary
-
-**What must be built:**
-1. StatisticsResult dataclass (in models/) — holds four aggregated metrics
-2. StatisticsService class (in services/) — computes statistics from MemoryService
-3. Two import updates — make new classes discoverable
-
-**Key computation logic:**
-- count_per_operation: Tally entries by their operation field (dict)
-- total_errors: Count entries where success=False (int)
-- error_rate: (errors / total entries) * 100 (float percentage, not ratio)
-- avg_execution_time_ms: Sum execution_time_ms fields / number of entries (float)
-
-**Edge case handling:**
-- Empty MemoryService: Return all-zero statistics (no exception)
-
-**No external dependencies:**
-- Uses only Python stdlib (dataclasses, typing)
-- No new packages needed
-
----
-
-## File Paths (Absolute)
-
-**Files to create:**
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/models/statistics_result.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/services/statistics_service.py`
-
-**Files to modify:**
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/models/__init__.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/services/__init__.py`
-
-**Files NOT to modify:**
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/models/memory_entry.py`
-- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/test_driven/calculator/src/services/memory_service.py`
-- Any files outside the working directory

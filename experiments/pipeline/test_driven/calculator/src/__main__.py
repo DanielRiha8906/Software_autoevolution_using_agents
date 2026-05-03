@@ -5,6 +5,8 @@ from pathlib import Path
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
+from .services.memory_service import MemoryService
+from .services.import_export_service import ImportExportService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
@@ -12,6 +14,14 @@ from .cli.calculator_cli import CalculatorCLI
 def _build_service() -> CalculatorService:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
     return CalculatorService(Calculator(), JsonStorage(storage_path))
+
+
+def _build_memory_service() -> MemoryService:
+    return MemoryService()
+
+
+def _build_import_export_service() -> ImportExportService:
+    return ImportExportService()
 
 
 def _as_number(value: str) -> float:
@@ -25,13 +35,24 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--export FILE] [--import FILE]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
         choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
         help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+    )
+    parser.add_argument(
+        "--export",
+        metavar="FILE",
+        help="Export memory to JSON file",
+    )
+    parser.add_argument(
+        "--import",
+        metavar="FILE",
+        dest="import_file",
+        help="Import memory from JSON file",
     )
     parser.add_argument(
         "operands",
@@ -42,7 +63,9 @@ def main() -> None:
 
     args = parser.parse_args()
     service = _build_service()
-    cli = CalculatorCLI(service)
+    memory_service = _build_memory_service()
+    import_export_service = _build_import_export_service()
+    cli = CalculatorCLI(service, memory_service, import_export_service)
 
     if args.operation:
         if len(args.operands) != 2:
@@ -53,6 +76,10 @@ def main() -> None:
         except argparse.ArgumentTypeError as exc:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)
+    elif args.export:
+        cli.export_memory(args.export)
+    elif args.import_file:
+        cli.import_memory(args.import_file)
     else:
         cli.run_interactive()
 
