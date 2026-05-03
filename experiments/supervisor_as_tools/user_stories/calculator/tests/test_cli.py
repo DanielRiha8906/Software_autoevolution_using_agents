@@ -160,3 +160,195 @@ class TestRunInteractiveNewOps:
         with patch("builtins.input", side_effect=["8", "10", "0", "11"]):
             cli.run_interactive()
         assert "Modulo by zero is not allowed" in capsys.readouterr().out
+
+
+class TestShowFilteredMemoryCli:
+    def test_show_filtered_memory_no_memory_service(self, capsys):
+        cli = CalculatorCLI(MagicMock(), None)
+        cli.show_filtered_memory_cli()
+        assert "Memory service is not available" in capsys.readouterr().err
+
+    def test_show_filtered_memory_no_entries(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, _ = _make_cli()
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter.return_value = []
+        cli.show_filtered_memory_cli()
+        assert "No matching memory entries" in capsys.readouterr().out
+
+    def test_show_filtered_memory_successful_entry(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, _ = _make_cli()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter.return_value = [entry]
+        cli.show_filtered_memory_cli()
+        output = capsys.readouterr().out
+        assert "add" in output
+        assert "3.0" in output
+
+    def test_show_filtered_memory_failed_entry(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, _ = _make_cli()
+        entry = MemoryEntry("divide", 5.0, 0.0, None, False, error_message="Division by zero")
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter.return_value = [entry]
+        cli.show_filtered_memory_cli()
+        output = capsys.readouterr().out
+        assert "divide" in output
+        assert "Division by zero" in output
+
+    def test_show_filtered_memory_with_operation_filter(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, _ = _make_cli()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter.return_value = [entry]
+        cli.show_filtered_memory_cli(operation_name="add")
+        cli.memory_service.filter.assert_called_once_with("add", None)
+
+    def test_show_filtered_memory_with_success_filter(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, _ = _make_cli()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter.return_value = [entry]
+        cli.show_filtered_memory_cli(success=True)
+        cli.memory_service.filter.assert_called_once_with(None, True)
+
+    def test_show_filtered_memory_with_both_filters(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, _ = _make_cli()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter.return_value = [entry]
+        cli.show_filtered_memory_cli(operation_name="add", success=True)
+        cli.memory_service.filter.assert_called_once_with("add", True)
+
+    def test_show_filtered_memory_multiple_entries(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, _ = _make_cli()
+        entry1 = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        entry2 = MemoryEntry("add", 5.0, 3.0, 8.0, True)
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter.return_value = [entry1, entry2]
+        cli.show_filtered_memory_cli()
+        output = capsys.readouterr().out
+        assert "add" in output
+        assert output.count("add") >= 2
+
+
+class TestFlagIntegration:
+    def test_help_includes_filter_operation_flag(self, capsys):
+        from src.__main__ import main
+        with patch("sys.argv", ["python", "--help"]):
+            with pytest.raises(SystemExit):
+                main()
+        output = capsys.readouterr().out
+        assert "--filter-operation" in output
+
+    def test_help_includes_filter_success_flag(self, capsys):
+        from src.__main__ import main
+        with patch("sys.argv", ["python", "--help"]):
+            with pytest.raises(SystemExit):
+                main()
+        output = capsys.readouterr().out
+        assert "--filter-success" in output
+
+    def test_help_includes_filter_error_flag(self, capsys):
+        from src.__main__ import main
+        with patch("sys.argv", ["python", "--help"]):
+            with pytest.raises(SystemExit):
+                main()
+        output = capsys.readouterr().out
+        assert "--filter-error" in output
+
+    def test_filter_success_and_error_mutually_exclusive(self, capsys):
+        from src.__main__ import main
+        with patch("sys.argv", ["python", "--filter-success", "--filter-error"]):
+            with pytest.raises(SystemExit) as exc_info:
+                main()
+            assert exc_info.value.code == 2
+        assert "Cannot use both --filter-success and --filter-error" in capsys.readouterr().err
+
+
+class TestMemoryFilterSubmenu:
+    def test_show_memory_filter_submenu_view_all(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, service = _make_cli()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        cli.memory_service = MagicMock()
+        cli.memory_service.get_all_entries.return_value = [entry]
+        with patch("builtins.input", side_effect=["1", "5"]):
+            cli._show_memory_filter_submenu()
+        output = capsys.readouterr().out
+        assert "add" in output
+
+    def test_show_memory_filter_submenu_filter_by_operation(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, service = _make_cli()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter_by_operation.return_value = [entry]
+        with patch("builtins.input", side_effect=["2", "add", "5"]):
+            cli._show_memory_filter_submenu()
+        cli.memory_service.filter_by_operation.assert_called_once_with("add")
+
+    def test_show_memory_filter_submenu_filter_by_success(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, service = _make_cli()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter_by_success.return_value = [entry]
+        with patch("builtins.input", side_effect=["3", "5"]):
+            cli._show_memory_filter_submenu()
+        cli.memory_service.filter_by_success.assert_called_once_with(True)
+
+    def test_show_memory_filter_submenu_filter_by_error(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, service = _make_cli()
+        entry = MemoryEntry("divide", 5.0, 0.0, None, False, error_message="Division by zero")
+        cli.memory_service = MagicMock()
+        cli.memory_service.filter_by_success.return_value = [entry]
+        with patch("builtins.input", side_effect=["4", "5"]):
+            cli._show_memory_filter_submenu()
+        cli.memory_service.filter_by_success.assert_called_once_with(False)
+
+    def test_show_memory_filter_submenu_back_option(self, capsys):
+        cli, service = _make_cli()
+        cli.memory_service = MagicMock()
+        with patch("builtins.input", side_effect=["5"]):
+            cli._show_memory_filter_submenu()
+        output = capsys.readouterr().out
+        assert "Memory Filter Options" in output
+
+    def test_show_memory_filter_submenu_invalid_choice(self, capsys):
+        cli, service = _make_cli()
+        cli.memory_service = MagicMock()
+        cli.memory_service.get_all_entries.return_value = []
+        with patch("builtins.input", side_effect=["99", "5"]):
+            cli._show_memory_filter_submenu()
+        output = capsys.readouterr().out
+        assert "Invalid choice" in output
+
+    def test_show_memory_calls_filter_submenu(self, capsys):
+        cli, service = _make_cli()
+        cli.memory_service = MagicMock()
+        with patch.object(cli, "_show_memory_filter_submenu") as mock_submenu:
+            cli._show_memory()
+            mock_submenu.assert_called_once()
+
+    def test_display_memory_entries_no_entries(self, capsys):
+        cli, service = _make_cli()
+        cli._display_memory_entries([])
+        output = capsys.readouterr().out
+        assert "No matching memory entries" in output
+
+    def test_display_memory_entries_with_entries(self, capsys):
+        from src.models.memory_entry import MemoryEntry
+        cli, service = _make_cli()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        cli._display_memory_entries([entry])
+        output = capsys.readouterr().out
+        assert "add" in output
+        assert "3.0" in output

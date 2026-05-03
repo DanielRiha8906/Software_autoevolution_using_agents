@@ -10,6 +10,8 @@ rectangle "Calculator Application" {
     usecase "Perform calculation" as UC_Calc
     usecase "View calculation history" as UC_History
     usecase "View memory entries" as UC_Memory
+    usecase "Filter memory by operation" as UC_FilterOp
+    usecase "Filter memory by result state" as UC_FilterSuccess
     usecase "Exit application" as UC_Exit
 
 }
@@ -17,6 +19,8 @@ rectangle "Calculator Application" {
 User --> UC_Calc
 User --> UC_History
 User --> UC_Memory
+UC_Memory <-- UC_FilterOp : extends
+UC_Memory <-- UC_FilterSuccess : extends
 User --> UC_Exit
 
 @enduml

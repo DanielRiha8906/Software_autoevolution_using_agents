@@ -256,3 +256,280 @@ class TestMemoryServiceGetAllEntries:
         memory_service = MemoryService(calc_service, storage)
         memory_service.get_all_entries()
         storage.load_all.assert_called_once()
+
+
+class TestMemoryServiceFilterByOperation:
+    """Test MemoryService.filter_by_operation() method."""
+
+    def test_filter_by_operation_returns_list(self):
+        """Test filter_by_operation() returns a list."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        storage.load_all.return_value = []
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_operation("add")
+        assert isinstance(result, list)
+
+    def test_filter_by_operation_single_match(self):
+        """Test filter_by_operation() with single matching entry."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_operation("add")
+        assert len(result) == 1
+        assert result[0] is entry
+
+    def test_filter_by_operation_multiple_matches(self):
+        """Test filter_by_operation() with multiple matching entries."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry1 = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        entry2 = MemoryEntry("add", 5.0, 3.0, 8.0, True)
+        entry3 = MemoryEntry("subtract", 10.0, 3.0, 7.0, True)
+        storage.load_all.return_value = [entry1, entry2, entry3]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_operation("add")
+        assert len(result) == 2
+        assert entry1 in result
+        assert entry2 in result
+        assert entry3 not in result
+
+    def test_filter_by_operation_no_matches(self):
+        """Test filter_by_operation() with no matching entries."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_operation("multiply")
+        assert len(result) == 0
+
+    def test_filter_by_operation_case_insensitive(self):
+        """Test filter_by_operation() is case-insensitive."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result1 = memory_service.filter_by_operation("ADD")
+        result2 = memory_service.filter_by_operation("Add")
+        result3 = memory_service.filter_by_operation("add")
+        assert len(result1) == 1
+        assert len(result2) == 1
+        assert len(result3) == 1
+
+    def test_filter_by_operation_returns_memory_entries(self):
+        """Test filter_by_operation() returns MemoryEntry instances."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_operation("add")
+        assert all(isinstance(e, MemoryEntry) for e in result)
+
+
+class TestMemoryServiceFilterBySuccess:
+    """Test MemoryService.filter_by_success() method."""
+
+    def test_filter_by_success_returns_list(self):
+        """Test filter_by_success() returns a list."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        storage.load_all.return_value = []
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_success(True)
+        assert isinstance(result, list)
+
+    def test_filter_by_success_true_single_match(self):
+        """Test filter_by_success(True) with single successful entry."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_success(True)
+        assert len(result) == 1
+        assert result[0] is entry
+
+    def test_filter_by_success_true_multiple_matches(self):
+        """Test filter_by_success(True) with multiple successful entries."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry1 = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        entry2 = MemoryEntry("subtract", 5.0, 3.0, 2.0, True)
+        entry3 = MemoryEntry("divide", 5.0, 0.0, None, False)
+        storage.load_all.return_value = [entry1, entry2, entry3]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_success(True)
+        assert len(result) == 2
+        assert entry1 in result
+        assert entry2 in result
+        assert entry3 not in result
+
+    def test_filter_by_success_false_single_match(self):
+        """Test filter_by_success(False) with single failed entry."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("divide", 5.0, 0.0, None, False, error_message="Division by zero")
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_success(False)
+        assert len(result) == 1
+        assert result[0] is entry
+
+    def test_filter_by_success_false_multiple_matches(self):
+        """Test filter_by_success(False) with multiple failed entries."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry1 = MemoryEntry("divide", 5.0, 0.0, None, False, error_message="Division by zero")
+        entry2 = MemoryEntry("sqrt", -4.0, 0.0, None, False, error_message="negative")
+        entry3 = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry1, entry2, entry3]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_success(False)
+        assert len(result) == 2
+        assert entry1 in result
+        assert entry2 in result
+        assert entry3 not in result
+
+    def test_filter_by_success_no_matches(self):
+        """Test filter_by_success() with no matching entries."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_success(False)
+        assert len(result) == 0
+
+    def test_filter_by_success_returns_memory_entries(self):
+        """Test filter_by_success() returns MemoryEntry instances."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter_by_success(True)
+        assert all(isinstance(e, MemoryEntry) for e in result)
+
+
+class TestMemoryServiceFilter:
+    """Test MemoryService.filter() method."""
+
+    def test_filter_returns_list(self):
+        """Test filter() returns a list."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        storage.load_all.return_value = []
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter()
+        assert isinstance(result, list)
+
+    def test_filter_both_none_returns_all(self):
+        """Test filter() with both parameters None returns all entries."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry1 = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        entry2 = MemoryEntry("subtract", 5.0, 3.0, 2.0, True)
+        entry3 = MemoryEntry("divide", 5.0, 0.0, None, False, error_message="Division by zero")
+        storage.load_all.return_value = [entry1, entry2, entry3]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter()
+        assert len(result) == 3
+
+    def test_filter_operation_only(self):
+        """Test filter() with operation_name only."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry1 = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        entry2 = MemoryEntry("add", 5.0, 3.0, 8.0, True)
+        entry3 = MemoryEntry("subtract", 10.0, 3.0, 7.0, True)
+        storage.load_all.return_value = [entry1, entry2, entry3]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter(operation_name="add")
+        assert len(result) == 2
+        assert entry1 in result
+        assert entry2 in result
+
+    def test_filter_success_only(self):
+        """Test filter() with success only."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry1 = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        entry2 = MemoryEntry("divide", 5.0, 0.0, None, False, error_message="Division by zero")
+        entry3 = MemoryEntry("subtract", 10.0, 3.0, 7.0, True)
+        storage.load_all.return_value = [entry1, entry2, entry3]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter(success=True)
+        assert len(result) == 2
+        assert entry1 in result
+        assert entry3 in result
+
+    def test_filter_both_criteria(self):
+        """Test filter() with both operation_name and success."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry1 = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        entry2 = MemoryEntry("add", 5.0, 0.0, None, False, error_message="error")
+        entry3 = MemoryEntry("subtract", 10.0, 3.0, 7.0, True)
+        storage.load_all.return_value = [entry1, entry2, entry3]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter(operation_name="add", success=True)
+        assert len(result) == 1
+        assert entry1 in result
+
+    def test_filter_operation_case_insensitive(self):
+        """Test filter() with operation_name is case-insensitive."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result1 = memory_service.filter(operation_name="ADD")
+        result2 = memory_service.filter(operation_name="Add")
+        assert len(result1) == 1
+        assert len(result2) == 1
+
+    def test_filter_operation_no_matches(self):
+        """Test filter() with operation_name that has no matches."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter(operation_name="multiply")
+        assert len(result) == 0
+
+    def test_filter_success_false_no_matches(self):
+        """Test filter() with success=False with no failed entries."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter(success=False)
+        assert len(result) == 0
+
+    def test_filter_both_criteria_no_matches(self):
+        """Test filter() with both criteria having no matches."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry1 = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        entry2 = MemoryEntry("subtract", 5.0, 3.0, 2.0, True)
+        storage.load_all.return_value = [entry1, entry2]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter(operation_name="add", success=False)
+        assert len(result) == 0
+
+    def test_filter_returns_memory_entries(self):
+        """Test filter() returns MemoryEntry instances."""
+        calc_service = MagicMock()
+        storage = MagicMock()
+        entry = MemoryEntry("add", 1.0, 2.0, 3.0, True)
+        storage.load_all.return_value = [entry]
+        memory_service = MemoryService(calc_service, storage)
+        result = memory_service.filter(operation_name="add")
+        assert all(isinstance(e, MemoryEntry) for e in result)

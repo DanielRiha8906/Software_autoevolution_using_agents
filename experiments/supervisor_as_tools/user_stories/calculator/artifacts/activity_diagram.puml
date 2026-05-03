@@ -51,8 +51,25 @@ else (no)
         :Show history;
 
       case (View Memory)
-        :Load memory entries;
-        :Show memory entries;
+        :Display memory filter submenu;
+
+        switch (Filter choice?)
+          case (View all)
+            :Load all memory entries;
+            :Show memory entries;
+          case (Filter by operation)
+            :Prompt for operation name;
+            :Filter memory by operation;
+            :Show filtered entries;
+          case (Filter by success)
+            :Filter for successful entries;
+            :Show filtered entries;
+          case (Filter by error)
+            :Filter for failed entries;
+            :Show filtered entries;
+          case (Back)
+            :Return to main menu;
+        endswitch
 
       case (Operation)
         :Read operands;

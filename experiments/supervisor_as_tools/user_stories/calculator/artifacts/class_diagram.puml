@@ -76,6 +76,9 @@ package "services" #DDFFD4 {
         +MemoryService(calculatorService: CalculatorService, storage: JsonStorage)
         +record(operation: str, operandA: float, operandB: float) : MemoryEntry
         +getAllEntries() : List<MemoryEntry>
+        +filterByOperation(operationName: str) : List<MemoryEntry>
+        +filterBySuccess(success: bool) : List<MemoryEntry>
+        +filter(operationName: str, success: bool) : List<MemoryEntry>
     }
 }
 
@@ -95,14 +98,20 @@ package "cli" #FFE5E5 {
     class CalculatorCLI {
         -MENU : List<Tuple<Operation, String>>
         -service : CalculatorService
+        -memory_service : MemoryService
         --
-        +CalculatorCLI(service: CalculatorService)
+        +CalculatorCLI(service: CalculatorService, memory_service: MemoryService)
         +runInteractive() : void
         +runCommand(operation: String, a: float, b: float) : void
+        +showMemoryCli() : void
+        +showFilteredMemoryCli(operationName: str, success: bool) : void
         -printMenu() : void
         -resolveMenuChoice(choice: String) : Operation [0..1]
         -promptNumber(prompt: String) : float [0..1]
         -showHistory() : void
+        -showMemory() : void
+        -showMemoryFilterSubmenu() : void
+        -displayMemoryEntries(entries: List<MemoryEntry>) : void
     }
 }
 
