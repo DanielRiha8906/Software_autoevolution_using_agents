@@ -719,4 +719,4 @@ All existing tests continue to pass. The implementation maintains full backward 
   - No breaking changes to Operation enum or Calculator interface
   - Standard mode menu identical to previous version
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 473.4s | Cost: $1.023617 USD | Turns: 38
