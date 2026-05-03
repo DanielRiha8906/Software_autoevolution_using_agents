@@ -12,6 +12,7 @@ from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.workflow_query import DurationRange, TimestampRange
 from ..services.workflow_statistics_service import WorkflowStatisticsService
 from ..services.workflow_run_export_service import WorkflowRunExportService
+from ..services.github_fetch_service import GitHubFetchService
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -188,6 +189,15 @@ def build_parser() -> argparse.ArgumentParser:
     import_p = sub.add_parser("import", help="Import workflow runs from a JSON file")
     import_p.add_argument("--filepath", required=True, help="Path to input JSON file")
 
+    # github-fetch
+    github_p = sub.add_parser("github-fetch", help="Fetch workflow runs from GitHub API")
+    github_p.add_argument("--owner", required=True, help="Repository owner (username or org)")
+    github_p.add_argument("--repo", required=True, help="Repository name")
+    github_p.add_argument("--workflow", default=None, help="Optional workflow ID or filename to filter by")
+    github_p.add_argument("--token", default=None, help="GitHub PAT (if not set, will be resolved from env/secrets/.env/prompt)")
+    github_p.add_argument("--no-validate", action="store_true", help="Skip token validation before fetching")
+    github_p.add_argument("--incremental", action="store_true", help="Only fetch runs newer than the latest stored run")
+
     return parser
 
 
@@ -350,4 +360,61 @@ def run_cli(workflow_service: WorkflowRunService, attempt_service: AttemptServic
             sys.exit(1)
         except Exception as e:
             print(f"Error importing: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "github-fetch":
+        try:
+            fetch_service = GitHubFetchService()
+            validate_token = not ns.no_validate
+
+            if ns.incremental:
+                # Get the latest run timestamp from stored runs
+                all_runs = workflow_service.list_runs()
+                latest_timestamp = None
+                if all_runs:
+                    latest_timestamp = max(run.created_at for run in all_runs)
+                runs = fetch_service.fetch_incremental(
+                    owner=ns.owner,
+                    repo=ns.repo,
+                    latest_run_timestamp=latest_timestamp,
+                    workflow=ns.workflow,
+                    token=ns.token,
+                )
+            else:
+                runs = fetch_service.fetch_workflow_runs(
+                    owner=ns.owner,
+                    repo=ns.repo,
+                    workflow=ns.workflow,
+                    token=ns.token,
+                    validate=validate_token,
+                )
+
+            if not runs:
+                print("No workflow runs fetched from GitHub.")
+                return
+
+            # Add fetched runs to storage (skip duplicates)
+            added_count = 0
+            skipped_count = 0
+            for run in runs:
+                try:
+                    workflow_service.add_workflow_run(run)
+                    added_count += 1
+                except ValueError:
+                    # Run already exists
+                    skipped_count += 1
+
+            print(f"Fetched {len(runs)} workflow run(s) from GitHub.")
+            print(f"Added {added_count} new run(s) to storage.")
+            if skipped_count > 0:
+                print(f"Skipped {skipped_count} run(s) (already exist).")
+
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error fetching from GitHub: {e}", file=sys.stderr)
             sys.exit(1)
