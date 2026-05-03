@@ -130,4 +130,4 @@ Duration: 339.8s | Cost: $0.684623 USD | Turns: 48
   - One-shot CLI: python -m src --operation {square|sqrt|power|modulo} A B
   - Help shows all operations: python -m src --help
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 399.0s | Cost: $0.859193 USD | Turns: 48
