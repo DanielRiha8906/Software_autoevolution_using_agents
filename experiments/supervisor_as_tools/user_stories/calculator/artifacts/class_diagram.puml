@@ -45,6 +45,13 @@ package "models" #DDEEFF {
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : MemoryEntry
     }
+
+    class CalculationStatistics {
+        +operationCounts : dict[str, int]
+        +totalErrors : int
+        +errorRate : float
+        +avgExecutionTimeMs : float
+    }
 }
 
 package "services" #DDFFD4 {
@@ -80,6 +87,13 @@ package "services" #DDFFD4 {
         +filterBySuccess(success: bool) : List<MemoryEntry>
         +filter(operationName: str, success: bool) : List<MemoryEntry>
     }
+
+    class StatisticsService {
+        -memoryService : MemoryService
+        --
+        +StatisticsService(memoryService: MemoryService)
+        +generate() : CalculationStatistics
+    }
 }
 
 package "storage" #FFF3CC {
@@ -99,8 +113,9 @@ package "cli" #FFE5E5 {
         -MENU : List<Tuple<Operation, String>>
         -service : CalculatorService
         -memory_service : MemoryService
+        -statistics_service : StatisticsService
         --
-        +CalculatorCLI(service: CalculatorService, memory_service: MemoryService)
+        +CalculatorCLI(service: CalculatorService, memory_service: MemoryService, statistics_service: StatisticsService)
         +runInteractive() : void
         +runCommand(operation: String, a: float, b: float) : void
         +showMemoryCli() : void
@@ -112,18 +127,22 @@ package "cli" #FFE5E5 {
         -showMemory() : void
         -showMemoryFilterSubmenu() : void
         -displayMemoryEntries(entries: List<MemoryEntry>) : void
+        -showStatistics() : void
     }
 }
 
 CalculatorCLI --> CalculatorService : service
 CalculatorCLI --> MemoryService : memory service
+CalculatorCLI --> StatisticsService : statistics service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 MemoryService --> CalculatorService : uses
 MemoryService --> JsonStorage : persists to
+StatisticsService --> MemoryService : uses
 
 CalculatorService ..> CalculationResult : create
 MemoryService ..> MemoryEntry : create/return
+StatisticsService ..> CalculationStatistics : generate
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 Calculator ..> Operation

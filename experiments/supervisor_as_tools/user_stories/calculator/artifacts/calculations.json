@@ -70,5 +70,21 @@
     "result": 5.0,
     "timestamp": "2026-05-03T18:01:46.350216",
     "execution_time_ms": 0.006903000041802443
+  },
+  {
+    "operation": "add",
+    "operand_a": 3.0,
+    "operand_b": 5.0,
+    "result": 8.0,
+    "timestamp": "2026-05-03T19:44:25.249919",
+    "execution_time_ms": 0.006141000028492272
+  },
+  {
+    "operation": "multiply",
+    "operand_a": 4.0,
+    "operand_b": 5.0,
+    "result": 20.0,
+    "timestamp": "2026-05-03T19:44:26.598057",
+    "execution_time_ms": 0.006142000017916871
   }
 ]
