@@ -7,13 +7,14 @@ from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
 from .services.query_service import QueryService
+from .services.statistics_service import StatisticsService
 from .storage.json_storage import JsonStorage
 from .storage.memory_storage import MemoryStorage
 from .cli.calculator_cli import CalculatorCLI
 
 
-def _build_service() -> tuple[CalculatorService, QueryService]:
-    """Build and return both CalculatorService and QueryService."""
+def _build_service() -> tuple[CalculatorService, QueryService, StatisticsService]:
+    """Build and return CalculatorService, QueryService, and StatisticsService."""
     calc_storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
     memory_storage_path = Path(__file__).parent.parent / "artifacts" / "memory.json"
 
@@ -23,7 +24,8 @@ def _build_service() -> tuple[CalculatorService, QueryService]:
 
     calc_service = CalculatorService(Calculator(), calc_storage, memory_service)
     query_service = QueryService(memory_service)
-    return calc_service, query_service
+    statistics_service = StatisticsService(memory_service)
+    return calc_service, query_service, statistics_service
 
 
 def _as_number(value: str) -> float:
@@ -37,7 +39,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--query-by-operation OP] [--query-by-state STATE]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--query-by-operation OP] [--query-by-state STATE] [--stats]",
     )
     parser.add_argument(
         "--operation",
@@ -62,13 +64,30 @@ def main() -> None:
         choices=["success", "failed", "all"],
         help="Query calculations by result state (success | failed | all)",
     )
+    parser.add_argument(
+        "--stats",
+        action="store_true",
+        help="Display calculation statistics (operation counts, error rates, execution times)",
+    )
 
     args = parser.parse_args()
-    calc_service, query_service = _build_service()
-    cli = CalculatorCLI(calc_service, query_service)
+    calc_service, query_service, statistics_service = _build_service()
+    cli = CalculatorCLI(calc_service, query_service, statistics_service)
 
+    # Statistics mode (CLI flag)
+    if args.stats:
+        report = statistics_service.compute_statistics()
+        print("=== Calculation Statistics ===")
+        print(f"Total operations: {report.total_operations}")
+        print(f"Operations by type: {report.operation_count}")
+        print(f"Total errors: {report.total_errors}")
+        print(f"Error frequency: {report.error_frequency}")
+        print(f"Error rate: {report.error_rate:.2%}")
+        print(f"Average execution time: {report.average_execution_time_ms:.2f}ms")
+        print(f"Min execution time: {report.min_execution_time_ms:.2f}ms")
+        print(f"Max execution time: {report.max_execution_time_ms:.2f}ms")
     # Query mode (CLI flags)
-    if args.query_by_operation or args.query_by_state:
+    elif args.query_by_operation or args.query_by_state:
         try:
             result_state = args.query_by_state if args.query_by_state else "all"
             results = query_service.query(

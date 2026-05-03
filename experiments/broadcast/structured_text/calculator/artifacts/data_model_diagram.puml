@@ -32,6 +32,17 @@ package "Domain Models" {
     {method} +from_dict(data: dict): MemoryEntry
   }
 
+  class StatisticsReport {
+    +total_operations: int
+    +operation_count: dict[str, int]
+    +total_errors: int
+    +error_frequency: dict[str, int]
+    +error_rate: float
+    +average_execution_time_ms: float
+    +min_execution_time_ms: float
+    +max_execution_time_ms: float
+  }
+
   interface Serializable <<interface>> {
     {method} +to_dict(): dict
     {method} +from_dict(data: dict): Self
@@ -80,6 +91,20 @@ note right of MemDB
       "execution_time_ms": 0.001
     }
   ]
+end note
+
+note right of StatisticsReport
+  Computed Report (not persistent):
+  {
+    "total_operations": 100,
+    "operation_count": {"add": 30, "multiply": 20},
+    "total_errors": 5,
+    "error_frequency": {"divide": 5},
+    "error_rate": 0.05,
+    "average_execution_time_ms": 0.5,
+    "min_execution_time_ms": 0.001,
+    "max_execution_time_ms": 2.5
+  }
 end note
 
 @enduml

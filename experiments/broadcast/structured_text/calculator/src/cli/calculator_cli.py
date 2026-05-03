@@ -4,6 +4,7 @@ from typing import Optional
 from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
 from ..services.query_service import QueryService
+from ..services.statistics_service import StatisticsService
 
 
 class CalculatorCLI:
@@ -22,9 +23,11 @@ class CalculatorCLI:
         self,
         service: CalculatorService,
         query_service: Optional[QueryService] = None,
+        statistics_service: Optional[StatisticsService] = None,
     ) -> None:
         self.service = service
         self.query_service = query_service
+        self.statistics_service = statistics_service
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -36,9 +39,10 @@ class CalculatorCLI:
             self._print_menu()
             choice = input("Choose option: ").strip()
 
-            history_opt = len(self._MENU) + 1
-            query_opt   = len(self._MENU) + 2
-            exit_opt    = len(self._MENU) + 3
+            history_opt   = len(self._MENU) + 1
+            query_opt     = len(self._MENU) + 2
+            stats_opt     = len(self._MENU) + 3
+            exit_opt      = len(self._MENU) + 4
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -53,6 +57,13 @@ class CalculatorCLI:
                     self._query_interactive()
                 else:
                     print("  Query service not available.\n")
+                continue
+
+            if choice == str(stats_opt):
+                if self.statistics_service is not None:
+                    self._show_statistics()
+                else:
+                    print("  Statistics service not available.\n")
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -92,7 +103,8 @@ class CalculatorCLI:
             print(f"  {i}. {label}")
         print(f"  {len(self._MENU) + 1}. View history")
         print(f"  {len(self._MENU) + 2}. Query calculations")
-        print(f"  {len(self._MENU) + 3}. Exit")
+        print(f"  {len(self._MENU) + 3}. View statistics")
+        print(f"  {len(self._MENU) + 4}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
@@ -159,3 +171,20 @@ class CalculatorCLI:
             pass
         else:
             print("  Invalid choice.\n")
+
+    def _show_statistics(self) -> None:
+        """Display calculation statistics."""
+        if self.statistics_service is None:
+            print("  Statistics service not available.\n")
+            return
+
+        report = self.statistics_service.compute_statistics()
+        print("\n=== Calculation Statistics ===")
+        print(f"  Total operations: {report.total_operations}")
+        print(f"  Operations by type: {report.operation_count}")
+        print(f"  Total errors: {report.total_errors}")
+        print(f"  Error frequency: {report.error_frequency}")
+        print(f"  Error rate: {report.error_rate:.2%}")
+        print(f"  Average execution time: {report.average_execution_time_ms:.2f}ms")
+        print(f"  Min execution time: {report.min_execution_time_ms:.2f}ms")
+        print(f"  Max execution time: {report.max_execution_time_ms:.2f}ms\n")

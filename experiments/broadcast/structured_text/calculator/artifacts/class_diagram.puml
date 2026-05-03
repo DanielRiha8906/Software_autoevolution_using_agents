@@ -46,6 +46,17 @@ package "models" {
     +to_dict(): dict
     +from_dict(data: dict): MemoryEntry
   }
+
+  class StatisticsReport {
+    +total_operations: int
+    +operation_count: dict[str, int]
+    +total_errors: int
+    +error_frequency: dict[str, int]
+    +error_rate: float
+    +average_execution_time_ms: float
+    +min_execution_time_ms: float
+    +max_execution_time_ms: float
+  }
 }
 
 package "services" {
@@ -77,6 +88,12 @@ package "services" {
     +query_by_state(result_state: str): list[MemoryEntry]
     +format_results(entries: list[MemoryEntry]): str
   }
+
+  class StatisticsService {
+    -memory_service: MemoryService
+    --
+    +compute_statistics(): StatisticsReport
+  }
 }
 
 package "storage" {
@@ -94,14 +111,17 @@ package "cli" {
   class CalculatorCLI {
     -service: CalculatorService
     -query_service: Optional[QueryService]
+    -statistics_service: Optional[StatisticsService]
     --
     +run_interactive(): None
     +run_command(op_str: str, a: float, b: float): None
+    +run_stats(): None
     -_print_menu(): None
     -_resolve_menu_choice(choice: str): Operation
     -_prompt_number(prompt: str): float
     -_show_history(): None
     -_query_interactive(): None
+    -_show_statistics(): None
   }
 }
 
@@ -119,7 +139,12 @@ QueryService --> MemoryEntry
 
 CalculatorCLI --> CalculatorService
 CalculatorCLI --> QueryService
+CalculatorCLI --> StatisticsService
 CalculatorCLI --> Operation
+
+QueryService --> MemoryEntry
+StatisticsService --> MemoryEntry
+StatisticsService --> StatisticsReport
 
 JsonStorage --> CalculationResult
 JsonStorage --> MemoryEntry
