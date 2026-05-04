@@ -26,5 +26,29 @@
     "operand_b": 2.0,
     "result": 3.0,
     "timestamp": "2026-04-29T13:49:21.896125"
+  },
+  {
+    "operation": "add",
+    "operand_a": 2.0,
+    "operand_b": 3.0,
+    "result": 5.0,
+    "timestamp": "2026-05-04T01:57:13.129094",
+    "execution_time_ms": 0.008821487426757812
+  },
+  {
+    "operation": "multiply",
+    "operand_a": 5.0,
+    "operand_b": 6.0,
+    "result": 30.0,
+    "timestamp": "2026-05-04T01:57:31.942556",
+    "execution_time_ms": 0.009298324584960938
+  },
+  {
+    "operation": "sin",
+    "operand_a": 0.0,
+    "operand_b": 0.0,
+    "result": 0.0,
+    "timestamp": "2026-05-04T01:57:34.291153",
+    "execution_time_ms": 0.01049041748046875
   }
 ]

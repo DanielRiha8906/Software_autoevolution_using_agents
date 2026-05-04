@@ -4,40 +4,55 @@ skinparam componentStyle uml2
 skinparam defaultFontSize 13
 left to right direction
 
-package "Calculator Application" {
-
+package "Orchestration Layer" #FFE5E5 {
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
-    component "Application Service\n(CalculatorService)" as Service
+}
+
+package "Calculation Engine Layer" #DDFFD4 {
+    component "Calculation Service\n(CalculatorService)" as Service
+    component "Basic Calculator\n(Calculator)" as BasicCalc
+    component "Scientific Calculator\n(ScientificCalculator)" as SciCalc
+    interface "CalculationEngine\n(Protocol)" as CalcProto
+}
+
+package "History & Storage Layer" #FFF3CC {
     component "Memory Service\n(MemoryService)" as Memory
-    component "Import/Export Service\n(ImportExportService)" as ImportExport
     component "Statistics Service\n(StatisticsService)" as Statistics
-    component "Calculation Engine\n(Calculator)" as Calc
+    component "Import/Export Service\n(ImportExportService)" as ImportExport
     component "JSON Storage\n(JsonStorage)" as Store
-    component "Domain Models\n(Operation, CalculationResult, MemoryEntry, StatisticsResult)" as Models
+    interface "MemoryBackend\n(Protocol)" as MemProto
+    interface "StorageBackend\n(Protocol)" as StorProto
+}
 
-    Main --> CLI : initializes
-    Main --> Service : initializes
-    Main --> Memory : initializes
-    Main --> ImportExport : initializes
-
-    CLI --> Service : uses
-    CLI --> Memory : uses
-    CLI --> ImportExport : uses
-    Service --> Calc : uses
-    Service --> Store : uses
-    ImportExport --> Memory : depends on
-    ImportExport ..> Models : serializes
-    Memory ..> Models : uses
-    Statistics --> Memory : depends on
-    Statistics ..> Models : uses
-
-    Service ..> Models
-    Store ..> Models
+package "Domain Models" #DDEEFF {
+    component "Operation (Enum)" as OpModel
+    component "CalculationResult" as CalcModel
+    component "MemoryEntry" as MemModel
+    component "StatisticsResult" as StatsModel
 }
 
 database "calculations.json" as DB
 
+Main --> CLI : initializes
+CLI --> Service : uses
+Service --> CalcProto : depends on
+CalcProto <|.. BasicCalc : implements
+CalcProto <|.. SciCalc : implements
+Service --> StorProto : depends on
+StorProto <|.. Store : implements
+
+Memory --> MemProto : implements
+Statistics --> MemProto : depends on
+ImportExport --> MemProto : depends on
+Store --> StorProto : implements
 Store --> DB : read/write
+
+Service ..> CalcModel : creates
+Service ..> OpModel : uses
+Memory ..> MemModel : manages
+Statistics ..> StatsModel : creates
+ImportExport ..> MemModel : serializes
+Store ..> CalcModel : persists
 
 @enduml

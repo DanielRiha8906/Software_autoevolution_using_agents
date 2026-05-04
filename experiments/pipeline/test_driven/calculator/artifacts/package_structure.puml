@@ -1,0 +1,129 @@
+@startuml package_structure
+
+title Package/Module Structure - Refactored Calculator
+
+package "src" {
+
+    package "cli/" #FFE5E5 {
+        file "__init__.py" as cli_init
+        file "calculator_cli.py" as cli_main
+        note bottom of cli_main
+            CalculatorCLI class
+            Orchestrates services
+            Interactive & CLI modes
+        end note
+    }
+
+    package "core/" #DDFFD4 {
+        file "__init__.py" as core_init
+        file "interfaces.py" as core_int
+        file "calculator.py" as calc_py
+        file "scientific_calculator.py" as sci_py
+        note bottom of core_int
+            CalculationEngine Protocol
+        end note
+        note bottom of calc_py
+            Calculator class
+            Basic operations: +,-,*,/,²,√,^,%
+        end note
+        note bottom of sci_py
+            ScientificCalculator class
+            Extended: sin, cos, tan, log, ln, exp
+        end note
+    }
+
+    package "storage/" #FFF3CC {
+        file "__init__.py" as stor_init
+        file "interfaces.py" as stor_int
+        file "json_storage.py" as json_py
+        note bottom of stor_int
+            StorageBackend Protocol
+        end note
+        note bottom of json_py
+            JsonStorage class
+            Persistence to calculations.json
+        end note
+    }
+
+    package "history/" #FFF8CC {
+        file "__init__.py" as hist_init
+        file "interfaces.py" as hist_int
+        file "memory_service.py" as mem_py
+        file "statistics_service.py" as stats_py
+        file "import_export_service.py" as ie_py
+        note bottom of hist_int
+            MemoryBackend Protocol
+        end note
+        note bottom of mem_py
+            MemoryService class
+            In-memory entry management
+        end note
+        note bottom of stats_py
+            StatisticsService class
+            Computes aggregated metrics
+        end note
+        note bottom of ie_py
+            ImportExportService class
+            JSON serialization/deserialization
+        end note
+    }
+
+    package "services/" #E5F3FF {
+        file "__init__.py" as svc_init
+        file "calculator_service.py" as calc_svc
+        note bottom of calc_svc
+            CalculatorService class
+            Composes Calculator + Storage
+            Executes operations with timing
+        end note
+    }
+
+    package "models/" #DDEEFF {
+        file "__init__.py" as models_init
+        file "operation.py" as op_py
+        file "calculation_result.py" as cr_py
+        file "memory_entry.py" as me_py
+        file "statistics_result.py" as sr_py
+        note bottom of op_py
+            Operation Enum
+            14 operations: ADD, SUBTRACT, ..., EXP
+        end note
+        note bottom of cr_py
+            CalculationResult dataclass
+            Captures result + timing
+        end note
+        note bottom of me_py
+            MemoryEntry dataclass
+            Domain history entry
+        end note
+        note bottom of sr_py
+            StatisticsResult dataclass
+            Aggregated metrics
+        end note
+    }
+
+    file "__init__.py" as src_init
+    file "__main__.py" as src_main
+    note bottom of src_main
+        Entry point
+        Initializes all services
+        Routes to CLI
+    end note
+}
+
+cli_main --> calc_svc : imports
+calc_svc --> core_int : imports
+calc_svc --> stor_int : imports
+mem_py --> hist_int : implements
+stats_py --> hist_int : depends on
+ie_py --> hist_int : depends on
+calc_py --> op_py : imports
+sci_py --> calc_py : imports
+sci_py --> op_py : imports
+json_py --> cr_py : imports
+json_py --> stor_int : implements
+mem_py --> me_py : imports
+stats_py --> sr_py : imports
+calc_svc --> cr_py : creates
+
+@enduml
