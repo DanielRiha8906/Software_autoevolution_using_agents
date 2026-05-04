@@ -215,7 +215,6 @@ def test_check_overdue_shows_task_id_prefix(cli, capsys):
 def test_check_overdue_completed_task_not_overdue(cli, capsys):
     """check-overdue on a completed past-due task prints 'not overdue'."""
     from datetime import datetime, timezone, timedelta
-    from src.services.task_manager import TaskManager
 
     # Create a task and manually set it as completed with past due date
     _add(cli, "Completed overdue")

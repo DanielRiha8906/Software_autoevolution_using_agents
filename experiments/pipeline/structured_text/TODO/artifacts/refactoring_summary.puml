@@ -1,0 +1,184 @@
+@startuml refactoring_summary
+
+title Task 09: Layered Architecture Refactor - Change Summary
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+
+package "OLD ARCHITECTURE (Pre-Refactor)" #FFE5E5 {
+
+    package "services" {
+        class TaskManager <<deprecated>> {
+            -storage : JsonStorage
+            -tasks : Dictionary
+            --
+            +add(), get(), list_all()
+            +list_by_status(), list_by_filter()
+            +update(), set_status(), delete()
+            +list_by_project()
+            +assign_to_project()
+            +unassign_from_project()
+            -load(), -persist()
+        }
+
+        class CommentManager <<deprecated>> {
+            -storage : JsonStorage
+            -comments : Dictionary
+            --
+            +add(), get(), list_all()
+            +list_by_task(), delete()
+            +delete_all_by_task()
+            -load(), -persist()
+        }
+
+        class ProjectManager <<deprecated>> {
+            -storage : JsonStorage
+            -projects : Dictionary
+            --
+            +add(), get(), list_all()
+            +delete(), update()
+            -load(), -persist()
+        }
+
+        class TodoService {
+            -manager : TaskManager
+            -comment_manager : CommentManager
+            -project_manager : ProjectManager
+            --
+            +add_task(), get_task()
+            +list_tasks(), start_task()
+            +complete_task(), reopen_task()
+            +delete_task()
+            +add_comment(), get_comments()
+            +delete_comment()
+            +get_statistics()
+            +create_project(), list_projects()
+            +assign_task_to_project()
+            +export_tasks_and_comments()
+            +import_tasks_and_comments()
+        }
+    }
+
+    note right
+        PROBLEMS:
+        - Managers directly access JsonStorage
+        - No shared interface or abstraction
+        - Hard to test (tightly coupled)
+        - Duplicate load/persist logic
+        - No dependency injection
+    end note
+}
+
+package "NEW ARCHITECTURE (Post-Refactor)" #E5F3FF {
+
+    package "exceptions" {
+        class DomainError
+        class TaskNotFoundError
+        class CommentNotFoundError
+        class ProjectNotFoundError
+        class ImportExportError
+    }
+
+    package "repositories" {
+        abstract class BaseRepository<T> {
+            #_storage : JsonStorage
+            #_items : Dictionary<String, T>
+            --
+            +get(), list_all(), delete()
+            #{abstract}_deserialize()
+            #{abstract}_serialize()
+            #{abstract}_item_not_found()
+            #_load(), #_persist()
+        }
+
+        class TaskRepository {
+            +add(), list_by_status()
+            +list_by_filter(), update()
+            +set_status(), list_by_project()
+            +assign_to_project()
+        }
+
+        class CommentRepository {
+            +add(), list_by_task()
+            +delete_all_by_task()
+        }
+
+        class ProjectRepository {
+            +add(), update()
+        }
+    }
+
+    package "storage" {
+        class JsonStorage
+        class StoragePathProvider
+    }
+
+    package "container" {
+        class Container {
+            +get_task_repository()
+            +get_comment_repository()
+            +get_project_repository()
+            +get_todo_service()
+        }
+    }
+
+    package "services" {
+        class TodoService {
+            -task_repository : TaskRepository
+            -comment_repository : CommentRepository
+            -project_repository : ProjectRepository
+            --
+            [same public interface]
+        }
+
+        class ExportService {
+            -task_repository : TaskRepository
+            -comment_repository : CommentRepository
+            -project_repository : ProjectRepository
+        }
+
+        class ImportService {
+            -task_repository : TaskRepository
+            -comment_repository : CommentRepository
+            -project_repository : ProjectRepository
+        }
+    }
+
+    note right
+        BENEFITS:
+        - Generic Repository<T> pattern
+        - Clean separation of concerns
+        - Type-safe and testable
+        - DI via Container
+        - No circular dependencies
+        - Consistent CRUD interface
+    end note
+}
+
+note bottom
+    KEY CHANGES:
+
+    REMOVED:
+    - TaskManager class
+    - CommentManager class
+    - ProjectManager class
+
+    ADDED:
+    - exceptions.py module (DomainError hierarchy)
+    - BaseRepository<T> abstract base class
+    - TaskRepository, CommentRepository, ProjectRepository
+    - StoragePathProvider class
+    - Container class for DI
+
+    REFACTORED:
+    - TodoService now uses repositories, not managers
+    - Services depend on abstraction (repositories)
+    - CLI/Menu now use Container for service creation
+    - ExportService and ImportService now use repositories
+
+    ARCHITECTURE PATTERN:
+    CLI -> Container -> Services -> Repositories -> Storage
+    (no circular dependencies, clean layering)
+end note
+
+@enduml

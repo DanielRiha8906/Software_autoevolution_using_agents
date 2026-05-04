@@ -1,0 +1,140 @@
+@startuml repository_pattern_diagram
+
+title Repository Pattern Implementation
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+
+package "Repository Layer" #E5F3FF {
+    abstract class BaseRepository<T> <<abstract>> {
+        #{abstract}#_storage : JsonStorage
+        #{abstract}#_items : Dictionary<String, T>
+        --
+        +{abstract}_deserialize(data: dict) : T
+        +{abstract}_serialize(item: T) : dict
+        +{abstract}_item_not_found(msg: String) : Exception
+        --
+        +get(item_id: String) : T
+        +list_all() : List<T>
+        +delete(item_id: String) : void
+        #{protected}_load() : void
+        #{protected}_persist() : void
+    }
+
+    note right of BaseRepository
+        Generic base repository implementing:
+        - Type-safe CRUD operations
+        - Lazy loading on initialization
+        - Prefix-based ID lookup
+        - Abstract serialization for subclasses
+    end note
+
+    class TaskRepository <<Repository>> {
+        --
+        +add(title: String, desc: String [0..1]) : Task
+        +list_by_status(status: TaskStatus) : List<Task>
+        +list_by_filter(...) : List<Task>
+        +update(task_id: String, ...) : Task
+        +set_status(task_id: String, status: TaskStatus) : Task
+        +list_by_project(project_id: String) : List<Task>
+        +assign_to_project(task_id: String, project_id: String) : Task
+        +unassign_from_project(task_id: String) : Task
+    }
+
+    class CommentRepository <<Repository>> {
+        --
+        +add(task_id: String, content: String, author: String [0..1]) : TaskComment
+        +list_by_task(task_id: String) : List<TaskComment>
+        +delete_all_by_task(task_id: String) : void
+    }
+
+    class ProjectRepository <<Repository>> {
+        --
+        +add(name: String) : Project
+        +update(project_id: String, name: String) : Project
+    }
+
+    BaseRepository <|-- TaskRepository
+    BaseRepository <|-- CommentRepository
+    BaseRepository <|-- ProjectRepository
+}
+
+package "Domain Model" #DDEEFF {
+    class Task {
+        +id : String
+        +title : String
+        +description : String [0..1]
+        +status : TaskStatus
+        +due_date : DateTime [0..1]
+        +project_id : String [0..1]
+        +created_at : DateTime
+        +updated_at : DateTime
+        +to_dict() : dict
+        +from_dict(data: dict) : Task
+    }
+
+    class TaskComment {
+        +id : String
+        +task_id : String
+        +content : String
+        +author : String [0..1]
+        +created_at : DateTime
+        +updated_at : DateTime [0..1]
+        +to_dict() : dict
+        +from_dict(data: dict) : TaskComment
+    }
+
+    class Project {
+        +id : String
+        +name : String
+        +created_at : DateTime
+        +to_dict() : dict
+        +from_dict(data: dict) : Project
+    }
+}
+
+package "Storage" #FFF3CC {
+    class JsonStorage {
+        -path : String
+        --
+        +load() : List<Dictionary>
+        +save(items: List<Dictionary>) : void
+    }
+
+    class StoragePathProvider {
+        -tasks_path : Path
+        --
+        +get_tasks_path() : Path
+        +get_comments_path() : Path
+        +get_projects_path() : Path
+    }
+}
+
+package "Exceptions" #FFD9E5 {
+    exception TaskNotFoundError
+    exception CommentNotFoundError
+    exception ProjectNotFoundError
+}
+
+TaskRepository --> JsonStorage : encapsulates
+CommentRepository --> JsonStorage : encapsulates
+ProjectRepository --> JsonStorage : encapsulates
+
+TaskRepository --> Task : manages (T)
+CommentRepository --> TaskComment : manages (T)
+ProjectRepository --> Project : manages (T)
+
+TaskRepository ..> TaskNotFoundError : raises
+CommentRepository ..> CommentNotFoundError : raises
+ProjectRepository ..> ProjectNotFoundError : raises
+
+note bottom
+    REPOSITORY PATTERN BENEFITS:
+    - Type-safe: Each Repository<T> manages exactly one type
+    - Consistent: All repositories inherit from BaseRepository<T>
+    - Testable: Easy to mock/stub for unit tests
+    - Maintainable: Logic centralized, no duplicate code
+    - Decoupled: Services never touch JsonStorage directly
+end note
+
+@enduml

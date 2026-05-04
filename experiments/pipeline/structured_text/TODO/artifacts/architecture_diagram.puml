@@ -1,0 +1,129 @@
+@startuml architecture_diagram
+
+title TODO Application - Clean Layered Architecture (Task 09 Refactor)
+
+skinparam componentStyle uml2
+skinparam defaultFontSize 12
+
+package "CLI Layer" #FFE5E5 {
+    component "TodoCLI" as CLI
+    component "InteractiveMenu" as Menu
+}
+
+package "Dependency Injection" #F0F0F0 {
+    component "Container" as Container
+    note bottom of Container
+        Lazy initialization of repositories
+        and service. Central point for wiring.
+    end note
+}
+
+package "Service Layer" #DDFFD4 {
+    component "TodoService" as Service
+    component "ExportService" as Export
+    component "ImportService" as Import
+}
+
+package "Repository Layer" #E5F3FF {
+    component "TaskRepository" as TaskRepo
+    component "CommentRepository" as CommentRepo
+    component "ProjectRepository" as ProjectRepo
+    component "BaseRepository<T>" as BaseRepo
+}
+
+package "Storage Abstraction" #FFF3CC {
+    component "StoragePathProvider" as PathProvider
+    component "JsonStorage" as Storage
+}
+
+package "Domain Model" #DDEEFF {
+    component "Task" as Task
+    component "TaskComment" as Comment
+    component "Project" as Project
+    component "TaskStatus" as Status
+    component "TaskStatistics" as Stats
+}
+
+package "Exception Handling" #FFD9E5 {
+    component "DomainError" as DomainErr
+    component "TaskNotFoundError" as TaskErr
+    component "CommentNotFoundError" as CommentErr
+    component "ProjectNotFoundError" as ProjectErr
+    component "ImportExportError" as ImpExpErr
+}
+
+package "Utilities" #F0E5FF {
+    component "TimezoneUtils" as TZ
+}
+
+'' CLI -> Dependency Injection
+CLI --> Container : creates service
+Menu --> Container : creates service
+
+'' DI -> Services
+Container --> Service : provides
+Container --> TaskRepo : provides
+Container --> CommentRepo : provides
+Container --> ProjectRepo : provides
+
+'' Services -> Repositories (clean layering)
+Service --> TaskRepo : uses
+Service --> CommentRepo : uses
+Service --> ProjectRepo : uses
+Service --> Export : delegates
+Service --> Import : delegates
+
+Export --> TaskRepo : reads
+Export --> CommentRepo : reads
+Export --> ProjectRepo : reads
+
+Import --> TaskRepo : writes
+Import --> CommentRepo : writes
+Import --> ProjectRepo : writes
+
+'' Repositories -> Storage
+TaskRepo --> Storage : persists
+CommentRepo --> Storage : persists
+ProjectRepo --> Storage : persists
+
+'' Repositories -> Path Provider
+TaskRepo --> PathProvider : locates
+CommentRepo --> PathProvider : locates
+ProjectRepo --> PathProvider : locates
+
+'' Repositories inherit from Base
+TaskRepo --|> BaseRepo : extends
+CommentRepo --|> BaseRepo : extends
+ProjectRepo --|> BaseRepo : extends
+
+'' Exception handling
+Service ..> TaskErr : raises
+Service ..> CommentErr : raises
+Service ..> ProjectErr : raises
+Export ..> ImpExpErr : raises
+Import ..> ImpExpErr : raises
+TaskRepo ..> TaskErr : raises
+CommentRepo ..> CommentErr : raises
+ProjectRepo ..> ProjectErr : raises
+
+'' Domain usage
+Service ..> Task : creates/manages
+Service ..> Comment : creates/manages
+Service ..> Project : creates/manages
+Service ..> Stats : computes
+
+'' Timezone utilities
+TaskRepo --> TZ : uses for filtering
+
+note bottom
+    CLEAN LAYERS (no circular dependencies):
+    1. Exception Handling - crosses all layers
+    2. Domain Model - independent, pure data
+    3. Storage & Path Provider - I/O abstraction
+    4. Repository - generic CRUD with type safety
+    5. Service - business logic using repositories
+    6. DI Container - wires dependencies
+    7. CLI - user interface, uses Container
+end note
+
+@enduml

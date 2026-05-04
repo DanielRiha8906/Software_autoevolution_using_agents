@@ -1,13 +1,19 @@
 import pytest
 from src.models.task_status import TaskStatus
-from src.services.task_manager import TaskNotFoundError
+from src.repositories.task_repository import TaskRepository
+from src.repositories.comment_repository import CommentRepository
+from src.repositories.project_repository import ProjectRepository
 from src.services.todo_service import TodoService
-from src.storage.json_storage import JsonStorage
+from src.exceptions import TaskNotFoundError, CommentNotFoundError
 
 
 @pytest.fixture
 def service(tmp_path):
-    return TodoService(JsonStorage(str(tmp_path / "tasks.json")))
+    return TodoService(
+        TaskRepository(tmp_path / "tasks.json"),
+        CommentRepository(tmp_path / "comments.json"),
+        ProjectRepository(tmp_path / "projects.json"),
+    )
 
 
 def test_add_task(service):
@@ -206,7 +212,6 @@ def test_delete_comment_by_prefix(service):
 
 def test_delete_comment_nonexistent_raises(service):
     """delete_comment() raises CommentNotFoundError if comment doesn't exist."""
-    from src.services.comment_manager import CommentNotFoundError
     with pytest.raises(CommentNotFoundError):
         service.delete_comment("nonexistent-id")
 
@@ -238,7 +243,6 @@ def test_delete_task_cascades_comments(service):
 
     # Comments are also gone (cascade delete)
     # Verify by attempting to get a non-existent comment
-    from src.services.comment_manager import CommentNotFoundError
     with pytest.raises(CommentNotFoundError):
         service.delete_comment(c1.id)
 

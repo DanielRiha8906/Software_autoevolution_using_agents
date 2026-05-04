@@ -6,26 +6,53 @@ from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..models.task_statistics import TaskStatistics
 from ..models.project import Project
-from ..storage.json_storage import JsonStorage
-from .comment_manager import CommentManager
+from ..repositories.task_repository import TaskRepository
+from ..repositories.comment_repository import CommentRepository
+from ..repositories.project_repository import ProjectRepository
 from .import_export_service import ExportService, ImportService
-from .task_manager import TaskManager
-from .project_manager import ProjectManager
 
 
 class TodoService:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
-        self._manager = TaskManager(storage)
-        self._comment_manager = CommentManager(storage)
-        self._project_manager = ProjectManager(storage)
+    def __init__(
+        self,
+        task_repository: Optional[TaskRepository] = None,
+        comment_repository: Optional[CommentRepository] = None,
+        project_repository: Optional[ProjectRepository] = None,
+    ) -> None:
+        """Initialize TodoService with repositories.
+
+        Args:
+            task_repository: TaskRepository instance
+            comment_repository: CommentRepository instance
+            project_repository: ProjectRepository instance
+        """
+        # For backward compatibility, support the old storage parameter
+        # (if someone passes a JsonStorage as positional arg)
+        # This is handled by checking if the first arg looks like storage
+        if task_repository is not None and hasattr(task_repository, 'load') and hasattr(task_repository, 'save'):
+            # It's a JsonStorage instance, not a repository - backward compat mode
+            from ..storage.json_storage import JsonStorage
+            from ..storage.path_provider import StoragePathProvider
+            storage = task_repository
+            path_provider = StoragePathProvider(str(storage.path) if hasattr(storage, 'path') else None)
+            from ..repositories.task_repository import TaskRepository as TR
+            from ..repositories.comment_repository import CommentRepository as CR
+            from ..repositories.project_repository import ProjectRepository as PR
+            task_repository = TR(path_provider.get_tasks_path())
+            comment_repository = CR(path_provider.get_comments_path())
+            project_repository = PR(path_provider.get_projects_path())
+
+        self._task_repository = task_repository
+        self._comment_repository = comment_repository
+        self._project_repository = project_repository
 
     def add_task(self, title: str, description: Optional[str] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description)
+        return self._task_repository.add(title.strip(), description)
 
     def get_task(self, task_id: str) -> Task:
-        return self._manager.get(task_id)
+        return self._task_repository.get(task_id)
 
     def list_tasks(
         self,
@@ -53,8 +80,8 @@ class TodoService:
             if due_after > due_before:
                 raise ValueError("due_after cannot be after due_before")
 
-        # Delegate to manager's list_by_filter method
-        return self._manager.list_by_filter(
+        # Delegate to repository's list_by_filter method
+        return self._task_repository.list_by_filter(
             status=status,
             due_after=due_after,
             due_before=due_before,
@@ -62,23 +89,23 @@ class TodoService:
         )
 
     def start_task(self, task_id: str) -> Task:
-        return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)
+        return self._task_repository.set_status(task_id, TaskStatus.IN_PROGRESS)
 
     def complete_task(self, task_id: str) -> Task:
-        return self._manager.set_status(task_id, TaskStatus.DONE)
+        return self._task_repository.set_status(task_id, TaskStatus.DONE)
 
     def reopen_task(self, task_id: str) -> Task:
-        return self._manager.set_status(task_id, TaskStatus.PENDING)
+        return self._task_repository.set_status(task_id, TaskStatus.PENDING)
 
     def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
         if title is not None and not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.update(task_id, title=title, description=description)
+        return self._task_repository.update(task_id, title=title, description=description)
 
     def delete_task(self, task_id: str) -> None:
-        task = self._manager.get(task_id)  # resolves prefix; raises if missing
-        self._comment_manager.delete_all_by_task(task.id)  # cascade delete comments
-        self._manager.delete(task.id)
+        task = self._task_repository.get(task_id)  # resolves prefix; raises if missing
+        self._comment_repository.delete_all_by_task(task.id)  # cascade delete comments
+        self._task_repository.delete(task.id)
 
     def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
         """Add a comment to a task.
@@ -98,8 +125,8 @@ class TodoService:
         if not content or not content.strip():
             raise ValueError("Comment content cannot be empty")
         # Verify task exists
-        task = self._manager.get(task_id)
-        return self._comment_manager.add(task.id, content.strip(), author)
+        task = self._task_repository.get(task_id)
+        return self._comment_repository.add(task.id, content.strip(), author)
 
     def get_comments(self, task_id: str) -> list[TaskComment]:
         """Get all comments for a task in chronological order.
@@ -114,8 +141,8 @@ class TodoService:
             TaskNotFoundError: If task does not exist
         """
         # Verify task exists
-        task = self._manager.get(task_id)
-        return self._comment_manager.list_by_task(task.id)
+        task = self._task_repository.get(task_id)
+        return self._comment_repository.list_by_task(task.id)
 
     def delete_comment(self, comment_id: str) -> None:
         """Delete a comment.
@@ -126,7 +153,7 @@ class TodoService:
         Raises:
             CommentNotFoundError: If comment not found or prefix is ambiguous
         """
-        self._comment_manager.delete(comment_id)
+        self._comment_repository.delete(comment_id)
 
     def get_statistics(self) -> TaskStatistics:
         """Compute aggregate statistics over all tasks.
@@ -134,7 +161,7 @@ class TodoService:
         Returns:
             TaskStatistics dataclass with aggregated metrics
         """
-        tasks = self._manager.list_all()
+        tasks = self._task_repository.list_all()
 
         total_count = len(tasks)
         pending_count = sum(1 for t in tasks if t.status == TaskStatus.PENDING)
@@ -164,7 +191,7 @@ class TodoService:
         Raises:
             ImportExportError: If export fails
         """
-        service = ExportService(self._manager, self._comment_manager, self._project_manager)
+        service = ExportService(self._task_repository, self._comment_repository, self._project_repository)
         return service.export_to_file(filepath)
 
     def import_tasks_and_comments(self, filepath: str, mode: str = "fail") -> tuple[int, int, int, int]:
@@ -180,7 +207,7 @@ class TodoService:
         Raises:
             ImportExportError: If import fails
         """
-        service = ImportService(self._manager, self._comment_manager, self._project_manager)
+        service = ImportService(self._task_repository, self._comment_repository, self._project_repository)
         return service.import_from_file(filepath, mode)
 
     def create_project(self, name: str) -> Project:
@@ -197,7 +224,7 @@ class TodoService:
         """
         if not name or not name.strip():
             raise ValueError("Project name cannot be empty")
-        return self._project_manager.add(name.strip())
+        return self._project_repository.add(name.strip())
 
     def list_projects(self) -> list[Project]:
         """List all projects.
@@ -205,7 +232,7 @@ class TodoService:
         Returns:
             List of all Project instances
         """
-        return self._project_manager.list_all()
+        return self._project_repository.list_all()
 
     def get_project(self, project_id: str) -> Project:
         """Get a project by ID or ID prefix.
@@ -219,7 +246,7 @@ class TodoService:
         Raises:
             ProjectNotFoundError: If project not found or prefix is ambiguous
         """
-        return self._project_manager.get(project_id)
+        return self._project_repository.get(project_id)
 
     def delete_project(self, project_id: str) -> None:
         """Delete a project and unassign all its tasks.
@@ -230,13 +257,13 @@ class TodoService:
         Raises:
             ProjectNotFoundError: If project not found or prefix is ambiguous
         """
-        project = self._project_manager.get(project_id)
+        project = self._project_repository.get(project_id)
         # Unassign all tasks in this project
-        tasks_in_project = self._manager.list_by_project(project.id)
+        tasks_in_project = self._task_repository.list_by_project(project.id)
         for task in tasks_in_project:
-            self._manager.unassign_from_project(task.id)
+            self._task_repository.unassign_from_project(task.id)
         # Delete the project
-        self._project_manager.delete(project.id)
+        self._project_repository.delete(project.id)
 
     def list_tasks_by_project(self, project_id: str) -> list[Task]:
         """List all tasks assigned to a project.
@@ -251,8 +278,8 @@ class TodoService:
             ProjectNotFoundError: If project not found or prefix is ambiguous
         """
         # Verify project exists
-        self._project_manager.get(project_id)
-        return self._manager.list_by_project(project_id)
+        self._project_repository.get(project_id)
+        return self._task_repository.list_by_project(project_id)
 
     def assign_task_to_project(self, task_id: str, project_id: str) -> Task:
         """Assign a task to a project.
@@ -269,8 +296,8 @@ class TodoService:
             ProjectNotFoundError: If project not found
         """
         # Verify project exists
-        self._project_manager.get(project_id)
-        return self._manager.assign_to_project(task_id, project_id)
+        self._project_repository.get(project_id)
+        return self._task_repository.assign_to_project(task_id, project_id)
 
     def unassign_task_from_project(self, task_id: str) -> Task:
         """Unassign a task from its project.
@@ -284,7 +311,7 @@ class TodoService:
         Raises:
             TaskNotFoundError: If task not found
         """
-        return self._manager.unassign_from_project(task_id)
+        return self._task_repository.unassign_from_project(task_id)
 
     def update_project(self, project_id: str, name: str) -> Project:
         """Update a project's name.
@@ -302,4 +329,4 @@ class TodoService:
         """
         if not name or not name.strip():
             raise ValueError("Project name cannot be empty")
-        return self._project_manager.update(project_id, name.strip())
+        return self._project_repository.update(project_id, name.strip())

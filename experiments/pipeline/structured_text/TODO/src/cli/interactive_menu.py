@@ -2,15 +2,17 @@ import os
 from datetime import datetime
 from typing import Optional
 
+from ..container import Container
+from ..exceptions import (
+    TaskNotFoundError,
+    CommentNotFoundError,
+    ProjectNotFoundError,
+    ImportExportError,
+)
 from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
-from ..services.comment_manager import CommentNotFoundError
-from ..services.import_export_service import ImportExportError
-from ..services.task_manager import TaskNotFoundError
-from ..services.project_manager import ProjectNotFoundError
 from ..services.todo_service import TodoService
-from ..storage.json_storage import JsonStorage
 
 _STATUS_LABEL = {
     TaskStatus.PENDING: "[ ]",
@@ -55,9 +57,18 @@ def _task_line(task: Task) -> str:
 
 
 class InteractiveMenu:
-    def __init__(self, storage_path: Optional[str] = None) -> None:
-        storage = JsonStorage(storage_path) if storage_path else JsonStorage()
-        self._service = TodoService(storage)
+    def __init__(self, service: Optional[TodoService] = None, storage_path: Optional[str] = None) -> None:
+        """Initialize InteractiveMenu with optional service or storage path.
+
+        Args:
+            service: TodoService instance (if provided, storage_path is ignored)
+            storage_path: Path to task storage file (if service not provided)
+        """
+        if service is not None:
+            self._service = service
+        else:
+            container = Container(storage_path)
+            self._service = container.get_todo_service()
 
     def run(self) -> None:
         while True:

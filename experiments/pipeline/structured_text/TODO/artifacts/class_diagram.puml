@@ -3,6 +3,19 @@
 skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
 
+package "exceptions" #FFD9E5 {
+    exception DomainError
+    exception TaskNotFoundError
+    exception CommentNotFoundError
+    exception ProjectNotFoundError
+    exception ImportExportError
+
+    DomainError <|-- TaskNotFoundError
+    DomainError <|-- CommentNotFoundError
+    DomainError <|-- ProjectNotFoundError
+    DomainError <|-- ImportExportError
+}
+
 package "models" #DDEEFF {
     enum TaskStatus {
         PENDING
@@ -46,12 +59,6 @@ package "models" #DDEEFF {
         +overdue_count : int
         +with_due_date_count : int
     }
-    note right of Task
-        to_dict() conditionally includes due_date
-        from_dict() safely parses due_date with backward compatibility
-        is_overdue() returns True if due_date is set,
-        task is not DONE, and current time is past due_date
-    end note
 
     class TaskComment {
         +id : String
@@ -64,17 +71,10 @@ package "models" #DDEEFF {
         +to_dict() : Dictionary
         +from_dict(data: Dictionary) : TaskComment
     }
-    Task "1" -- "0..*" TaskComment : "has (via task_id)"
-    note right of TaskComment
-        Foreign key reference to Task via task_id
-        Supports optional author and update timestamp
-    end note
 
+    Task "1" -- "0..*" TaskComment : "has (via task_id)"
     Task "0..*" -- "0..1" Project : "assigned to"
-    note right of Project
-        Projects group tasks. Deleting a project
-        unassigns (not cascades) its tasks.
-    end note
+    Task --> TaskStatus : status
 }
 
 package "storage" #FFF3CC {
@@ -85,93 +85,77 @@ package "storage" #FFF3CC {
         +load() : List<Dictionary>
         +save(tasks: List<Dictionary>) : void
     }
-}
 
-package "utils" #F0E5FF {
-    class TimezoneUtils <<utility>> {
+    class StoragePathProvider {
+        -tasks_path : Path
         --
-        +now_in_cest() : DateTime
-        +is_overdue_cest(due_date: DateTime) : Boolean
-        +utc_to_cest(dt: DateTime) : DateTime
+        +StoragePathProvider(tasks_path: String [0..1])
+        +get_tasks_path() : Path
+        +get_comments_path() : Path
+        +get_projects_path() : Path
     }
-    note right of TimezoneUtils
-        Utility module for CEST (Europe/Paris) timezone handling.
-        now_in_cest(): Returns current time in CEST.
-        is_overdue_cest(): Checks if due_date is past current CEST time.
-        utc_to_cest(): Converts UTC or timezone-aware datetime to CEST.
-    end note
 }
 
-package "services" #DDFFD4 {
-    exception TaskNotFoundError
-    exception CommentNotFoundError
-    exception ImportExportError
-    exception ProjectNotFoundError
-
-    class TaskManager {
-        -storage : JsonStorage
-        -tasks : Dictionary<String, Task>
+package "repositories" #E5F3FF {
+    abstract class BaseRepository<T> <<abstract, generic>> {
+        #_storage : JsonStorage
+        #_items : Dictionary<String, T>
         --
-        +TaskManager(storage: JsonStorage [0..1])
+        +get(item_id: String) : T
+        +list_all() : List<T>
+        +delete(item_id: String) : void
+        #_load() : void
+        #_persist() : void
+        #{abstract}_deserialize(data: Dictionary) : T
+        #{abstract}_serialize(item: T) : Dictionary
+        #{abstract}_item_not_found(message: String) : Exception
+    }
+
+    class TaskRepository <<Repository>> {
+        --
         +add(title: String, description: String [0..1]) : Task
-        +get(task_id: String) : Task
-        +list_all() : List<Task>
         +list_by_status(status: TaskStatus) : List<Task>
         +list_by_filter(status: TaskStatus [0..1], due_after: DateTime [0..1], due_before: DateTime [0..1], overdue: Boolean [0..1]) : List<Task>
         +update(task_id: String, title: String [0..1], description: String [0..1]) : Task
         +set_status(task_id: String, status: TaskStatus) : Task
-        +delete(task_id: String) : void
         +list_by_project(project_id: String) : List<Task>
         +assign_to_project(task_id: String, project_id: String) : Task
         +unassign_from_project(task_id: String) : Task
-        -load() : void
-        -persist() : void
     }
-    note right of TaskManager
-        list_by_filter() combines status, date range, and overdue filters.
-        Raises ValueError if due_after > due_before.
-        list_by_project() filters tasks by project_id.
-    end note
 
-    class CommentManager {
-        -storage : JsonStorage
-        -comments : Dictionary<String, TaskComment>
+    class CommentRepository <<Repository>> {
         --
-        +CommentManager(storage: JsonStorage [0..1])
         +add(task_id: String, content: String, author: String [0..1]) : TaskComment
-        +get(comment_id: String) : TaskComment
-        +list_all() : List<TaskComment>
         +list_by_task(task_id: String) : List<TaskComment>
-        +delete(comment_id: String) : void
         +delete_all_by_task(task_id: String) : void
-        -load() : void
-        -persist() : void
     }
 
-    class ProjectManager {
-        -storage : JsonStorage
-        -projects : Dictionary<String, Project>
+    class ProjectRepository <<Repository>> {
         --
-        +ProjectManager(storage: JsonStorage [0..1])
         +add(name: String) : Project
-        +get(project_id: String) : Project
-        +list_all() : List<Project>
-        +delete(project_id: String) : void
         +update(project_id: String, name: String) : Project
-        -load() : void
-        -persist() : void
     }
-    note right of ProjectManager
-        Stores projects in a separate JSON file.
-        Supports ID prefix lookup for get/delete/update.
-    end note
 
+    BaseRepository <|-- TaskRepository
+    BaseRepository <|-- CommentRepository
+    BaseRepository <|-- ProjectRepository
+
+    TaskRepository --> JsonStorage : uses
+    CommentRepository --> JsonStorage : uses
+    ProjectRepository --> JsonStorage : uses
+
+    TaskRepository ..> TaskNotFoundError : raises
+    CommentRepository ..> CommentNotFoundError : raises
+    ProjectRepository ..> ProjectNotFoundError : raises
+}
+
+package "services" #DDFFD4 {
     class TodoService {
-        -manager : TaskManager
-        -comment_manager : CommentManager
-        -project_manager : ProjectManager
+        -task_repository : TaskRepository
+        -comment_repository : CommentRepository
+        -project_repository : ProjectRepository
         --
-        +TodoService(storage: JsonStorage [0..1])
+        +TodoService(task_repository: TaskRepository, comment_repository: CommentRepository, project_repository: ProjectRepository)
         +add_task(title: String, description: String [0..1]) : Task
         +get_task(task_id: String) : Task
         +list_tasks(status: TaskStatus [0..1], due_after: DateTime [0..1], due_before: DateTime [0..1], overdue: Boolean [0..1]) : List<Task>
@@ -195,48 +179,86 @@ package "services" #DDFFD4 {
         +export_tasks_and_comments(filepath: String) : tuple[int, int, int]
         +import_tasks_and_comments(filepath: String, mode: String) : tuple[int, int, int, int]
     }
-    note right of TodoService
-        delete_task() cascades: deletes all comments.
-        delete_project() unassigns (not cascades) tasks.
-        export/import now handle projects as well.
-    end note
 
     class ExportService {
-        -task_manager : TaskManager
-        -comment_manager : CommentManager
-        -project_manager : ProjectManager
+        -task_repository : TaskRepository
+        -comment_repository : CommentRepository
+        -project_repository : ProjectRepository
         --
-        +ExportService(task_manager: TaskManager, comment_manager: CommentManager, project_manager: ProjectManager)
+        +ExportService(task_repository: TaskRepository, comment_repository: CommentRepository, project_repository: ProjectRepository)
         +export_to_file(filepath: String) : tuple[int, int, int]
     }
-    note right of ExportService
-        Exports all tasks, comments, and projects to JSON file.
-        Returns (tasks_exported, comments_exported, projects_exported).
-        Raises ImportExportError if file cannot be written.
-    end note
 
     class ImportService {
-        -task_manager : TaskManager
-        -comment_manager : CommentManager
-        -project_manager : ProjectManager
+        -task_repository : TaskRepository
+        -comment_repository : CommentRepository
+        -project_repository : ProjectRepository
         --
-        +ImportService(task_manager: TaskManager, comment_manager: CommentManager, project_manager: ProjectManager)
+        +ImportService(task_repository: TaskRepository, comment_repository: CommentRepository, project_repository: ProjectRepository)
         +import_from_file(filepath: String, mode: String) : tuple[int, int, int, int]
         -_validate_schema(data: Dictionary) : void
     }
-    note right of ImportService
-        Imports tasks, comments, and projects from JSON file.
-        Mode: 'fail' (stop on conflict), 'skip' (skip conflicts),
-        or 'replace' (overwrite existing).
-        Returns (tasks_imported, comments_imported, projects_imported, conflicts_detected).
+
+    TodoService --> TaskRepository : task_repository
+    TodoService --> CommentRepository : comment_repository
+    TodoService --> ProjectRepository : project_repository
+    TodoService --> ExportService : uses
+    TodoService --> ImportService : uses
+    TodoService ..> TaskStatistics : returns
+
+    ExportService --> TaskRepository : task_repository
+    ExportService --> CommentRepository : comment_repository
+    ExportService --> ProjectRepository : project_repository
+    ExportService ..> ImportExportError : raises
+
+    ImportService --> TaskRepository : task_repository
+    ImportService --> CommentRepository : comment_repository
+    ImportService --> ProjectRepository : project_repository
+    ImportService ..> ImportExportError : raises
+}
+
+package "container" #F0F0F0 {
+    class Container {
+        -storage_path : String [0..1]
+        -path_provider : StoragePathProvider
+        -task_repository : TaskRepository
+        -comment_repository : CommentRepository
+        -project_repository : ProjectRepository
+        -service : TodoService
+        --
+        +Container(storage_path: String [0..1])
+        +get_task_repository() : TaskRepository
+        +get_comment_repository() : CommentRepository
+        +get_project_repository() : ProjectRepository
+        +get_todo_service() : TodoService
+    }
+
+    note right of Container
+        Manages dependency injection for repositories
+        and service. Lazy-initializes each component.
     end note
+
+    Container --> StoragePathProvider : creates
+    Container --> TaskRepository : creates
+    Container --> CommentRepository : creates
+    Container --> ProjectRepository : creates
+    Container --> TodoService : creates
+}
+
+package "utils" #F0E5FF {
+    class TimezoneUtils <<utility>> {
+        --
+        +now_in_cest() : DateTime
+        +is_overdue_cest(due_date: DateTime) : Boolean
+        +utc_to_cest(dt: DateTime) : DateTime
+    }
 }
 
 package "cli" #FFE5E5 {
     class TodoCLI {
         -service : TodoService
         --
-        +TodoCLI(storage_path: String [0..1])
+        +TodoCLI(service: TodoService [0..1], storage_path: String [0..1])
         +run(argv: List<String> [0..1]) : Integer
         -_cmd_export(args: Namespace) : Integer
         -_cmd_import(args: Namespace) : Integer
@@ -245,36 +267,17 @@ package "cli" #FFE5E5 {
     class InteractiveMenu {
         -service : TodoService
         --
-        +InteractiveMenu(storage_path: String [0..1])
+        +InteractiveMenu(service: TodoService [0..1], storage_path: String [0..1])
         +run() : void
         -_do_import_export() : void
         -_do_export() : void
         -_do_import() : void
     }
-}
 
-Task --> TaskStatus : status
-TaskManager --> JsonStorage : storage
-TaskManager ..> TaskNotFoundError : raises
-CommentManager --> JsonStorage : storage
-CommentManager ..> CommentNotFoundError : raises
-ProjectManager --> JsonStorage : storage
-ProjectManager ..> ProjectNotFoundError : raises
-TodoService --> TaskManager : manager
-TodoService --> CommentManager : comment_manager
-TodoService --> ProjectManager : project_manager
-TodoService ..> TaskStatistics : returns
-TodoService --> ExportService : uses (export)
-TodoService --> ImportService : uses (import)
-ExportService --> TaskManager : task_manager
-ExportService --> CommentManager : comment_manager
-ExportService --> ProjectManager : project_manager
-ExportService ..> ImportExportError : raises
-ImportService --> TaskManager : task_manager
-ImportService --> CommentManager : comment_manager
-ImportService --> ProjectManager : project_manager
-ImportService ..> ImportExportError : raises
-TodoCLI --> TodoService : service
-InteractiveMenu --> TodoService : service
+    TodoCLI --> Container : uses (for service creation)
+    TodoCLI --> TodoService : uses
+    InteractiveMenu --> Container : uses (for service creation)
+    InteractiveMenu --> TodoService : uses
+}
 
 @enduml
