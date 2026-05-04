@@ -401,3 +401,69 @@ Duration: 508.4s | Cost: $1.067696 USD | Turns: 26
 - Protocols are purely documentation; they have zero runtime impact and enable better IDE support and type checking
 
 Duration: 375.0s | Cost: $0.666798 USD | Turns: 20
+
+## Task 10: Add graphical interface for the calculator
+
+**Objective:** Provide a tkinter GUI for users who prefer not to use the command line, enabling calculations and history review without typing commands.
+
+**Acceptance Criteria:** ✅ All met
+- GUI provided using `tkinter` (stdlib, no additional dependencies)
+- All standard mode operations accessible from the GUI
+- Calculation history (MemoryEntry records) displayed in a scrollable list
+- GUI calls existing calculation logic — no business logic duplicated in the UI layer
+- Toggling between standard and scientific mode in the GUI supported (bonus)
+- Error entries in the history list are visually highlighted as a bonus
+- GUI launchable via `python -m src --gui`
+
+**Files Changed:**
+- `src/__main__.py` — Added `--gui` flag to argparse; added routing to launch CalculatorWindow if flag provided
+- `src/gui/__init__.py` — Created new module marker (empty file)
+- `src/gui/constants.py` — Created configuration file with OperationMode enum, operation groupings, colors, fonts, and layout dimensions
+- `src/gui/components.py` — Created reusable tkinter widget classes: NumberInput, OperationSelector, FilterPanel
+- `src/gui/calculator_window.py` — Created main window class (382 lines) with complete GUI orchestration, service integration, and user interaction handling
+- `artifacts/class_diagram.puml` — Added gui package with 4 new classes (CalculatorWindow, NumberInput, OperationSelector, FilterPanel); documented dependencies on services and models
+- `artifacts/component_diagram.puml` — Added gui component showing dependency on CalculatorService, MemoryService, StatisticsService; displayed as alternative entry point alongside CLI
+
+**GUI Features Implemented:**
+- **Standard Mode:** 8 operations (add, subtract, multiply, divide, square, sqrt, modulo, power)
+- **Scientific Mode:** 14 operations (standard + sin, cos, tan, log, ln, exp) toggled via View menu
+- **Operation Buttons:** 8x2 grid in standard mode, 8x3 grid in scientific mode; buttons labeled with operation names
+- **Display Field:** Large text entry showing current input and results
+- **History List:** Scrollable listbox displaying all MemoryEntry records with format: [✓/✗] operation(a, b) = result [time_ms]
+- **Error Highlighting:** Error entries show [✗] icon with red background and red text; error message displayed below result field
+- **Filters:** Operation dropdown (all operations or specific operation) + success/error checkboxes with AND logic; "Apply" and "Clear" buttons
+- **Details Popup:** Double-click history entry to display full MemoryEntry details in popup window
+- **File Operations:** File menu with Export (exports current memory to JSON) and Import (imports entries from JSON file with overwrite option)
+- **Mode Toggle:** View menu with "Toggle to Scientific Mode" option
+- **Clear/Delete:** Button to clear display or delete last character
+- **Window Properties:** 800x600 default size (resizable, 400x300 minimum); responsive UI using tkinter grid layout
+
+**Service Integration:**
+- MemoryService.record() — Called when user performs calculation; returns MemoryEntry with success/error status
+- MemoryService.get_all_entries() — Called on startup and after import; populates history list
+- MemoryService.filter() — Called when filters applied; filters history by operation and/or success status
+- MemoryService.export_memory_entries() — Called from File → Export menu
+- MemoryService.import_memory_entries() — Called from File → Import menu with overwrite option
+- No direct calls to Calculator or CalculatorService; all calculations routed through MemoryService.record() for consistent error handling and persistence
+
+**Test Results:**
+- Total tests: 337
+- Passed: 337 ✅
+- Failed: 0
+- Execution time: 0.46s
+- Coverage: All existing tests pass; GUI layer does not require unit tests (pure UI, no business logic)
+
+**Implementation Notes:**
+- Tkinter is stdlib, no external dependencies required
+- GUI is event-driven (button clicks trigger callbacks that call MemoryService methods)
+- MemoryService handles all error catching, so GUI assumes record() always returns MemoryEntry (with success flag indicating outcome)
+- Number input validated for float conversion; invalid input shows error message in display field
+- History list items are clickable (double-click for details); color-coded (green tint for success, red tint for error)
+- Mode toggle refreshes button grid dynamically (expensive operation but acceptable for user interaction)
+- File dialogs use tkinter.filedialog for platform-native file selection
+- No blocking operations; all callbacks return immediately, keeping UI responsive
+- Fonts: Arial or system default, size 12 for buttons, size 14 for display
+- Color scheme: white background with light green (#90EE90) for success, light red (#FFB6C6) for errors
+- Window layout: display at top, buttons in middle, history list at bottom with filters on the right
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

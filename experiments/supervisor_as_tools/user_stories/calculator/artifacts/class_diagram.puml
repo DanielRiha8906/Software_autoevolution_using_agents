@@ -152,9 +152,57 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #FFD9D9 {
+    class CalculatorWindow {
+        -service : CalculatorService
+        -memory_service : MemoryService
+        -statistics_service : StatisticsService
+        -numberInput : NumberInput
+        -operationSelector : OperationSelector
+        -filterPanel : FilterPanel
+        --
+        +CalculatorWindow(service: CalculatorService, memory_service: MemoryService, statistics_service: StatisticsService)
+        +run() : void
+        -setupUI() : void
+        -onCalculate() : void
+        -onMemoryExport() : void
+        -onMemoryImport() : void
+    }
+
+    class NumberInput {
+        -display : String
+        --
+        +getValue() : float
+        +setValue(value: float) : void
+        +clear() : void
+        +appendDigit(digit: String) : void
+    }
+
+    class OperationSelector {
+        --
+        +getSelectedOperation() : Operation
+        +setSelectedOperation(op: Operation) : void
+        +getAvailableOperations() : List<Operation>
+    }
+
+    class FilterPanel {
+        --
+        +getFilteredByOperation(operationName: str) : List<MemoryEntry>
+        +getFilteredBySuccess(success: bool) : List<MemoryEntry>
+        +getFiltered(operationName: str, success: bool) : List<MemoryEntry>
+    }
+
+    CalculatorWindow --> NumberInput : uses
+    CalculatorWindow --> OperationSelector : uses
+    CalculatorWindow --> FilterPanel : uses
+}
+
 CalculatorCLI --> CalculatorService : service
 CalculatorCLI --> MemoryService : memory service
 CalculatorCLI --> StatisticsService : statistics service
+CalculatorWindow --> CalculatorService : service
+CalculatorWindow --> MemoryService : memory service
+CalculatorWindow --> StatisticsService : statistics service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
 MemoryService --> CalculatorService : uses execute()
@@ -166,6 +214,9 @@ MemoryService ..> MemoryEntry : create/return
 StatisticsService ..> CalculationStatistics : generate
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
+CalculatorWindow ..> Operation
+OperationSelector ..> Operation
+FilterPanel ..> MemoryEntry
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
 JsonStorage ..> MemoryEntry : stores

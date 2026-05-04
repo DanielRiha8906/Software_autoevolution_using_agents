@@ -8,6 +8,7 @@ package "Calculator Application" {
 
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
+    component "GUI Interface\n(CalculatorWindow)" as GUI
     component "Application Service\n(CalculatorService)" as Service
     component "Memory Service\n(MemoryService)" as MemService
     component "Statistics Service\n(StatisticsService)" as StatService
@@ -16,6 +17,7 @@ package "Calculator Application" {
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry, CalculationStatistics)" as Models
 
     Main --> CLI : initializes
+    Main --> GUI : initializes
     Main --> Service : initializes
     Main --> MemService : initializes
     Main --> StatService : initializes
@@ -23,6 +25,9 @@ package "Calculator Application" {
     CLI --> Service : uses
     CLI --> MemService : uses export/import
     CLI --> StatService : uses
+    GUI --> Service : uses
+    GUI --> MemService : uses export/import
+    GUI --> StatService : uses
     Service --> Calc : uses
     Service --> Store : uses
     MemService --> Service : uses execute()
@@ -33,6 +38,7 @@ package "Calculator Application" {
     MemService ..> Models
     StatService ..> Models
     Store ..> Models
+    GUI ..> Models
 }
 
 database "calculations.json" as DB
