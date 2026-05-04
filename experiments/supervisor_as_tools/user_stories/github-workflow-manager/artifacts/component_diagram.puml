@@ -13,6 +13,16 @@ package "GitHub Workflow Manager" {
   package "Interface layer" {
     component "workflow_cli" as CLI
     component "interactive_menu" as IM
+
+    package "GUI" #F0F8FF {
+      component "MainWindow" as GUI
+      package "View Frames" {
+        component "FilterFrame" as FILTER_VIEW
+        component "ListFrame" as LIST_VIEW
+        component "DetailFrame" as DETAIL_VIEW
+        component "EditFrame" as EDIT_VIEW
+      }
+    }
   }
 
   package "Service layer" {
@@ -46,12 +56,15 @@ cloud "GitHub API" as GITHUB_API
 
 MAIN --> CLI
 MAIN --> IM
+MAIN --> GUI
 
 CLI --> TRACKER
 IM --> TRACKER
+GUI --> TRACKER
 
 CLI --> SVC
 IM --> SVC
+GUI --> SVC
 
 CLI --> ATTEMPT
 IM --> ATTEMPT
@@ -61,6 +74,15 @@ IM --> STATS
 
 CLI --> IMPORT
 IM --> IMPORT
+
+GUI --> FILTER_VIEW
+GUI --> LIST_VIEW
+GUI --> DETAIL_VIEW
+GUI --> EDIT_VIEW
+FILTER_VIEW --> SVC
+LIST_VIEW --> SVC
+DETAIL_VIEW --> SVC
+EDIT_VIEW --> SVC
 
 TRACKER --> SVC
 ATTEMPT --> SVC
@@ -81,5 +103,11 @@ SVC ..> RUN
 RUN --> STATUS
 RUN --> CONCLUSION
 STATS ..> RUN
+GUI ..> RUN
+FILTER_VIEW ..> STATUS
+FILTER_VIEW ..> CONCLUSION
+LIST_VIEW ..> RUN
+DETAIL_VIEW ..> RUN
+EDIT_VIEW ..> RUN
 
 @enduml
