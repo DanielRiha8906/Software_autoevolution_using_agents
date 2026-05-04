@@ -9,6 +9,7 @@ class ImportResult:
     imported: int
     skipped: int
     errors: list = field(default_factory=list)
+    updated: int = 0
 
     @property
     def error_count(self) -> int:
@@ -30,6 +31,7 @@ class ImportResult:
             f"Import Summary:",
             f"  Total:    {self.total}",
             f"  Imported: {self.imported}",
+            f"  Updated:  {self.updated}",
             f"  Skipped:  {self.skipped}",
             f"  Errors:   {self.error_count}",
         ]

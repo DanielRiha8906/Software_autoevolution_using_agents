@@ -374,3 +374,85 @@ Successfully implemented export/import functionality for workflow runs to JSON f
 - **Serialization**: Proper ISO 8601 datetime handling, enum value serialization, null value support
 
 Duration: 488.2s | Cost: $1.073144 USD | Turns: 23
+
+---
+
+# Task 08: Live CI Data Fetch from GitHub
+
+## Summary
+Successfully implemented GitHub API integration to fetch workflow runs directly from GitHub REST API, converting fetched data to the existing domain model with secure token management and comprehensive error handling. Users can now fetch live workflow data without manual export steps via both CLI and interactive menu.
+
+## Files Changed
+- `src/github_api/__init__.py` — New module initialization
+- `src/github_api/exceptions.py` — Custom exceptions (GitHubApiError, TokenResolutionError, GitHubImportError)
+- `src/github_api/token_resolver.py` — Token acquisition with priority chain (CLI arg → env var → secrets/.env → user prompt)
+- `src/github_api/token_validator.py` — Token format validation
+- `src/github_api/client.py` — GitHub REST API client with requests library, pagination, error handling
+- `src/github_api/mapper.py` — Maps GitHub API responses to WorkflowRun and WorkflowRunAttempt domain models
+- `src/models/workflow_run.py` — Added duration_seconds field
+- `src/services/workflow_run_service.py` — Added get_run_by_number() and update_workflow_run() methods for deduplication
+- `src/services/github_import_service.py` — Orchestrator for GitHub import workflow with deduplication and force/incremental modes
+- `src/cli/workflow_cli.py` — Added fetch subcommand with --owner, --repo, --branch, --status, --github-token, --force, --incremental flags
+- `src/cli/interactive_menu.py` — Added "Fetch from GitHub" menu option with interactive prompts
+- `artifacts/class_diagram.puml` — Added github_api package and updated service relationships
+- `artifacts/component_diagram.puml` — Added GitHub API integration layer
+- `artifacts/activity_diagram_interactive.puml` — Added fetch workflow
+- `artifacts/use_case_diagram.puml` — Added GitHub import use cases
+- `requirements.txt` — Added requests>=2.28.0 dependency
+
+## Test Results
+- **Total tests**: 206
+- **Passed**: 206 ✓
+- **Failed**: 0
+- **Command**: `pytest tests/ -q`
+
+## Acceptance Criteria Met
+✓ GitHub fetch mode available via GitHub REST API (requests library)
+✓ Fetched data converted to existing domain model (WorkflowRun/WorkflowRunAttempt)
+✓ PAT resolution: GITHUB_TOKEN env var → secrets/.env file → interactive prompt
+✓ User-entered PAT not persisted unless explicitly configured
+✓ API errors handled gracefully (rate limits, invalid token, network issues)
+✓ Token validated before making requests (format validation)
+✓ Incremental fetch supported (fetches only runs newer than latest stored)
+✓ Full authentication management (OAuth, token refresh) out of scope
+✓ Accessible via python -m src as both CLI flag and interactive menu option
+✓ Deduplication by run_number (GitHub's natural key)
+✓ Force mode for updating existing runs
+✓ ImportResult tracks imported, updated, skipped, and error counts
+
+## Feature Coverage
+- **Token management**: Priority chain resolution with no persistence of user-entered tokens
+- **GitHub API client**: fetch_workflow_runs(), fetch_attempts() with pagination, error handling for 401/403/timeouts
+- **Response mapping**: GitHub API → WorkflowRun/WorkflowRunAttempt with enum conversion and duration calculation
+- **Deduplication**: By run_number + workflow_name with force-update option
+- **Incremental fetch**: Filters to runs created after max stored created_at (bonus feature)
+- **CLI integration**: fetch subcommand with all required parameters
+- **Interactive menu**: Full workflow with prompts for owner, repo, filters, token source, and flags
+- **Error handling**: Custom exceptions with meaningful messages for API/token/import failures
+- **Import result**: Summary of imported, updated, skipped, and error counts
+
+## CLI Examples
+```
+# Fetch all runs from owner/repo with env token
+python -m src fetch --owner owner --repo repo
+
+# Fetch with filters and explicit token
+python -m src fetch --owner owner --repo repo --branch main --status completed --github-token gh_token --force
+
+# Incremental fetch (only new runs)
+python -m src fetch --owner owner --repo repo --incremental
+```
+
+## Interactive Menu Example
+```
+--- Fetch from GitHub ---
+GitHub owner/org: owner
+Repository name: repo
+Branch (leave blank for all): main
+Status filter (leave blank for all): completed
+Use GITHUB_TOKEN from environment? (yes/no): yes
+[fetches and imports runs]
+Successfully imported 5 run(s)
+```
+
+Duration: 586.0s | Cost: $1.177924 USD | Turns: 24

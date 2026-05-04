@@ -126,7 +126,27 @@ repeat
         :Print "(Dry-run mode: no changes made)";
       endif
 
-    case (10 — Exit)
+    case (10 — Fetch from GitHub)
+      :Prompt GitHub owner;
+      :Prompt GitHub repository;
+      :Resolve GitHub token\n(CLI / env / secrets / prompt);
+      :Prompt branch (optional);
+      :Prompt status filter (optional);
+      :Choose force update? (No / Yes);
+      :Choose incremental? (No / Yes);
+      :GitHubImportService.import_from_github();
+      if (token error?) then (yes)
+        :Print "Token resolution failed";
+      elseif (API error?) then (yes)
+        :Print API error message;
+      else (success)
+        :Print import summary;
+        if (errors?) then (yes)
+          :Print per-run errors;
+        endif
+      endif
+
+    case (11 — Exit)
       :Print "Goodbye.";
       stop
 

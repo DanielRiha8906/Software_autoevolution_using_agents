@@ -20,6 +20,7 @@ rectangle "GitHub Workflow Manager" {
     usecase "List attempts"            as I_ALIST
     usecase "Export runs"              as I_EXPORT
     usecase "Import runs"              as I_IMPORT
+    usecase "Fetch from GitHub"        as I_FETCH_GH
     usecase "Exit application"         as I_EXIT
   }
 
@@ -36,6 +37,7 @@ rectangle "GitHub Workflow Manager" {
     usecase "List attempts"            as C_ALIST
     usecase "Export runs"              as C_EXPORT
     usecase "Import runs"              as C_IMPORT
+    usecase "Fetch from GitHub"        as C_FETCH_GH
   }
 }
 
@@ -51,6 +53,7 @@ UI --> I_AADD
 UI --> I_ALIST
 UI --> I_EXPORT
 UI --> I_IMPORT
+UI --> I_FETCH_GH
 UI --> I_EXIT
 
 I_FILTER --> I_FBRANCH  : <<extend>>
@@ -65,6 +68,7 @@ CLI --> C_AADD
 CLI --> C_ALIST
 CLI --> C_EXPORT
 CLI --> C_IMPORT
+CLI --> C_FETCH_GH
 
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>

@@ -14,6 +14,8 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
 from ..services.statistics_service import StatisticsService
+from ..services.github_import_service import GitHubImportService
+from ..github_api.exceptions import GitHubApiError, TokenResolutionError
 
 
 def _parse_iso8601(timestamp_str: str) -> datetime:
@@ -86,6 +88,21 @@ def build_parser() -> argparse.ArgumentParser:
         description="GitHub Workflow Run Tracker",
     )
     sub = parser.add_subparsers(dest="command", required=True)
+
+    # fetch
+    fetch_p = sub.add_parser("fetch", help="Fetch workflow runs from GitHub")
+    fetch_p.add_argument("--owner", required=True, help="GitHub owner/organization")
+    fetch_p.add_argument("--repo", required=True, help="Repository name")
+    fetch_p.add_argument("--branch", default=None, help="Branch filter (optional)")
+    fetch_p.add_argument(
+        "--status",
+        default=None,
+        choices=["queued", "in_progress", "completed"],
+        help="Status filter (optional)",
+    )
+    fetch_p.add_argument("--github-token", default=None, help="GitHub token (optional, can use env/prompt)")
+    fetch_p.add_argument("--force", action="store_true", help="Update existing runs (default: skip)")
+    fetch_p.add_argument("--incremental", action="store_true", help="Only fetch runs created after latest stored")
 
     # add
     add_p = sub.add_parser("add", help="Add a new workflow run")
@@ -249,7 +266,31 @@ def run_cli(service: WorkflowRunService, args=None) -> None:
     ns = parser.parse_args(args)
     tracker = WorkflowRunTracker(service)
 
-    if ns.command == "add":
+    if ns.command == "fetch":
+        try:
+            import_service = GitHubImportService(service)
+            result = import_service.import_from_github(
+                owner=ns.owner,
+                repo=ns.repo,
+                branch=ns.branch,
+                status=ns.status,
+                github_token=ns.github_token,
+                force=ns.force,
+                incremental=ns.incremental,
+            )
+            print(result.summary())
+            if result.errors:
+                print("Errors:", file=sys.stderr)
+                for error in result.errors:
+                    print(f"  {error}", file=sys.stderr)
+        except (GitHubApiError, TokenResolutionError) as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "add":
         run = tracker.track(
             workflow_name=ns.name,
             branch=ns.branch,
