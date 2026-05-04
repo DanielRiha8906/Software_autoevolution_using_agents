@@ -92,7 +92,7 @@ package "Storage Layer (storage/)" #FFF3CC {
 ' ============================================================================
 ' LAYER 3: INTERFACE LAYER (User Interaction)
 ' ============================================================================
-package "LAYER 3: INTERFACE LAYER (cli/, interface/)" #DDEEFF {
+package "LAYER 3: INTERFACE LAYER (cli/, gui/, interface/)" #DDEEFF {
     interface "<<protocol>>\nUserInterface" as UIProto {
         +run_interactive() : void
         +run_command(operation, a, b) : void
@@ -111,9 +111,27 @@ package "LAYER 3: INTERFACE LAYER (cli/, interface/)" #DDEEFF {
         +run_command(operation, a, b) : void
     }
 
+    class CalculatorGUI {
+        -service : CalculatorService
+        -root : tk.Tk
+        -display_var : tk.StringVar
+        -operand_a : Optional[float]
+        -pending_operation : Optional[Operation]
+        --
+        +run() : void
+        -_create_display() : void
+        -_create_buttons() : void
+        -_append_digit(digit) : void
+        -_set_operation(operation) : void
+        -_calculate() : void
+        -_calculate_unary(operation) : void
+        -_clear() : void
+    }
+
     CalculatorCLI --|> CLIBase : extends
     CalculatorCLI ..|> UIProto : implements
     CalculatorCLI --> CalculatorService : delegates to
+    CalculatorGUI --> CalculatorService : delegates to
 }
 
 ' ============================================================================
@@ -180,5 +198,4 @@ MemoryService ..> MemoryEntry : manages
 StatisticsService ..> StatisticsReport : creates
 JsonStorage ..> CalculationResult : persists
 
-@enduml
 @enduml

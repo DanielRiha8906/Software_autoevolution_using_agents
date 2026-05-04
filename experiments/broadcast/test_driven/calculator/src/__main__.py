@@ -11,6 +11,7 @@ from .services.statistics_service import StatisticsService
 from .services.import_export_service import ImportExportService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
+from .gui.calculator_gui import CalculatorGUI
 
 
 def _build_service() -> CalculatorService:
@@ -46,8 +47,8 @@ def _run_scientific(operation: str, x: float) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
-        description="OOP Calculator — run interactively or pass --operation, --scientific, --statistics, --import, or --export",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--scientific {sin,cos,tan,log,ln,exp} X] [--statistics] [--import FILE] [--export FILE]",
+        description="OOP Calculator — run interactively or pass --operation, --scientific, --statistics, --import, --export, or --gui",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--scientific {sin,cos,tan,log,ln,exp} X] [--statistics] [--import FILE] [--export FILE] [--gui]",
     )
     parser.add_argument(
         "--operation",
@@ -78,6 +79,11 @@ def main() -> None:
         help="Import memory entries from a JSON file",
     )
     parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch the graphical user interface",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -90,7 +96,10 @@ def main() -> None:
     cli = CalculatorCLI(service)
     import_export = ImportExportService(memory_service)
 
-    if args.import_file:
+    if args.gui:
+        gui = CalculatorGUI(service)
+        gui.run()
+    elif args.import_file:
         try:
             import_export.import_from(args.import_file)
             print(f"Successfully imported entries from {args.import_file}")

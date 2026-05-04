@@ -6,6 +6,33 @@ skinparam activityDiamondBackgroundColor #FFF3CC
 
 start
 
+if (Interface mode?) then (GUI)
+
+  :Launch tkinter window;
+
+  repeat
+    :Display buttons & display field;
+    :Wait for user interaction;
+
+    switch (User action?)
+
+      case (Digit/operator button)
+        :Update display or set operation;
+
+      case (Calculate/equals)
+        :Perform calculation via service;
+        :Update display with result;
+
+      case (Clear)
+        :Reset display and state;
+
+    endswitch
+
+  repeat while (Window open?) is (yes)
+  stop
+
+else (CLI)
+
 if (Import/Export requested?) then (yes)
 
   if (Import?) then (yes)
@@ -107,6 +134,8 @@ else (no)
     repeat while (Menu active?) is (yes)
 
   endif
+
+endif
 
 endif
 

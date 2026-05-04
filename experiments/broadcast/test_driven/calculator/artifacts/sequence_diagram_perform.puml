@@ -8,21 +8,22 @@ skinparam noteBkgColor #FFFFCC
 
 ' Participants grouped by layer
 participant "User" as User #FFE5E5
-participant "CalculatorCLI\n(LAYER 3)" as CLI #FFE5E5
+participant "CalculatorGUI / CalculatorCLI\n(LAYER 3)" as Interface #FFE5E5
 participant "CalculatorService\n(LAYER 2)" as Service #DDFFD4
 participant "BasicCalculationEngine\n(LAYER 1)" as Engine #FFE5E5
 participant "JsonStorage\n(LAYER 2)" as Storage #DDFFD4
 participant "time module" as Time
 
-User -> CLI: run_command(operation, a, b)
-activate CLI
+User -> Interface: GUI: button click / CLI: run_command(operation, a, b)
+activate Interface
 
-note over CLI
+note over Interface
   LAYER 3: INTERFACE LAYER
-  Parse input & delegate
+  GUI parses UI input or CLI parses command line
+  Both delegate to service
 end note
 
-CLI -> Service: perform(operation, a, b)
+Interface -> Service: perform(operation, a, b)
 activate Service
 
 note over Service
@@ -76,15 +77,15 @@ activate Storage
 Storage --> Service: (void)
 deactivate Storage
 
-Service --> CLI: CalculationResult
+Service --> Interface: CalculationResult
 deactivate Service
 
-note over CLI
+note over Interface
   Format and display result
-  Show calculation & timing
+  GUI: update display field / CLI: show calculation & timing
 end note
 
-CLI --> User: Display:\nOperation, Operands, Result,\nExecution Time
-deactivate CLI
+Interface --> User: Display:\nOperation, Operands, Result,\nExecution Time
+deactivate Interface
 
 @enduml

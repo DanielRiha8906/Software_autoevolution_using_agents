@@ -1,25 +1,35 @@
-@startuml
+@startuml state_diagram_interactive
 
 skinparam defaultFontSize 13
 skinparam stateFontStyle bold
 
 top to bottom direction
 
-[*] --> Menu
+state "CLI Interactive Mode" as CLIMode {
+  [*] --> Menu
+  Menu --> FirstOperand : operation selected
+  Menu --> Feedback : history selected
+  Menu --> Feedback : invalid choice
+  Menu --> [*] : exit
+  FirstOperand --> SecondOperand : valid number
+  FirstOperand --> Feedback : invalid number
+  SecondOperand --> Calculating : valid number
+  SecondOperand --> Feedback : invalid number
+  Calculating --> Feedback : success / show result
+  Calculating --> Feedback : error / show error
+  Feedback --> Menu
+}
 
-Menu --> FirstOperand : operation selected
-Menu --> Feedback : history selected
-Menu --> Feedback : invalid choice
-Menu --> [*] : exit
-
-FirstOperand --> SecondOperand : valid number
-FirstOperand --> Feedback : invalid number
-
-SecondOperand --> Calculating : valid number
-SecondOperand --> Feedback : invalid number
-
-Calculating --> Feedback : success / show result
-Calculating --> Feedback : error / show error
-Feedback --> Menu
+state "GUI Interactive Mode" as GUIMode {
+  [*] --> Display
+  Display --> PendingOp : operator button clicked
+  Display --> Calculating2 : equals button clicked
+  PendingOp --> Display2 : digit entered
+  Display2 --> Calculating2 : equals button clicked
+  Calculating2 --> DisplayResult : success
+  Calculating2 --> ErrorMsg : error
+  DisplayResult --> Display : clear or new operation
+  ErrorMsg --> Display : clear
+}
 
 @enduml
