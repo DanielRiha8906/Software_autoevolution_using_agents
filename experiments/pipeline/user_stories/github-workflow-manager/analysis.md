@@ -1,1160 +1,709 @@
-# Task 08 Analysis: Add Optional GitHub Fetch Mode to Fetch Workflow Runs via GitHub REST API or gh CLI
-
-**Date:** 2026-05-03  
-**Architecture:** Pipeline (Sequential Agents)  
-**Scope:** Fetch workflow runs from GitHub repositories via REST API (requests) or gh CLI, convert to existing domain model, manage authentication with secure token resolution, handle errors gracefully.
-
----
-
-## What the Task Is Asking For
-
-Extend the GitHub Workflow Manager with a **GitHub fetch mode** that can retrieve workflow runs directly from a repository on GitHub, convert them into the existing `WorkflowRun` domain model, and integrate them into the local tracking system.
-
-**Core Requirements:**
-
-1. **Fetch source options:**
-   - GitHub REST API using `requests` library
-   - `gh` CLI tool (command-line)
-   - Both must be optional, configurable per fetch operation
-
-2. **Authentication (PAT — Personal Access Token):**
-   - Check `GITHUB_TOKEN` environment variable first
-   - Fall back to `secrets/.env` file if env var not set
-   - Prompt user securely if neither available
-   - User-entered PAT NOT persisted unless explicitly configured
-   - Token validated before making requests
-
-3. **Data Conversion:**
-   - Fetched GitHub API response → existing `WorkflowRun` domain model
-   - Must map GitHub API fields to WorkflowRun attributes
-   - Handle optional/missing fields gracefully
-
-4. **Error Handling:**
-   - Rate limit errors (HTTP 403, etc.)
-   - Invalid/expired token errors (HTTP 401, etc.)
-   - Network failures (connection errors, timeouts)
-   - All errors handled gracefully (no unhandled exceptions)
-
-5. **Incremental Fetch (Bonus):**
-   - Option to fetch only new/updated runs since last fetch
-   - Not required, but may reduce API calls
-
-6. **CLI & Interactive Menu Integration:**
-   - New subcommand: `python -m src fetch` with arguments
-   - New interactive menu option for fetch
-   - All functionality must be accessible via both interfaces
-   - Help text and error messages user-friendly
-
----
-
-## Current State: Existing Architecture
-
-### Data Models
-
-**WorkflowRun** (`src/models/workflow_run.py`)
-- `id: str` — unique identifier (currently UUID or GitHub run ID)
-- `workflow_name: str` — workflow name
-- `branch: str` — Git branch
-- `status: WorkflowStatus` — enum (QUEUED, IN_PROGRESS, COMPLETED, WAITING, REQUESTED, PENDING)
-- `conclusion: Optional[WorkflowConclusion]` — enum or None (SUCCESS, FAILURE, CANCELLED, SKIPPED, TIMED_OUT, ACTION_REQUIRED, NEUTRAL, STALE)
-- `created_at: datetime` — UTC timestamp
-- `updated_at: Optional[datetime]` — UTC timestamp or None
-- `run_number: Optional[int]` — GitHub run number
-- `commit_sha: Optional[str]` — commit SHA
-- `duration_seconds: float` — execution time (default 0.0)
-
-**No breaking changes needed to WorkflowRun** — it already supports GitHub's native fields (run_number, commit_sha, etc.)
-
-### Service Layer
-
-**WorkflowRunService** (`src/services/workflow_run_service.py`)
-- Manages in-memory list of WorkflowRun objects
-- `add_workflow_run(run: WorkflowRun)` — persists to storage
-- `list_runs()`, `get_run_detail()`, filtering, querying
-- Storage backed by WorkflowJsonStorage
-
-**WorkflowRunTracker** (`src/services/workflow_run_tracker.py`)
-- High-level facade for creating new runs
-- Auto-generates UUIDs if no `run_id` provided
-- Delegates to WorkflowRunService for persistence
-
-**No existing GitHub API integration** — all current data is manually entered or imported from JSON files.
-
-### Storage Layer
-
-**WorkflowJsonStorage** (`src/storage/workflow_json_storage.py`)
-- Loads/saves WorkflowRun objects as JSON arrays
-- Files: `artifacts/workflow_runs.json`, `artifacts/workflow_run_attempts.json`
-- In-memory pattern: load on startup, persist after mutations
-
-### CLI & Menu
-
-**workflow_cli.py** (`src/cli/workflow_cli.py`)
-- Argparse-based subcommand interface
-- Current commands: `add`, `list`, `detail`, `check`, `attempt-*`, `stats`, `export`, `import`
-- Entry point: `run_cli(service, attempt_service, args=None)`
-- Usage: `python -m src <subcommand> [args]`
-
-**interactive_menu.py** (`src/cli/interactive_menu.py`)
-- Menu-driven interface with numbered options
-- Current options: Add, List, Detail, Check, Filter, Advanced Filter, Statistics, Attempts, Exit
-- Entry point: `run_interactive(service, attempt_service)`
-- Usage: `python -m src` (no args)
-
-**__main__.py** (`src/__main__.py`)
-- Routes to interactive or CLI mode based on argv length
-
----
-
-## Task 08 Requirements: GitHub Fetch Feature
-
-### 1. Authentication Management
-
-**Current state:** No auth system exists. Task requires:
-
-#### 1.1 PAT Resolution Strategy
-
-Three-tier priority (highest to lowest):
-1. `GITHUB_TOKEN` environment variable
-2. `secrets/.env` file (location TBD, likely `secrets/.env` or `.github/.env`)
-3. Secure user prompt (if neither available)
-
-**Key constraints:**
-- User-entered token must NOT be saved to disk unless explicitly configured
-- Validation: Check token before making API calls (e.g., via test request or local format check)
-- Error handling: Invalid/expired tokens → graceful error message, no re-prompt
-
-**New module required:** `src/auth/` or `src/utils/` for token management
-
-#### 1.2 Token Validation
-
-Before fetching:
-- Validate token format (GitHub tokens have known prefixes: `ghp_*`, `ghu_*`, `ghs_*`, `gho_*`)
-- Make a lightweight test request (e.g., `GET /user`) to verify token validity
-- Return clear error if validation fails
-
-### 2. GitHub API Adapter
-
-**Not yet created.** Need a new service to fetch workflow runs from GitHub.
-
-#### 2.1 GitHub REST API Integration
-
-**Responsibilities:**
-- Connect to GitHub API v3 endpoint
-- Fetch workflow runs for a given `owner/repo`
-- Map GitHub API response fields to WorkflowRun domain model
-- Handle pagination (API returns max 30 per page by default)
-- Support optional filtering (e.g., branch, status, created date)
-
-**GitHub API endpoints involved:**
-- `GET /repos/{owner}/{repo}/actions/runs` — List all workflow runs
-- Optional filters: `?status=<status>&created=<date_range>&branch=<branch>`
-- Pagination: `?page=<n>&per_page=<max>`
-
-**New class:** `GitHubAPIFetcher` in `src/services/github_api_fetcher.py` or similar
-
-**Expected method signature:**
-```python
-class GitHubAPIFetcher:
-    def __init__(self, token: str):
-        self.token = token  # or retrieve from env/file
-    
-    def fetch_runs(
-        self,
-        owner: str,
-        repo: str,
-        status: Optional[str] = None,
-        branch: Optional[str] = None,
-        created_after: Optional[datetime] = None,
-        per_page: int = 30
-    ) -> List[WorkflowRun]:
-        """
-        Fetch workflow runs from GitHub API.
-        Returns list of WorkflowRun objects.
-        """
-        pass
-    
-    def validate_token(self) -> bool:
-        """Check token validity via test request."""
-        pass
-```
-
-#### 2.2 gh CLI Integration (Alternative)
-
-**Why:** User may prefer `gh` CLI over direct API calls (simpler, auth already configured)
-
-**Responsibilities:**
-- Execute `gh run list` or `gh run view` commands
-- Parse output (JSON mode available via `--json`)
-- Convert to WorkflowRun domain model
-
-**Expected command:**
-```bash
-gh run list --repo owner/repo --json id,name,status,conclusion,createdAt,updatedAt,databaseId,headBranch,headSha,runNumber
-```
-
-**New class:** `GitHubCLIFetcher` in `src/services/github_cli_fetcher.py` or similar
-
-**Expected method signature:**
-```python
-class GitHubCLIFetcher:
-    def fetch_runs(
-        self,
-        owner: str,
-        repo: str,
-        status: Optional[str] = None,
-        branch: Optional[str] = None,
-        created_after: Optional[datetime] = None
-    ) -> List[WorkflowRun]:
-        """
-        Fetch workflow runs via gh CLI.
-        Returns list of WorkflowRun objects.
-        """
-        pass
-    
-    def is_available(self) -> bool:
-        """Check if gh CLI is installed and authenticated."""
-        pass
-```
-
-### 3. API Response → Domain Model Mapping
-
-**Critical challenge:** GitHub API field names differ from WorkflowRun field names.
-
-#### 3.1 GitHub API Response Structure
-
-Example workflow run from `GET /repos/{owner}/{repo}/actions/runs`:
-```json
-{
-  "id": 12345,
-  "name": "Build and Test",
-  "status": "completed",
-  "conclusion": "success",
-  "created_at": "2025-05-03T10:30:00Z",
-  "updated_at": "2025-05-03T10:35:00Z",
-  "run_number": 42,
-  "head_sha": "abc123def456",
-  "head_branch": "main",
-  "event": "push"
-}
-```
-
-#### 3.2 Mapping Strategy
-
-**Fields to map:**
-
-| GitHub API Field | WorkflowRun Field | Conversion | Notes |
-|---|---|---|---|
-| `id` (int) | `id` (str) | `str(id)` | Convert to string for consistency |
-| `name` (str) | `workflow_name` | Direct | Name of the workflow |
-| `status` (str) | `status` (WorkflowStatus) | Enum conversion | May need normalization (GitHub: "completed", "in_progress", "queued", "requested", "waiting"; WorkflowStatus: similar but check enum values) |
-| `conclusion` (str \| null) | `conclusion` (WorkflowConclusion \| None) | Enum conversion or None | GitHub: "success", "failure", "cancelled", etc. |
-| `created_at` (ISO 8601) | `created_at` (datetime) | Parse ISO format | Already UTC, timezone-aware |
-| `updated_at` (ISO 8601) | `updated_at` (datetime \| None) | Parse ISO format or None | Same as above |
-| `run_number` (int) | `run_number` (int \| None) | Direct | GitHub's run sequence number |
-| `head_sha` (str) | `commit_sha` (str \| None) | Direct | Commit SHA |
-| `head_branch` (str) | `branch` (str) | Direct | Branch name |
-| **N/A** | `duration_seconds` (float) | Calculated or 0.0 | GitHub API provides `created_at` and `updated_at`; calculate as `(updated_at - created_at).total_seconds()` if both present, else 0.0 |
-
-**Design decision:** Create a **mapping/conversion module** or factory method:
-
-```python
-class GitHubWorkflowRunFactory:
-    @staticmethod
-    def from_github_api_response(data: dict) -> WorkflowRun:
-        """
-        Convert GitHub API response to WorkflowRun.
-        Handles field name translation, enum conversion, datetime parsing.
-        """
-        pass
-```
-
-**Location:** `src/models/github_workflow_run_factory.py` or `src/services/github_workflow_run_converter.py`
-
-### 4. Error Handling & Edge Cases
-
-#### 4.1 Common Error Scenarios
-
-| Scenario | HTTP Code | Handling |
-|---|---|---|
-| Invalid token | 401 Unauthorized | Print user-friendly error, exit gracefully |
-| Expired token | 401 Unauthorized | Same as above |
-| Insufficient permissions | 403 Forbidden | Inform user token lacks required scopes (e.g., `repo:read`) |
-| Rate limit reached | 403 Forbidden (with `X-RateLimit-Remaining: 0`) | Inform user of rate limit; suggest retry later |
-| Network error | Connection error | Catch and print "Network error: ..." |
-| Repo not found | 404 Not Found | Print "Repository not found" |
-| Malformed API response | JSON decode error | Log error, skip bad record or fail gracefully |
-
-#### 4.2 Implementation Strategy
-
-- Wrap API calls in try/except blocks
-- Distinguish between fatal errors (invalid token, network failure) and recoverable errors (bad record in paginated response)
-- Log meaningful error messages without exposing raw stack traces
-- No retries within feature scope (out of scope per requirements)
-
-### 5. Fetch Modes & CLI Integration
-
-#### 5.1 Fetch Subcommand Structure
-
-**New subcommand:** `fetch`
-
-**Arguments:**
-```
-python -m src fetch \
-    --owner <owner> \
-    --repo <repo> \
-    --mode <api|cli> \
-    [--branch <branch>] \
-    [--status <status>] \
-    [--created-after <date>] \
-    [--token <pat>] \
-    [--incremental]
-```
-
-**Argument details:**
-- `--owner` (required): GitHub username or organization
-- `--repo` (required): Repository name
-- `--mode` (required): Fetch method — "api" or "cli"
-- `--branch` (optional): Filter by branch
-- `--status` (optional): Filter by workflow status
-- `--created-after` (optional): Only fetch runs created after this date (YYYY-MM-DD or ISO format)
-- `--token` (optional): Explicit PAT (if provided, skips env var and .env file)
-- `--incremental` (optional, bonus): Fetch only new runs since last fetch
-
-#### 5.2 Interactive Menu Integration
-
-**New menu option:** "Fetch from GitHub" or similar
-
-**Flow:**
-1. Prompt for owner/repo
-2. Prompt for fetch mode (API or CLI)
-3. Optionally prompt for filters (branch, status, created-after)
-4. Perform fetch
-5. Display results (e.g., "Fetched 42 workflow runs")
-
-**Handler function:** `_fetch_from_github()` in `src/cli/interactive_menu.py`
-
----
-
-## Current Architecture Overview
-
-### Layered Design
+# GitHub Workflow Manager - Layer Separation Analysis
+
+## Current Architecture and Layer Identification
+
+### Layer Structure (Current)
+
+The codebase has three logical layers currently intermingled:
+
+1. **Service Layer** (`src/services/`)
+   - `WorkflowRunService` — core business logic for workflow runs (CRUD, filtering, querying)
+   - `WorkflowRunAttemptService` — manages workflow run attempts
+   - `WorkflowRunTracker` — facade that creates and tracks runs
+   - `StatisticsService` — computes aggregated statistics
+   - `WorkflowRunExportImportService` — handles export/import operations
+   - `GitHubAPIFetcher` — REST API adapter (GitHub integration)
+   - `GitHubCLIFetcher` — CLI adapter (GitHub integration)
+
+2. **Storage Layer** (`src/storage/`)
+   - `WorkflowJsonStorage` — JSON file persistence (single class)
+
+3. **GitHub Adapter Layer** (currently split across services and auth)
+   - `GitHubAuthManager` (`src/auth/`) — authentication token management
+   - `GitHubWorkflowRunFactory` (`src/models/`) — GitHub API → domain model conversion
+   - `GitHubAPIFetcher` (`src/services/`) — REST API integration
+   - `GitHubCLIFetcher` (`src/services/`) — CLI integration
+   - Exception classes (`src/exceptions/`) — GitHub-specific errors
+
+4. **Models/Domain** (`src/models/`)
+   - Pure domain objects: `WorkflowRun`, `WorkflowRunAttempt`, `WorkflowStatus`, `WorkflowConclusion`
+   - DTOs/Reports: `StatisticsReport`, `ImportResult`
+   - Factory: `GitHubWorkflowRunFactory` (belongs in adapter, not models)
+
+5. **CLI/Interface** (`src/cli/`)
+   - `workflow_cli` — command-line interface
+   - `interactive_menu` — interactive menu interface
+
+### Dependency Graph
 
 ```
-┌─────────────────────────────────────────────┐
-│      CLI / Interactive Menu (Interface)     │
-│  workflow_cli.py / interactive_menu.py      │
-└──────────────┬──────────────────────────────┘
-               │
-┌──────────────▼──────────────────────────────┐
-│   Services (Business Logic)                 │
-│  WorkflowRunService, WorkflowRunTracker,    │
-│  StatisticsService, ExportImportService    │
-└──────────────┬──────────────────────────────┘
-               │
-┌──────────────▼──────────────────────────────┐
-│   Domain Models                             │
-│  WorkflowRun, WorkflowStatus,               │
-│  WorkflowConclusion, etc.                   │
-└──────────────┬──────────────────────────────┘
-               │
-┌──────────────▼──────────────────────────────┐
-│   Storage (Persistence)                     │
-│  WorkflowJsonStorage                        │
-└──────────────┬──────────────────────────────┘
-               │
-            JSON files
-```
-
-**Task 08 adds new layer:**
-- GitHub Fetcher services (API + CLI)
-- Authentication/token manager
-- GitHub response converter
-
-### Key Classes & Their Responsibilities
-
-| Class | Location | Responsibility |
-|---|---|---|
-| `WorkflowRun` | `src/models/workflow_run.py` | Domain model for workflow run data |
-| `WorkflowRunService` | `src/services/workflow_run_service.py` | CRUD operations, querying, filtering |
-| `WorkflowRunTracker` | `src/services/workflow_run_tracker.py` | High-level run creation facade |
-| `WorkflowJsonStorage` | `src/storage/workflow_json_storage.py` | File-based persistence (JSON) |
-| `run_cli()` | `src/cli/workflow_cli.py` | CLI command dispatcher |
-| `run_interactive()` | `src/cli/interactive_menu.py` | Interactive menu loop |
-
-**Task 08 adds:**
-
-| Class | Location | Responsibility |
-|---|---|---|
-| `GitHubAuthManager` | `src/auth/github_auth.py` (new) | Resolve PAT from env/file/user; validate token |
-| `GitHubAPIFetcher` | `src/services/github_api_fetcher.py` (new) | Fetch via GitHub REST API |
-| `GitHubCLIFetcher` | `src/services/github_cli_fetcher.py` (new) | Fetch via gh CLI |
-| `GitHubWorkflowRunFactory` | `src/models/github_workflow_run_factory.py` (new) | Map GitHub API → WorkflowRun |
-| `GitHubFetchService` | `src/services/github_fetch_service.py` (new, optional) | Facade for API/CLI selection & error handling |
-
----
-
-## Domain Model: WorkflowRun (Existing)
-
-The WorkflowRun dataclass already supports all fields required for GitHub workflow runs:
-
-```python
-@dataclass
-class WorkflowRun:
-    id: str                           # Can hold GitHub run ID (as string)
-    workflow_name: str                # GitHub workflow name
-    branch: str                       # GitHub head_branch
-    status: WorkflowStatus            # GitHub status (enum)
-    conclusion: Optional[WorkflowConclusion]  # GitHub conclusion (enum or None)
-    created_at: datetime              # GitHub created_at (ISO → datetime)
-    updated_at: Optional[datetime]    # GitHub updated_at (ISO → datetime)
-    run_number: Optional[int]         # GitHub run_number
-    commit_sha: Optional[str]         # GitHub head_sha
-    duration_seconds: float = 0.0     # Calculated from updated_at - created_at
-```
-
-**No changes needed to WorkflowRun itself** — it's already GitHub-compatible.
-
----
-
-## What Needs to Be Implemented
-
-### 1. Authentication Module (New)
-
-**File:** `src/auth/github_auth.py` (new directory/file)
-
-**Responsibilities:**
-- Load PAT from environment variable (`GITHUB_TOKEN`)
-- Load PAT from file (`secrets/.env` or `.github/.env`)
-- Prompt user securely if neither available
-- Validate token before use (format check + test API call)
-- Manage token lifecycle (not persisting user-entered tokens)
-
-**Key methods:**
-```python
-class GitHubAuthManager:
-    def get_token(self, explicit_token: Optional[str] = None) -> str:
-        """Resolve PAT with priority: explicit > env > file > prompt."""
-        pass
-    
-    def validate_token(self, token: str) -> bool:
-        """Check token validity."""
-        pass
-```
-
-### 2. GitHub REST API Fetcher (New)
-
-**File:** `src/services/github_api_fetcher.py`
-
-**Responsibilities:**
-- Use `requests` library (may need to add to dependencies)
-- Construct API requests to GitHub REST API v3
-- Handle pagination
-- Parse responses and convert to WorkflowRun objects
-- Handle errors (rate limits, auth failures, network issues)
-
-**Key methods:**
-```python
-class GitHubAPIFetcher:
-    def __init__(self, token: str):
-        pass
-    
-    def fetch_runs(
-        self,
-        owner: str,
-        repo: str,
-        status: Optional[str] = None,
-        branch: Optional[str] = None,
-        created_after: Optional[datetime] = None,
-        per_page: int = 30
-    ) -> List[WorkflowRun]:
-        """Fetch workflow runs from GitHub API."""
-        pass
-```
-
-### 3. GitHub CLI Fetcher (New)
-
-**File:** `src/services/github_cli_fetcher.py`
-
-**Responsibilities:**
-- Detect if `gh` CLI is installed
-- Execute `gh run list` with JSON output
-- Parse JSON response
-- Convert to WorkflowRun objects
-
-**Key methods:**
-```python
-class GitHubCLIFetcher:
-    def is_available(self) -> bool:
-        """Check if gh CLI is installed."""
-        pass
-    
-    def fetch_runs(
-        self,
-        owner: str,
-        repo: str,
-        status: Optional[str] = None,
-        branch: Optional[str] = None,
-        created_after: Optional[datetime] = None
-    ) -> List[WorkflowRun]:
-        """Fetch via gh CLI."""
-        pass
-```
-
-### 4. GitHub Response Converter (New)
-
-**File:** `src/models/github_workflow_run_factory.py` or `src/services/github_workflow_run_converter.py`
-
-**Responsibilities:**
-- Map GitHub API field names to WorkflowRun attributes
-- Handle enum conversions (status, conclusion)
-- Parse ISO 8601 datetime strings
-- Calculate duration_seconds from timestamps
-- Validate data before creating WorkflowRun
-
-**Key method:**
-```python
-class GitHubWorkflowRunFactory:
-    @staticmethod
-    def from_github_api_response(data: dict) -> WorkflowRun:
-        """Convert GitHub API response to WorkflowRun."""
-        pass
-```
-
-### 5. CLI Integration (Modified)
-
-**File:** `src/cli/workflow_cli.py`
-
-**Changes:**
-1. Import GitHubAuthManager, GitHubAPIFetcher, GitHubCLIFetcher, factory
-2. Add `fetch` subcommand to argparse parser
-3. Add handler in `run_cli()` for `ns.command == "fetch"`
-4. Handler logic:
-   - Validate owner/repo arguments
-   - Resolve token (env → file → prompt)
-   - Create fetcher instance (API or CLI)
-   - Fetch runs
-   - Add to service
-   - Print summary
-
-### 6. Interactive Menu Integration (Modified)
-
-**File:** `src/cli/interactive_menu.py`
-
-**Changes:**
-1. Add new handler function `_fetch_from_github(service, attempt_service)`
-2. Prompt for owner, repo, fetch mode
-3. Optionally prompt for filters
-4. Call fetch logic
-5. Add to menu options list
-
-### 7. Incremental Fetch (Bonus, Optional)
-
-**If implemented:**
-- Store timestamp of last successful fetch
-- Query API with `created_after=last_fetch_time`
-- Reduce API calls and data transfer
-- Requires state persistence (e.g., in a `.github/last_fetch.txt` file)
-
----
-
-## Integration Points & Data Flow
-
-### Fetch Flow (New)
-
-```
-User: python -m src fetch --owner alice --repo my-repo --mode api [--token xyz]
-                    ↓
-run_cli() routes to fetch handler
-                    ↓
-GitHubAuthManager.get_token(explicit_token)
-    - Check GITHUB_TOKEN env var
-    - Check secrets/.env file
-    - Prompt user if neither
-                    ↓
-Validate token: GitHubAuthManager.validate_token()
-                    ↓
-Create fetcher: GitHubAPIFetcher(token) or GitHubCLIFetcher()
-                    ↓
-Call fetcher.fetch_runs(owner, repo, filters...)
-                    ↓
-For each GitHub API response:
-    GitHubWorkflowRunFactory.from_github_api_response()
-        - Map fields
-        - Convert enums
-        - Parse datetimes
-        - Calculate duration
-                    ↓
-WorkflowRunService.add_workflow_run() for each run
-                    ↓
-Print: "Fetched N workflow run(s) from owner/repo"
-```
-
-### Interactive Menu Flow (New)
-
-```
-User: python -m src  (no args)
-                    ↓
-run_interactive() shows menu
-                    ↓
-User selects "Fetch from GitHub" option
-                    ↓
-_fetch_from_github(service, attempt_service)
-                    ↓
-Prompt for owner/repo
-                    ↓
-Prompt for fetch mode (API or CLI)
-                    ↓
-Prompt for optional filters
-                    ↓
-Validate inputs
-                    ↓
-Execute fetch (same as CLI flow)
-                    ↓
-Display results
+                              ┌──────────────────────┐
+                              │   CLI Layer          │
+                              │  (workflow_cli,      │
+                              │ interactive_menu)    │
+                              └──────┬───────────────┘
+                                     │
+         ┌───────────────────────────┼───────────────────────────┐
+         │                           │                           │
+    ┌────▼─────────────┐    ┌────────▼──────────┐   ┌────────────▼────────┐
+    │ Service Layer    │    │ GitHub Adapter    │   │ Auth Layer          │
+    │                  │    │                   │   │                     │
+    │ WorkflowRunSvc   │◄───┤ GitHubAPIFetcher  │   │ GitHubAuthManager   │
+    │ WorkflowAttempt  │    │ GitHubCLIFetcher  │   │                     │
+    │ WorkflowTracker  │    │ Factory (models)  │   └─────────────────────┘
+    │ StatisticsSvc    │    └───────┬───────────┘
+    │ ExportImportSvc  │            │
+    └────┬─────────────┘      ┌─────▼──────────┐
+         │                    │ Exceptions     │
+         │                    │ (all layers)   │
+         │                    └────────────────┘
+         │
+    ┌────▼──────────────┐
+    │ Storage Layer     │
+    │                   │
+    │ WorkflowJsonStor  │
+    └────┬──────────────┘
+         │
+         └──► Models (WorkflowRun, etc.)
 ```
 
 ---
 
-## Ambiguities & Working Assumptions
+## Circular Dependencies and Coupling Issues
 
-### 1. GitHub API vs. CLI Selection
+### Issue 1: Service Layer Directly Uses Storage
 
-**Ambiguity:** When should user choose API vs. CLI?
+**Location:** `src/services/workflow_run_service.py`, `src/services/workflow_run_attempt_service.py`
 
-**Working Assumption:**
-- **API (requests):** More reliable, direct control, no CLI dependency, explicit error handling
-- **CLI (gh):** User may already have `gh` authenticated locally; simpler for first-time users
-- **Implementation:** Both supported; user chooses per invocation
-- **Error handling:** If CLI not available, informative error; user can fall back to API
+**Problem:**
+- Both services receive `WorkflowJsonStorage` in constructor
+- Services directly call `storage.load()` and `storage.save()`
+- No abstraction between service and storage layer
+- Tight coupling makes testing difficult and prevents swapping storage backends
 
-### 2. Token Validation Strategy
+**Evidence:**
+```python
+# workflow_run_service.py
+def __init__(self, storage: WorkflowJsonStorage):
+    self._storage = storage
+    self._runs: List[WorkflowRun] = storage.load()
 
-**Ambiguity:** Should we validate token before fetching, or fail on first API call?
+def _persist(self) -> None:
+    self._storage.save(self._runs)
+```
 
-**Working Assumption:** Validate token early (before API calls). This prevents unnecessary network overhead and provides clearer error messages.
-
-**Validation method:**
-- Format check: GitHub tokens follow patterns like `ghp_*`, `ghu_*`, etc.
-- Test API call: `GET /user` (lightweight endpoint)
-- On failure: Print "Invalid or expired token" and exit
-
-### 3. Secrets File Location
-
-**Ambiguity:** Where should the secrets/.env file be located?
-
-**Working Assumption:** Check `secrets/.env` relative to project root (or absolute path `~/.github/.env`). Configurable via code comments. Path likely: `project_root/secrets/.env` or `~/.github/.env`.
-
-**Design decision:** Start with relative path `secrets/.env` (simple, local to project); document that user can symlink or copy to that location.
-
-### 4. Duration Calculation
-
-**Ambiguity:** How to calculate duration_seconds from GitHub API timestamps?
-
-**Working Assumption:** 
-- If both `created_at` and `updated_at` are present: `duration = (updated_at - created_at).total_seconds()`
-- If only `created_at`: Use 0.0 (run still in progress, actual duration unknown)
-- Handle edge cases (negative duration due to clock skew): Return 0.0
-
-### 5. Duplicate Run Handling
-
-**Ambiguity:** If fetched run already exists locally (same `id`), what happens?
-
-**Working Assumption:**
-- Check `service.get_run_detail(id)` before adding
-- If exists: Skip with a note (e.g., "Run already tracked")
-- If new: Add to service
-- No upsert/update of existing runs (out of scope; import feature handles that)
-
-### 6. Incremental Fetch State
-
-**Ambiguity:** How to track "last fetch time" for incremental fetches?
-
-**Working Assumption:** Store in a simple text file (e.g., `.github/last_fetch.timestamp`) with ISO 8601 timestamp. Bonus feature; can be skipped.
-
-### 7. API Rate Limit Handling
-
-**Ambiguity:** GitHub has rate limits (60 req/hour unauthenticated, 5000/hour authenticated). How to handle hitting the limit?
-
-**Working Assumption:**
-- Check `X-RateLimit-*` response headers
-- If `X-RateLimit-Remaining: 0`, inform user and fail gracefully
-- No automatic retry or wait loop (out of scope)
-- User can retry after rate limit resets
-
-### 8. Enum Value Normalization
-
-**Ambiguity:** Do GitHub API status/conclusion values exactly match WorkflowStatus/WorkflowConclusion enums?
-
-**Working Assumption:** 
-- Likely match (GitHub API uses standard values like "completed", "success", etc.)
-- If mismatch: Implement mapping table or case-insensitive conversion
-- If unknown value: Log warning and skip run (or use a fallback status)
+**Impact:** Cannot substitute storage implementation without modifying services.
 
 ---
 
-## Scope Signals
+### Issue 2: GitHub Adapter Coupled to Service Layer
 
-### In Scope
-- ✅ Fetch via GitHub REST API (requests library)
-- ✅ Fetch via gh CLI (subprocess execution)
-- ✅ PAT resolution: env var → file → secure prompt
-- ✅ Token validation before API calls
-- ✅ Graceful error handling (rate limits, invalid token, network, malformed data)
-- ✅ Conversion from GitHub API response to WorkflowRun
-- ✅ Optional filtering (branch, status, created-after)
-- ✅ Integration with existing WorkflowRunService
-- ✅ CLI subcommand `fetch` with required args
-- ✅ Interactive menu option for fetch
-- ✅ User-friendly error messages and help text
+**Location:** `src/services/github_api_fetcher.py` and `src/services/github_cli_fetcher.py`
 
-### Out of Scope (per requirements)
-- ❌ OAuth flow (manual PAT only)
-- ❌ Token refresh logic (assume single-use PAT)
-- ❌ Automatic retries on rate limit (user retries manually)
-- ❌ Webhook-based sync (one-shot fetch only)
-- ❌ Database instead of JSON (stay with current storage)
-- ❌ GUI / graphical interface
+**Problem:**
+- GitHub fetchers return `WorkflowRun` (domain model) directly
+- Use `GitHubWorkflowRunFactory` (currently in models) to convert API responses
+- CLI layer directly instantiates fetchers and calls them
+- No common interface between `GitHubAPIFetcher` and `GitHubCLIFetcher`
+- Both fetchers are in the service layer, not clearly separated as adapters
 
-### Bonus (Optional)
-- ✓ Incremental fetch (store last fetch time)
-- ✓ Per-status or per-branch filtering via API query params
-- ✓ Progress indication during large fetches
+**Evidence:**
+```python
+# workflow_cli.py (CLI layer calling adapters directly)
+api_fetcher = GitHubAPIFetcher(token)
+cli_fetcher = GitHubCLIFetcher()
+# Then: api_fetcher.fetch_runs(...), cli_fetcher.fetch_runs(...)
+```
+
+**Impact:** 
+- No way to swap or extend GitHub sources without modifying CLI
+- Inconsistent error handling between two similar components
+- Factory logic buried in models layer
 
 ---
 
-## Existing Patterns to Follow
+### Issue 3: WorkflowRunExportImportService Directly Accesses Service Internals
 
-### 1. Service Pattern (Stateless)
+**Location:** `src/services/workflow_export_import_service.py`
+
+**Problem:**
+- Imports from `workflows_run_service` and `workflow_run_attempt_service`
+- Directly manipulates `service._runs` (private attribute)
+- Directly manipulates `attempt_service._attempts` (private attribute)
+- Calls private `_persist()` method
+
+**Evidence:**
 ```python
-# Pattern from WorkflowRunService
-class SomeService:
-    def __init__(self, some_dependency):
-        self._dep = some_dependency
-    
-    def some_method(self) -> Result:
-        # Operate on dependency, return result
-        pass
+# workflow_export_import_service.py
+service._runs = [r for r in service._runs if r.id != run.id]
+service._runs.append(run)
+service._persist()
+
+attempt_service._attempts = [a for a in attempt_service._attempts if a.id != attempt.id]
+attempt_service._persist()
 ```
 
-**For Task 08:** GitHubAPIFetcher, GitHubCLIFetcher follow this pattern (initialized per-call in CLI handler).
-
-### 2. Dataclass Pattern (Domain Model)
-```python
-# Pattern from WorkflowRun
-@dataclass
-class SomeModel:
-    field1: str
-    field2: Optional[float]
-    
-    def __post_init__(self):
-        # Validation
-        if self.field2 is not None and self.field2 < 0:
-            raise ValueError(...)
-    
-    def to_dict(self) -> dict:
-        return {...}
-    
-    @classmethod
-    def from_dict(cls, data: dict) -> "SomeModel":
-        return cls(...)
-```
-
-**For Task 08:** GitHubWorkflowRunFactory uses static factory method (no @dataclass, just conversion logic).
-
-### 3. CLI Pattern (Argparse)
-```python
-# Pattern from workflow_cli.py
-def build_parser():
-    parser = argparse.ArgumentParser(...)
-    sub = parser.add_subparsers(dest="command", required=True)
-    
-    some_p = sub.add_parser("some-cmd", help="...")
-    some_p.add_argument("--arg", required=True, ...)
-    
-    return parser
-
-def run_cli(service, attempt_service, args=None):
-    parser = build_parser()
-    ns = parser.parse_args(args)
-    
-    if ns.command == "some-cmd":
-        # Handle command
-        pass
-```
-
-**For Task 08:** Add `fetch` subparser with owner, repo, mode, optional filters.
-
-### 4. Interactive Menu Pattern
-```python
-# Pattern from interactive_menu.py
-def _handler_name(service, attempt_service):
-    print("--- Operation ---")
-    # Prompt user
-    # Call service methods
-    # Print results
-
-MENU = [
-    ("Option 1", _handler_name),
-    ...
-]
-
-def run_interactive(service, attempt_service):
-    while True:
-        # Display menu, read choice, call handler
-        pass
-```
-
-**For Task 08:** Add `_fetch_from_github()` handler; add to MENU; update dispatcher.
+**Impact:** 
+- Violates encapsulation
+- If service layer changes, import/export breaks
+- Makes refactoring the service layer risky
 
 ---
 
-## Required Changes: Files to Create/Modify
+### Issue 4: CLI Layer Has Wide Dependencies
 
-### New Files
+**Location:** `src/cli/workflow_cli.py`, `src/cli/interactive_menu.py`
 
-#### 1. `src/auth/github_auth.py` (New Directory + File)
+**Problem:**
+- CLI imports directly from services, auth, adapters, exceptions, models
+- 18+ direct imports from different layers
+- Mixes service instantiation with CLI logic
+- No dependency injection; CLI creates instances directly
 
-**Purpose:** Manage GitHub Personal Access Token (PAT) resolution and validation
-
-**Responsibilities:**
-- Load token from environment (GITHUB_TOKEN)
-- Load token from file (secrets/.env)
-- Prompt user securely if neither available
-- Validate token format and validity
-- No persistence of user-entered tokens (unless explicitly configured)
-
-**Estimated class:**
+**Evidence:**
 ```python
-class GitHubAuthManager:
-    def get_token(self, explicit_token: Optional[str] = None) -> str:
-        """Resolve PAT with priority: explicit > env > file > prompt."""
-        pass
-    
-    def validate_token(self, token: str) -> bool:
-        """Validate token format and API access."""
-        pass
+# workflow_cli.py imports
+from ..services.workflow_run_service import WorkflowRunService
+from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
+from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.statistics_service import StatisticsService
+from ..services.workflow_export_import_service import WorkflowRunExportImportService
+from ..services.github_api_fetcher import GitHubAPIFetcher
+from ..services.github_cli_fetcher import GitHubCLIFetcher
+from ..auth.github_auth import GitHubAuthManager
+# ... + exceptions, models
 ```
 
-#### 2. `src/services/github_api_fetcher.py` (New File)
+**Impact:** 
+- Difficult to test CLI in isolation
+- Adding new service requires modifying CLI imports
+- Hard to understand service dependencies from CLI code
 
-**Purpose:** Fetch workflow runs from GitHub REST API
+---
 
-**Responsibilities:**
-- Use `requests` library
-- Construct and send API requests
-- Handle pagination
-- Parse responses
-- Convert to WorkflowRun objects
-- Handle errors (rate limits, auth, network)
+### Issue 5: GitHub Adapter Logic Distributed Across Three Locations
 
-**Estimated class:**
-```python
-class GitHubAPIFetcher:
-    def __init__(self, token: str):
-        pass
-    
-    def fetch_runs(
-        self,
-        owner: str,
-        repo: str,
-        status: Optional[str] = None,
-        branch: Optional[str] = None,
-        created_after: Optional[datetime] = None,
-        per_page: int = 30
-    ) -> List[WorkflowRun]:
-        pass
-```
+**Location:** `src/services/` (fetchers), `src/models/` (factory), `src/auth/` (auth manager), `src/exceptions/` (errors)
 
-#### 3. `src/services/github_cli_fetcher.py` (New File)
+**Problem:**
+- `GitHubAPIFetcher` and `GitHubCLIFetcher` in services layer
+- `GitHubWorkflowRunFactory` in models layer
+- `GitHubAuthManager` in auth layer (separate from fetchers)
+- GitHub-specific exceptions in exceptions layer
+- No cohesive "GitHub adapter" module
 
-**Purpose:** Fetch workflow runs via `gh` CLI
+**Impact:**
+- GitHub adapter logic scattered across codebase
+- Cannot easily swap GitHub for another provider
+- Adding new GitHub features requires changes in multiple places
 
-**Responsibilities:**
-- Detect gh CLI availability
-- Execute gh commands with JSON output
-- Parse output
-- Convert to WorkflowRun objects
+---
 
-**Estimated class:**
-```python
-class GitHubCLIFetcher:
-    def is_available(self) -> bool:
-        pass
-    
-    def fetch_runs(
-        self,
-        owner: str,
-        repo: str,
-        status: Optional[str] = None,
-        branch: Optional[str] = None,
-        created_after: Optional[datetime] = None
-    ) -> List[WorkflowRun]:
-        pass
-```
+## Public Interfaces That Must Be Preserved
 
-#### 4. `src/models/github_workflow_run_factory.py` (New File)
+### Explicitly Public (used by CLI/main)
 
-**Purpose:** Convert GitHub API response to WorkflowRun domain model
-
-**Responsibilities:**
-- Map GitHub API field names to WorkflowRun attributes
-- Convert enum values (status, conclusion)
-- Parse ISO 8601 datetimes
-- Calculate duration
-- Validate data
-
-**Estimated class:**
-```python
-class GitHubWorkflowRunFactory:
-    @staticmethod
-    def from_github_api_response(data: dict) -> WorkflowRun:
-        """Convert GitHub API response to WorkflowRun."""
-        pass
-```
-
-#### 5. `src/services/github_fetch_service.py` (New File, Optional)
-
-**Purpose:** Facade combining auth, fetcher selection, and error handling
-
-**Responsibilities:**
-- Resolve token via GitHubAuthManager
-- Select fetcher (API or CLI) based on mode
-- Execute fetch
-- Handle errors
-- Return results
-
-**Estimated class:**
-```python
-class GitHubFetchService:
-    def fetch(
-        self,
-        owner: str,
-        repo: str,
-        mode: str,  # "api" or "cli"
-        service: WorkflowRunService,
-        token: Optional[str] = None,
-        filters: Optional[dict] = None
-    ) -> Tuple[int, List[str]]:  # (count, errors)
-        """Fetch and persist runs."""
-        pass
-```
-
-### Modified Files
-
-#### 1. `src/cli/workflow_cli.py`
-
-**Changes:**
-1. Import new classes: GitHubAuthManager, GitHubAPIFetcher, GitHubCLIFetcher, GitHubWorkflowRunFactory
-2. Add `fetch` subcommand to `build_parser()`:
+1. **WorkflowRunService**
+   ```python
+   def __init__(self, storage: WorkflowJsonStorage)
+   def list_runs() -> List[WorkflowRun]
+   def get_run_detail(run_id: str) -> Optional[WorkflowRun]
+   def add_workflow_run(run: WorkflowRun) -> WorkflowRun
+   def filter_by_branch(branch: str) -> List[WorkflowRun]
+   def filter_by_status(status: WorkflowStatus) -> List[WorkflowRun]
+   def filter_by_conclusion(conclusion: WorkflowConclusion) -> List[WorkflowRun]
+   def filter_by_created_after(threshold_date: datetime) -> List[WorkflowRun]
+   def filter_by_created_before(threshold_date: datetime) -> List[WorkflowRun]
+   def filter_by_duration_min(min_seconds: float) -> List[WorkflowRun]
+   def filter_by_duration_max(max_seconds: float) -> List[WorkflowRun]
+   def filter_by_attempt_presence(attempt_service, has_attempts: bool) -> List[WorkflowRun]
+   def query(...) -> List[WorkflowRun]
    ```
-   fetch_p = sub.add_parser("fetch", help="Fetch workflow runs from GitHub")
-   fetch_p.add_argument("--owner", required=True, help="GitHub username or organization")
-   fetch_p.add_argument("--repo", required=True, help="Repository name")
-   fetch_p.add_argument("--mode", required=True, choices=["api", "cli"], help="Fetch method")
-   fetch_p.add_argument("--branch", default=None, help="Filter by branch")
-   fetch_p.add_argument("--status", default=None, help="Filter by workflow status")
-   fetch_p.add_argument("--created-after", default=None, help="Filter runs created after date")
-   fetch_p.add_argument("--token", default=None, help="GitHub PAT (optional; env var/file checked first)")
-   fetch_p.add_argument("--incremental", action="store_true", help="Fetch only new runs (bonus)")
+
+2. **WorkflowRunAttemptService**
+   ```python
+   def __init__(self, storage: WorkflowJsonStorage)
+   def list_attempts(sorted: bool = True) -> List[WorkflowRunAttempt]
+   def get_attempt(attempt_id: int) -> Optional[WorkflowRunAttempt]
+   def get_attempts_for_run(run_id: int, sorted: bool = True) -> List[WorkflowRunAttempt]
+   def add_attempt(attempt: WorkflowRunAttempt) -> WorkflowRunAttempt
    ```
-3. Add handler in `run_cli()` for `ns.command == "fetch"`
 
-#### 2. `src/cli/interactive_menu.py`
+3. **WorkflowRunTracker**
+   ```python
+   def __init__(self, service: WorkflowRunService)
+   def track(workflow_name, branch, status, conclusion, run_number, commit_sha, run_id, duration_seconds) -> WorkflowRun
+   ```
 
-**Changes:**
-1. Import new classes
-2. Add handler function `_fetch_from_github(service, attempt_service)`
-3. Add to MENU list
-4. Update dispatcher logic
+4. **StatisticsService**
+   ```python
+   def calculate_statistics(runs: List[WorkflowRun], attempt_service: Optional[...]) -> StatisticsReport
+   ```
 
-#### 3. `src/__init__.py` (or `src/auth/__init__.py`)
+5. **WorkflowRunExportImportService**
+   ```python
+   def export_to_file(filepath, service, attempt_service, include_attempts)
+   def import_from_file(filepath, service, attempt_service, overwrite, dry_run) -> ImportResult
+   ```
 
-**Changes:**
-- Export GitHubAuthManager (if imported elsewhere)
+6. **GitHubAPIFetcher**
+   ```python
+   def __init__(self, token: str)
+   def fetch_runs(owner, repo, status, branch, created_after, per_page) -> List[WorkflowRun]
+   ```
 
-#### 4. `src/models/__init__.py` (Optional)
+7. **GitHubCLIFetcher**
+   ```python
+   def is_available() -> bool
+   def fetch_runs(owner, repo, status, branch, created_after) -> List[WorkflowRun]
+   ```
 
-**Changes:**
-- Export GitHubWorkflowRunFactory (if needed for public API)
+8. **GitHubAuthManager**
+   ```python
+   def get_token(explicit_token: Optional[str]) -> str
+   def validate_token(token: str) -> bool
+   ```
 
----
+9. **WorkflowJsonStorage**
+   ```python
+   def __init__(filepath, attempts_filepath)
+   def save(runs: List[WorkflowRun])
+   def load() -> List[WorkflowRun]
+   def save_attempts(attempts: List[WorkflowRunAttempt])
+   def load_attempts() -> List[WorkflowRunAttempt]
+   ```
 
-## Key Design Decisions
+10. **Domain Models** (used everywhere)
+    - `WorkflowRun`, `WorkflowRunAttempt`, `WorkflowStatus`, `WorkflowConclusion`
+    - `StatisticsReport`, `ImportResult`
 
-### 1. Separate Fetcher Classes (API vs. CLI)
+11. **Exception Classes** (must exist and be importable)
+    - `GitHubAuthError`, `GitHubAPIError`, `GitHubNetworkError`, `GitHubRateLimitError`
 
-- **Rationale:** Different implementation details; common interface (fetch_runs)
-- **Pattern:** Strategy pattern — user chooses implementation at runtime
-- **Benefit:** Testable independently; easy to add more fetchers later
+12. **Factory**
+    - `GitHubWorkflowRunFactory.from_github_api_response(data: dict) -> WorkflowRun`
 
-### 2. Conversion Factory Pattern
-
-- **Rationale:** Separates API response parsing from domain logic
-- **Implementation:** Static method (no state)
-- **Benefit:** Single responsibility; testable in isolation
-
-### 3. Token Resolution Priority
-
-- **Order:** Explicit arg > env var > file > user prompt
-- **Rationale:** Follows principle of least surprise; explicit takes precedence
-- **Non-persistence:** User-entered tokens not saved (avoids security risk)
-
-### 4. Error Handling Strategy
-
-- **Philosophy:** Fail fast with clear messages; no silent skips
-- **Rate limits:** Inform user; suggest retry later
-- **Bad data:** Skip individual runs with warning (non-atomic)
-- **Auth failures:** Exit immediately
-
-### 5. No Upsert Logic
-
-- **Assumption:** Fetched runs are new (or older than local copies)
-- **Behavior:** Skip if ID already exists (no update)
-- **Rationale:** Avoids accidental overwrites; import feature handles upserts
-
-### 6. Stateless Fetchers
-
-- **Design:** Instantiate per-call, no persistent state
-- **Rationale:** Simple, testable, no cleanup needed
-- **Incremental bonus:** Implement as optional state file (outside service)
+### Entry Point
+- `src/__main__.py` — calls `WorkflowJsonStorage`, `WorkflowRunService`, `WorkflowRunAttemptService`, `run_cli()`, `run_interactive()`
 
 ---
 
-## Expected CLI Usage
+## Required Abstractions for Decoupling
 
-```bash
-# Fetch via GitHub REST API
-python -m src fetch --owner octocat --repo hello-world --mode api
+### 1. Storage Interface (Protocol)
 
-# Fetch via gh CLI
-python -m src fetch --owner octocat --repo hello-world --mode cli
+**Purpose:** Decouple services from JSON storage implementation
 
-# Fetch with filters
-python -m src fetch --owner octocat --repo hello-world --mode api --branch main --status completed
+**Location:** `src/storage/base.py` (new file)
 
-# Provide token explicitly
-python -m src fetch --owner octocat --repo hello-world --mode api --token ghp_xxxxxxxxxxxx
+```python
+from typing import Protocol, List
+from ..models.workflow_run import WorkflowRun
+from ..models.workflow_run_attempt import WorkflowRunAttempt
 
-# Incremental fetch (bonus)
-python -m src fetch --owner octocat --repo hello-world --mode api --incremental
+class WorkflowRunStorage(Protocol):
+    """Abstract storage contract for workflow runs."""
+    
+    def save(self, runs: List[WorkflowRun]) -> None:
+        """Persist workflow runs."""
+        ...
+    
+    def load(self) -> List[WorkflowRun]:
+        """Load all workflow runs."""
+        ...
+
+class WorkflowRunAttemptStorage(Protocol):
+    """Abstract storage contract for workflow run attempts."""
+    
+    def save_attempts(self, attempts: List[WorkflowRunAttempt]) -> None:
+        """Persist workflow run attempts."""
+        ...
+    
+    def load_attempts(self) -> List[WorkflowRunAttempt]:
+        """Load all workflow run attempts."""
+        ...
 ```
 
-## Expected Menu Usage
+**Impact on Services:**
+- `WorkflowRunService.__init__()` changes parameter type from `WorkflowJsonStorage` → `WorkflowRunStorage`
+- `WorkflowRunAttemptService.__init__()` changes parameter type from `WorkflowJsonStorage` → `WorkflowRunAttemptStorage`
+- No change to method signatures; backward compatible at call site
+
+**Rationale:**
+- Protocols are duck-typed, so existing `WorkflowJsonStorage` still satisfies the contract
+- Allows testing with mock storage
+- Allows swapping to database, Redis, S3, etc. without touching service code
+
+---
+
+### 2. GitHub Fetcher Interface (Protocol + Adapter Consolidation)
+
+**Purpose:** Unify fetcher interfaces and make them interchangeable
+
+**Location:** `src/adapters/github/base.py` (new file)
+
+```python
+from typing import Protocol, List, Optional
+from datetime import datetime
+from ...models.workflow_run import WorkflowRun
+
+class WorkflowFetcher(Protocol):
+    """Abstract interface for fetching workflow runs from any source."""
+    
+    def fetch_runs(
+        self,
+        owner: str,
+        repo: str,
+        status: Optional[str] = None,
+        branch: Optional[str] = None,
+        created_after: Optional[datetime] = None,
+    ) -> List[WorkflowRun]:
+        """Fetch workflow runs from source."""
+        ...
+```
+
+**Changes Required:**
+1. Create `src/adapters/` directory
+2. Create `src/adapters/github/` subdirectory
+3. Move `GitHubAPIFetcher` from `src/services/github_api_fetcher.py` → `src/adapters/github/api_fetcher.py`
+4. Move `GitHubCLIFetcher` from `src/services/github_cli_fetcher.py` → `src/adapters/github/cli_fetcher.py`
+5. Move `GitHubWorkflowRunFactory` from `src/models/` → `src/adapters/github/factory.py`
+6. Move `GitHubAuthManager` from `src/auth/` → `src/adapters/github/auth.py`
+7. Move GitHub exceptions to `src/adapters/github/exceptions.py` (or keep in `src/exceptions/`)
+
+**Rationale:**
+- Consolidates all GitHub-specific logic in one place
+- Makes it easy to swap GitHub for GitLab, Bitbucket, etc.
+- Isolates GitHub API version changes and quirks
+- Clarifies that fetchers are adapters, not services
+
+---
+
+### 3. Export/Import Service Refactoring
+
+**Purpose:** Eliminate direct access to service internals
+
+**Location:** Add methods to `WorkflowRunService` and `WorkflowRunAttemptService`
+
+**New Public Methods:**
+
+In `WorkflowRunService`:
+```python
+def replace_run(self, run: WorkflowRun) -> None:
+    """Replace existing run or add if not exists. For import operations."""
+    self._runs = [r for r in self._runs if r.id != run.id]
+    self._runs.append(run)
+    self._persist()
+
+def delete_run(self, run_id: str) -> bool:
+    """Delete run by id. Returns True if deleted, False if not found."""
+    original_count = len(self._runs)
+    self._runs = [r for r in self._runs if r.id != run_id]
+    if len(self._runs) < original_count:
+        self._persist()
+        return True
+    return False
+```
+
+In `WorkflowRunAttemptService`:
+```python
+def replace_attempt(self, attempt: WorkflowRunAttempt) -> None:
+    """Replace existing attempt or add if not exists. For import operations."""
+    self._attempts = [a for a in self._attempts if a.id != attempt.id]
+    self._attempts.append(attempt)
+    self._persist()
+
+def delete_attempt(self, attempt_id: int) -> bool:
+    """Delete attempt by id. Returns True if deleted, False if not found."""
+    original_count = len(self._attempts)
+    self._attempts = [a for a in self._attempts if a.id != attempt_id]
+    if len(self._attempts) < original_count:
+        self._persist()
+        return True
+    return False
+```
+
+**Updated `WorkflowRunExportImportService`:**
+```python
+# Before (violates encapsulation)
+service._runs = [r for r in service._runs if r.id != run.id]
+service._runs.append(run)
+service._persist()
+
+# After (uses public API)
+service.replace_run(run)
+```
+
+**Rationale:**
+- Eliminates private member access
+- Makes import/export operations explicit and testable
+- Service layer controls persistence guarantees
+
+---
+
+### 4. Service Layer Facade (Optional but Recommended)
+
+**Purpose:** Simplify CLI's dependencies; provide unified entry point
+
+**Location:** `src/services/workflow_service_container.py` (new file)
+
+```python
+from .workflow_run_service import WorkflowRunService
+from .workflow_run_attempt_service import WorkflowRunAttemptService
+from .workflow_run_tracker import WorkflowRunTracker
+from .statistics_service import StatisticsService
+from .workflow_export_import_service import WorkflowRunExportImportService
+from ..storage.workflow_json_storage import WorkflowJsonStorage
+
+class WorkflowServiceContainer:
+    """Facade providing unified access to all workflow services."""
+    
+    def __init__(self, storage: WorkflowJsonStorage):
+        self.runs = WorkflowRunService(storage)
+        self.attempts = WorkflowRunAttemptService(storage)
+        self.tracker = WorkflowRunTracker(self.runs)
+        self.statistics = StatisticsService()
+        self.export_import = WorkflowRunExportImportService()
+```
+
+**CLI Usage:**
+```python
+# Before
+from ..services.workflow_run_service import WorkflowRunService
+from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
+from ..services.workflow_run_tracker import WorkflowRunTracker
+from ..services.statistics_service import StatisticsService
+from ..services.workflow_export_import_service import WorkflowRunExportImportService
+
+service = WorkflowRunService(storage)
+attempt_service = WorkflowRunAttemptService(storage)
+tracker = WorkflowRunTracker(service)
+stats = StatisticsService()
+
+# After
+from ..services.workflow_service_container import WorkflowServiceContainer
+
+container = WorkflowServiceContainer(storage)
+service = container.runs
+attempt_service = container.attempts
+tracker = container.tracker
+stats = container.statistics
+```
+
+**Rationale:**
+- Single import in CLI instead of many
+- Service dependencies managed in one place
+- Easier to test with mock container
+- Better dependency graph visibility
+
+---
+
+## Circular Dependencies Analysis
+
+### Current Flow (No True Cycles, But Tight Coupling)
+
+1. CLI → Services → Storage → Models ✓ (acyclic)
+2. CLI → GitHub Adapters → Models → Exceptions ✓ (acyclic)
+3. Services → Storage → Models ✓ (acyclic)
+
+**However:**
+- `GitHubWorkflowRunFactory` is in models but only used by adapters → should move to adapters
+- `ExportImportService` accesses `_runs` and `_persist()` → should use public API
+- `GitHubCLIFetcher` and `GitHubAPIFetcher` have no shared interface → should both implement protocol
+
+**No true circular dependencies detected**, but poor separation causes:
+- Tight coupling (hard to test)
+- Unclear responsibilities (adapters mixed with services)
+- Encapsulation violations (private member access from export/import)
+
+---
+
+## Minimal Structural Changes Needed
+
+### Directory Structure Changes
 
 ```
-Interactive Menu
+BEFORE:
+src/
+  ├── auth/
+  │   ├── __init__.py
+  │   └── github_auth.py
+  ├── models/
+  │   ├── __init__.py
+  │   ├── github_workflow_run_factory.py
+  │   ├── workflow_*.py
+  │   ├── statistics_report.py
+  │   └── import_result.py
+  ├── services/
+  │   ├── __init__.py
+  │   ├── github_api_fetcher.py
+  │   ├── github_cli_fetcher.py
+  │   ├── statistics_service.py
+  │   ├── workflow_export_import_service.py
+  │   ├── workflow_run_service.py
+  │   ├── workflow_run_attempt_service.py
+  │   └── workflow_run_tracker.py
+  ├── storage/
+  │   ├── __init__.py
+  │   └── workflow_json_storage.py
+  ├── exceptions/
+  │   ├── __init__.py
+  │   └── github_exceptions.py
+  └── cli/
+      ├── __init__.py
+      ├── interactive_menu.py
+      └── workflow_cli.py
 
-1. Add workflow run
-2. List all runs
-...
-N. Fetch from GitHub  # NEW
-N+1. Exit
-
-Select option: N
-
---- Fetch Workflow Runs from GitHub ---
-Owner: octocat
-Repository: hello-world
-Fetch mode (api/cli): api
-Filter by branch? (leave blank to skip): main
-Filter by status? (leave blank to skip): completed
-Filter by created-after date? (leave blank to skip): 2025-05-01
-
-Fetching from GitHub...
-Fetched 42 workflow run(s) from octocat/hello-world
-
-Press Enter to continue...
+AFTER:
+src/
+  ├── adapters/
+  │   ├── __init__.py
+  │   └── github/
+  │       ├── __init__.py
+  │       ├── api_fetcher.py          (moved from services)
+  │       ├── cli_fetcher.py          (moved from services)
+  │       ├── factory.py              (moved from models)
+  │       ├── auth.py                 (moved from auth/)
+  │       └── exceptions.py           (or keep in src/exceptions)
+  ├── models/                          (unchanged)
+  │   ├── __init__.py
+  │   ├── workflow_*.py
+  │   ├── statistics_report.py
+  │   └── import_result.py
+  ├── services/                        (only core services)
+  │   ├── __init__.py
+  │   ├── base.py                     (storage protocols)
+  │   ├── statistics_service.py
+  │   ├── workflow_export_import_service.py
+  │   ├── workflow_run_service.py      (refactored: no _persist private access)
+  │   ├── workflow_run_attempt_service.py (refactored: no _persist private access)
+  │   ├── workflow_run_tracker.py
+  │   └── workflow_service_container.py (new: facade)
+  ├── storage/                         (unchanged)
+  │   ├── __init__.py
+  │   ├── base.py                     (new: protocols)
+  │   └── workflow_json_storage.py
+  ├── exceptions/                      (unchanged or with GitHub moved out)
+  │   ├── __init__.py
+  │   └── github_exceptions.py
+  └── cli/
+      ├── __init__.py
+      ├── interactive_menu.py
+      └── workflow_cli.py
 ```
 
----
+### Files to Create (6 new files)
 
-## Summary of Changes
+1. `src/adapters/__init__.py` — empty
+2. `src/adapters/github/__init__.py` — re-exports
+3. `src/adapters/github/base.py` — protocol for `WorkflowFetcher`
+4. `src/storage/base.py` — protocols for `WorkflowRunStorage`, `WorkflowRunAttemptStorage`
+5. `src/services/workflow_service_container.py` — facade (optional but recommended)
 
-**New modules:**
-- `src/auth/github_auth.py` — PAT resolution and validation
-- `src/services/github_api_fetcher.py` — REST API fetcher
-- `src/services/github_cli_fetcher.py` — gh CLI fetcher
-- `src/models/github_workflow_run_factory.py` — Response converter
+### Files to Move (5 moves)
 
-**Modified modules:**
-- `src/cli/workflow_cli.py` — Add `fetch` subcommand
-- `src/cli/interactive_menu.py` — Add fetch menu option
+1. `src/services/github_api_fetcher.py` → `src/adapters/github/api_fetcher.py`
+2. `src/services/github_cli_fetcher.py` → `src/adapters/github/cli_fetcher.py`
+3. `src/models/github_workflow_run_factory.py` → `src/adapters/github/factory.py`
+4. `src/auth/github_auth.py` → `src/adapters/github/auth.py`
+5. `src/exceptions/github_exceptions.py` → `src/adapters/github/exceptions.py` (optional; can stay in exceptions)
 
-**Dependencies (may need to add):**
-- `requests` — For HTTP calls to GitHub REST API (if not already present)
-- Standard library: `subprocess` (for gh CLI), `os`, `getpass` (for secure prompts), `json`, `datetime`
+### Files to Modify (8 files)
 
-**No changes to domain model** — WorkflowRun already compatible with GitHub API fields
+1. `src/services/workflow_run_service.py`
+   - Change: `def __init__(self, storage: WorkflowJsonStorage)` → `def __init__(self, storage: WorkflowRunStorage)`
+   - Add: `replace_run()`, `delete_run()` public methods
+   - No logic changes; protocol typing only
 
-**No changes to storage** — Persist via existing WorkflowRunService and WorkflowJsonStorage
+2. `src/services/workflow_run_attempt_service.py`
+   - Change: `def __init__(self, storage: WorkflowJsonStorage)` → `def __init__(self, storage: WorkflowRunAttemptStorage)`
+   - Add: `replace_attempt()`, `delete_attempt()` public methods
+   - No logic changes; protocol typing only
 
----
+3. `src/services/workflow_export_import_service.py`
+   - Change: `service._runs.append()` → `service.replace_run()`
+   - Change: `attempt_service._attempts.append()` → `attempt_service.replace_attempt()`
+   - Change: `service._persist()` calls → removed (now implicit in public methods)
 
-## Validation & Testing Scope
+4. `src/__main__.py`
+   - Update imports: `from .adapters.github.auth import GitHubAuthManager` etc.
+   - Optionally use `WorkflowServiceContainer` for cleaner setup
 
-### Unit Tests (Expected)
+5. `src/cli/workflow_cli.py`
+   - Update imports from moved files
+   - Optionally refactor to use `WorkflowServiceContainer`
 
-**Authentication:**
-- Token resolution priority (env > file > prompt)
-- Token validation (format check)
-- Error handling (invalid token, missing secrets file)
+6. `src/cli/interactive_menu.py`
+   - Update imports from moved files
+   - Optionally refactor to use `WorkflowServiceContainer`
 
-**Fetchers:**
-- API response parsing (mock requests)
-- gh CLI output parsing (mock subprocess)
-- Pagination logic
-- Error handling (HTTP errors, timeouts)
+7. `src/adapters/github/api_fetcher.py` (moved)
+   - Update import paths: `from ...models` → `from ...models`
+   - Update import: `from ..github.factory import GitHubWorkflowRunFactory`
 
-**Factory:**
-- Field mapping (GitHub → WorkflowRun)
-- Enum conversion (status, conclusion)
-- Datetime parsing
-- Duration calculation
-- Edge cases (missing fields, null values)
-
-**CLI Integration:**
-- Argument parsing
-- Handler logic (token resolution, fetcher selection)
-- Error messages
-
-**Interactive Menu:**
-- Prompt flow
-- Handler invocation
-- Result display
-
-### Manual Testing (Expected)
-
-- Fetch from real GitHub repo (with mock or test repo)
-- Token validation flow (env, file, prompt)
-- Error handling (invalid token, rate limit, network error)
-- Filtering (branch, status, created-after)
-- Both API and CLI modes
+8. `src/adapters/github/cli_fetcher.py` (moved)
+   - Update import paths: `from ...models` → `from ...models`
+   - Update import: `from ..github.factory import GitHubWorkflowRunFactory`
 
 ---
 
-## Conclusion
+## Summary of Changes by Impact Level
 
-Task 08 requires extending the GitHub Workflow Manager with GitHub integration. The feature must:
+### Minimal (No Logic Changes)
+- Create protocols: `WorkflowRunStorage`, `WorkflowRunAttemptStorage`, `WorkflowFetcher`
+- Move adapter files to `src/adapters/github/`
+- Update import paths throughout codebase
+- Change parameter types in services from concrete to protocol (duck-typing compatible)
 
-1. Fetch workflow runs from GitHub (REST API or gh CLI)
-2. Convert GitHub API responses to the existing WorkflowRun domain model
-3. Manage authentication securely (env var → file → user prompt)
-4. Handle errors gracefully (rate limits, invalid tokens, network issues)
-5. Integrate with both CLI and interactive menu interfaces
-6. Persist runs via existing WorkflowRunService
+### Small (Encapsulation Fixes)
+- Add public methods to services: `replace_run()`, `replace_attempt()`, `delete_run()`, `delete_attempt()`
+- Update `WorkflowRunExportImportService` to use public API instead of private member access
 
-**Key new components:**
-- Authentication manager (PAT resolution and validation)
-- Two fetcher implementations (API and CLI)
-- Response converter (GitHub API → WorkflowRun)
-- CLI subcommand and interactive menu option
+### Optional (Convenience)
+- Create `WorkflowServiceContainer` facade to simplify CLI dependencies
+- Consolidate GitHub exceptions into `src/adapters/github/exceptions.py` (can stay in original location)
 
-**No breaking changes to existing code** — domain model and storage remain unchanged.
+---
 
-**Optional enhancements:**
-- Incremental fetch (store last fetch time)
-- Filtering parameters in fetch requests
-- Progress indication during large fetches
+## Files Affected
 
-The implementation follows existing patterns (service layer, factory methods, argparse CLI, interactive menu) for consistency with the codebase.
+### Must Modify (Core Changes)
+1. `/src/services/workflow_run_service.py` — protocol typing, new public methods
+2. `/src/services/workflow_run_attempt_service.py` — protocol typing, new public methods
+3. `/src/services/workflow_export_import_service.py` — use public API
+4. `/src/__main__.py` — update imports
+
+### Should Modify (Best Practice)
+5. `/src/cli/workflow_cli.py` — update imports
+6. `/src/cli/interactive_menu.py` — update imports
+
+### Must Create
+7. `/src/storage/base.py` — storage protocols
+8. `/src/adapters/__init__.py` — empty module marker
+9. `/src/adapters/github/__init__.py` — re-exports
+
+### Must Move (Or Create as New Locations)
+10. `github_api_fetcher.py` → `/src/adapters/github/api_fetcher.py`
+11. `github_cli_fetcher.py` → `/src/adapters/github/cli_fetcher.py`
+12. `github_workflow_run_factory.py` → `/src/adapters/github/factory.py`
+13. `github_auth.py` → `/src/adapters/github/auth.py`
+14. `github_exceptions.py` → `/src/adapters/github/exceptions.py` (or stay where it is)
+
+### Optional (Convenience)
+15. `/src/services/workflow_service_container.py` — optional facade
+
+---
+
+## Verification Checklist
+
+After refactoring, ensure:
+- [ ] All public interfaces (signatures from "Public Interfaces" section) are preserved
+- [ ] `python -m src` runs without errors
+- [ ] `python -m src --help` lists all commands
+- [ ] Tests pass: `pytest tests/ -q`
+- [ ] Imports use protocols where appropriate (no import errors)
+- [ ] No private member access (`_runs`, `_attempts`, `_persist()`) from other modules
+- [ ] GitHub adapter logic is consolidated in `src/adapters/github/`
+- [ ] Storage layer abstraction via protocols exists and is used
+- [ ] No new circular dependencies introduced
+

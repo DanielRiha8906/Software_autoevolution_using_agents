@@ -11,10 +11,10 @@ from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.statistics_service import StatisticsService
 from ..services.workflow_export_import_service import WorkflowRunExportImportService
-from ..services.github_api_fetcher import GitHubAPIFetcher
-from ..services.github_cli_fetcher import GitHubCLIFetcher
-from ..auth.github_auth import GitHubAuthManager
-from ..exceptions import (
+from ..adapters.github import (
+    GitHubAPIFetcher,
+    GitHubCLIFetcher,
+    GitHubAuthManager,
     GitHubAuthError,
     GitHubAPIError,
     GitHubNetworkError,

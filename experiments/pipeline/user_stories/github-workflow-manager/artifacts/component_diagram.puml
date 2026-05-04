@@ -21,24 +21,21 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunAttemptService" as ATTEMPT_SVC
     component "StatisticsService" as STATS_SVC
     component "WorkflowRunExportImportService" as EXPORT_SVC
+  }
+
+  package "GitHub Adapter layer" {
+    component "WorkflowFetcher (protocol)" as FETCHER_PROTO
     component "GitHubAPIFetcher" as API_FETCH
     component "GitHubCLIFetcher" as CLI_FETCH
-  }
-
-  package "Authentication & GitHub Integration" {
-    component "GitHubAuthManager" as AUTH_MGR
     component "GitHubWorkflowRunFactory" as GH_FACTORY
+    component "GitHubAuthManager" as AUTH_MGR
+    component "GitHub Exceptions" as GH_ERRORS
   }
 
-  package "Exception layer" {
-    component "GitHubAuthError" as AUTH_ERR
-    component "GitHubAPIError" as API_ERR
-    component "GitHubNetworkError" as NET_ERR
-    component "GitHubRateLimitError" as RATE_ERR
-  }
-
-  package "Persistence layer" {
-    component "WorkflowJsonStorage" as STOR
+  package "Storage abstraction layer" {
+    component "WorkflowRunStorage (protocol)" as STORAGE_PROTO
+    component "WorkflowRunAttemptStorage (protocol)" as ATTEMPT_STORAGE_PROTO
+    component "WorkflowJsonStorage (impl)" as STOR
     artifact "workflow_runs.json" as JSON_FILE
     artifact "workflow_run_attempts.json" as ATTEMPTS_FILE
   }
@@ -76,6 +73,9 @@ IM --> API_FETCH
 CLI --> CLI_FETCH
 IM --> CLI_FETCH
 
+API_FETCH ..|> FETCHER_PROTO
+CLI_FETCH ..|> FETCHER_PROTO
+
 API_FETCH --> AUTH_MGR
 API_FETCH --> GH_FACTORY
 CLI_FETCH --> GH_FACTORY
@@ -83,22 +83,19 @@ CLI_FETCH --> GH_FACTORY
 API_FETCH --> SVC
 CLI_FETCH --> SVC
 
-API_FETCH ..> AUTH_ERR
-API_FETCH ..> API_ERR
-API_FETCH ..> NET_ERR
-API_FETCH ..> RATE_ERR
+API_FETCH ..> GH_ERRORS
+CLI_FETCH ..> GH_ERRORS
 
-CLI_FETCH ..> API_ERR
-CLI_FETCH ..> NET_ERR
-
-AUTH_MGR ..> AUTH_ERR
+AUTH_MGR ..> GH_ERRORS
 
 TRACKER --> SVC
-SVC --> STOR
+SVC ..|> STORAGE_PROTO
+ATTEMPT_SVC ..|> ATTEMPT_STORAGE_PROTO
+
+STOR ..|> STORAGE_PROTO
+STOR ..|> ATTEMPT_STORAGE_PROTO
 STOR --> JSON_FILE
 STOR --> ATTEMPTS_FILE
-
-ATTEMPT_SVC --> STOR
 
 EXPORT_SVC --> SVC
 EXPORT_SVC --> ATTEMPT_SVC
@@ -113,5 +110,11 @@ GH_FACTORY ..> RUN
 RUN --> STATUS
 RUN --> CONCLUSION
 RUN "1" --> "N" ATTEMPT : relationship
+
+note right of STORAGE_PROTO
+  **Dependency Inversion Pattern**
+  Services depend on protocols,
+  not concrete implementations
+end note
 
 @enduml

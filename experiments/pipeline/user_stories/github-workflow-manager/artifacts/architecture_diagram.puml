@@ -1,0 +1,129 @@
+@startuml architecture_diagram
+
+title GitHub Workflow Manager - Layered Architecture
+
+skinparam componentStyle rectangle
+skinparam linetype ortho
+top to bottom direction
+
+' ============================================================================
+' LAYER 1: PRESENTATION / CLI LAYER
+' ============================================================================
+package "Layer 1: Presentation" #FFE5E5 {
+    component [workflow_cli] as CLI_CMDS
+    component [interactive_menu] as CLI_MENU
+    component [__main__] as ENTRY_POINT
+}
+
+ENTRY_POINT --> CLI_CMDS
+ENTRY_POINT --> CLI_MENU
+
+' ============================================================================
+' LAYER 2: SERVICE LAYER (Business Logic)
+' ============================================================================
+package "Layer 2: Services" #DDFFD4 {
+    component [WorkflowRunService] as SVC_RUN
+    component [WorkflowRunAttemptService] as SVC_ATTEMPT
+    component [WorkflowRunTracker] as SVC_TRACKER
+    component [StatisticsService] as SVC_STATS
+    component [WorkflowRunExportImportService] as SVC_EXPORT
+}
+
+CLI_CMDS --> SVC_RUN
+CLI_CMDS --> SVC_ATTEMPT
+CLI_CMDS --> SVC_TRACKER
+CLI_CMDS --> SVC_STATS
+CLI_CMDS --> SVC_EXPORT
+
+CLI_MENU --> SVC_RUN
+CLI_MENU --> SVC_ATTEMPT
+CLI_MENU --> SVC_TRACKER
+CLI_MENU --> SVC_STATS
+CLI_MENU --> SVC_EXPORT
+
+SVC_TRACKER --> SVC_RUN
+
+' ============================================================================
+' LAYER 3: ADAPTERS / EXTERNAL INTEGRATION
+' ============================================================================
+package "Layer 3: Adapters" #FFE8CC {
+    component [GitHubAPIFetcher] as ADAPTER_API
+    component [GitHubCLIFetcher] as ADAPTER_CLI
+    component [GitHubAuthManager] as ADAPTER_AUTH
+    component [GitHubWorkflowRunFactory] as ADAPTER_FACTORY
+    component [GitHub Exceptions] as ADAPTER_EXCEPTIONS
+}
+
+CLI_CMDS --> ADAPTER_API
+CLI_CMDS --> ADAPTER_CLI
+CLI_CMDS --> ADAPTER_AUTH
+
+CLI_MENU --> ADAPTER_API
+CLI_MENU --> ADAPTER_CLI
+CLI_MENU --> ADAPTER_AUTH
+
+ADAPTER_API --> ADAPTER_FACTORY
+ADAPTER_CLI --> ADAPTER_FACTORY
+ADAPTER_API ..> ADAPTER_EXCEPTIONS
+ADAPTER_CLI ..> ADAPTER_EXCEPTIONS
+ADAPTER_AUTH ..> ADAPTER_EXCEPTIONS
+
+' ============================================================================
+' LAYER 4: STORAGE LAYER (with Protocols)
+' ============================================================================
+package "Layer 4: Storage Abstraction" #FFF3CC {
+    interface [<<protocol>>\nWorkflowRunStorage] as PROTO_STORAGE_RUN
+    interface [<<protocol>>\nWorkflowRunAttemptStorage] as PROTO_STORAGE_ATTEMPT
+}
+
+SVC_RUN --> PROTO_STORAGE_RUN
+SVC_ATTEMPT --> PROTO_STORAGE_ATTEMPT
+
+' ============================================================================
+' LAYER 5: PERSISTENCE IMPLEMENTATION
+' ============================================================================
+package "Layer 5: Persistence" #E8F8E8 {
+    component [WorkflowJsonStorage] as PERSIST_JSON
+    artifact [workflow_runs.json] as FILE_RUNS
+    artifact [workflow_run_attempts.json] as FILE_ATTEMPTS
+}
+
+PROTO_STORAGE_RUN <|-- PERSIST_JSON
+PROTO_STORAGE_ATTEMPT <|-- PERSIST_JSON
+
+PERSIST_JSON --> FILE_RUNS
+PERSIST_JSON --> FILE_ATTEMPTS
+
+' ============================================================================
+' LAYER 6: DOMAIN MODELS
+' ============================================================================
+package "Layer 6: Domain Models" #DDEEFF {
+    component [WorkflowRun] as MODEL_RUN
+    component [WorkflowRunAttempt] as MODEL_ATTEMPT
+    component [WorkflowStatus] as MODEL_STATUS
+    component [WorkflowConclusion] as MODEL_CONCLUSION
+    component [StatisticsReport] as MODEL_REPORT
+    component [ImportResult] as MODEL_IMPORT_RESULT
+}
+
+SVC_RUN ..> MODEL_RUN
+SVC_ATTEMPT ..> MODEL_ATTEMPT
+SVC_STATS ..> MODEL_REPORT
+SVC_EXPORT ..> MODEL_IMPORT_RESULT
+ADAPTER_FACTORY ..> MODEL_RUN
+MODEL_RUN --> MODEL_STATUS
+MODEL_RUN --> MODEL_CONCLUSION
+
+note right of PROTO_STORAGE_RUN
+  **Key Design Pattern:**
+
+  Services depend on protocols,
+  not concrete storage implementations.
+
+  This enables:
+  - Easy testing with mock storage
+  - Different storage backends
+  - No circular dependencies
+end note
+
+@enduml

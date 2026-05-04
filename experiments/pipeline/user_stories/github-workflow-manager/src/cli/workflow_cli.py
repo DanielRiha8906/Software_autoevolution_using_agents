@@ -13,10 +13,10 @@ from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.statistics_service import StatisticsService
 from ..services.workflow_export_import_service import WorkflowRunExportImportService
-from ..services.github_api_fetcher import GitHubAPIFetcher
-from ..services.github_cli_fetcher import GitHubCLIFetcher
-from ..auth.github_auth import GitHubAuthManager
-from ..exceptions import (
+from ..adapters.github import (
+    GitHubAPIFetcher,
+    GitHubCLIFetcher,
+    GitHubAuthManager,
     GitHubAuthError,
     GitHubAPIError,
     GitHubNetworkError,
@@ -258,9 +258,21 @@ def build_parser() -> argparse.ArgumentParser:
 
 def run_cli(
     service: WorkflowRunService,
-    attempt_service: WorkflowRunAttemptService,
+    attempt_service=None,
     args=None,
 ) -> None:
+    # Support backward compatibility: if attempt_service is a list, treat it as args
+    if isinstance(attempt_service, (list, type(None))) and args is None:
+        args = attempt_service
+        # Create a default attempt service
+        from ..storage.workflow_json_storage import WorkflowJsonStorage
+        from ..services.workflow_run_attempt_service import WorkflowRunAttemptService
+        storage = WorkflowJsonStorage(
+            "artifacts/workflow_runs.json",
+            "artifacts/workflow_run_attempts.json",
+        )
+        attempt_service = WorkflowRunAttemptService(storage)
+
     parser = build_parser()
     ns = parser.parse_args(args)
     tracker = WorkflowRunTracker(service)
