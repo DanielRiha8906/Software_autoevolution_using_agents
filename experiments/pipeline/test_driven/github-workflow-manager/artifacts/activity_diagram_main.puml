@@ -41,6 +41,15 @@ if (CLI arguments provided?) then (yes)
         :Exit code 1;
       endif
 
+    case (query)
+      :Parse query parameters\n(duration, timestamps, attempts);
+      :WorkflowRunService.query() with filters;
+      if (no runs?) then (yes)
+        :Print "No runs match criteria.";
+      else (no)
+        :Print matching runs;
+      endif
+
   endswitch
   stop
 

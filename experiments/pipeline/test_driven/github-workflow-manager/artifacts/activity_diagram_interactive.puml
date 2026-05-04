@@ -59,7 +59,18 @@ repeat
         :Print matching runs;
       endif
 
-    case (5 — Exit)
+    case (5 — Query runs)
+      :Prompt duration filters\n(min/max seconds);
+      :Prompt timestamp filters\n(created after/before);
+      :Choose attempt filter\n(no filter / has / no attempts);
+      :service.query() with all filters;
+      if (no matches?) then (yes)
+        :Print "No matching runs.";
+      else (no)
+        :Print matching runs;
+      endif
+
+    case (6 — Exit)
       :Print "Goodbye.";
       stop
 
