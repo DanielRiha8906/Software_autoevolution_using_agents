@@ -1,3 +1,4 @@
+import logging
 import sys
 from datetime import datetime
 from typing import Optional
@@ -11,7 +12,11 @@ from ..services.workflow_attempt_service import WorkflowAttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.workflow_statistics_service import WorkflowStatisticsService
 from ..services.workflow_data_portability_service import WorkflowDataPortabilityService
+from ..services.github_integration_service import GitHubIntegrationService
 from ..utils.timezone_converter import parse_datetime_with_timezone
+
+
+logger = logging.getLogger(__name__)
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -633,11 +638,128 @@ def _portability_menu(portability_service) -> None:
             print()
 
 
+def _github_fetch_menu(
+    service: WorkflowRunService,
+    attempt_service: WorkflowAttemptService,
+    github_service: GitHubIntegrationService,
+) -> None:
+    """GitHub integration menu for fetching runs and attempts."""
+    print("\n--- Fetch from GitHub ---")
+
+    # Prompt for owner and repo
+    owner = _prompt("GitHub repository owner")
+    repo = _prompt("GitHub repository name")
+
+    # Optional workflow name filter
+    workflow = _prompt("Workflow name (leave blank to fetch all)", "")
+    workflow = workflow if workflow else None
+
+    # Fetch mode
+    mode_choice = _choose("Fetch mode", ["api (REST API)", "cli (gh command-line)"], allow_blank=False)
+    mode = "api" if "api" in mode_choice else "cli"
+
+    # Token handling
+    token_source = _choose(
+        "Token source",
+        ["Environment variable (GITHUB_TOKEN)", "Secrets file (secrets/.env)", "Prompt now"],
+        allow_blank=False
+    )
+    token = None
+    if "Prompt" in token_source:
+        token = _prompt("GitHub token")
+
+    try:
+        # Create a fresh service instance with specified fetch mode
+        github_service = GitHubIntegrationService(fetch_mode=mode)
+
+        # Fetch runs
+        print(f"\nFetching workflow runs from {owner}/{repo}...")
+        runs = github_service.fetch_runs(
+            owner=owner,
+            repo=repo,
+            workflow_name=workflow,
+            limit=30,
+            token=token,
+        )
+
+        if not runs:
+            print("No runs found.")
+            return
+
+        print(f"\nFetched {len(runs)} run(s):")
+
+        # Display and add runs
+        added_count = 0
+        skipped_count = 0
+
+        for i, run in enumerate(runs):
+            print(f"\n{i + 1}. {run.workflow_name} ({run.status.value})")
+            try:
+                # Check if run already exists
+                try:
+                    service.get_run_detail(run.id)
+                    skipped_count += 1
+                    logger.info(f"Skipped duplicate run {run.id}")
+                except ValueError:
+                    # Run doesn't exist, add it
+                    service.add_workflow_run(run)
+                    added_count += 1
+            except Exception as e:
+                logger.warning(f"Failed to add run {run.id}: {e}")
+
+        print(f"\nAdded {added_count} run(s), skipped {skipped_count} duplicate(s)")
+
+        # Offer to fetch attempts
+        if added_count > 0 and runs:
+            fetch_attempts = input("\nFetch attempts for any of these runs? (y/n): ").strip().lower()
+            if fetch_attempts == "y":
+                run_options = [f"{r.workflow_name} ({r.id[:8]}...)" for r in runs]
+                selected = _choose("Select run to fetch attempts for", run_options, allow_blank=True)
+                if selected:
+                    # Find the selected run
+                    selected_idx = run_options.index(selected)
+                    selected_run = runs[selected_idx]
+
+                    print(f"\nFetching attempts for run {selected_run.id}...")
+                    attempts = github_service.fetch_run_attempts(
+                        owner=owner,
+                        repo=repo,
+                        run_id=selected_run.id,
+                        token=token,
+                    )
+
+                    if not attempts:
+                        print("No attempts found.")
+                    else:
+                        print(f"\nFetched {len(attempts)} attempt(s):")
+
+                        added_attempts = 0
+                        skipped_attempts = 0
+
+                        for attempt in attempts:
+                            try:
+                                try:
+                                    attempt_service.get_attempt_detail(attempt.id)
+                                    skipped_attempts += 1
+                                    logger.info(f"Skipped duplicate attempt {attempt.id}")
+                                except ValueError:
+                                    attempt_service.add_attempt(attempt)
+                                    added_attempts += 1
+                            except Exception as e:
+                                logger.warning(f"Failed to add attempt {attempt.id}: {e}")
+
+                        print(f"\nAdded {added_attempts} attempt(s), skipped {skipped_attempts} duplicate(s)")
+
+    except Exception as e:
+        print(f"Error fetching from GitHub: {e}")
+
+
 MENU = [
     ("Workflow Runs", "runs"),
     ("Workflow Attempts", "attempts"),
     ("View Statistics", "statistics"),
     ("Export/Import Data", "portability"),
+    ("Fetch from GitHub", "github_fetch"),
     ("Exit", None),
 ]
 
@@ -647,6 +769,7 @@ def run_interactive(
     attempt_service: Optional[WorkflowAttemptService] = None,
     stats_service: Optional[WorkflowStatisticsService] = None,
     portability_service=None,
+    github_service: Optional[GitHubIntegrationService] = None,
 ) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
@@ -679,5 +802,10 @@ def run_interactive(
                     print("Data portability service not initialized.")
                     continue
                 _portability_menu(portability_service)
+            elif submenu == "github_fetch":
+                if github_service is None:
+                    print("GitHub integration service not initialized.")
+                    continue
+                _github_fetch_menu(service, attempt_service, github_service)
         except KeyboardInterrupt:
             print()

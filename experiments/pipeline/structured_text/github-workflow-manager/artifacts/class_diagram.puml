@@ -101,6 +101,26 @@ package "storage" #FFF3CC {
 }
 
 package "services" #DDFFD4 {
+    class GitHubIntegrationService {
+        -_token : Optional[str]
+        -{static} API_BASE_URL : str
+        -{static} TOKEN_PREFIX : str
+        --
+        +__init__(fetch_mode: str = "api")
+        +fetch_runs(owner: str, repo: str, workflow_name: Optional[str],\n  limit: int = 30, token: Optional[str]) : List[WorkflowRun]
+        +fetch_run_attempts(owner: str, repo: str, run_id: str,\n  token: Optional[str]) : List[WorkflowRunAttempt]
+        -_resolve_token() : str
+        -_validate_token(token: str) : bool
+        -_fetch_runs_api(owner: str, repo: str, workflow_name: Optional[str],\n  limit: int, token: str) : List[WorkflowRun]
+        -_fetch_runs_cli(owner: str, repo: str, workflow_name: Optional[str],\n  limit: int, token: str) : List[WorkflowRun]
+        -_fetch_attempts_api(owner: str, repo: str, run_id: str,\n  token: str) : List[WorkflowRunAttempt]
+        -_fetch_attempts_cli(owner: str, repo: str, run_id: str,\n  token: str) : List[WorkflowRunAttempt]
+        -_convert_api_run(api_data: Dict, repo: str) : WorkflowRun
+        -_convert_api_attempt(api_data: Dict, run_id: str,\n  repo: str) : WorkflowRunAttempt
+        -_call_gh_cli(args: List[str]) : str
+        -{static} _parse_github_timestamp(timestamp_str: str) : datetime
+    }
+
     class WorkflowRunService {
         -_storage : WorkflowJsonStorage
         -_runs    : List[WorkflowRun]
@@ -205,6 +225,28 @@ package "services" #DDFFD4 {
         • Returns dict with:
           imported, skipped, count, successful, failed
     end note
+
+    note right of GitHubIntegrationService
+        **fetch_runs()** and **fetch_run_attempts()**:
+        • Primary entry points for GitHub integration
+        • Token resolved via priority:
+          1. GITHUB_TOKEN env var
+          2. secrets/.env file
+          3. Interactive prompt
+        • Validates token before API call
+        • Supports two fetch modes: REST API or gh CLI
+        • Returns domain models (WorkflowRun, WorkflowRunAttempt)
+
+        **Timestamp Parsing**:
+        • Converts GitHub ISO 8601 strings to UTC datetime
+        • Handles Z suffix and timezone-aware strings
+
+        **Data Conversion**:
+        • _convert_api_run(): GitHub API → WorkflowRun
+        • _convert_api_attempt(): GitHub API → WorkflowRunAttempt
+        • Calculates duration from timestamps
+        • Validates status and conclusion enums
+    end note
 }
 
 package "utils" #FFFFCC {
@@ -283,6 +325,7 @@ WorkflowAttemptTracker     ..>  WorkflowRunAttempt
 "interactive_menu"         ..>  WorkflowDataPortabilityService
 "interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  "timezone_converter"
+"interactive_menu"         ..>  GitHubIntegrationService
 
 ' Statistics service relationships
 WorkflowStatisticsService  "1" --> "1" WorkflowRunService : -_run_service

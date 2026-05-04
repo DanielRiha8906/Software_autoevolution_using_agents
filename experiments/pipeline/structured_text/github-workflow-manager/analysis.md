@@ -1,31 +1,26 @@
-# Task 06 - Statistics Reporting: Analysis Report
+# Task 08 - GitHub Integration: Analysis Report
 
 ## Task Summary
 
-Implement a statistics computation module that generates structured reports about workflow runs and attempts. The system must:
+Add optional GitHub integration to fetch workflow runs via GitHub API or CLI and convert fetched data to the application's domain model.
 
 **Must Have:**
-- Compute count grouped by `conclusion` (e.g., 5 SUCCESS, 3 FAILURE, 2 CANCELLED)
-- Compute average `duration_seconds` (overall and per-conclusion)
-- Compute average number of attempts per run
-- Return a structured report object (dataclass or named object, not plain dict)
-- Expose all functionality via `python -m src` as both interactive menu option and one-shot CLI flag
+- Add mode: `github_fetch_mode` (new fetch strategy to complement manual entry)
+- Fetch workflow runs via GitHub REST API (using `requests`) or `gh` CLI
+- Convert fetched data into WorkflowRun and WorkflowRunAttempt domain models
+- Resolve PAT (Personal Access Token) priority: GITHUB_TOKEN env var → secrets/.env → prompt user
+- Do not persist user-entered PAT unless configured
+- Accessible via `python -m src` (both interactive menu and CLI flag)
 
 **Should Have:**
-- Use a dataclass or named object for the report structure
-- Include min/max `duration_seconds` in the report
-
-**Could Have:**
-- Per-status breakdown of average duration (distinct from per-conclusion)
-
-**Won't Have:**
-- Visualization layer (graphs, charts)
+- Handle API errors gracefully (network failures, auth errors, rate limits)
+- Validate token before requests (test connectivity)
 
 ---
 
 ## Current Architecture Overview
 
-### Three-Tier Layered Architecture
+### Layered Application Structure
 
 ```
 Application Entrypoint (__main__.py)
@@ -34,885 +29,505 @@ Interface Layer (workflow_cli.py, interactive_menu.py)
     ├── CLI: argparse-driven one-shot commands
     └── Interactive: multi-step menu-driven interface
     ↓
-Service Layer (WorkflowRunService, WorkflowAttemptService, Trackers)
-    ├── WorkflowRunService — CRUD + filtering
-    ├── WorkflowAttemptService — CRUD + filtering
-    ├── WorkflowRunTracker — run creation facade
-    └── WorkflowAttemptTracker — attempt creation facade
+Service Layer (WorkflowRunService, WorkflowAttemptService, Trackers, Statistics, Portability)
+    ├── WorkflowRunService — CRUD + filtering for runs
+    ├── WorkflowAttemptService — CRUD + filtering for attempts
+    ├── WorkflowRunTracker — run creation facade (generates UUIDs, timestamps)
+    ├── WorkflowAttemptTracker — attempt creation facade
+    ├── WorkflowStatisticsService — report generation
+    └── WorkflowDataPortabilityService — export/import JSON
     ↓
 Storage Layer (WorkflowJsonStorage, WorkflowAttemptJsonStorage)
     ├── JSON file persistence
     └── Load/save operations
     ↓
 Domain Models (WorkflowRun, WorkflowRunAttempt, enums)
-    ├── Dataclasses with serialization
+    ├── Dataclasses with serialization (to_dict/from_dict)
     ├── State query methods
     └── Type-safe enums
 ```
 
-### Data Flow
-1. Data is loaded from JSON files via storage layer into service layer
-2. Services maintain in-memory lists and expose query/filter methods
-3. CLI and interactive menu call service methods to retrieve/filter data
-4. Statistics computation must operate on service-layer data
+### Entry Point Pattern
+
+File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/__main__.py`
+
+Currently:
+- Initializes storage layers (WorkflowJsonStorage, WorkflowAttemptJsonStorage)
+- Instantiates services (WorkflowRunService, WorkflowAttemptService, WorkflowStatisticsService, WorkflowDataPortabilityService)
+- Routes to CLI or interactive menu based on sys.argv presence
+- All services are injected into both CLI and menu functions
+
+New GitHub integration must follow same pattern: create service → initialize in __main__.py → pass to CLI/menu.
+
+### CLI Routing Pattern
+
+File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/cli/workflow_cli.py`
+
+Current subcommands:
+- `add` — manually add workflow run
+- `list` — list runs with optional filters
+- `detail` — show single run
+- `query-state` — query run state
+- `attempt add/list/detail/query-state` — attempt management
+- `report` — generate statistics
+- `export runs/attempts` — export data
+- `import runs/attempts` — import data
+
+New `fetch` subcommand needed for GitHub integration:
+- `fetch --owner <owner> --repo <repo> [--workflow <name>] [--limit <n>] [--mode api|cli]`
+
+### Interactive Menu Pattern
+
+File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/cli/interactive_menu.py`
+
+Current menu structure:
+```
+Main menu options:
+  1. Workflow Runs → run_menu (add, list, detail, filter, query state)
+  2. Workflow Attempts → attempt_menu (add, list, detail, filter, query state)
+  3. Statistics → view_statistics
+  4. Export/Import Data → portability_menu
+  5. Exit
+```
+
+New menu option needed:
+- Option "Fetch from GitHub" in main menu (before exit) → github_fetch_menu with prompts for owner, repo, workflow name, token source
 
 ---
 
-## Domain Model: Data Structures for Statistics
+## Existing Domain Model Structure
 
-### WorkflowRun (src/models/workflow_run.py)
+### WorkflowRun
+File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/models/workflow_run.py`
 
-**Key Fields for Statistics:**
-- `conclusion: Optional[WorkflowConclusion]` — Nullable enum (success, failure, cancelled, skipped, timed_out, action_required, neutral, stale)
-- `duration_seconds: float` — Non-negative, default 0.0
-- `id: str` — Unique identifier (needed to count runs)
+Fields:
+- `id: str` — unique identifier (currently UUID generated locally)
+- `workflow_name: str` — name of the workflow
+- `branch: str` — git branch
+- `status: WorkflowStatus` — enum (queued, in_progress, completed, waiting, requested, pending)
+- `conclusion: Optional[WorkflowConclusion]` — enum (success, failure, cancelled, skipped, timed_out, action_required, neutral, stale) or None
+- `created_at: datetime` — UTC timestamp
+- `updated_at: Optional[datetime]` — UTC timestamp or None
+- `run_number: Optional[int]` — GitHub run number (optional, can be fetched from API)
+- `commit_sha: Optional[str]` — commit SHA (optional, can be fetched from API)
+- `duration_seconds: float` — execution time in seconds
 
-**Important Constraint:**
-- A run may have `conclusion = None` (non-terminal states: queued, in_progress, waiting, requested, pending)
-- Statistics must handle None conclusions gracefully
+Methods:
+- `to_dict() / from_dict()` — serialization
+- `is_terminal(), is_running(), is_successful(), is_failed(), is_cancelled()` — state queries
 
-### WorkflowRunAttempt (src/models/workflow_attempt.py)
+### WorkflowRunAttempt
+File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/models/workflow_attempt.py`
 
-**Key Fields for Statistics:**
-- `run_id: str` — Foreign key to parent run
-- `attempt_number: int` — Sequence number (1, 2, 3...)
-- `duration_seconds: float` — Non-negative, default 0.0
-- `conclusion: Optional[WorkflowConclusion]` — Same as WorkflowRun
+Fields:
+- `id: str` — unique identifier
+- `run_id: str` — foreign key to WorkflowRun
+- `attempt_number: int` — sequence number (1, 2, 3...)
+- `status: WorkflowStatus` — same as WorkflowRun
+- `conclusion: Optional[WorkflowConclusion]` — same as WorkflowRun
+- `started_at: datetime` — UTC timestamp
+- `completed_at: Optional[datetime]` — UTC timestamp or None
+- `duration_seconds: float` — execution time in seconds
+- `logs_url: Optional[str]` — URL to logs (can be fetched from API)
 
-**Important Relationship:**
-- One-to-many: 1 WorkflowRun → N WorkflowRunAttempts
-- Attempts are stored separately; must query attempt service to link to runs
+Methods:
+- `to_dict() / from_dict()` — serialization
+- `is_terminal(), is_running(), is_successful(), is_failed(), is_cancelled()` — state queries
 
 ### Enums
 
-**WorkflowConclusion (workflow_conclusion.py):**
-8 possible values: success, failure, cancelled, skipped, timed_out, action_required, neutral, stale (plus None)
+**WorkflowStatus:** queued, in_progress, completed, waiting, requested, pending
 
-**WorkflowStatus (workflow_status.py):**
-6 possible values: queued, in_progress, completed, waiting, requested, pending
-(Not used for statistics grouping in must-have, but available for could-have)
+**WorkflowConclusion:** success, failure, cancelled, skipped, timed_out, action_required, neutral, stale
 
 ---
 
-## Service Layer: Current Capabilities
+## Service Layer: Existing Patterns
 
-### WorkflowRunService (src/services/workflow_run_service.py)
+### WorkflowRunService
+File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/services/workflow_run_service.py`
 
-**Available Methods:**
-- `list_runs() → List[WorkflowRun]` — Get all runs (needed for statistics)
-- `filter_runs(...)` → List[WorkflowRun]` — Filter with multiple criteria
-- Various filter_by_* methods
+Pattern:
+- Constructor takes `WorkflowJsonStorage` → loads data into `self._runs: List[WorkflowRun]`
+- Public methods: `add_workflow_run(run)`, `list_runs()`, `get_run_detail(run_id)`, various `filter_*` methods
+- Private method: `_persist()` calls storage.save(self._runs)
+- All mutations immediately persist to JSON
 
-**Data Access Pattern:**
-- Maintains in-memory `_runs: List[WorkflowRun]` (loaded from storage on init)
-- All filtering returns new lists (no mutation)
-- Direct access to runs list via `list_runs()`
+### WorkflowRunTracker
+File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/services/workflow_run_tracker.py`
 
-### WorkflowAttemptService (src/services/workflow_attempt_service.py)
+Pattern:
+- High-level facade for creating WorkflowRun instances
+- Constructor: `__init__(service, attempt_service)`
+- Public method: `track(workflow_name, branch, status, ...)` → creates WorkflowRun, calls service.add_workflow_run()
+- Generates UUIDs and timestamps automatically (not from external data)
 
-**Available Methods:**
-- `list_attempts() → List[WorkflowRunAttempt]` — Get all attempts
-- `filter_by_run_id(run_id: str) → List[WorkflowRunAttempt]` — Get attempts for a run (sorted by attempt_number ascending)
+### WorkflowAttemptService & Tracker
 
-**Data Access Pattern:**
-- Maintains in-memory `_attempts: List[WorkflowRunAttempt]` (loaded from storage on init)
-- Can link attempts to runs via run_id foreign key
-
----
-
-## Statistics Requirements Analysis
-
-### Requirement 1: Count by Conclusion
-
-**What to compute:**
-- Group all runs by `conclusion` value
-- Count runs in each group
-- Handle None conclusions (non-terminal runs)
-
-**Example output structure:**
-```python
-conclusion_counts = {
-    'success': 5,
-    'failure': 3,
-    'cancelled': 2,
-    'skipped': 1,
-    None: 2  # or 'pending' if we treat non-terminal separately
-}
-```
-
-**Implementation notes:**
-- Must iterate all runs from WorkflowRunService.list_runs()
-- Group by run.conclusion field (str Enum or None)
-- Count occurrences
-
-### Requirement 2: Average Duration Seconds
-
-**What to compute:**
-1. **Overall average** — mean of all run durations (or filtered subset)
-2. **Per-conclusion average** — mean duration for each conclusion group
-
-**Calculation:**
-- Sum all duration_seconds values
-- Divide by count of runs
-- Handle edge case: empty list (0 runs) → return 0 or None
-
-**Example output:**
-```python
-duration_stats = {
-    'overall_average': 45.5,
-    'by_conclusion': {
-        'success': 40.2,
-        'failure': 55.3,
-        'cancelled': 30.0,
-        ...
-    },
-    'min_seconds': 5.0,      # Should have (global min)
-    'max_seconds': 120.0,    # Should have (global max)
-}
-```
-
-### Requirement 3: Average Number of Attempts per Run
-
-**What to compute:**
-- For each run, count its associated attempts
-- Calculate mean attempts across all runs
-- Include runs with 0 attempts
-
-**Calculation:**
-1. Get all runs from WorkflowRunService
-2. For each run.id, query WorkflowAttemptService.filter_by_run_id(run.id)
-3. Count attempts for that run
-4. Average the counts: sum / total_runs
-
-**Example:**
-```python
-attempts_stats = {
-    'total_attempts': 12,
-    'total_runs': 5,
-    'average_attempts_per_run': 2.4,  # 12 / 5
-    'runs_with_no_attempts': 1,
-    'runs_with_attempts': 4,
-}
-```
-
-### Requirement 4: Structured Report Object
-
-**What to design:**
-- A dataclass (not plain dict) to hold all statistics
-- Fields for all computed metrics
-- Optional: serialization methods for JSON output
-
-**Proposed structure:**
-```python
-@dataclass
-class WorkflowStatisticsReport:
-    # Counts
-    total_runs: int
-    conclusion_counts: Dict[Optional[str], int]  # {conclusion_value: count}
-    
-    # Duration stats (runs)
-    average_duration_seconds: float
-    min_duration_seconds: float
-    max_duration_seconds: float
-    duration_by_conclusion: Dict[Optional[str], float]  # {conclusion: avg_duration}
-    
-    # Attempt stats
-    total_attempts: int
-    average_attempts_per_run: float
-    runs_with_no_attempts: int
-    runs_with_attempts: int
-    
-    # Metadata
-    generated_at: datetime
-    
-    def to_dict(self) -> dict:
-        """Serialize for JSON output"""
-    
-    @classmethod
-    def from_services(...) -> WorkflowStatisticsReport:
-        """Factory method to compute from services"""
-```
-
-### Requirement 5: CLI Exposure
-
-**Current CLI structure (src/cli/workflow_cli.py):**
-- Uses argparse with subcommands (add, list, detail, query-state, attempt)
-- Each subcommand maps to a handler function in run_cli()
-
-**What needs to be added:**
-- New subcommand: `stats` or `report` or `statistics`
-- Command-line flags: `--report` or `--stats` (alternate naming)
-- Handler that calls statistics computation service
-- Output formatting (human-readable or JSON)
-
-**Example CLI usage:**
-```bash
-python -m src stats                    # Interactive: compute and display
-python -m src --report                 # One-shot CLI: return JSON
-python -m src report --format json     # JSON output
-python -m src report --format text     # Human-readable output
-```
-
-### Requirement 6: Interactive Menu Exposure
-
-**Current menu structure (src/cli/interactive_menu.py):**
-- run_interactive() displays main menu
-- _run_menu() shows options for runs
-- _attempt_menu() shows options for attempts
-
-**What needs to be added:**
-- New main menu option: "View Statistics" or "Generate Report"
-- Handler function that calls computation
-- Display results in formatted output (table or summary)
-
-**Example menu flow:**
-```
-Main Menu:
-  1. Workflow Runs
-  2. Workflow Attempts
-  3. View Statistics      <- NEW
-  4. Exit
-
-Choice: 3
--> Computes stats for all runs/attempts
--> Displays summary in formatted output
--> Returns to main menu
-```
+Similar pattern to runs: service handles CRUD, tracker is creation facade.
 
 ---
 
-## Key Findings
+## GitHub API / Data Mapping
 
-### 1. Data Is Available and Accessible
+### GitHub REST API Response Structure (Workflow Runs)
 
-- WorkflowRunService.list_runs() provides all runs in memory
-- WorkflowAttemptService.list_attempts() provides all attempts
-- WorkflowAttemptService.filter_by_run_id(run_id) provides attempts per run
-- No new data fetching mechanisms needed; use existing service methods
+From GitHub Actions API: GET /repos/{owner}/{repo}/actions/runs
 
-### 2. Duration and Attempt Data Is Already Stored
+Response contains array of runs with fields:
+- `id` — numeric run ID (convert to string for domain model id field)
+- `name` — workflow name (maps to workflow_name)
+- `status` — GitHub status: "queued", "in_progress", "completed", "waiting", "requested", "pending" (maps directly to WorkflowStatus)
+- `conclusion` — GitHub conclusion: "success", "failure", "cancelled", "skipped", "timed_out", "action_required", "neutral", "stale" or null (maps directly to WorkflowConclusion)
+- `head_branch` — branch name (maps to branch)
+- `run_number` — numeric run number (maps to run_number)
+- `head_sha` — commit SHA (maps to commit_sha)
+- `created_at` — ISO timestamp string (parse to datetime, maps to created_at)
+- `updated_at` — ISO timestamp string (parse to datetime, maps to updated_at)
 
-- Both WorkflowRun and WorkflowRunAttempt have `duration_seconds: float`
-- WorkflowRunAttempt.run_id links to parent run
-- No schema changes needed; statistics computation is pure calculation
+Derived:
+- `duration_seconds` — Not directly in API response. Calculate from created_at and updated_at if status is completed, otherwise 0.0
 
-### 3. Conclusion Field Handles Non-Terminal States
+### GitHub REST API Response Structure (Workflow Run Attempts)
 
-- WorkflowRun.conclusion is Optional[WorkflowConclusion]
-- Can be None for non-terminal runs (status != COMPLETED)
-- Statistics must handle None as a valid grouping key
-- **Design choice:** Group None conclusions under "pending" or "incomplete" label for clarity
+From GitHub Actions API: GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts
 
-### 4. Service Layer Extension Location
+Response contains array of attempts with fields:
+- `id` — numeric attempt ID (convert to string)
+- `attempt_number` — sequence number
+- `status` — same enum as runs
+- `conclusion` — same enum as runs
+- `created_at` — ISO timestamp (maps to started_at)
+- `completed_at` — ISO timestamp or null (maps to completed_at)
+- `name` — workflow name (for reference, not stored in WorkflowRunAttempt)
 
-- Create a new service or utility class for statistics computation
-- Options:
-  1. **New file:** `src/services/workflow_statistics_service.py` (follows pattern)
-  2. **New file:** `src/utils/statistics_calculator.py` (lighter-weight utility)
-  3. **Extend existing:** Add method to WorkflowRunService (not ideal; violates single responsibility)
+Derived:
+- `run_id` — passed as parameter from the run fetch loop
+- `duration_seconds` — calculate from created_at and completed_at if available
 
-**Recommendation:** Create `src/services/workflow_statistics_service.py` to keep architecture consistent.
+---
 
-### 5. CLI and Menu Need New Entry Points
+## Required Changes: File-by-File Scope
 
-**CLI changes (src/cli/workflow_cli.py):**
-- Add new subparser in build_parser() for `stats` or `report` command
-- Handle in run_cli() dispatch logic
-- Output formatted results to stdout
+### NEW FILES
 
-**Menu changes (src/cli/interactive_menu.py):**
-- Add new main menu option (after Runs/Attempts)
-- Create handler function (e.g., _view_statistics())
-- Format and display results
+#### 1. src/services/github_integration_service.py
+Purpose: Fetch data from GitHub API or CLI and convert to domain models.
 
-### 6. Report Object Should Be a Dataclass
+Responsibilities:
+- Token resolution (env var → secrets/.env → prompt user)
+- API client initialization (requests library for REST API, or subprocess for gh CLI)
+- Fetch workflow runs for a given owner/repo
+- Fetch workflow attempts for a given run
+- Convert GitHub API response → WorkflowRun / WorkflowRunAttempt instances
+- Error handling (network, auth, rate limits, API errors)
+- Token validation before fetching
 
-- Matches existing pattern (WorkflowRun, WorkflowRunAttempt are dataclasses)
-- Enables serialization/deserialization
-- Type-safe fields
-- Can add helper methods for formatting/display
+Key methods:
+- `__init__(fetch_mode: str = "api")` — mode: "api" (requests) or "cli" (gh)
+- `_resolve_token() -> str` — check GITHUB_TOKEN env, then secrets/.env, then prompt
+- `_validate_token(token: str) -> bool` — test token validity (shallow API call)
+- `fetch_runs(owner: str, repo: str, workflow_name: Optional[str] = None, limit: int = 30) -> List[WorkflowRun]`
+- `fetch_run_attempts(owner: str, repo: str, run_id: str) -> List[WorkflowRunAttempt]`
+- `_convert_api_run(api_data: dict, repo: str) -> WorkflowRun` — private helper
+- `_convert_api_attempt(api_data: dict, run_id: str, repo: str) -> WorkflowRunAttempt` — private helper
+- `_call_gh_cli(args: List[str]) -> str` — private helper for subprocess execution
+- `_call_api(url: str, method: str = "GET", data: Optional[dict] = None) -> dict` — private helper for requests
+
+#### 2. tests/test_github_integration_service.py
+Unit and integration tests for:
+- Token resolution logic (mocking env vars, file reads)
+- API response parsing (mock GitHub responses)
+- Conversion logic (API data → domain models)
+- Error handling (network errors, auth failures, invalid responses)
+- CLI mode testing (mocking subprocess calls)
+- API mode testing (mocking requests library)
+
+### MODIFIED FILES
+
+#### 1. src/__main__.py
+Add initialization of GitHubIntegrationService:
+- Create instance with fetch_mode parameter (default "api")
+- Pass to CLI and interactive menu
+
+#### 2. src/cli/workflow_cli.py
+Add new subcommand `fetch`:
+- `fetch` subparser with subcommands:
+  - `fetch runs` — fetch workflow runs
+    - `--owner <owner>` (required)
+    - `--repo <repo>` (required)
+    - `--workflow <name>` (optional, filter to specific workflow)
+    - `--limit <n>` (optional, default 30)
+    - `--mode api|cli` (optional, default api)
+    - `--token <token>` (optional, for testing or explicit override)
+  - `fetch attempts` — fetch attempts for a specific run
+    - `--owner <owner>` (required)
+    - `--repo <repo>` (required)
+    - `--run-id <id>` (required)
+    - `--mode api|cli` (optional)
+    - `--token <token>` (optional)
+
+Integration with existing services:
+- After fetching, call `WorkflowRunService.add_workflow_run()` for each run
+- After fetching attempts, call `WorkflowAttemptService.add_attempt()` for each attempt
+- Display summary (count added, count skipped due to duplicate ID)
+
+#### 3. src/cli/interactive_menu.py
+Add new menu option:
+- "Fetch from GitHub" → `_github_fetch_menu()`
+
+Menu flow:
+1. Prompt user for owner (required)
+2. Prompt user for repo (required)
+3. Prompt user for workflow name (optional)
+4. Prompt user for mode (api or cli, default api)
+5. Prompt user for token source (env, secrets file, prompt, or skip)
+6. Call GitHubIntegrationService.fetch_runs() and display results
+7. Option to fetch attempts for first result (or show menu to select run)
+
+#### 4. src/services/__init__.py
+Export GitHubIntegrationService in __all__
+
+---
+
+## Implementation Scope: Token Management
+
+### Token Resolution Priority (Must Have)
+1. Check `GITHUB_TOKEN` environment variable (os.getenv("GITHUB_TOKEN"))
+2. If not found, check `secrets/.env` file in working directory
+   - Format: `GITHUB_TOKEN=ghp_...` (or similar)
+   - Use dotenv or manual file parsing
+3. If not found, prompt user interactively
+4. Do NOT persist user-entered token unless explicitly configured
+
+### Token Validation (Should Have)
+Before using token for actual API calls:
+- Make a simple GET request: https://api.github.com/user (or gh auth status for CLI mode)
+- If valid, continue with run/attempt fetches
+- If invalid (401), retry prompt or fail gracefully with error message
+
+### Sensitive Data Handling
+- Never log full token value (show only first 4 chars: "ghp_****")
+- Do not write prompted token to any file
+- Keep token in memory only for duration of session
+- Close file handles after reading secrets/.env
+
+---
+
+## Integration Points: Exact Files and Functions
+
+### Entry Point
+**File:** `src/__main__.py`
+**Function:** `main()`
+
+Before line 27 (if len(sys.argv) == 1), after portability_service init:
+```python
+# Create GitHub integration service
+github_service = GitHubIntegrationService(fetch_mode="api")
+```
+
+Update function signatures:
+```python
+run_interactive(service, attempt_service, stats_service, portability_service, github_service)
+run_cli(service, attempt_service, stats_service, portability_service, github_service, args)
+```
+
+### CLI
+**File:** `src/cli/workflow_cli.py`
+**Function:** `build_parser()`
+
+Add after line 276 (after import section):
+```python
+# fetch subcommand with runs/attempts subcommands
+fetch_p = sub.add_parser("fetch", help="Fetch workflow runs from GitHub")
+fetch_sub = fetch_p.add_subparsers(dest="fetch_command", required=True)
+
+fetch_runs_p = fetch_sub.add_parser("runs", help="Fetch workflow runs from GitHub")
+fetch_runs_p.add_argument("--owner", required=True, help="GitHub repository owner")
+fetch_runs_p.add_argument("--repo", required=True, help="GitHub repository name")
+fetch_runs_p.add_argument("--workflow", default=None, help="Filter by workflow name (optional)")
+fetch_runs_p.add_argument("--limit", type=int, default=30, help="Maximum runs to fetch (default 30)")
+fetch_runs_p.add_argument("--mode", choices=["api", "cli"], default="api", help="Fetch mode (default api)")
+fetch_runs_p.add_argument("--token", default=None, help="GitHub token (optional, uses env/file if omitted)")
+
+fetch_attempts_p = fetch_sub.add_parser("attempts", help="Fetch workflow attempts from GitHub")
+fetch_attempts_p.add_argument("--owner", required=True, help="GitHub repository owner")
+fetch_attempts_p.add_argument("--repo", required=True, help="GitHub repository name")
+fetch_attempts_p.add_argument("--run-id", required=True, help="Workflow run ID")
+fetch_attempts_p.add_argument("--mode", choices=["api", "cli"], default="api", help="Fetch mode")
+fetch_attempts_p.add_argument("--token", default=None, help="GitHub token (optional)")
+```
+
+**Function:** `run_cli()` command handler
+
+Add before line 279 (after command routing):
+```python
+elif ns.command == "fetch":
+    if github_service is None:
+        print("GitHub service not initialized.", file=sys.stderr)
+        sys.exit(1)
+    
+    if ns.fetch_command == "runs":
+        # Call github_service.fetch_runs(...)
+        # Add results via tracker.track(...)
+        # Report count added/skipped
+        pass
+    elif ns.fetch_command == "attempts":
+        # Call github_service.fetch_run_attempts(...)
+        # Add results via tracker.create_attempt(...)
+        # Report count added/skipped
+        pass
+```
+
+### Interactive Menu
+**File:** `src/cli/interactive_menu.py`
+
+Add to MENU list (before "Exit" entry):
+```python
+("Fetch from GitHub", "github_fetch"),
+```
+
+Add handler in `run_interactive()` after portability check:
+```python
+elif submenu == "github_fetch":
+    if github_service is None:
+        print("GitHub service not initialized.")
+        continue
+    _github_fetch_menu(service, attempt_service, github_service, tracker)
+```
+
+Add new function `_github_fetch_menu()`:
+- Prompt for owner, repo, workflow name, mode, token source
+- Call github_service.fetch_runs()
+- Call service.add_workflow_run() or tracker.track() for each result
+- Display results
+- Offer to fetch attempts for selected runs
+
+---
+
+## Error Handling Strategy
+
+### Network Errors
+- requests.ConnectionError → "Network error: check internet connection"
+- Subprocess failure for gh CLI → "gh CLI not available or authentication failed"
+
+### Authentication Errors (401, 403)
+- github_service._validate_token() fails → "Token validation failed. Check GITHUB_TOKEN or delete secrets/.env and try again."
+
+### Rate Limiting (403 rate limit)
+- Detect from response header → "GitHub API rate limit exceeded. Try again later."
+
+### Invalid Data Responses
+- Missing expected fields → "Invalid GitHub API response: missing field '<name>'"
+- Invalid enum values → Skip that record and continue (log warning)
+
+### File I/O Errors
+- secrets/.env not readable → Fall back to prompt
+- Token prompt cancelled (Ctrl+C) → Exit with "Cancelled"
 
 ---
 
 ## Ambiguities and Working Assumptions
 
-### Ambiguity 1: How to Handle Non-Terminal Runs
+### 1. Token File Location
+Assumption: `secrets/.env` in working directory (the root of the experiment folder).
+Alternative: Could be `.env` in working directory. Decision: Use `secrets/.env` first for explicit separation of secrets directory.
 
-**Ambiguity:** When grouping by conclusion, how should runs with `conclusion = None` (non-terminal) be displayed?
-- Option A: Show as separate "None" group
-- Option B: Label as "Incomplete" or "Pending"
-- Option C: Include in statistics but note they are non-terminal
+### 2. Fetch Mode Default
+Assumption: Default to REST API (`requests` library) because it's more portable and doesn't require `gh` CLI installation.
+Alternative: Default to `gh` CLI if available, fall back to requests. Decision: Stick with requests as default, CLI as opt-in.
 
-**Working Assumption:** 
-- Include None conclusions in grouping with a label like "incomplete" or "pending" for clarity
-- Keep internal representation as None for type safety
-- Display formatting can show a human-readable label
+### 3. Duplicate Run Handling
+Assumption: If a run with the same ID already exists (from manual entry or prior fetch), skip it and report count.
+Alternative: Allow option to overwrite. Decision: Skip with message (consistent with import behavior in Task 7).
 
-### Ambiguity 2: Empty Runs Edge Case
+### 4. Attempt Fetching
+Assumption: Attempts can be fetched separately per run (not automatically when fetching runs).
+Rationale: API quota and user control—not all workflows have multiple attempts.
 
-**Ambiguity:** What should statistics return if there are zero runs?
-- Option A: Return all zeros
-- Option B: Return None or special "no data" object
-- Option C: Return error
+### 5. Token Persistence
+Assumption: User-entered token is NOT persisted anywhere (kept in memory only for this session).
+Rationale: Security best practice and explicit "don't persist" requirement in must-have.
 
-**Working Assumption:**
-- Return report with count=0, average=0, min=None, max=None
-- No error; graceful handling of empty data
+### 6. Datetime Handling
+Assumption: GitHub API returns ISO 8601 timestamps. Parse with `datetime.fromisoformat()`.
+Consideration: GitHub may use 'Z' suffix (UTC). Handle with timezone_converter utility or Python's fromisoformat().
 
-### Ambiguity 3: Scope of "Per-Status" Statistics
-
-**Task says "Could Have: Per-status breakdown"** — distinct from per-conclusion.
-**Ambiguity:** What metrics per status?
-- Option A: Count by status (similar to conclusion)
-- Option B: Average duration by status
-- Option C: Both
-
-**Working Assumption:**
-- This is "Could Have" so defer to later
-- If implemented: parallel structure to per-conclusion stats
-- Would require additional logic to group by both status and conclusion
-
-### Ambiguity 4: Should Statistics Filter Incomplete Data?
-
-**Ambiguity:** Should statistics include runs/attempts that are still in progress?
-- Option A: Include all (regardless of status/conclusion)
-- Option B: Exclude non-terminal (status != COMPLETED)
-- Option C: Separate reports for complete vs. incomplete
-
-**Working Assumption:**
-- Include all runs and attempts (complete and incomplete)
-- Non-terminal runs contribute to duration average and attempt counts
-- Separation by completion status can be added as optional filter later
-
-### Ambiguity 5: CLI Command Naming
-
-**Task doesn't specify the exact command name.**
-- Options: `stats`, `report`, `statistics`, `metrics`
-
-**Working Assumption:**
-- Use `report` as the subcommand name (shorter, clearer)
-- Keep internal class name as WorkflowStatisticsReport or StatisticsReport
+### 7. Duration Calculation
+Assumption: For runs, duration = (updated_at - created_at).total_seconds() if both exist, else 0.0
+Assumption: For attempts, duration = (completed_at - started_at).total_seconds() if both exist, else 0.0
+Rationale: Matches existing model convention.
 
 ---
 
-## Scope In/Out/Borderline
+## Testing Strategy
 
-### IN: Must Implement
+### Unit Tests (Mock All External Calls)
+- Token resolution: mock os.getenv, file reads
+- API parsing: mock requests.get responses
+- Enum conversions: GitHub API data → domain models
+- Error cases: 401, 403, 404, network error, invalid JSON
 
-1. Count of runs grouped by conclusion value
-2. Average duration_seconds (overall and per-conclusion)
-3. Average number of attempts per run
-4. Structured report object (dataclass)
-5. Accessible via `python -m src` (both interactive menu and CLI)
-6. Both interactive (menu) and one-shot (CLI flag) access modes
+### Integration Tests
+- End-to-end with github_service → add to service → verify persistence
 
-### IN: Should Have
-
-1. Min/max duration_seconds in report
-2. Dataclass structure (not plain dict)
-
-### BORDERLINE: Could Have
-
-1. Per-status breakdown of average duration
-2. Additional metrics (stddev, percentiles, etc.)
-3. Report export formats (JSON, CSV)
-4. Ability to filter statistics (e.g., stats for branch=main only)
-
-### OUT: Explicitly Excluded
-
-1. Visualization (charts, graphs)
-2. Database back-end (JSON storage only)
-3. Real-time streaming statistics
-4. Historical tracking (stats only for current data, not time-series)
-5. External API integration
+### Test Fixtures
+- Sample GitHub API response JSON (use real examples from GitHub docs)
+- Valid and invalid tokens
+- Various workflow statuses/conclusions
 
 ---
 
-## Where Statistics Should Be Computed
+## Scope Boundaries
 
-### Option 1: Service Class (Recommended)
+### In Scope
+- Fetch workflow runs from GitHub (owner/repo/workflow filter)
+- Fetch workflow attempts for a given run
+- Convert API response to WorkflowRun and WorkflowRunAttempt models
+- Token resolution (env → file → prompt)
+- Error handling (network, auth, rate limits)
+- Token validation (shallow check)
+- Interactive menu and CLI flag entry points
+- Persist fetched data to existing JSON storage
 
-**File:** `src/services/workflow_statistics_service.py`
-
-**Class:**
-```python
-class WorkflowStatisticsService:
-    def __init__(
-        self,
-        workflow_run_service: WorkflowRunService,
-        workflow_attempt_service: WorkflowAttemptService,
-    ):
-        self._run_service = workflow_run_service
-        self._attempt_service = workflow_attempt_service
-    
-    def compute_report(self) -> WorkflowStatisticsReport:
-        """Compute full statistics report from all runs/attempts"""
-        ...
-    
-    def compute_report_for_runs(
-        self,
-        runs: List[WorkflowRun]
-    ) -> WorkflowStatisticsReport:
-        """Compute statistics for a filtered subset of runs"""
-        ...
-```
-
-**Advantages:**
-- Consistent with existing architecture (follows service pattern)
-- Dependency injection of services
-- Testable in isolation
-- Can add caching/optimization later
-
-**Disadvantages:**
-- Slightly more code structure
-
-### Option 2: Utility Module
-
-**File:** `src/utils/statistics_calculator.py`
-
-**Functions:**
-```python
-def compute_statistics(
-    runs: List[WorkflowRun],
-    attempts: List[WorkflowRunAttempt],
-) -> WorkflowStatisticsReport:
-    ...
-```
-
-**Advantages:**
-- Simpler, lightweight
-- No class wrapping needed
-- Easier for one-shot usage
-
-**Disadvantages:**
-- Mixes utilities and domain logic
-- Less aligned with existing service architecture
-
-**Recommendation:** Use Option 1 (Service Class) for architectural consistency.
+### Out of Scope
+- Webhook-based automatic fetching (pull-based only)
+- Graphql API (REST API only, plus gh CLI as alternative)
+- Advanced filtering (status, conclusion, date range) — that's for existing filter commands
+- Caching (fetch fresh each time)
+- Data transformation beyond domain model conversion
+- Visualization of fetched runs
 
 ---
 
-## Report Object Design
+## Summary: Required Implementation Files and Functions
 
-### Recommended Dataclass Structure
+**New Service Class:**
+- `src/services/github_integration_service.py` — GitHubIntegrationService
 
-**File:** `src/models/workflow_statistics_report.py` (new)
+**Modified Entry Point:**
+- `src/__main__.py` — Initialize github_service, pass to CLI/menu
 
-```python
-from dataclasses import dataclass
-from datetime import datetime
-from typing import Dict, Optional
+**Modified CLI:**
+- `src/cli/workflow_cli.py` — Add `fetch` subcommand with runs/attempts subcommands
 
-@dataclass
-class WorkflowStatisticsReport:
-    # Run counts
-    total_runs: int
-    conclusion_counts: Dict[Optional[str], int]
-    
-    # Duration statistics
-    average_duration_seconds: float
-    min_duration_seconds: Optional[float]
-    max_duration_seconds: Optional[float]
-    duration_by_conclusion: Dict[Optional[str], float]
-    
-    # Attempt statistics
-    total_attempts: int
-    average_attempts_per_run: float
-    runs_with_no_attempts: int
-    runs_with_attempts: int
-    
-    # Metadata
-    generated_at: datetime
-    
-    def to_dict(self) -> dict:
-        """Serialize for JSON output"""
-        return {
-            'total_runs': self.total_runs,
-            'conclusion_counts': {
-                str(k) if k is not None else 'incomplete': v
-                for k, v in self.conclusion_counts.items()
-            },
-            'average_duration_seconds': self.average_duration_seconds,
-            'min_duration_seconds': self.min_duration_seconds,
-            'max_duration_seconds': self.max_duration_seconds,
-            'duration_by_conclusion': {
-                str(k) if k is not None else 'incomplete': v
-                for k, v in self.duration_by_conclusion.items()
-            },
-            'total_attempts': self.total_attempts,
-            'average_attempts_per_run': self.average_attempts_per_run,
-            'runs_with_no_attempts': self.runs_with_no_attempts,
-            'runs_with_attempts': self.runs_with_attempts,
-            'generated_at': self.generated_at.isoformat(),
-        }
-```
+**Modified Interactive Menu:**
+- `src/cli/interactive_menu.py` — Add "Fetch from GitHub" menu option with _github_fetch_menu()
+
+**Modified Exports:**
+- `src/services/__init__.py` — Export GitHubIntegrationService
+
+**New Tests:**
+- `tests/test_github_integration_service.py` — Unit tests for service
 
 ---
 
-## Files That Need to Be Modified/Created
-
-### New Files to Create
-
-1. **src/models/workflow_statistics_report.py** (NEW)
-   - Define WorkflowStatisticsReport dataclass
-   - Add to_dict(), from_dict() methods
-
-2. **src/services/workflow_statistics_service.py** (NEW)
-   - Define WorkflowStatisticsService class
-   - Implement compute_report() method
-   - Use WorkflowRunService and WorkflowAttemptService
-
-### Files to Modify
-
-1. **src/cli/workflow_cli.py**
-   - Add `report` subparser in build_parser()
-   - Add handler in run_cli() for report command
-   - Format and print results
-
-2. **src/cli/interactive_menu.py**
-   - Add _view_statistics() handler function
-   - Add menu option to main menu or submenu
-   - Format and display results
-
-3. **src/__main__.py**
-   - Initialize WorkflowStatisticsService
-   - Pass to both CLI and interactive menu interfaces
-
-4. **src/models/__init__.py**
-   - Export WorkflowStatisticsReport
-
-5. **src/services/__init__.py**
-   - Export WorkflowStatisticsService
-
-6. **tests/** (multiple new test files)
-   - test_workflow_statistics_service.py
-   - test_workflow_statistics_report.py
-
-7. **artifacts/class_diagram.puml**
-   - Add WorkflowStatisticsReport class
-   - Add WorkflowStatisticsService class
-   - Show relationships to other classes
-
----
-
-## Entry Points to Modify
-
-### src/__main__.py
-
-**Current code:**
-```python
-def main() -> None:
-    storage = WorkflowJsonStorage("artifacts/workflow_runs.json")
-    service = WorkflowRunService(storage)
-    attempt_storage = WorkflowAttemptJsonStorage("artifacts/workflow_attempts.json")
-    attempt_service = WorkflowAttemptService(attempt_storage)
-    
-    if len(sys.argv) == 1:
-        run_interactive(service, attempt_service)
-    else:
-        run_cli(service, attempt_service)
-```
-
-**Changes needed:**
-```python
-def main() -> None:
-    storage = WorkflowJsonStorage("artifacts/workflow_runs.json")
-    service = WorkflowRunService(storage)
-    attempt_storage = WorkflowAttemptJsonStorage("artifacts/workflow_attempts.json")
-    attempt_service = WorkflowAttemptService(attempt_storage)
-    
-    # NEW: Initialize statistics service
-    stats_service = WorkflowStatisticsService(service, attempt_service)
-    
-    if len(sys.argv) == 1:
-        run_interactive(service, attempt_service, stats_service)
-    else:
-        run_cli(service, attempt_service, stats_service)
-```
-
-### src/cli/workflow_cli.py
-
-**Changes needed:**
-1. Import WorkflowStatisticsService
-2. Add `report` subparser in build_parser()
-3. Add handler in run_cli() dispatch (elif ns.command == "report")
-4. Format output (text or JSON)
-
-**Example CLI command to support:**
-```bash
-python -m src report                      # Compute and display
-python -m src report --format json        # JSON output
-python -m src report --format text        # Human-readable output
-```
-
-### src/cli/interactive_menu.py
-
-**Changes needed:**
-1. Import WorkflowStatisticsService
-2. Add _view_statistics() function
-3. Add menu option in main menu or runs submenu
-4. Format and display results
-
-**Example menu option:**
-```
-Main Menu:
-  1. Workflow Runs
-  2. Workflow Attempts
-  3. View Statistics        <- NEW
-  4. Exit
-```
-
----
-
-## Calculation Details
-
-### Conclusion Counts
-
-**Algorithm:**
-```python
-def compute_conclusion_counts(runs: List[WorkflowRun]) -> Dict[Optional[str], int]:
-    counts = {}
-    for run in runs:
-        conclusion_key = run.conclusion.value if run.conclusion else None
-        counts[conclusion_key] = counts.get(conclusion_key, 0) + 1
-    return counts
-```
-
-### Average Duration
-
-**Algorithm:**
-```python
-def compute_average_duration(runs: List[WorkflowRun]) -> float:
-    if not runs:
-        return 0.0
-    return sum(r.duration_seconds for r in runs) / len(runs)
-
-def compute_duration_by_conclusion(runs: List[WorkflowRun]) -> Dict[Optional[str], float]:
-    by_conclusion = {}
-    for run in runs:
-        conclusion_key = run.conclusion.value if run.conclusion else None
-        if conclusion_key not in by_conclusion:
-            by_conclusion[conclusion_key] = []
-        by_conclusion[conclusion_key].append(run.duration_seconds)
-    
-    averages = {}
-    for conclusion_key, durations in by_conclusion.items():
-        averages[conclusion_key] = sum(durations) / len(durations) if durations else 0.0
-    return averages
-```
-
-### Min/Max Duration
-
-**Algorithm:**
-```python
-def compute_min_max_duration(runs: List[WorkflowRun]) -> (Optional[float], Optional[float]):
-    if not runs:
-        return None, None
-    durations = [r.duration_seconds for r in runs]
-    return min(durations), max(durations)
-```
-
-### Average Attempts per Run
-
-**Algorithm:**
-```python
-def compute_average_attempts_per_run(
-    runs: List[WorkflowRun],
-    attempt_service: WorkflowAttemptService
-) -> float:
-    if not runs:
-        return 0.0
-    
-    total_attempts = 0
-    runs_with_attempts = 0
-    
-    for run in runs:
-        attempts = attempt_service.filter_by_run_id(run.id)
-        total_attempts += len(attempts)
-        if attempts:
-            runs_with_attempts += 1
-    
-    return total_attempts / len(runs) if runs else 0.0
-```
-
----
-
-## Summary of Changes
-
-| Component | File | Type | Description |
-|-----------|------|------|-------------|
-| **Models** | src/models/workflow_statistics_report.py | NEW | Dataclass for report structure |
-| **Services** | src/services/workflow_statistics_service.py | NEW | Computation logic |
-| **CLI** | src/cli/workflow_cli.py | MODIFY | Add `report` subcommand |
-| **Menu** | src/cli/interactive_menu.py | MODIFY | Add statistics menu option |
-| **Entry** | src/__main__.py | MODIFY | Initialize statistics service |
-| **Models Init** | src/models/__init__.py | MODIFY | Export WorkflowStatisticsReport |
-| **Services Init** | src/services/__init__.py | MODIFY | Export WorkflowStatisticsService |
-| **Tests** | tests/test_workflow_statistics_service.py | NEW | Unit tests for service |
-| **Tests** | tests/test_workflow_statistics_report.py | NEW | Unit tests for dataclass |
-| **Diagrams** | artifacts/class_diagram.puml | MODIFY | Add new classes |
-| **Diagrams** | artifacts/use_case_diagram.puml | MODIFY | Add statistics use case |
-
----
-
-## Current Data Model and How Runs/Attempts Are Stored
-
-### WorkflowRun Storage Pattern
-
-**Memory:**
-- WorkflowRunService maintains `_runs: List[WorkflowRun]`
-- Loaded from JSON storage on service initialization
-- All modifications persisted via _persist() → storage.save()
-
-**JSON Format (artifacts/workflow_runs.json):**
-```json
-[
-  {
-    "id": "run-123",
-    "workflow_name": "CI",
-    "branch": "main",
-    "status": "completed",
-    "conclusion": "success",
-    "created_at": "2026-05-03T10:00:00",
-    "updated_at": "2026-05-03T10:05:00",
-    "run_number": 42,
-    "commit_sha": "abc123...",
-    "duration_seconds": 300.5
-  }
-]
-```
-
-### WorkflowRunAttempt Storage Pattern
-
-**Memory:**
-- WorkflowAttemptService maintains `_attempts: List[WorkflowRunAttempt]`
-- Loaded from JSON storage on service initialization
-- All modifications persisted via _persist() → storage.save()
-
-**JSON Format (artifacts/workflow_attempts.json):**
-```json
-[
-  {
-    "id": "attempt-456",
-    "run_id": "run-123",
-    "attempt_number": 1,
-    "status": "completed",
-    "conclusion": "failure",
-    "started_at": "2026-05-03T10:00:00",
-    "completed_at": "2026-05-03T10:02:30",
-    "duration_seconds": 150.0,
-    "logs_url": "https://..."
-  }
-]
-```
-
----
-
-## Current CLI/Menu Structure
-
-### CLI Command Structure (src/cli/workflow_cli.py)
-
-**Subcommands:**
-- `add` — Add new run (required flags: --name, --branch, --status; optional: --conclusion, --id, etc.)
-- `list` — List runs with optional filters (--branch, --status, --conclusion, --duration-min, --duration-max, etc.)
-- `detail <run_id>` — Get single run
-- `query-state <run_id>` — Query terminal/running/successful/failed/cancelled flags
-- `attempt add/list/detail/query-state` — Attempt management subcommands
-
-**Entry:**
-- Parser built in build_parser()
-- Dispatch in run_cli() with ns.command if/elif chain
-- No subcommand required yet; args must start with command name
-
-### Interactive Menu Structure (src/cli/interactive_menu.py)
-
-**Main Menu Options:**
-1. Workflow Runs — submenu
-2. Workflow Attempts — submenu
-3. Exit
-
-**Runs Submenu:**
-1. Add workflow run
-2. List all runs
-3. Get run detail
-4. Advanced filter runs
-5. Query workflow state
-6. Back
-
-**Attempts Submenu:**
-1. Add workflow attempt
-2. List all attempts
-3. Get attempt detail
-4. Advanced filter attempts
-5. Query attempt state
-6. Back
-
-**Control Flow:**
-- run_interactive() loop displays menu
-- User selects option (numeric input)
-- Handler function called with service instances
-- Returns to menu after handler completes
-
----
-
-## Implementation Notes and Edge Cases
-
-### Edge Case 1: Zero Runs
-
-**Scenario:** No runs exist in the system
-**Expected:** Report with:
-- total_runs = 0
-- All averages = 0.0
-- Min/max = None
-- conclusion_counts = {} (empty)
-
-### Edge Case 2: All Runs Have None Conclusion
-
-**Scenario:** All runs are non-terminal (in progress, queued, etc.)
-**Expected:**
-- conclusion_counts = {None: <count>}
-- duration_by_conclusion = {None: <avg>}
-
-### Edge Case 3: Runs Without Attempts
-
-**Scenario:** Some runs have no associated attempts
-**Expected:**
-- total_attempts counted correctly
-- average_attempts_per_run includes runs with 0 attempts
-- runs_with_no_attempts > 0
-
-### Edge Case 4: Runs With Different Attempt Counts
-
-**Scenario:**
-- Run A: 3 attempts
-- Run B: 1 attempt
-- Run C: 0 attempts
-- Total: 4 runs, 4 attempts
-
-**Expected:**
-- average_attempts_per_run = 4 / 4 = 1.0
-- runs_with_attempts = 2
-- runs_with_no_attempts = 1
-
-### Edge Case 5: Duration Edge Values
-
-**Scenario:** Some durations are 0.0, some are very large
-**Expected:**
-- min_duration_seconds = 0.0
-- max_duration_seconds = <max_value>
-- average includes all values fairly
-
----
-
-## Next Steps for Implementation
-
-1. **Create WorkflowStatisticsReport dataclass** (src/models/)
-2. **Create WorkflowStatisticsService class** (src/services/)
-3. **Implement compute_report() with all calculations**
-4. **Add CLI subcommand** (workflow_cli.py)
-5. **Add interactive menu option** (interactive_menu.py)
-6. **Wire services in __main__.py**
-7. **Write comprehensive unit tests**
-8. **Update class diagram**
-9. **Test end-to-end via `python -m src`**
-
+## Design Principles Applied
+
+1. **Layered Architecture:** GitHub service sits at service layer, independent of CLI/menu
+2. **Dependency Injection:** Service passed to CLI/menu at initialization
+3. **Converter Pattern:** github_service handles GitHub API data → domain models conversion
+4. **Facade Pattern:** WorkflowRunTracker used to create WorkflowRun instances with automatic UUID/timestamp generation
+5. **Error Handling:** Graceful degradation (skip invalid records, retry token prompt)
+6. **Security:** Token not persisted unless explicitly configured
+7. **Testability:** Service methods are pure functions (except I/O), easy to mock

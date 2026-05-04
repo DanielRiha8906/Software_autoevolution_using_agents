@@ -53,6 +53,14 @@ rectangle "GitHub Workflow Manager" {
     usecase "Import attempts from JSON" as IMP_ATTEMPTS
   }
 
+  package "GitHub Integration" {
+    usecase "Fetch runs from GitHub"   as GITHUB_FETCH_RUNS
+    usecase "Fetch attempts from GitHub" as GITHUB_FETCH_ATTEMPTS
+    usecase "Resolve GitHub token"     as GITHUB_TOKEN
+    usecase "Validate GitHub token"    as GITHUB_VALIDATE
+    usecase "Choose fetch mode (API/CLI)" as GITHUB_MODE
+  }
+
   package "Command-line Mode" {
     usecase "Run one-shot CLI command" as CLI
     usecase "Add workflow run"         as C_ADD
@@ -67,6 +75,7 @@ User --> UI
 User --> CLI
 
 UI --> I_ADD
+UI --> GITHUB_FETCH_RUNS
 UI --> I_LIST
 UI --> I_DETAIL
 UI --> I_FILTER
@@ -117,5 +126,10 @@ CLI --> EXP_RUNS : <<extend>>
 CLI --> IMP_RUNS : <<extend>>
 CLI --> EXP_ATTEMPTS : <<extend>>
 CLI --> IMP_ATTEMPTS : <<extend>>
+
+GITHUB_FETCH_RUNS --> GITHUB_TOKEN : <<uses>>
+GITHUB_FETCH_RUNS --> GITHUB_VALIDATE : <<uses>>
+GITHUB_FETCH_RUNS --> GITHUB_MODE : <<uses>>
+GITHUB_FETCH_RUNS --> GITHUB_FETCH_ATTEMPTS : <<extend>>
 
 @enduml

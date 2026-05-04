@@ -1,0 +1,150 @@
+@startuml sequence_github_integration
+
+skinparam sequenceParticipant underline
+skinparam backgroundColor transparent
+
+participant "User" as USR
+participant "InteractiveMenu" as MENU
+participant "GitHubIntegrationService" as GIS
+participant "GitHub API\n(REST or gh CLI)" as GITHUB
+participant "WorkflowRunService" as WRS
+participant "WorkflowAttemptService" as WAS
+participant "Domain Models\n(WorkflowRun,\nWorkflowRunAttempt)" as MODELS
+
+== Token Resolution ==
+activate MENU
+MENU -> GIS: fetch_runs(\nowner, repo,\nworkflow_name,\nlimit, token?)
+activate GIS
+
+alt token provided explicitly
+    GIS --> GIS: Use provided token
+else token not provided
+    GIS -> GIS: _resolve_token()
+    activate GIS
+
+    GIS -> GIS: Check GITHUB_TOKEN\nenvironment variable
+    alt env var set
+        GIS --> GIS: Return env token
+    else env var not set
+        GIS -> GIS: Check secrets/.env file
+        alt file exists and\nGITHUB_TOKEN= found
+            GIS --> GIS: Return file token
+        else file missing or\nno GITHUB_TOKEN key
+            GIS -> USR: Prompt for token
+            USR --> GIS: token input
+            GIS --> GIS: Return input token
+        end
+    end
+    deactivate GIS
+end
+
+== Token Validation ==
+GIS -> GIS: _validate_token(token)
+activate GIS
+alt fetch_mode == "cli"
+    GIS -> GITHUB: gh auth status
+    GITHUB --> GIS: status code
+    alt status code == 0
+        GIS --> GIS: token valid
+    else status code != 0
+        GIS --> GIS: token invalid\nRaise RuntimeError
+    end
+else fetch_mode == "api"
+    GIS -> GITHUB: GET /user\nAuthorization: token
+    GITHUB --> GIS: 200 | 401 | other
+    alt status == 200
+        GIS --> GIS: token valid
+    else status == 401
+        GIS --> GIS: token invalid\nRaise RuntimeError
+    else other status
+        GIS --> GIS: token validation uncertain\nRaise RuntimeError
+    end
+end
+deactivate GIS
+
+== Fetch Runs from GitHub ==
+alt fetch_mode == "api"
+    GIS -> GITHUB: GET /repos/{owner}/{repo}/actions/runs\n?per_page={limit}\nAuthorization: token
+else fetch_mode == "cli"
+    GIS -> GITHUB: gh run list -R {owner}/{repo}\n-L {limit} --json id,name,status,...
+end
+
+GITHUB --> GIS: JSON response
+
+== Convert API Response ==
+GIS -> GIS: For each workflow_run in response:\n_convert_api_run(api_data, repo)
+activate GIS
+    GIS -> GIS: Parse timestamps\n_parse_github_timestamp()
+    GIS -> GIS: Extract status, conclusion\nValidate enum values
+    GIS -> GIS: Calculate duration\nfrom timestamps
+    GIS -> MODELS: Create WorkflowRun
+    MODELS --> GIS: WorkflowRun instance
+deactivate GIS
+
+GIS --> MENU: List[WorkflowRun]
+deactivate GIS
+
+== Add Runs to Storage ==
+MENU -> MENU: For each run:\nCheck if duplicate
+alt run already exists
+    MENU -> MENU: Skip (log info)
+else run is new
+    MENU -> WRS: add_workflow_run(run)
+    activate WRS
+    WRS -> WRS: Validate, persist
+    WRS --> MENU: WorkflowRun
+    deactivate WRS
+end
+
+MENU --> USR: Display: Added N, Skipped M
+deactivate MENU
+
+== Fetch Attempts for Selected Run ==
+MENU -> GIS: fetch_run_attempts(\nowner, repo, run_id, token?)
+activate GIS
+
+alt token provided
+    GIS --> GIS: Use provided token
+else
+    GIS -> GIS: Use cached token\nor re-resolve
+end
+
+GIS -> GIS: _validate_token(token)
+
+alt fetch_mode == "api"
+    GIS -> GITHUB: GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts\nAuthorization: token
+else fetch_mode == "cli"
+    GIS -> GITHUB: gh run view {run_id} -R {owner}/{repo}\n--json attemptNumber,status,conclusion,...
+end
+
+GITHUB --> GIS: JSON response
+
+== Convert Attempt Response ==
+GIS -> GIS: For each workflow_run in response:\n_convert_api_attempt(api_data, run_id, repo)
+activate GIS
+    GIS -> GIS: Parse timestamps
+    GIS -> GIS: Extract status, conclusion\nValidate enum values
+    GIS -> GIS: Calculate duration
+    GIS -> MODELS: Create WorkflowRunAttempt
+    MODELS --> GIS: WorkflowRunAttempt instance
+deactivate GIS
+
+GIS --> MENU: List[WorkflowRunAttempt]
+deactivate GIS
+
+== Add Attempts to Storage ==
+MENU -> MENU: For each attempt:\nCheck if duplicate
+alt attempt already exists
+    MENU -> MENU: Skip (log info)
+else attempt is new
+    MENU -> WAS: add_attempt(attempt)
+    activate WAS
+    WAS -> WAS: Validate (unique id,\nunique run_id+attempt_number)
+    WAS -> WAS: Persist
+    WAS --> MENU: WorkflowRunAttempt
+    deactivate WAS
+end
+
+MENU --> USR: Display: Added N, Skipped M
+
+@enduml
