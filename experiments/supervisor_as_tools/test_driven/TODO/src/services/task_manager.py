@@ -40,6 +40,14 @@ class TaskManager:
             raise TaskNotFoundError(f"Ambiguous prefix '{task_id}' matches {len(matches)} tasks")
         raise TaskNotFoundError(f"Task '{task_id}' not found")
 
+    def get_all_tasks(self) -> list[Task]:
+        """Get all tasks.
+
+        Returns:
+            A list of all tasks.
+        """
+        return list(self._tasks.values())
+
     def list_all(self) -> list[Task]:
         return list(self._tasks.values())
 
@@ -80,3 +88,14 @@ class TaskManager:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
         self._persist()
+
+    def import_tasks(self, tasks: list[Task]) -> None:
+        """Import a list of tasks to storage.
+
+        Args:
+            tasks: A list of Task objects to import.
+        """
+        for task in tasks:
+            self._tasks[task.id] = task
+        if tasks:
+            self._persist()

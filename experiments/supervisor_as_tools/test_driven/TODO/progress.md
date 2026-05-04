@@ -462,3 +462,84 @@ Successfully implemented Project domain class and ProjectService to support grou
 - class_diagram.puml: Added Project class, extended Task with project_id, added ProjectService class with relationships
 
 Duration: 348.6s | Cost: $0.691889 USD | Turns: 35
+
+## Task 09: Refactor TODO manager into clearly separated components
+
+### Summary
+Successfully refactored the TODO application architecture to improve separation of concerns by introducing storage abstraction, eliminating private attribute access, breaking circular dependencies, and centralizing configuration. All 113 tests continue to pass with no changes to external behavior or public APIs.
+
+### Files Changed
+- `src/storage/storage_interface.py` - New file: StorageInterface abstraction with load() and save() methods
+- `src/storage/json_storage.py` - Made JsonStorage inherit from StorageInterface
+- `src/services/task_manager.py` - Added get_all_tasks() and import_tasks() public methods
+- `src/services/comment_manager.py` - Added storage_path parameter, get_all_comments(), get_comments_for_task(), import_comments() methods
+- `src/services/project_service.py` - Added storage_path parameter for configurable storage paths
+- `src/services/import_export_service.py` - Refactored to use public APIs instead of private attributes
+- `src/services/todo_service.py` - Added optional comment_manager parameter to break circular dependency
+- `artifacts/class_diagram.puml` - Updated to reflect new architecture with StorageInterface, public accessors, and import methods
+- `artifacts/component_diagram.puml` - Updated to show StorageInterface abstraction and public API usage
+
+### Test Results
+- **All 113 tests passing** ✅ (all existing tests continue to pass)
+- No test failures or regressions
+- Code compiles without syntax or import errors
+- Existing task, comment, and project functionality behaves identically
+- CLI (`python -m src`) behaves identically
+
+### Implementation Details
+
+**Architecture Improvements:**
+
+1. **Storage Abstraction (Phase 1)**
+   - Created `StorageInterface` abstract base class with `load()` and `save()` methods
+   - JsonStorage now inherits from StorageInterface
+   - Enables storage implementation swapping without changing service code
+   - Benefits: testability, flexibility, clearer contracts
+
+2. **Public Accessors (Phase 2-3)**
+   - `TaskManager.get_all_tasks()` - Returns list of all tasks without exposing private `_tasks`
+   - `TaskManager.import_tasks()` - Bulk import with proper persistence
+   - `CommentManager.get_all_comments()` - Returns all comments without private attribute access
+   - `CommentManager.get_comments_for_task()` - Ordered list for specific task
+   - `CommentManager.import_comments()` - Bulk import with persistence
+   - Benefits: encapsulation, clearer interfaces, safety
+
+3. **Storage Path Configuration (Phase 4)**
+   - `CommentManager.__init__()` now accepts optional `storage_path` parameter
+   - `ProjectService.__init__()` now accepts optional `storage_path` parameter
+   - Removes hardcoded paths while maintaining backward compatibility
+   - Benefits: testability, flexibility, configuration
+
+4. **Circular Dependency Resolution (Phase 6)**
+   - `TodoService` now optionally accepts `comment_manager: Optional[CommentManager]`
+   - `delete_task()` uses comment_manager directly when available, falls back to comments_service
+   - `CommentsService` verified to NOT import TodoService
+   - Benefits: decoupling, flexibility, clearer dependency graph
+
+5. **Encapsulation Fix (Phase 5)**
+   - `TaskImportExportService` refactored to use public methods instead of private attributes
+   - Replaced all `_tasks` and `_comments` direct access with method calls
+   - Uses new `import_tasks()` and `import_comments()` for bulk operations
+   - Benefits: maintainability, robustness, clear public interfaces
+
+**Responsibility Boundaries:**
+
+- **Domain Layer** (models/): Task, TaskComment, Project - pure data with serialization
+- **Storage Layer** (storage/): StorageInterface, JsonStorage - persistence abstraction
+- **Repository/Manager Layer** (services/): TaskManager, CommentManager - in-memory + persistence
+- **Business Logic Layer** (services/): TodoService, CommentsService, ProjectService - validation + orchestration
+- **Utility Services** (services/): TaskStatisticsService, TaskImportExportService - specialized operations
+- **Interface Layer** (cli/): TodoCLI, InteractiveMenu - user interaction
+
+**No Breaking Changes:**
+- All public method signatures preserved
+- All public behavior preserved
+- All existing tests pass without modification
+- All 113 tests continue to pass
+- Backward compatible with existing configurations and usage
+
+### Diagrams Updated
+- `class_diagram.puml`: Added StorageInterface, updated with public accessors, added import methods
+- `component_diagram.puml`: Updated to show StorageInterface abstraction and clearer service boundaries
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

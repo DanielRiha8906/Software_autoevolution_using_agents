@@ -9,14 +9,20 @@ class ProjectNotFoundError(Exception):
 
 
 class ProjectService:
-    def __init__(self, todo_service=None, storage: Optional[JsonStorage] = None) -> None:
+    def __init__(self, todo_service=None, storage: Optional[JsonStorage] = None, storage_path: Optional[str] = None) -> None:
         """Initialize ProjectService with optional TodoService and custom storage.
 
         Args:
             todo_service: Optional TodoService instance (for test fixture pattern).
             storage: Optional JsonStorage instance. Defaults to ~/.todo_projects.json.
+            storage_path: Optional path for JsonStorage. Used if storage is not provided.
         """
-        self._storage = storage or JsonStorage(path=str(JsonStorage().path.parent / ".todo_projects.json"))
+        if storage:
+            self._storage = storage
+        elif storage_path:
+            self._storage = JsonStorage(path=storage_path)
+        else:
+            self._storage = JsonStorage(path=str(JsonStorage().path.parent / ".todo_projects.json"))
         self._projects: dict[str, Project] = {}
         self._load()
 
