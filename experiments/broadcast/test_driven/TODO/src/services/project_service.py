@@ -1,44 +1,41 @@
 from typing import TYPE_CHECKING, Optional
 
 from ..models.project import Project
+from ..persistence.project_adapter import ProjectPersistenceAdapter
 
 if TYPE_CHECKING:
     from .todo_service import TodoService
 
 
 class ProjectService:
+    """Project management service - manages project lifecycle and persistence.
+
+    Responsibility:
+    - Project creation and retrieval
+    - Project persistence to storage
+    - Coordination with task storage for coexistence
+
+    Separation from persistence:
+    - Uses ProjectPersistenceAdapter to delegate storage operations
+    - Accesses storage via TodoService to maintain consistency
+    """
+
     _PROJECTS_KEY = "__projects__"
 
     def __init__(self, todo_service: "TodoService") -> None:
         """Initialize ProjectService with a TodoService instance."""
         self._todo_service = todo_service
+        self._adapter = ProjectPersistenceAdapter(self._todo_service.get_storage())
         self._projects: dict[str, Project] = {}
         self._load()
 
     def _load(self) -> None:
-        """Load projects from storage."""
-        storage = self._todo_service._manager._storage
-        raw = storage.load()
-        if isinstance(raw, dict):
-            projects_data = raw.get(self._PROJECTS_KEY, [])
-        else:
-            projects_data = []
-        self._projects = {p["id"]: Project.from_dict(p) for p in projects_data}
+        """Load projects from storage using the persistence adapter."""
+        self._projects = self._adapter.load()
 
     def _persist(self) -> None:
-        """Persist projects to storage."""
-        storage = self._todo_service._manager._storage
-        raw = storage.load()
-        # Convert to dict format if needed (to accommodate both tasks and projects)
-        if isinstance(raw, list):
-            # Current format is a list of tasks, convert to dict
-            raw = {"__tasks__": raw}
-        else:
-            # Already dict, update __tasks__ with current tasks
-            raw["__tasks__"] = [t.to_dict() for t in self._todo_service._manager._tasks.values()]
-        # Add/update projects
-        raw[self._PROJECTS_KEY] = [p.to_dict() for p in self._projects.values()]
-        storage.save(raw)
+        """Persist projects to storage using the persistence adapter."""
+        self._adapter.save(self._projects)
 
     def create(self, name: str) -> Project:
         """Create a new project."""

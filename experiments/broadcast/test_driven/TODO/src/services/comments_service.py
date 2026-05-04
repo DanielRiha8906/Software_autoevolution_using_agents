@@ -5,7 +5,19 @@ from ..models.task import Task
 
 
 class CommentsService:
-    """Service for managing task comments."""
+    """Comment management service - manages task comments in-memory.
+
+    Responsibility:
+    - In-memory comment storage and retrieval
+    - Comment creation and access by task
+    - Serialization for export/import
+
+    Design notes:
+    - Comments are NOT persisted to main storage (in-memory only)
+    - Persistence only happens during export/import operations
+    - Uses from_dict/to_dict for import/export serialization
+    - No direct storage layer dependency
+    """
 
     def __init__(self, todo_service=None) -> None:
         """Initialize the comments service with an empty comments store.

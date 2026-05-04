@@ -11,6 +11,31 @@ class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
 
+    def get_storage(self):
+        """Get storage backend for dependent services (e.g., ProjectService).
+
+        Returns:
+            The JsonStorage instance.
+        """
+        return self._manager._storage
+
+    def get_all_tasks_as_dicts(self) -> list[dict]:
+        """Get all persisted tasks as dictionaries.
+
+        Used by ProjectService for coordinated storage operations.
+
+        Returns:
+            List of task dictionaries.
+        """
+        return [t.to_dict() for t in self._manager.list_all()]
+
+    def _reload_tasks(self) -> None:
+        """Reload tasks from storage.
+
+        Used by import/export operations that modify storage externally.
+        """
+        self._manager._load()
+
     def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None, project_id: Optional[str] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
