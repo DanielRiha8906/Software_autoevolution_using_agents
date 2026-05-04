@@ -8,8 +8,9 @@ from typing import Optional
 from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..services.todo_service import TodoService
+from ..services.task_manager import TaskNotFoundError
+from ..services.project_manager import ProjectNotFoundError
 from ..storage.json_storage import JsonStorage
-from ..services.base_repositories import TaskNotFoundError, ProjectNotFoundError
 
 
 class TodoGUI:
