@@ -9,6 +9,7 @@ from .history.memory_service import MemoryService
 from .history.import_export_service import ImportExportService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
+from .gui.calculator_gui import CalculatorGUI
 
 
 def _build_service() -> CalculatorService:
@@ -55,6 +56,11 @@ def main() -> None:
         help="Import memory from JSON file",
     )
     parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch the GUI calculator",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -63,25 +69,30 @@ def main() -> None:
 
     args = parser.parse_args()
     service = _build_service()
-    memory_service = _build_memory_service()
-    import_export_service = _build_import_export_service()
-    cli = CalculatorCLI(service, memory_service, import_export_service)
 
-    if args.operation:
-        if len(args.operands) != 2:
-            parser.error("Exactly two operands are required when using --operation")
-        try:
-            a = _as_number(args.operands[0])
-            b = _as_number(args.operands[1])
-        except argparse.ArgumentTypeError as exc:
-            parser.error(str(exc))
-        cli.run_command(args.operation, a, b)
-    elif args.export:
-        cli.export_memory(args.export)
-    elif args.import_file:
-        cli.import_memory(args.import_file)
+    if args.gui:
+        gui = CalculatorGUI(service)
+        gui.run()
     else:
-        cli.run_interactive()
+        memory_service = _build_memory_service()
+        import_export_service = _build_import_export_service()
+        cli = CalculatorCLI(service, memory_service, import_export_service)
+
+        if args.operation:
+            if len(args.operands) != 2:
+                parser.error("Exactly two operands are required when using --operation")
+            try:
+                a = _as_number(args.operands[0])
+                b = _as_number(args.operands[1])
+            except argparse.ArgumentTypeError as exc:
+                parser.error(str(exc))
+            cli.run_command(args.operation, a, b)
+        elif args.export:
+            cli.export_memory(args.export)
+        elif args.import_file:
+            cli.import_memory(args.import_file)
+        else:
+            cli.run_interactive()
 
 
 if __name__ == "__main__":

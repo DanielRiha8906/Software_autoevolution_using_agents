@@ -119,6 +119,26 @@ package "cli" #FFE5E5 {
     CalculatorCLI --> ImportExportService : import_export_service
 }
 
+package "gui" #FFE5CC {
+    class CalculatorGUI {
+        -service : CalculatorService
+        -root : tk.Tk
+        -operand_a_var : tk.StringVar
+        -operand_b_var : tk.StringVar
+        -result_var : tk.StringVar
+        --
+        +CalculatorGUI(service: CalculatorService)
+        +run() : void
+        -_setup_ui() : void
+        -_create_operation_buttons(parent: tk.Widget) : void
+        -_on_operation_selected(operation: Operation) : void
+        -_display_result(result) : void
+        -_on_clear() : void
+    }
+
+    CalculatorGUI --> CalculatorService : service
+}
+
 package "models" #DDEEFF {
     enum Operation {
         ADD, SUBTRACT, MULTIPLY, DIVIDE

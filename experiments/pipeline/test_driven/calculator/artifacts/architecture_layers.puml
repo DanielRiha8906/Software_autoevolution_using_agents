@@ -8,13 +8,29 @@ title Three-Layer Architecture: Calculator Application
 
 rectangle "ORCHESTRATION LAYER" #FFE5E5 {
     rectangle CLI [
-        <b>Orchestration & Interface</b>
+        <b>CLI Interface</b>
         ----
         CalculatorCLI
-        __main__.py
         ----
         <i>Coordinates user input with services
         Manages interactive and CLI modes</i>
+    ]
+
+    rectangle GUI [
+        <b>GUI Interface</b>
+        ----
+        CalculatorGUI
+        ----
+        <i>Tkinter-based graphical interface
+        Delegates calculations to service</i>
+    ]
+
+    rectangle EntryPoint [
+        <b>Entry Point</b>
+        ----
+        __main__.py
+        ----
+        <i>Dispatches to CLI or GUI mode</i>
     ]
 }
 
@@ -64,7 +80,10 @@ rectangle "HISTORY & STORAGE LAYER" #FFF3CC {
     ]
 }
 
+EntryPoint --> CLI : dispatches to
+EntryPoint --> GUI : dispatches to
 CLI --> CalcService : uses
+GUI --> CalcService : uses
 CalcService --> CalcEngine : depends on\n(CalculationEngine)
 CalcService --> StorageComp : depends on\n(StorageBackend)
 HistoryComp --> StorageComp : may persist\nto
