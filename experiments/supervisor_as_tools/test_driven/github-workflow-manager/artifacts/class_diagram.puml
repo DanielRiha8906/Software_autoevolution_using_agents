@@ -165,6 +165,27 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #F0E8FF {
+    class WorkflowGUI {
+        -_service : WorkflowRunService
+        -_root : Tk
+        -_current_runs : List[WorkflowRun]
+        -_selected_run_id : Optional[str]
+        --
+        +__init__(service: WorkflowRunService)
+        +run() : None
+        -_build_ui() : None
+        -_load_runs() : None
+        -_populate_treeview(runs: List[WorkflowRun]) : None
+        -_apply_filters() : None
+        -_reset_filters() : None
+        -_on_run_selected(event) : None
+        -_show_selected_detail() : None
+        -_format_run_detail(run: WorkflowRun) : str
+        -_show_detail(text: str) : None
+    }
+}
+
 WorkflowRun                ..>  WorkflowStatus             : status
 WorkflowRun                ..>  WorkflowConclusion         : conclusion
 WorkflowRunAttempt    "*" --> "1" WorkflowRun             : run_id
@@ -192,5 +213,9 @@ GitHubFetchService        ..>  WorkflowConclusion
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  WorkflowRunTracker
+WorkflowGUI          "1" --> "1" WorkflowRunService     : -_service
+WorkflowGUI               ..>  WorkflowRun
+WorkflowGUI               ..>  WorkflowStatus
+WorkflowGUI               ..>  WorkflowConclusion
 
 @enduml

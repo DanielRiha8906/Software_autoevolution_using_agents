@@ -8,6 +8,7 @@ from .services.workflow_statistics_service import WorkflowStatisticsService
 from .services.import_export_service import WorkflowImportExportService
 from .cli.workflow_cli import run_cli
 from .cli.interactive_menu import run_interactive
+from .gui.workflow_gui import WorkflowGUI
 
 
 def main() -> None:
@@ -17,8 +18,12 @@ def main() -> None:
     service = WorkflowRunService(storage)
     import_export_service = WorkflowImportExportService(service, attempt_service)
 
+    # Check for --gui flag
+    if "--gui" in sys.argv:
+        gui = WorkflowGUI(service)
+        gui.run()
     # No sub-command args → launch interactive menu
-    if len(sys.argv) == 1:
+    elif len(sys.argv) == 1:
         run_interactive(service, import_export_service)
     else:
         run_cli(service, import_export_service)
