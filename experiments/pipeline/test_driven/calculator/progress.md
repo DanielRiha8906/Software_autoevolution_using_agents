@@ -288,3 +288,55 @@ Duration: 391.3s | Cost: $0.758979 USD | Turns: 18
 - Code compiles without errors, no circular dependencies, clear responsibility boundaries
 
 Duration: 676.9s | Cost: $1.175821 USD | Turns: 20
+
+## Task 10: Calculator GUI with tkinter
+
+**Status:** Completed
+
+**Files Changed:**
+- src/gui/__init__.py — New file; exports CalculatorGUI class
+- src/gui/calculator_gui.py — New file; CalculatorGUI class with 8 methods (init, _setup_ui, _create_operation_buttons, _on_operation_selected, _on_equals_pressed, _display_result, _on_clear, run)
+- src/__main__.py — Modified; added CalculatorGUI import, --gui argument, conditional branch for GUI mode
+- tests/test_calculator_gui.py — New file; 47 comprehensive test cases for GUI functionality
+- tests/conftest.py — New file; xvfb virtual display setup for headless tkinter testing
+- artifacts/class_diagram.puml — Updated; added GUI package and CalculatorGUI class with service dependency
+- artifacts/component_diagram.puml — Updated; added GUI Interface component to Orchestration Layer
+- artifacts/architecture_layers.puml — Updated; restructured Orchestration Layer to show CLI and GUI as separate interfaces
+
+**Test Results:**
+- 47/47 test_calculator_gui.py tests: PASSED ✓
+- 174/174 existing tests: PASSED ✓
+- 5/5 provided test requirements: PASSED ✓
+  - test_calculator_gui_module_exists
+  - test_calculator_gui_accepts_service
+  - test_gui_does_not_instantiate_calculator_directly
+  - test_gui_contains_no_arithmetic_logic
+  - test_gui_references_service
+- Total: 221/221 passing tests
+- No regressions in existing test suite
+
+**Implementation Summary:**
+- Created CalculatorGUI class accepting CalculatorService via constructor (dependency injection)
+- Implemented tkinter GUI with 14 operation buttons (dynamically created from Operation enum)
+- Two separate operand entry fields (operand_a, operand_b) using StringVar for binding
+- Result display label that updates with CalculationResult formatted output
+- Clear button resets all fields and operation state
+- Error handling with messagebox for invalid input and calculation errors
+- Service delegation: all arithmetic delegated to CalculatorService.perform() — no Calculator instantiation or duplicate logic in GUI
+- Added --gui flag to src/__main__.py with conditional dispatch (GUI mode vs. CLI mode)
+- GUI launchable via `python -m src --gui` command-line entry point
+- All provided tests passing without modification
+- Source code verifiably references 'service' and does not contain arithmetic methods
+- Backward compatibility: all existing CLI functionality and tests unchanged
+
+**Key Design Points:**
+- CalculatorGUI stores service as instance variable (required for test verification)
+- No direct import of Calculator class in GUI module (verified via inspect.getsource)
+- GUI widgets (Tk, StringVar, Frame, Button, Label, Entry) organized in _setup_ui() method
+- Operation enum iteration used to dynamically create buttons, eliminating hardcoded operation list
+- _on_equals_pressed() validates operands (try/except on float parsing), calls service.perform(), displays result via _display_result()
+- Error messages shown via messagebox.showerror() for user visibility
+- GUI.run() method calls tkinter root.mainloop() to start event loop
+- Entry/output model uses tkinter StringVar for data binding and observation
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

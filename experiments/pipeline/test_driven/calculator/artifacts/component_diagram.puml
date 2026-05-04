@@ -7,6 +7,7 @@ left to right direction
 package "Orchestration Layer" #FFE5E5 {
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
+    component "GUI Interface\n(CalculatorGUI)" as GUI
 }
 
 package "Calculation Engine Layer" #DDFFD4 {
@@ -35,7 +36,9 @@ package "Domain Models" #DDEEFF {
 database "calculations.json" as DB
 
 Main --> CLI : initializes
+Main --> GUI : initializes
 CLI --> Service : uses
+GUI --> Service : uses
 Service --> CalcProto : depends on
 CalcProto <|.. BasicCalc : implements
 CalcProto <|.. SciCalc : implements
