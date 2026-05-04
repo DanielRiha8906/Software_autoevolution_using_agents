@@ -4,6 +4,11 @@ from ..models.operation import Operation
 
 
 class Calculator:
+    """Concrete implementation of the CalculationEngine protocol.
+
+    Provides pure arithmetic and scientific calculation logic.
+    No knowledge of persistence or user interface.
+    """
     def add(self, a: float, b: float) -> float:
         return a + b
 

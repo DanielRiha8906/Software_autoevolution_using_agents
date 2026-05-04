@@ -5,48 +5,75 @@ skinparam componentBorderColor #333333
 skinparam arrowColor #333333
 skinparam fontName Courier
 
-package "CLI Layer" {
+package "Presentation (CalculatorUI Protocol)" as UI {
   component [CalculatorCLI] as CLI
   note right of CLI
-    Supports two modes:
-    - Standard (8 operations)
-    - Scientific (14 operations)
-    Mode selected via --scientific flag
+    CLI Implementation
+    - run_interactive()
+    - run_command()
   end note
 }
 
-package "Service Layer" {
-  component [CalculatorService] as CalcService
-  component [MemoryService] as MemService
+package "Calculation Engine (CalculationEngine Protocol)" as Calc {
+  component [Calculator] as CalcImpl
+  note right of CalcImpl
+    Pure arithmetic
+    - calculate()
+    - 14 operations
+  end note
+}
+
+package "Memory/History (HistoryStorage Protocol)" as Mem {
+  component [MemoryService] as MemSvc
   component [HistoryManager] as HistMgr
+  note right of MemSvc
+    Memory Storage
+    - store()
+    - retrieve()
+  end note
+  note right of HistMgr
+    History Management
+    - export_to_file()
+    - import_from_file()
+  end note
+}
+
+package "Orchestration" as Orch {
+  component [CalculatorService] as CalcService
+  note right of CalcService
+    Coordinator
+    - Depends on protocols
+    - Not concrete impls
+  end note
+}
+
+package "Supporting Services" as Support {
   component [QueryService] as QuerySvc
-  component [Calculator] as CalcLogic
+  component [StatisticsService] as StatsSvc
 }
 
-package "Storage Layer" {
+package "Persistence" as Persist {
   component [JsonStorage] as Storage
+  component [calculations.json]
+  component [memory.json]
 }
 
-package "Data Layer" {
-  component [calculations.json] as CalcFile
-  component [memory.json] as MemFile
-}
+' Dependency relationships via protocols
+CLI --> CalcService: orchestrates
+CLI --> QuerySvc: queries
+CLI --> HistMgr: export/import
 
-CLI --> CalcService: uses
-CLI --> QuerySvc: uses for querying
-CLI --> HistMgr: uses for export/import
+CalcService --> CalcImpl: uses CalculationEngine
+CalcService --> MemSvc: uses HistoryStorage
+CalcService --> Storage: persistence
 
-CalcService --> CalcLogic: delegates calculation
-CalcService --> Storage: stores CalculationResult
-CalcService --> MemService: optionally stores MemoryEntry
+MemSvc --> Storage: read/write MemoryEntry
+HistMgr --> Storage: file I/O
 
-MemService --> Storage: stores/retrieves MemoryEntry
+QuerySvc --> MemSvc: queries
+StatsSvc --> MemSvc: analyzes
 
-HistMgr --> Storage: exports/imports MemoryEntry
-
-QuerySvc --> MemService: queries MemoryEntry
-
-Storage --> CalcFile: persists
-Storage --> MemFile: persists
+Storage --> calculations.json
+Storage --> memory.json
 
 @enduml
