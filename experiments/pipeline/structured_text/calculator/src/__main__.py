@@ -9,6 +9,7 @@ from .services.memory_service import MemoryService
 from .storage.json_storage import JsonStorage
 from .storage.memory_json_storage import MemoryJsonStorage
 from .cli.calculator_cli import CalculatorCLI
+from .gui.calculator_gui import CalculatorGUI
 
 
 def _build_service() -> CalculatorService:
@@ -31,8 +32,13 @@ def _as_number(value: str) -> float:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
-        description="OOP Calculator — run interactively or pass flags for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B] [--memory] [--statistics] [--memory-filter {operation,status} ...] [--export [FILE]] [--import [FILE]] [--skip-invalid]",
+        description="OOP Calculator — run interactively, use GUI, or pass flags for one-shot use",
+        usage="python -m src [--gui] [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B] [--memory] [--statistics] [--memory-filter {operation,status} ...] [--export [FILE]] [--import [FILE]] [--skip-invalid]",
+    )
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch graphical user interface (GUI) instead of CLI",
     )
     parser.add_argument(
         "--operation",
@@ -97,6 +103,13 @@ def main() -> None:
     args = parser.parse_args()
     service = _build_service()
     memory_service = _build_memory_service()
+
+    # Handle GUI flag (takes precedence)
+    if args.gui:
+        gui = CalculatorGUI(service, memory_service)
+        gui.run()
+        return
+
     cli = CalculatorCLI(service, memory_service)
 
     # Handle export flag

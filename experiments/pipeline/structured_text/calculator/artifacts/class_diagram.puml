@@ -183,8 +183,39 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #FFE5E5 {
+    class CalculatorGUI {
+        -service : CalcServiceProto
+        -memory_service : MemServiceProto | None
+        -_current_operation : Operation | None
+        -_operand_a_var : StringVar
+        -_operand_b_var : StringVar
+        -_result_var : StringVar
+        -_memory_listbox : Listbox
+        -_stats_text : Text | None
+        --
+        +CalculatorGUI(service: CalcServiceProto, memory_service: MemServiceProto | None)
+        +run() : void
+        -_create_widgets() : void
+        -_create_standard_mode_tab(parent: Notebook) : Frame
+        -_create_scientific_mode_tab(parent: Notebook) : Frame
+        -_on_operation_button_click(operation: Operation) : void
+        -_on_calculate_button_click() : void
+        -_execute_calculation(operation: Operation, a: float, b: float) : void
+        -_display_result(result: CalculationResult) : void
+        -_refresh_memory_display() : void
+        -_refresh_statistics_display() : void
+        -_show_error(message: str) : void
+        -_on_clear_fields() : void
+        -_on_clear_memory() : void
+    }
+}
+
 CalculatorCLI --> CalcServiceProto : service
 CalculatorCLI --> MemServiceProto : memory_service
+
+CalculatorGUI --> CalcServiceProto : service
+CalculatorGUI --> MemServiceProto : memory_service
 
 CalculatorService ..|> CalcServiceProto : implements
 MemoryService ..|> MemServiceProto : implements
@@ -199,6 +230,9 @@ MemoryService --> StorageProto : storage
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
+CalculatorGUI ..> Operation
+CalculatorGUI ..> CalculationResult : uses
+CalculatorGUI ..> MemoryEntry : displays
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
 MemoryService ..> MemoryEntry : manages

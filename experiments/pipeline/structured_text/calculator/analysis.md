@@ -1,485 +1,1088 @@
-# Calculator Project - Component Separation Analysis
+# Calculator Project - Task 10 Analysis
+# Add Graphical User Interface Using tkinter
 
-**Task 09: Separate Core Components**
+**Task 10: Add a graphical user interface using tkinter**
 **Status:** Analysis Complete
 **Date:** 2026-05-04
 
 ---
 
-## Summary
+## Task Summary
 
-The calculator project is a well-structured OOP application with clear logical separation between calculation logic, memory/history management, and CLI interface. However, components are currently **tightly coupled** at the service and CLI layers, with both `CalculatorService` and `MemoryService` being direct dependencies of the CLI. The memory tracking system is **separate but not formalized** — there are no abstract protocols defining component boundaries.
-
-The refactoring task requires introducing abstract base classes/protocols and clearer encapsulation while preserving all existing functionality and external behavior.
+Add a complete tkinter-based graphical user interface (GUI) to the calculator application. The GUI must:
+- Provide an alternative to the CLI for all calculator operations
+- Support both standard mode (8 operations) and scientific mode (6 additional operations)
+- Display and manage calculation memory/history
+- Integrate seamlessly with existing architecture (services, storage, models)
+- Be optional—existing CLI functionality unchanged
+- Be invoked via a new CLI flag or menu option
 
 ---
 
-## Current Architecture
+## Current State: Code Structure
 
 ### Directory Structure
-
 ```
 src/
-├── __main__.py                 # CLI entry point and argparse setup
-├── models/                     # Data models (domain entities)
-│   ├── operation.py            # Operation enum with fromString factory
-│   ├── calculation_result.py   # Dataclass: represents a completed calc
-│   ├── memory_entry.py         # Dataclass: represents a stored attempt (success/failure)
-│   └── calculation_statistics.py # Dataclass: aggregated metrics
-├── services/                   # Business logic and orchestration
-│   ├── calculator.py           # Pure calculation engine
-│   ├── calculator_service.py   # Orchestrates Calculator + storage for calcs
-│   └── memory_service.py       # Manages MemoryEntry lifecycle & filtering
-├── storage/                    # Persistence layer
-│   ├── json_storage.py         # Persists CalculationResult to JSON
-│   └── memory_json_storage.py  # Persists MemoryEntry to JSON
+├── __main__.py                    # Entry point, argparse, CLI wiring
+├── models/                        # Domain models (read-only data)
+│   ├── operation.py               # Operation enum (14 operations total)
+│   ├── calculation_result.py       # Result dataclass (successful calcs only)
+│   ├── memory_entry.py            # MemoryEntry dataclass (success + failure)
+│   └── calculation_statistics.py   # Statistics aggregation
+├── services/                      # Business logic (read via protocol interfaces)
+│   ├── calculator.py              # Pure calculation engine
+│   ├── calculator_service.py       # Orchestrates Calculator + JsonStorage
+│   └── memory_service.py          # Query/analytics over MemoryEntry
+├── storage/                       # Persistence (read/write JSON)
+│   ├── json_storage.py            # Persists CalculationResult
+│   └── memory_json_storage.py     # Persists MemoryEntry
+├── protocols/                     # Abstract interfaces (NEW as of Task 09)
+│   └── __init__.py                # Storage[T], CalculationService, MemoryService protocols
 └── cli/
-    └── calculator_cli.py       # Interactive & one-shot command interface
+    └── calculator_cli.py          # Interactive menu + one-shot CLI
 ```
 
-### Component Responsibilities (Current)
+### Current Architecture Layers
 
-#### 1. Calculation Engine: `Calculator`
-- **File:** `src/services/calculator.py`
-- **Responsibility:** Pure arithmetic logic
-- **Methods:**
-  - `add(a, b)`, `subtract(a, b)`, `multiply(a, b)`, `divide(a, b)` — binary ops
-  - `square(a, b)`, `sqrt(a, b)`, `power(a, b)`, `modulo(a, b)` — unary/binary mixed
-  - `sin(a, b)`, `cos(a, b)`, `tan(a, b)`, `log(a, b)`, `ln(a, b)`, `exp(a, b)` — trigonometric/logarithmic
-  - `calculate(operation: Operation, a, b)` — dispatch by enum
-- **No Dependencies:** Uses only Python stdlib (`math`)
-- **Error Handling:** Raises `ValueError` for invalid inputs (division by zero, negative sqrt, etc.)
-- **Coupling:** NONE. This is a pure, stateless calculation library.
+**1. Calculation Engine (Pure)**
+- `Calculator`: 14 stateless methods (add, subtract, multiply, divide, square, sqrt, power, modulo, sin, cos, tan, log, ln, exp)
+- Error-handling: raises `ValueError` for invalid inputs
+- No dependencies on services or storage
 
-**Current Status:** Well-isolated. No refactoring needed here.
+**2. Services (Orchestration)**
+- `CalculatorService`: Execute calc → save to `JsonStorage` → return `CalculationResult`
+- `MemoryService`: Manage `MemoryEntry` audit trail with filtering, statistics, import/export
+- Both services depend on `Storage[T]` protocol, not concrete classes
 
----
+**3. Storage (Persistence)**
+- `JsonStorage`: Append-only JSON file for `CalculationResult` → `artifacts/calculations.json`
+- `MemoryJsonStorage`: Append-only JSON file for `MemoryEntry` → `artifacts/memory_entries.json`
+- Both implement `Storage[T]` protocol
 
-#### 2. Memory/History Management: Mixed Layers
-This is where the complexity lies. History is tracked in **two separate ways**:
-
-**2a. Short-term calculation history: `CalculatorService` + `JsonStorage`**
-- **Class:** `CalculatorService` (`src/services/calculator_service.py`)
-- **Purpose:** Perform a calculation and immediately persist it
-- **Dependency Chain:** 
-  ```
-  CalculatorService
-    ├── Owns: Calculator (injection)
-    ├── Owns: JsonStorage (injection)
-    └── Delegates:
-        ├── calculation → Calculator.calculate()
-        ├── timing measurement → time.perf_counter()
-        └── persistence → JsonStorage.save()
-  ```
-- **Output Model:** `CalculationResult` — simple dataclass with operation, operands, result, timestamp, execution_time_ms
-- **Storage:** `JsonStorage` persists to `artifacts/calculations.json` (append-only JSON array)
-- **Methods:**
-  - `perform(operation, a, b) → CalculationResult` — execute and save, returns result. **On error, raises exception WITHOUT saving.**
-  - `get_history() → List[CalculationResult]` — delegates to storage
-
-**2b. Full audit trail: `MemoryService` + `MemoryJsonStorage`**
-- **Class:** `MemoryService` (`src/services/memory_service.py`)
-- **Purpose:** Store and query a complete audit log of all calculation attempts (including failures with error messages)
-- **Dependency Chain:**
-  ```
-  MemoryService
-    ├── Owns: MemoryJsonStorage (injection)
-    └── Delegates persistence to storage
-  ```
-- **Output Model:** `MemoryEntry` — richer dataclass capturing:
-  - `operation, operand_a, operand_b` — what was tried
-  - `result, success, error_message` — outcome and error details
-  - `execution_timestamp, execution_time_ms` — timing
-  - `memory_entry_id` — unique identifier (UUID auto-generated)
-- **Storage:** `MemoryJsonStorage` persists to `artifacts/memory_entries.json` (append-only JSON array)
-- **Methods:**
-  - `store(entry: MemoryEntry) → None`
-  - `retrieve_all() → List[MemoryEntry]`
-  - `filter_by_operation(name) → List[MemoryEntry]` — case-insensitive
-  - `filter_by_success(bool) → List[MemoryEntry]`
-  - `filter_by_execution_time(min_ms, max_ms) → List[MemoryEntry]`
-  - `compute_statistics() → CalculationStatistics` — aggregates metrics over all entries
-  - `export_to_file(path) → int` — serializes all entries to JSON
-  - `import_from_file(path, skip_invalid) → tuple[int, list]` — deserializes and imports with validation
-
-**Key Coupling Issue:**
-- `CalculatorService` and `MemoryService` are **separate** but **not coordinated**.
-- The CLI must manually decide to store results in both systems (not shown in `CalculatorService`, happens elsewhere).
-- There is **no abstract protocol** defining what a "memory" or "storage" component should do.
-- Two different storage classes (`JsonStorage`, `MemoryJsonStorage`) with **no common interface** — similar responsibilities but no base class.
+**4. Interface (Current)**
+- `CalculatorCLI`: Interactive menu (14 operations) + memory features + one-shot flags
+- Menu structure: 1-14 operations, 15-22 admin (memory, statistics, export, import, exit)
+- Entry point: `src/__main__.py` → argparse setup → CLI instantiation
 
 ---
 
-#### 3. Interface/CLI: `CalculatorCLI`
-- **File:** `src/cli/calculator_cli.py`
-- **Responsibility:** User interaction and presentation
-- **Dependency Chain:**
-  ```
-  CalculatorCLI
-    ├── Owns: CalculatorService (injection)
-    ├── Owns: MemoryService | None (optional injection)
-    ├── Imports: Operation enum
-    └── No direct dependency on storage classes
-  ```
-- **Public Methods (entry points):**
-  - `run_interactive() → None` — main menu loop
-  - `run_command(operation_str, a, b) → None` — one-shot execution
-  - `show_memory() → None` — display all memory entries
-  - `show_statistics() → None` — display aggregated stats
-  - `export_memory(filepath=None) → None` — export to file (prompts if path missing)
-  - `import_memory(filepath=None, skip_invalid=False) → None` — import from file
-- **Private Helpers (pure UI):**
-  - `_print_menu()` — render menu
-  - `_resolve_menu_choice(choice)` → Operation | None
-  - `_prompt_number(prompt)` → float | None
-  - `_show_history()` — display calculation history (from `CalculatorService`)
-  - `_show_memory()` — display memory entries (from `MemoryService`)
-  - `_filter_memory_by_operation()` — interactive filter UI
-  - `_filter_memory_by_status()` — interactive filter UI
-  - `_show_statistics()` — display stats (computed by `MemoryService`)
+## Key Domain Concepts
 
-**Key Coupling Issues:**
-- CLI directly calls `service.perform()` and `memory_service.*()`, mixing **computation orchestration** with **presentation logic**.
-- The CLI knows too much about both `CalculatorService` and `MemoryService` internals (methods, parameters).
-- No abstraction layer; replacing or extending either service requires CLI changes.
-- `MemoryService` is **optional** (can be None), forcing defensive null-checks throughout CLI.
-
----
-
-## Data Flow
-
-### Success Path: Add 3 + 5 (Interactive)
-
-```
-1. CLI: show menu
-2. User: enter choice "1" (add)
-3. CLI: prompt operands → 3, 5
-4. CLI: run_interactive() → cli.service.perform(Operation.ADD, 3.0, 5.0)
-5. CalculatorService.perform():
-   - time measurement starts
-   - Calculator.calculate(Operation.ADD, 3, 5) → 8.0
-   - CalculationResult created with result=8.0, timestamp, execution_time
-   - JsonStorage.save(result) → appends to calculations.json
-   - returns CalculationResult
-6. CLI: display result "3 + 5 = 8"
-7. (MemoryService NOT called in current path — memory entry is NOT stored)
-```
-
-### Failure Path: Divide by 0
-
-```
-1. CLI: prompt operation (divide), operands (10, 0)
-2. CLI: cli.service.perform(Operation.DIVIDE, 10, 0)
-3. CalculatorService.perform():
-   - Calculator.calculate(Operation.DIVIDE, 10, 0)
-   - Calculator.divide() checks: if b == 0 → raise ValueError("Division by zero...")
-   - Exception propagates up; JsonStorage.save() NEVER CALLED
-4. CLI: catches ValueError, prints "Error: Division by zero..."
-5. (MemoryService NOT called — no audit trail of the failed attempt)
-```
-
-**Critical Gap:** Failed calculations are **not** recorded. Only `MemoryService` can capture failures, but the CLI doesn't automatically wire them together.
-
----
-
-## Couplings and Dependencies
-
-### Tight Couplings
-
-1. **CLI → CalculatorService**
-   - Direct method calls: `service.perform()`, `service.get_history()`
-   - Knows about return type: `CalculationResult`
-   - No abstraction layer
-
-2. **CLI → MemoryService**
-   - Direct method calls: `memory_service.store()`, `memory_service.retrieve_all()`, `memory_service.filter_*()`, `memory_service.compute_statistics()`, `memory_service.export_to_file()`, `memory_service.import_from_file()`
-   - Knows about return types: `List[MemoryEntry]`, `CalculationStatistics`, tuple
-   - Optional dependency with repeated null-checks
-
-3. **CalculatorService → JsonStorage**
-   - Direct injection dependency
-   - Knows about storage interface: `save(result)`, `load_all()`
-   - No abstraction; storage implementation detail exposed
-
-4. **MemoryService → MemoryJsonStorage**
-   - Direct injection dependency
-   - Knows about storage interface: `save(entry)`, `load_all()`, `_read_raw()`, `_write_raw()`
-   - No abstraction
-
-5. **Two Storage Implementations with No Common Interface**
-   - `JsonStorage` and `MemoryJsonStorage` are both persistence layers
-   - **No shared base class or protocol**
-   - Similar method signatures (`save()`, `load_all()`) but unrelated
-   - Different model types (`CalculationResult` vs `MemoryEntry`)
-
-### Loose Couplings
-
-- **CLI → Operation enum:** Uses `Operation.from_string()` and display names. Acceptable; enum is a stable model.
-- **CLI → Models (CalculationResult, MemoryEntry, CalculationStatistics):** Uses for display/inspection. Acceptable; models are stable data containers.
-
----
-
-## What Exists Now
-
-| Component | Type | Purpose | Hidden Behavior |
-|-----------|------|---------|-----------------|
-| `Calculator` | Pure logic | Arithmetic operations | None; deterministic and stateless |
-| `CalculatorService` | Orchestrator | Calc + persist to history | Timing measurement; exception stops save |
-| `MemoryService` | Orchestrator + Query | Manage audit trail | Filtering logic; statistics computation |
-| `JsonStorage` | Persistence | Store CalculationResult | File I/O, error recovery (silently ignores corruption) |
-| `MemoryJsonStorage` | Persistence | Store MemoryEntry | File I/O, error recovery (silently ignores corruption) |
-| `CalculatorCLI` | Interface | Menu + one-shot mode | Menu numbering depends on `_MENU` length; complex state machine |
-
----
-
-## What Needs Separation
-
-### 1. **Abstract Storage Interface(s)**
-   
-**Problem:** Two storage classes do the same thing but with different models. No interface to swap implementations.
-
-**Solution:** Create an abstract base class or protocol.
+### Operation Enum
+**File:** `src/models/operation.py`
 
 ```python
-# Option A: ABC (Abstract Base Class)
-from abc import ABC, abstractmethod
-
-class Storage(ABC):
-    @abstractmethod
-    def save(self, entry) -> None: ...
+class Operation(Enum):
+    # Standard (8)
+    ADD, SUBTRACT, MULTIPLY, DIVIDE,
+    SQUARE, SQRT, POWER, MODULO,
     
-    @abstractmethod
-    def load_all(self) -> List: ...
-
-# Option B: Protocol (duck typing + type hints)
-from typing import Protocol
-
-class Storage(Protocol):
-    def save(self, entry) -> None: ...
-    def load_all(self) -> List: ...
+    # Scientific (6)
+    SIN, COS, TAN, LOG, LN, EXP
 ```
 
-**Scope:**
-- `JsonStorage` → implements `Storage[CalculationResult]`
-- `MemoryJsonStorage` → implements `Storage[MemoryEntry]`
-- Both follow same contract: append-only JSON persistence
+- `from_string(value: str)` → parses "add", "subtract", etc.
+- `display_name()` → returns "Add", "Subtract", etc.
+- Used to dispatch in `Calculator.calculate()`
+
+### CalculationResult
+**File:** `src/models/calculation_result.py`
+
+Represents a **successful calculation only**.
+
+```python
+@dataclass
+class CalculationResult:
+    operation: str               # operation name ("add", "sqrt", etc.)
+    operand_a: float
+    operand_b: float
+    result: float               # computed value
+    timestamp: str              # ISO format
+    execution_time_ms: float    # milliseconds
+    
+    def __str__() → "a + b = c"  # formatted for display
+```
+
+Persisted to `artifacts/calculations.json` (append-only).
+
+### MemoryEntry
+**File:** `src/models/memory_entry.py`
+
+Represents **any calculation attempt** (success or failure).
+
+```python
+@dataclass
+class MemoryEntry:
+    operation: str               # operation name
+    operand_a: float
+    operand_b: float
+    result: Optional[float]      # None if failed
+    success: bool                # True/False
+    error_message: Optional[str] # error details if failed
+    execution_timestamp: str     # ISO format
+    execution_time_ms: float
+    memory_entry_id: str         # UUID auto-generated
+    
+    def __str__() → "operation: inputs → result|error"
+```
+
+Persisted to `artifacts/memory_entries.json` (append-only).
+Auto-records successful calculations (manually) and can be extended to record failures.
+
+### CalculationStatistics
+**File:** `src/models/calculation_statistics.py`
+
+Aggregated metrics over all `MemoryEntry` records:
+
+```python
+@dataclass
+class CalculationStatistics:
+    operation_counts: dict[str, int]         # usage by operation
+    total_calculations: int
+    error_count: int
+    error_percentage: float
+    average_execution_time_ms: float
+    min_execution_time_ms: float
+    max_execution_time_ms: float
+    per_operation_stats: dict[str, dict]     # per-op breakdown
+```
+
+Computed on-demand by `MemoryService.compute_statistics()`.
 
 ---
 
-### 2. **Abstract Service Interfaces**
+## Standard Mode vs Scientific Mode
 
-**Problem:** `CalculatorService` and `MemoryService` have different contracts. CLI must know about both.
+**Standard Mode Operations (8):**
+1. Add
+2. Subtract
+3. Multiply
+4. Divide (with zero-check)
+5. Square (unary)
+6. Square Root (unary, with negative-check)
+7. Power
+8. Modulo (with zero-check)
 
-**Solution:** Formalize service contracts with protocols or ABCs.
+**Scientific Mode Operations (6):**
+9. Sin (unary, radians)
+10. Cos (unary, radians)
+11. Tan (unary, radians)
+12. Log (base 10, unary, with domain-check a > 0)
+13. Ln (natural log, unary, with domain-check a > 0)
+14. Exp (unary)
 
-**Calculation Service Protocol:**
+**Mode Transition:**
+- In CLI: unified menu, all 14 operations always available
+- **In GUI: likely organized as two tabs or sections**
+  - Standard tab: 8 operations
+  - Scientific tab: 6 operations
+  - Both tabs share the same services and memory
+
+---
+
+## How MemoryEntry Records Work
+
+### Creation
+1. After a successful calculation via `CalculatorService.perform()`, a `CalculationResult` is created and saved
+2. Separately, a `MemoryEntry` must be manually created and passed to `MemoryService.store()`
+3. `MemoryEntry.__post_init__()` auto-generates:
+   - `execution_timestamp` (ISO format)
+   - `memory_entry_id` (UUID)
+
+### Storage
+- `MemoryService.store(entry)` delegates to `MemoryJsonStorage.save(entry)`
+- `MemoryJsonStorage.save()` appends entry to `artifacts/memory_entries.json`
+- File is created automatically if missing
+
+### Retrieval & Querying
+- `MemoryService.retrieve_all()` → loads all entries from JSON
+- `filter_by_operation(name)` → case-insensitive operation filter
+- `filter_by_success(bool)` → filter by success/failure
+- `filter_by_execution_time(min_ms, max_ms)` → time range filter
+- `compute_statistics()` → aggregate metrics
+
+### Display
+- `MemoryEntry.__str__()` → "operation: a and b → result" (or error message)
+- Used in CLI menu option 10 ("View memory")
+
+---
+
+## Service Layer Architecture (Key for GUI Integration)
+
+### Services Depend on Protocols
+As of Task 09, services use abstract protocol interfaces (not concrete classes):
+
+**CalculationService Protocol:**
 ```python
 class CalculationService(Protocol):
-    """Execute a single calculation and return result."""
     def perform(self, operation: Operation, a: float, b: float) -> CalculationResult: ...
     def get_history(self) -> List[CalculationResult]: ...
 ```
 
-**Memory Service Protocol:**
+**MemoryService Protocol:**
 ```python
-class MemoryManagement(Protocol):
-    """Store, retrieve, and query calculation attempts."""
+class MemoryService(Protocol):
     def store(self, entry: MemoryEntry) -> None: ...
     def retrieve_all(self) -> List[MemoryEntry]: ...
     def filter_by_operation(self, name: str) -> List[MemoryEntry]: ...
-    def filter_by_success(self, success: bool) -> List[MemoryEntry]: ...
-    def filter_by_execution_time(self, min_ms: float, max_ms: float) -> List[MemoryEntry]: ...
+    def filter_by_success(self, bool) -> List[MemoryEntry]: ...
     def compute_statistics(self) -> CalculationStatistics: ...
-    def export_to_file(self, filepath) -> int: ...
-    def import_from_file(self, filepath, skip_invalid) -> tuple[int, list]: ...
+    def export_to_file(self, path) -> int: ...
+    def import_from_file(self, path, skip_invalid) -> tuple[int, list]: ...
+```
+
+### Concrete Service Classes (Wired in `src/__main__.py`)
+- `CalculatorService(Calculator, JsonStorage)` implements `CalculationService`
+- `MemoryService(MemoryJsonStorage)` implements `MemoryService`
+
+**GUI Integration Point:**
+- GUI can use same service instances created in `__main__.py`
+- Or GUI can be passed service instances at init time
+- Services are stateless (except for file I/O); safe to share
+
+---
+
+## Current CLI Structure (Reference)
+
+**Entry point:** `src/__main__.py`
+
+```python
+def main() -> None:
+    parser = argparse.ArgumentParser(...)
+    # Flags: --operation OP A B, --memory, --statistics, --export, --import, etc.
+    
+    service = _build_service()           # CalculatorService instance
+    memory_service = _build_memory_service()  # MemoryService instance
+    cli = CalculatorCLI(service, memory_service)
+    
+    if args.export:
+        cli.export_memory(...)
+    elif args.import_file:
+        cli.import_memory(...)
+    elif args.memory_filter:
+        memory_service.filter_by_*()
+    elif args.statistics:
+        cli.show_statistics()
+    elif args.memory:
+        cli.show_memory()
+    elif args.operation:
+        cli.run_command(...)
+    else:
+        cli.run_interactive()  # Interactive menu loop
+```
+
+**Interactive Menu (`CalculatorCLI.run_interactive()`):**
+```
+=== Calculator ===
+Operations:
+  1. Add
+  2. Subtract
+  ...
+  14. Exp
+  15. View history
+  16. View memory
+  17. Filter memory by operation
+  18. Filter memory by status
+  19. View statistics
+  20. Export memory to file
+  21. Import memory from file
+  22. Exit
+
+Choose option: [user enters number 1-22]
 ```
 
 ---
 
-### 3. **Decouple CLI from Service Details**
+## Task 10 Requirements Analysis
 
-**Problem:** CLI directly calls service methods and knows their signatures. Hard to test; hard to extend.
+### Must Have
 
-**Solution:** Introduce a facade or coordinator that sits between CLI and services.
+1. **Graphical Interface**
+   - tkinter-based window application
+   - No CLI knowledge required; pure GUI
+   - Professional, user-friendly layout
+   - Responsive to user interactions
 
-**Current:** CLI → CalculatorService/MemoryService
-**Proposed:** CLI → CalculatorFacade → (CalculatorService + MemoryService)
+2. **Standard Mode Operations (All 8)**
+   - Accessible buttons or menu for: Add, Subtract, Multiply, Divide, Square, Square Root, Power, Modulo
+   - Input fields for operands (a, b)
+   - Display result after calculation
+   - Show error messages on invalid input (e.g., divide by zero, negative sqrt)
 
-The facade would:
-- Coordinate between calculation and memory services
-- Present a unified interface to CLI
-- Handle error cases (e.g., capture failures in both systems)
-- Manage orchestration logic (e.g., "when a calc fails, create a MemoryEntry")
+3. **Scientific Mode Operations (All 6)**
+   - Accessible buttons or menu for: Sin, Cos, Tan, Log, Ln, Exp
+   - Handle unary operations (ignore operand_b or hide it)
+   - Input fields for operand(s)
+   - Display result; handle domain errors (log/ln of non-positive)
+
+4. **Mode Switching**
+   - User can switch between Standard and Scientific modes
+   - Likely implemented as:
+     - Tabs (one for Standard, one for Scientific)
+     - Or mode toggle button with dynamic UI update
+   - All 14 operations eventually reachable
+
+5. **Calculation Memory Display**
+   - Show all stored memory entries (from `MemoryService.retrieve_all()`)
+   - Display in a scrollable list or table
+   - Show: operation, operands, result/error, timestamp
+   - Update automatically after new calculation
+
+6. **Statistics Display**
+   - Display aggregated stats (from `MemoryService.compute_statistics()`)
+   - Show: total calculations, error count, error %, execution times, per-operation breakdown
+   - Update automatically after new calculation
+
+7. **Entry Point & Invocation**
+   - GUI accessible via new CLI flag: `python -m src --gui` or similar
+   - Or: interactive menu option to launch GUI (if maintaining backward compatibility)
+   - Must not break `python -m src` (existing interactive mode)
+
+### Should Have
+
+1. **Seamless Service Integration**
+   - GUI uses the same `CalculatorService` and `MemoryService` instances as CLI
+   - Shared storage; if CLI runs afterward, memory is consistent
+   - No duplicate storage mechanisms
+
+2. **Clear Presentation**
+   - Consistent with domain terminology (operation names, field names)
+   - Easy to understand operation categories (Standard vs Scientific)
+   - Readable memory/statistics output
+
+3. **Error Handling**
+   - Validation of numeric inputs before calling service
+   - Display user-friendly error messages (not stack traces)
+   - Graceful handling of invalid operation selections
+
+4. **Consistency**
+   - Operation behavior identical to CLI version
+   - Memory entries created with same metadata (timestamp, execution_time)
+   - Statistics computed the same way
+
+### Could Have
+
+1. **Export/Import GUI**
+   - GUI buttons to export memory to file / import from file
+   - File dialogs for path selection
+   - Success/error feedback
+
+2. **Memory Filtering GUI**
+   - Filter controls (operation name, success/failure)
+   - Display filtered subset in memory list
+   - Multiple filter combinations
+
+3. **Calculation History (short-term)**
+   - Display recent calculations from `CalculatorService.get_history()` separately
+   - Distinction between short-term history and long-term memory
+
+4. **Keyboard Support**
+   - Numeric keypad for input
+   - Operation shortcuts (e.g., Alt+A for Add)
+   - Enter to execute calculation
+
+5. **Theme/Appearance**
+   - Dark mode option
+   - Configurable button sizes
+   - Resizable window
+
+### Won't Have (Explicitly Out of Scope)
+
+1. **Complex Equation Parsing**
+   - No support for "3 + 5 * 2" expressions
+   - Only single operation per calculation (a OP b)
+
+2. **Additional Operations**
+   - No new arithmetic operations beyond the 14 already defined
+   - No custom user-defined operations
+
+3. **Database Backend**
+   - Keep using existing JSON file storage
+   - No migration to SQL or other DB
+
+4. **Networking**
+   - No cloud sync, no remote calculations
+   - GUI operates locally only
+
+5. **Embedded Documentation**
+   - No help text or tutorials in GUI
+   - Keep minimal UI; users know calculator basics
 
 ---
 
-## Tests Verify Current Behavior
+## Key Integration Points
 
-- **433 tests, all passing** ✓
-- Coverage includes:
-  - Calculator pure logic (30+ tests)
-  - CalculatorService orchestration (15+ tests)
-  - MemoryService store/retrieve (50+ tests)
-  - MemoryService filtering & statistics (50+ tests)
-  - Storage persistence (20+ tests)
-  - CLI interactive mode (20+ tests)
-  - CLI one-shot flags (50+ tests)
-  - Import/export (30+ tests)
-  - Data models serialization (50+ tests)
+### 1. Service Initialization in `__main__.py`
+Currently:
+```python
+def _build_service() -> CalculatorService:
+    storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
+    return CalculatorService(Calculator(), JsonStorage(storage_path))
 
-**Requirement:** All 433 tests must pass after refactoring.
+def _build_memory_service() -> MemoryService:
+    memory_storage_path = Path(__file__).parent.parent / "artifacts" / "memory_entries.json"
+    return MemoryService(MemoryJsonStorage(memory_storage_path))
+```
+
+**GUI Impact:**
+- Same service instances need to be passed to GUI window
+- Or GUI can create its own (but then memory won't be shared with CLI)
+- Recommended: Pass existing instances to GUI class
+
+### 2. Model Usage
+- **CalculationResult**: Read-only; GUI displays operation, operands, result, timestamp, execution_time
+- **MemoryEntry**: GUI creates new instances after successful calculations, stores via `memory_service.store()`
+- **CalculationStatistics**: GUI displays results from `memory_service.compute_statistics()`
+- **Operation**: GUI provides UI for selecting from enum; uses `Operation.from_string()` and `display_name()`
+
+### 3. Service Method Calls
+GUI must call:
+- `calculator_service.perform(operation, a, b)` → returns `CalculationResult` or raises `ValueError`
+- `memory_service.store(entry)` → stores `MemoryEntry`
+- `memory_service.retrieve_all()` → gets all `MemoryEntry` objects
+- `memory_service.compute_statistics()` → gets `CalculationStatistics`
+- Optional: `memory_service.filter_by_operation()`, etc.
+- Optional: `memory_service.export_to_file()`, `import_from_file()`
+
+### 4. Error Handling
+- `Calculator` and services raise `ValueError` on invalid input
+- GUI must catch, format, and display errors in message boxes or status labels
+- Example: `except ValueError as e: messagebox.showerror("Error", str(e))`
 
 ---
 
-## External Behavior (Must Not Change)
+## File Structure Changes Required
 
-### CLI Entry Point: `python -m src`
-- **Interactive:** No args → show menu, accept user input
-- **One-shot:** `--operation add 3 5` → execute and print result
-- **Flags:** `--memory`, `--statistics`, `--export`, `--import`, etc.
-- **Output:** Same format and messages as before
-- **Side Effects:** Same JSON files created/updated
+### New Files
 
-### Return Types
-- `CalculatorService.perform()` → `CalculationResult` (same fields, same serialization)
-- `MemoryService.retrieve_all()` → `List[MemoryEntry]` (same fields, same serialization)
-- Storage JSON format must remain compatible (backward compat required)
+1. **`src/gui/` (new package)**
+   ```
+   src/gui/
+   ├── __init__.py                # GUI package initialization
+   ├── calculator_gui.py          # Main GUI window class (CalculatorGUI)
+   ├── standard_mode_tab.py       # Standard operations tab (optional refactor)
+   └── scientific_mode_tab.py     # Scientific operations tab (optional refactor)
+   ```
+
+   **Alternative (simpler):**
+   ```
+   src/gui/
+   ├── __init__.py
+   └── calculator_gui.py          # All GUI code in single file
+   ```
+
+2. **`src/gui/calculator_gui.py`**
+   - Main class: `CalculatorGUI(tk.Tk)`
+   - Constructor: `__init__(service: CalculationService, memory_service: MemoryService)`
+   - Methods:
+     - `_create_standard_mode_frame()` → buttons for 8 standard operations
+     - `_create_scientific_mode_frame()` → buttons for 6 scientific operations
+     - `_on_operation_button_click(operation: Operation)` → handler for operation buttons
+     - `_prompt_operands()` → get a, b from input fields (or dialog)
+     - `_execute_calculation()` → call service, update memory, display result
+     - `_refresh_memory_display()` → update memory list widget
+     - `_refresh_statistics_display()` → update stats widget
+     - `_show_error(message)` → display error dialog/label
+     - Lifecycle: `run()` to start event loop
+
+### Modified Files
+
+1. **`src/__main__.py`**
+   - Add new CLI flag: `--gui` or `--launch-gui`
+   - Add logic to instantiate `CalculatorGUI` if flag is set
+   - Pass service instances to GUI
+   - Keep existing CLI logic unchanged
+
+2. **`src/cli/calculator_cli.py`**
+   - Optional: Add menu option to launch GUI (if desired for backward compat)
+   - Or: Keep as-is, GUI is separate entry point
+
+### Unchanged
+
+- `src/models/` — no changes
+- `src/services/` — no changes
+- `src/storage/` — no changes
+- `src/protocols/` — no changes
+- `tests/` — no new tests required (GUI is presentation layer; services are tested separately)
+
+---
+
+## Possible GUI Layouts
+
+### Option A: Tab-Based (Recommended for Task 10)
+
+```
+┌────────────────────────────────────────────┐
+│  OOP Calculator - GUI                      │
+├────────────────────────────────────────────┤
+│  [Standard] [Scientific]                   │  <- Tabs
+├────────────────────────────────────────────┤
+│                                            │
+│  Operation: [Dropdown/Buttons]             │
+│  Operand A: [Input field]                  │
+│  Operand B: [Input field]     [Calculate] │
+│                                            │
+│  Result: [Display result or error]         │
+│                                            │
+│  ┌────────────────────────────────────┐   │
+│  │ Memory Entries                     │   │
+│  │ ──────────────────────────────     │   │
+│  │ 1. add: 3 and 5 → 8                │   │
+│  │ 2. multiply: 2 and 3 → 6           │   │
+│  │ 3. divide: 10 and 0 → Error: ... │   │
+│  │ [Scroll bar]                       │   │
+│  └────────────────────────────────────┘   │
+│                                            │
+│  Statistics                                │
+│  ──────────────────                       │
+│  Total Calculations: 3                     │
+│  Error Count: 1                            │
+│  Avg Execution Time: 0.15 ms               │
+│                                            │
+│  [Export] [Import] [Clear] [Exit]         │
+└────────────────────────────────────────────┘
+```
+
+### Option B: Side-by-Side (Alternative)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│ OOP Calculator - GUI                                      │
+├──────────────────┬──────────────────────────────────────┤
+│ Standard         │ Operand A: [field]                   │
+│ ──────────────── │ Operand B: [field]                   │
+│ [Add]  [Subtract]│ Operation: [Dropdown]                │
+│ [Mul]  [Divide]  │                                      │
+│ [Sqrt] [Square]  │ [Calculate] [Clear]                  │
+│ [Power] [Modulo] │                                      │
+│                  │ Result: [Display]                    │
+│ Scientific       │                                      │
+│ ──────────────── │ Memory Entries                       │
+│ [Sin]  [Cos]     │ ────────────────                     │
+│ [Tan]  [Log]     │ [List of entries]                    │
+│ [Ln]   [Exp]     │                                      │
+│                  │ Statistics: [Compact display]       │
+│ [Export] [Import]│ [Export] [Import] [Exit]            │
+└──────────────────┴──────────────────────────────────────┘
+```
+
+### Option C: Button Grid (Alternative)
+
+```
+┌────────────────────────────────────┐
+│ OOP Calculator - GUI               │
+├────────────────────────────────────┤
+│ A: [field]  B: [field]  [Standard] │
+│ [Scientific]                       │
+│                                    │
+│  [Add] [Sub] [Mul] [Div]           │
+│ [Sqrt][Sq] [Pow] [Mod]             │
+│                                    │
+│ (Scientific shown when toggled)    │
+│  [Sin] [Cos] [Tan]                 │
+│ [Log] [Ln] [Exp]                   │
+│                                    │
+│ Result: [Display]                  │
+│                                    │
+│ Memory: [Scrollable list]          │
+│ Stats:  [Summary]                  │
+│                                    │
+│ [Export] [Import] [Clear] [Exit]   │
+└────────────────────────────────────┘
+```
+
+---
+
+## Standard Mode Understanding (Current Code)
+
+From `src/models/operation.py`, the 8 standard operations are:
+1. **ADD** (value="add") → Calculator.add(a, b)
+2. **SUBTRACT** (value="subtract") → Calculator.subtract(a, b)
+3. **MULTIPLY** (value="multiply") → Calculator.multiply(a, b)
+4. **DIVIDE** (value="divide") → Calculator.divide(a, b) [raises ValueError if b == 0]
+5. **SQUARE** (value="square") → Calculator.square(a, b) [returns a²; ignores b]
+6. **SQRT** (value="sqrt") → Calculator.sqrt(a, b) [returns √a; raises ValueError if a < 0]
+7. **POWER** (value="power") → Calculator.power(a, b) [returns a^b]
+8. **MODULO** (value="modulo") → Calculator.modulo(a, b) [raises ValueError if b == 0]
+
+**Operand Semantics:**
+- Binary operations: both a and b are required and used
+- Unary operations (square, sqrt, sin, cos, tan, log, ln, exp): only `a` is used; `b` is ignored/optional
+
+---
+
+## MemoryEntry Records Understanding
+
+### What Gets Stored
+When a calculation succeeds:
+1. `CalculatorService.perform(operation, a, b)` executes and saves `CalculationResult` to `artifacts/calculations.json`
+2. GUI can manually create `MemoryEntry` and call `memory_service.store(entry)` to append to `artifacts/memory_entries.json`
+
+Example flow (desired for GUI):
+```python
+try:
+    result = calculator_service.perform(operation, a, b)
+    # Success: create memory entry
+    entry = MemoryEntry(
+        operation=operation.value,
+        operand_a=a,
+        operand_b=b,
+        result=result.result,
+        success=True,
+        error_message=None,
+        execution_timestamp="",  # auto-filled in __post_init__
+        execution_time_ms=result.execution_time_ms,
+        memory_entry_id=None     # auto-generated UUID in __post_init__
+    )
+    memory_service.store(entry)
+except ValueError as e:
+    # Failure: could create memory entry with success=False
+    entry = MemoryEntry(
+        operation=operation.value,
+        operand_a=a,
+        operand_b=b,
+        result=None,
+        success=False,
+        error_message=str(e),
+        execution_timestamp="",
+        execution_time_ms=0.0,
+        memory_entry_id=None
+    )
+    memory_service.store(entry)
+```
+
+### Why MemoryEntry Matters
+- `MemoryEntry` is the complete audit trail (success + failure)
+- `CalculationResult` only captures successful calcs
+- `MemoryService` provides querying, filtering, statistics over all entries
+- Memory entries are persisted across sessions (JSON file)
 
 ---
 
 ## Ambiguities and Working Assumptions
 
-### 1. **Are we creating a "memory" abstraction separate from "storage"?**
-   - **Current state:** Memory (audit trail) and History (short-term calc log) are logically separate.
-   - **Assumption:** Keep them separate. A "memory service" is not just persistence; it's a query/analytics layer on top of storage.
-   - **Implication:** Abstract storage, but memory service remains domain-specific.
+### 1. **Should the GUI automatically record failures to memory?**
+   - **Current CLI behavior:** Failures are not recorded; only successes go to `CalculatorService` and then to memory
+   - **Assumption for GUI:** Same behavior as CLI—only successful calcs are recorded to memory
+   - **Implication:** GUI catch block shows error dialog but does NOT store failure entry
 
-### 2. **Should the CLI talk to a facade, or directly to services with abstract interfaces?**
-   - **Option A (Facade):** CLI → Facade → Services. Cleaner separation, easier testing.
-   - **Option B (Direct + Protocols):** CLI → CalculationService (protocol) + MemoryService (protocol). Simpler, less indirection.
-   - **Assumption:** Use **Option B** (protocols). Aligns with Python idiom; simpler to implement; tests can mock protocols directly.
+### 2. **How should mode switching work (Standard vs Scientific)?**
+   - **Option A (Tabs):** Two tkinter.Frame objects on Notebook widget; user clicks tabs to switch
+   - **Option B (Button toggle):** Single frame; buttons dynamically replaced or hidden when toggling
+   - **Option C (Sidebar menu):** Vertical menu; operations listed; user selects operation name
+   - **Assumption for this analysis:** Use **Option A (Tabs)** as clearest UI pattern
+   - **Implication:** Import `tkinter.ttk.Notebook` for tab widget
 
-### 3. **Who is responsible for linking Calculator → MemoryService (when failures occur)?**
-   - **Current:** Never. Failures are not recorded.
-   - **Assumption:** This is a **missing feature**, not part of separation. Don't add it during refactoring; preserve current behavior.
-   - **Implication:** After refactoring, failures still won't be recorded automatically. That's fine; it's out of scope.
+### 3. **Should operand B be hidden for unary operations in the GUI?**
+   - **Option A:** Always show two input fields (A and B); for unary, user ignores B
+   - **Option B:** Hide operand B when unary operation is selected
+   - **Option C:** Dynamically update UI layout based on operation
+   - **Assumption:** Use **Option A** (simpler; unary operations ignore B anyway)
+   - **Implication:** Label can say "Operand B (ignored for unary operations)" or similar
 
-### 4. **Should abstract types be in a new module?**
-   - **Option A:** Create `src/protocols/` directory with `calculation_service.py`, `memory_service.py`, `storage.py`
-   - **Option B:** Add protocols to existing modules (e.g., `calculation_protocol.py` in services)
-   - **Option C:** Use inline Protocol definitions (no new files)
-   - **Assumption:** Use **Option A** for clarity. New `src/protocols/` module with 2-3 protocol files.
+### 4. **Should memory entries include failed calculations?**
+   - **Current state:** Only successes are stored by CLI
+   - **Assumption:** Keep same behavior in GUI—only record successful calcs to memory
+   - **Future task:** If error recording is desired, a separate task should add that
 
-### 5. **Rename "CalculatorService" to avoid confusion with protocol?**
-   - **Current:** `CalculatorService` implements the service, no separate name for the interface.
-   - **Assumption:** Keep the name. Use `from src.protocols import CalculationService` (interface); concrete class remains `CalculatorService`.
-   - **Implication:** No breaking API changes; type hints can reference protocol.
+### 5. **Entry point: `--gui` flag vs menu option vs separate script?**
+   - **Option A:** `python -m src --gui` — add flag to argparse in `__main__.py`
+   - **Option B:** `python -m src` interactive menu with "Launch GUI" option
+   - **Option C:** Separate entry point script (e.g., `run_gui.py`)
+   - **Assumption:** Use **Option A** (`--gui` flag) for clarity
+   - **Implication:** Modify `__main__.py` to detect flag and instantiate `CalculatorGUI`
 
----
+### 6. **Should the GUI window block the CLI exit?**
+   - **Current behavior:** CLI with `--operation` flag completes immediately
+   - **Option A:** `python -m src --gui` starts GUI event loop; block until window closes
+   - **Option B:** Start GUI in background thread; return immediately
+   - **Assumption:** Use **Option A** (simpler, expected behavior for GUI apps)
+   - **Implication:** GUI's `mainloop()` blocks until user closes window
 
-## Scope Boundaries
+### 7. **Should memory be shared between GUI and CLI sessions?**
+   - **Current design:** Both use same service instances and JSON files
+   - **Answer:** YES—if you run CLI in one terminal and GUI in another, they see the same memory
+   - **Implication:** No duplication of storage; memory is consistent across invocations
 
-### IN SCOPE (must be addressed)
-- Introduce abstract storage interface (base class or protocol)
-- Introduce abstract service interfaces (protocols for calculation and memory)
-- Make concrete services implement these interfaces
-- Ensure CLI uses interfaces, not concrete types
-- Preserve all external behavior and tests
-
-### OUT OF SCOPE
-- Rewrite calculation algorithms
-- Add new features (e.g., auto-store failures in memory)
-- Change CLI commands or flags
-- Refactor the data models (`CalculationResult`, `MemoryEntry`, `CalculationStatistics`)
-- Optimize performance
-- Change JSON storage format (must maintain backward compatibility)
-
-### BORDERLINE (clarify with stakeholder)
-- Should `CalculatorService` automatically create `MemoryEntry` for all attempts? → NO, preserve current behavior
-- Should storage classes share code? → No explicit code sharing required; just unified interface
-- Should filters/statistics move to separate class? → No; keep as part of `MemoryService`
+### 8. **What happens if user closes GUI without exiting menu?**
+   - **Assumed behavior:** Close button closes window and exits cleanly
+   - **Implication:** No confirmation dialog needed; closing window = exiting
 
 ---
 
-## Suggested Implementation Order
+## Scope Signals
 
-1. **Create protocols module** (`src/protocols/__init__.py`)
-   - Define `Storage[T]` protocol (generic)
-   - Define `CalculationService` protocol
-   - Define `MemoryService` protocol
+### Explicitly IN Scope
+- ✅ Add tkinter-based GUI
+- ✅ Implement all 14 operations (8 standard + 6 scientific)
+- ✅ Display calculation results and errors
+- ✅ Show memory entries from `MemoryService`
+- ✅ Display statistics from `MemoryService.compute_statistics()`
+- ✅ Support mode switching (Standard vs Scientific)
+- ✅ Integrate with existing services (no duplication)
+- ✅ Provide CLI entry point (`--gui` flag or similar)
+- ✅ Error handling (invalid inputs, domain errors)
 
-2. **Make storage classes implement protocol**
-   - Update `JsonStorage` type hints
-   - Update `MemoryJsonStorage` type hints
-   - No code changes; just confirm they match protocol
+### Explicitly OUT of Scope
+- ❌ No new operations added
+- ❌ No changes to storage format
+- ❌ No GUI-only features that break CLI compatibility
+- ❌ No complex equation parsing or expression trees
+- ❌ No database migration
+- ❌ No network/cloud features
+- ❌ No custom theming or styling (unless very simple)
 
-3. **Update service constructors**
-   - Change `CalculatorService.__init__(calculator: Calculator, storage: Storage)` (instead of `JsonStorage`)
-   - Change `MemoryService.__init__(storage: Storage)` (instead of `MemoryJsonStorage`)
-   - Allow dependency injection of protocol implementations
-
-4. **Update CLI type hints**
-   - Change `__init__(self, service: CalculationService, memory_service: MemoryService | None)`
-   - Import protocols; use in type hints
-   - No behavioral changes
-
-5. **Test and verify**
-   - Run all 433 tests → must all pass
-   - Test `python -m src --operation add 3 5` → output unchanged
-   - Test CLI interactive mode → behavior unchanged
-
----
-
-## Key Metrics
-
-| Metric | Current | Target |
-|--------|---------|--------|
-| Storage implementations | 2 classes, no interface | 2 classes + 1 protocol |
-| Service implementations | 2 classes, no interface | 2 classes + 2 protocols |
-| Tests | 433 passing | 433 passing |
-| CLI entry points | All working | All unchanged |
-| Public method signatures | As-is | No breaking changes |
-| Dependencies | Circular potential | Clearly acyclic |
+### Borderline (Clarify for Implementation)
+- ? Export/Import buttons in GUI — could add, not Must
+- ? Filtering UI in GUI memory panel — could add, not Must
+- ? Keyboard shortcuts — could add, not Must
+- ? Clearing memory entries — could add, nice to have
 
 ---
 
-## Risk Assessment
+## Files Affected
 
-**Low Risk:**
-- Adding protocols/abstract classes doesn't break concrete implementations
-- Type hints are not enforced at runtime; old code still works
-- Tests use mocks, so they're compatible with protocols
+### New Files to Create
 
-**Medium Risk:**
-- Import paths change if protocols added to new module (need to update imports in services + CLI)
-- Type checkers (mypy) will flag protocol mismatches if not careful
+| File | Purpose | Lines |
+|------|---------|-------|
+| `src/gui/__init__.py` | Package marker | 5-10 |
+| `src/gui/calculator_gui.py` | Main GUI class, window setup, event handlers | 300-500 |
 
-**High Risk:**
-- None identified; this is a low-impact refactoring
-
----
-
-## Files to Modify
+### Files to Modify
 
 | File | Change | Reason |
 |------|--------|--------|
-| `src/protocols/__init__.py` | **Create** | Define Storage, CalculationService, MemoryService protocols |
-| `src/services/calculator_service.py` | **Minor** | Update type hints; no logic changes |
-| `src/services/memory_service.py` | **Minor** | Update type hints; no logic changes |
-| `src/storage/json_storage.py` | **Minor** | Add `# implements Storage` comment; verify signature match |
-| `src/storage/memory_json_storage.py` | **Minor** | Add `# implements Storage` comment; verify signature match |
-| `src/cli/calculator_cli.py` | **Minor** | Update type hints in `__init__` |
-| `src/__main__.py` | **Minimal** | Update imports if protocols moved to new module |
-| `tests/` | **No changes** | Tests should pass without modification |
+| `src/__main__.py` | Add `--gui` flag to argparse; handle GUI invocation | Launch GUI from CLI |
+| `src/cli/calculator_cli.py` | Optional: add menu option "Launch GUI" | Backward-compat feature (could skip) |
+
+### No Changes to
+
+| Category | Files |
+|----------|-------|
+| Models | `src/models/*.py` |
+| Services | `src/services/*.py` |
+| Storage | `src/storage/*.py` |
+| Protocols | `src/protocols/*.py` |
+| Tests | `tests/` (existing tests unchanged; GUI not tested in pytest) |
 
 ---
 
-## Success Criteria
+## Testing Considerations
 
-1. All 433 tests pass without modification
-2. `python -m src` runs identically before and after
-3. All public interfaces (methods, return types, side effects) are unchanged
-4. Type hints now reference protocols where appropriate
-5. Coupling metrics improve (fewer direct dependencies on concrete classes)
-6. Code review confirms component boundaries are now clear and formalized
+### What NOT to Test
+- GUI presentation logic (buttons rendering, widget layout) — not testable in unit tests
+- Tkinter event loop behavior — framework responsibility
+- User input validation at widget level — integration tests only
+
+### What CAN Be Tested (Outside GUI)
+- Service method calls and return values — already tested (433 tests)
+- Error handling (ValueError propagation) — already tested
+- MemoryEntry creation and storage — already tested
+- Statistics computation — already tested
+
+### GUI Testing Strategy (If Needed Later)
+- Use tkinter testing library (e.g., `pytest-tkinter` or manual fixtures)
+- Mock `CalculatorService` and `MemoryService` with stubs
+- Verify button clicks trigger correct service calls
+- Verify display updates after operations
+
+**For this task:** No new tests required. GUI is a presentation layer over tested services.
+
+---
+
+## Implementation Priority (For Programmer)
+
+1. **Highest:** Create `CalculatorGUI` class with initialization and window setup
+2. **High:** Standard mode tab with 8 operation buttons and input/output fields
+3. **High:** Scientific mode tab with 6 operation buttons
+4. **High:** Calculate button handler to execute operations and handle errors
+5. **High:** Memory display panel (read from `MemoryService.retrieve_all()`)
+6. **Medium:** Statistics panel (display from `MemoryService.compute_statistics()`)
+7. **Medium:** Refresh logic to update memory and stats after each calculation
+8. **Medium:** Modify `__main__.py` to add `--gui` flag and invoke GUI
+9. **Low:** Export/Import buttons (if time permits)
+10. **Low:** Filtering UI (if time permits)
+
+---
+
+## Success Criteria for Task 10
+
+### Must-Have Criteria (Verification Steps)
+
+1. ✅ **GUI window launches**
+   - `python -m src --gui` opens a tkinter window without errors
+
+2. ✅ **All 14 operations accessible**
+   - Standard mode: Add, Subtract, Multiply, Divide, Square, Square Root, Power, Modulo
+   - Scientific mode: Sin, Cos, Tan, Log, Ln, Exp
+   - All produce correct results matching CLI behavior
+
+3. ✅ **Error handling**
+   - Division by zero: displays user-friendly error message
+   - Negative sqrt: displays error
+   - Log/Ln of non-positive: displays error
+   - Invalid numeric input: displays error (e.g., non-numeric in field)
+
+4. ✅ **Memory integration**
+   - Each successful calculation creates a `MemoryEntry` via `memory_service.store()`
+   - Memory display shows all entries with operation, operands, result, timestamp
+   - Memory display updates after new calculation
+
+5. ✅ **Statistics display**
+   - Shows total calculations, error count, error %, execution times
+   - Updates after new calculation
+
+6. ✅ **Mode switching**
+   - User can switch between Standard and Scientific
+   - Operations in each mode are correct
+
+7. ✅ **Existing CLI unchanged**
+   - `python -m src` still launches interactive menu
+   - `python -m src --operation add 3 5` still works
+   - All 433 tests still pass
+
+8. ✅ **Shared memory across sessions**
+   - Run GUI, perform calculation, close GUI
+   - Run CLI `--memory` flag
+   - See the calculation recorded in memory
+
+### Should-Have Criteria (Quality)
+
+1. ✅ Service integration is seamless (no duplication of logic)
+2. ✅ Error messages are clear and user-friendly
+3. ✅ UI layout is professional and intuitive
+4. ✅ Window is reasonably sized (not too small, not huge)
+5. ✅ Response time is immediate (< 100ms for calculations)
+
+### Could-Have Criteria (Nice-to-Have)
+
+1. ⏳ Export/Import buttons in GUI
+2. ⏳ Memory filtering in GUI
+3. ⏳ Keyboard shortcuts
+4. ⏳ Dark mode option
+
+---
+
+## Key Design Patterns to Use
+
+### 1. **Separation of Concerns**
+- `CalculatorGUI` handles presentation only (tkinter widgets, event routing)
+- All calculation logic delegated to services
+- All persistence delegated to `MemoryService`
+
+### 2. **Dependency Injection**
+- GUI constructor accepts `service: CalculationService` and `memory_service: MemoryService` as parameters
+- Enables testing with mocks; enables sharing instances across CLI and GUI
+
+### 3. **Event-Driven Architecture**
+- Operation buttons have click handlers that trigger calculations
+- Calculation results trigger updates to memory and statistics displays
+- Window close button triggers cleanup and exit
+
+### 4. **Model-View Separation**
+- Models (`Operation`, `MemoryEntry`, `CalculationStatistics`) are data-only
+- Views (GUI widgets) display models without modifying them
+- Services are controllers that coordinate models and views
+
+---
+
+## Code Stubs (Template for Programmer)
+
+### `src/gui/__init__.py`
+```python
+"""
+GUI module for OOP Calculator.
+Provides tkinter-based graphical interface as alternative to CLI.
+"""
+
+from .calculator_gui import CalculatorGUI
+
+__all__ = ["CalculatorGUI"]
+```
+
+### `src/gui/calculator_gui.py` (Stub)
+```python
+import tkinter as tk
+from tkinter import ttk, messagebox
+from src.models import Operation
+from src.models.memory_entry import MemoryEntry
+from src.protocols import CalculationService, MemoryService
+
+
+class CalculatorGUI(tk.Tk):
+    """
+    Main GUI window for the calculator.
+    
+    Provides tabs for Standard and Scientific modes, input fields for operands,
+    buttons for operations, and displays for memory entries and statistics.
+    """
+    
+    def __init__(self, service: CalculationService, memory_service: MemoryService | None = None):
+        super().__init__()
+        self.title("OOP Calculator - GUI")
+        self.geometry("700x600")
+        
+        self.service = service
+        self.memory_service = memory_service
+        
+        self._create_widgets()
+        self._refresh_memory_display()
+        self._refresh_statistics_display()
+    
+    def _create_widgets(self) -> None:
+        """Create and layout all GUI widgets."""
+        # TODO: Create notebook (tabs)
+        # TODO: Create standard mode tab
+        # TODO: Create scientific mode tab
+        # TODO: Create input fields for operands
+        # TODO: Create result display
+        # TODO: Create memory display
+        # TODO: Create statistics display
+        # TODO: Create buttons (Calculate, Clear, Export, Import, Exit)
+        pass
+    
+    def _create_standard_mode_tab(self) -> tk.Frame:
+        """Create tab for standard operations."""
+        # TODO: Create 8 operation buttons
+        # Return frame
+        pass
+    
+    def _create_scientific_mode_tab(self) -> tk.Frame:
+        """Create tab for scientific operations."""
+        # TODO: Create 6 operation buttons
+        # Return frame
+        pass
+    
+    def _on_operation_button_click(self, operation: Operation) -> None:
+        """Handle operation button click."""
+        # TODO: Get operands from input fields
+        # TODO: Call service.perform(operation, a, b)
+        # TODO: Handle success/error
+        # TODO: Refresh memory and statistics
+        pass
+    
+    def _execute_calculation(self, operation: Operation, a: float, b: float) -> None:
+        """Execute a calculation and record to memory."""
+        try:
+            result = self.service.perform(operation, a, b)
+            self._display_result(result)
+            
+            # Record to memory
+            if self.memory_service:
+                entry = MemoryEntry(
+                    operation=operation.value,
+                    operand_a=a,
+                    operand_b=b,
+                    result=result.result,
+                    success=True,
+                    error_message=None,
+                    execution_timestamp="",
+                    execution_time_ms=result.execution_time_ms,
+                    memory_entry_id=None
+                )
+                self.memory_service.store(entry)
+            
+            self._refresh_memory_display()
+            self._refresh_statistics_display()
+        
+        except ValueError as e:
+            self._show_error(str(e))
+    
+    def _display_result(self, result) -> None:
+        """Display calculation result."""
+        # TODO: Update result label/text widget
+        pass
+    
+    def _refresh_memory_display(self) -> None:
+        """Refresh memory entries list."""
+        if not self.memory_service:
+            return
+        # TODO: Get all entries via memory_service.retrieve_all()
+        # TODO: Update memory list widget
+        pass
+    
+    def _refresh_statistics_display(self) -> None:
+        """Refresh statistics display."""
+        if not self.memory_service:
+            return
+        # TODO: Get stats via memory_service.compute_statistics()
+        # TODO: Update statistics widget
+        pass
+    
+    def _show_error(self, message: str) -> None:
+        """Display error dialog."""
+        messagebox.showerror("Calculation Error", message)
+    
+    def run(self) -> None:
+        """Start the GUI event loop."""
+        self.mainloop()
+```
+
+### `src/__main__.py` (Modifications)
+```python
+# Add import
+from .gui.calculator_gui import CalculatorGUI
+
+def main() -> None:
+    parser = argparse.ArgumentParser(...)
+    
+    # Add new flag
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch graphical user interface (GUI) instead of CLI"
+    )
+    
+    args = parser.parse_args()
+    
+    # Check if GUI flag is set
+    if args.gui:
+        service = _build_service()
+        memory_service = _build_memory_service()
+        gui = CalculatorGUI(service, memory_service)
+        gui.run()
+        return
+    
+    # ... rest of existing CLI code
+```
+
+---
+
+## Summary: What Needs to Be Built
+
+### New Components
+1. **`CalculatorGUI` class** in `src/gui/calculator_gui.py`
+   - Inherits from `tk.Tk`
+   - Constructor takes `CalculationService` and optional `MemoryService`
+   - Creates tabs for Standard and Scientific modes
+   - Manages input fields, buttons, result display, memory list, statistics
+   - Event handlers for operations, calculations, UI updates
+
+2. **GUI package** at `src/gui/`
+   - `__init__.py` to export `CalculatorGUI`
+   - `calculator_gui.py` with full implementation
+
+### Modified Components
+1. **`src/__main__.py`**
+   - Add `--gui` argparse flag
+   - Instantiate and run `CalculatorGUI` if flag is set
+   - Pass service instances to GUI
+
+### Unchanged
+- All existing services, models, storage, CLI
+- All 433 tests continue to pass
+- JSON file formats
+
+---
+
+## Next Steps for System Architect & Python Programmer
+
+1. **System Architect:** Review this analysis; define exact GUI layout (Option A, B, or C)
+2. **Python Programmer:** Create `CalculatorGUI` class following the stub template
+3. **Python Programmer:** Wire `--gui` flag in `__main__.py`
+4. **Python Programmer:** Implement event handlers and refresh logic
+5. **UML Designer:** Update diagrams to show GUI component
+6. **Tester:** Run `python -m src --gui` and verify functionality; all 433 tests still pass
 
