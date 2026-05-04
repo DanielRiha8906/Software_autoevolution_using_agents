@@ -3,39 +3,78 @@
 start
 :Launch application;
 
-repeat
-  :Display task list + main menu;
-  :Wait for user input;
+switch (interface)
+  case (CLI Interactive)
+    repeat
+      :Display task list + main menu;
+      :Wait for user input;
 
-  switch (choice)
-    case (1 — List/filter)
-      :Run list/filter flow;
-    case (2 — Add task)
-      :Run add task flow;
-    case (3 — Show details)
-      :Run show details flow;
-    case (4 — Change status)
-      :Run change status flow;
-    case (5 — Update task)
-      :Run update task flow;
-    case (6 — Delete task)
-      :Run delete task flow;
-    case (7 — View statistics)
-      :Compute task statistics;
-      :Display statistics report;
-    case (8 — Add comment)
-      :Run add comment flow;
-    case (9 — View comments)
-      :Run view comments flow;
-    case (10 — Delete comment)
-      :Run delete comment flow;
-    case (0/q — Quit)
-      :Clear screen;
-      stop
-    case (other)
-      :Show unknown option;
-  endswitch
+      switch (choice)
+        case (1 — List/filter)
+          :Run list/filter flow;
+        case (2 — Add task)
+          :Run add task flow;
+        case (3 — Show details)
+          :Run show details flow;
+        case (4 — Change status)
+          :Run change status flow;
+        case (5 — Update task)
+          :Run update task flow;
+        case (6 — Delete task)
+          :Run delete task flow;
+        case (7 — View statistics)
+          :Compute task statistics;
+          :Display statistics report;
+        case (8 — Add comment)
+          :Run add comment flow;
+        case (9 — View comments)
+          :Run view comments flow;
+        case (10 — Delete comment)
+          :Run delete comment flow;
+        case (0/q — Quit)
+          :Clear screen;
+          break
+        case (other)
+          :Show unknown option;
+      endswitch
 
-repeat while (user continues)
+    repeat while (user continues)
+
+  case (GUI)
+    :Initialize tkinter window;
+    :Display all tasks in treeview;
+    repeat
+      :Wait for user interaction;
+
+      switch (action)
+        case (Filter button)
+          :Apply filter (All/Pending/In Progress/Done/Overdue);
+          :Refresh task list display;
+        case (Add Task button)
+          :Show dialog for task input;
+          :Create new task;
+          :Refresh display;
+        case (Select + Start Task button)
+          :Start selected task;
+          :Refresh display;
+        case (Select + Complete Task button)
+          :Mark task as done;
+          :Refresh display;
+        case (Select + Reopen Task button)
+          :Reopen completed task;
+          :Refresh display;
+        case (Select + Delete Task button)
+          :Confirm deletion;
+          :Delete task;
+          :Refresh display;
+        case (Close window)
+          :Exit GUI;
+          break
+      endswitch
+
+    repeat while (window open)
+endswitch
+
+stop
 
 @enduml

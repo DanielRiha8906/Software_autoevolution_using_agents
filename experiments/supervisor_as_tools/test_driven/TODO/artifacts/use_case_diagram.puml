@@ -2,7 +2,8 @@
 
 left to right direction
 
-actor User
+actor "CLI User" as CLIUser
+actor "GUI User" as GUIUser
 
 rectangle "TODO Manager" {
 
@@ -39,12 +40,31 @@ rectangle "TODO Manager" {
     usecase "Export tasks and comments" as C_EXPORT
     usecase "Import tasks and comments" as C_IMPORT
   }
+
+  package "GUI mode" {
+    usecase "View all tasks in GUI" as G_VIEW_ALL
+    usecase "Filter tasks by status" as G_FILTER
+    usecase "View overdue tasks" as G_OVERDUE
+    usecase "Add task via GUI" as G_ADD
+    usecase "Start task via GUI" as G_START
+    usecase "Complete task via GUI" as G_COMPLETE
+    usecase "Reopen task via GUI" as G_REOPEN
+    usecase "Delete task via GUI" as G_DELETE
+  }
 }
 
-User --> UI
-User --> CLI
-User --> C_EXPORT
-User --> C_IMPORT
+CLIUser --> UI
+CLIUser --> CLI
+CLIUser --> C_EXPORT
+CLIUser --> C_IMPORT
+GUIUser --> G_VIEW_ALL
+GUIUser --> G_FILTER
+GUIUser --> G_OVERDUE
+GUIUser --> G_ADD
+GUIUser --> G_START
+GUIUser --> G_COMPLETE
+GUIUser --> G_REOPEN
+GUIUser --> G_DELETE
 
 UI ..> I_ADD    : <<exclude>>
 UI ..> I_LIST   : <<exclude>>
@@ -75,5 +95,17 @@ C_IMPORT ..> (Validate JSON) : validates structure
 C_IMPORT ..> (Detect Duplicates) : avoids overwrites
 C_IMPORT ..> (Restore Tasks) : recreates objects
 C_IMPORT ..> (Restore Comments) : recreates objects
+
+G_VIEW_ALL ..> (Refresh Display) : updates list
+G_FILTER ..> (Refresh Display) : updates list
+G_FILTER ..> (Filter by Status) : applies filter
+G_OVERDUE ..> (Refresh Display) : updates list
+G_OVERDUE ..> (Highlight Red) : visual indicator
+G_ADD ..> (Show Dialog) : input form
+G_START ..> (Update Task) : changes status
+G_COMPLETE ..> (Update Task) : changes status
+G_REOPEN ..> (Update Task) : changes status
+G_DELETE ..> (Confirm Action) : user confirmation
+G_DELETE ..> (Update Task) : deletes task
 
 @enduml

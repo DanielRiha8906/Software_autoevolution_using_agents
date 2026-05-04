@@ -543,3 +543,88 @@ Successfully refactored the TODO application architecture to improve separation 
 - `component_diagram.puml`: Updated to show StorageInterface abstraction and clearer service boundaries
 
 Duration: 505.5s | Cost: $0.992969 USD | Turns: 40
+
+## Task 10: Implement tkinter-based TodoGUI
+
+### Summary
+Successfully implemented a tkinter-based GUI (TodoGUI) that provides a graphical interface for task management. The GUI integrates entirely with the existing TodoService layer, displaying tasks with status, due date, and project information, supporting task operations, filtering, and overdue task highlighting.
+
+### Files Changed
+- `src/gui/__init__.py` - New file: Package initialization exporting TodoGUI
+- `src/gui/todo_gui.py` - New file: TodoGUI class with tkinter-based UI
+- `src/__main__.py` - Updated to support `--gui` flag for launching GUI mode
+- `tests/test_todo_gui.py` - New file: Test suite with 5 test functions
+- `artifacts/class_diagram.puml` - Added gui package and TodoGUI class with relationships
+- `artifacts/component_diagram.puml` - Added GUI Layer component and UI → Service dependency
+- `artifacts/use_case_diagram.puml` - Added GUI User actor and 8 GUI-specific use cases
+- `artifacts/activity_diagram.puml` - Added GUI user interaction flow
+
+### Test Results
+- **All 118 tests passing** ✅ (5 new TodoGUI tests + 113 existing tests)
+- New TodoGUI tests:
+  - test_todo_gui_module_exists - TodoGUI class can be imported
+  - test_todo_gui_accepts_service - Constructor accepts TodoService instance
+  - test_gui_does_not_duplicate_task_logic - No duplicate task logic (no add_task() or TaskStatus() in GUI)
+  - test_gui_references_service - Source code references "service"
+  - test_gui_handles_overdue - Source code handles overdue via "overdue" or "is_overdue"
+- Existing tests all pass (no regressions)
+
+### Implementation Details
+
+**TodoGUI Class** (src/gui/todo_gui.py):
+- Constructor: `__init__(self, service: TodoService)` - Accepts and stores TodoService instance
+- Method: `run()` - Launches tkinter window and starts event loop
+- Public interface:
+  * run() - Main entry point for GUI execution
+- Private implementation:
+  * _ensure_root() - Lazy initialization of tkinter root window and widgets
+  * _create_widgets() - Builds UI components: Treeview for tasks, filter buttons, action buttons
+  * _refresh_task_list() - Updates task display by calling service.list_tasks()
+  * _highlight_overdue_tasks() - Uses task.is_overdue() to color overdue tasks red
+  * Filter methods: _show_all(), _show_pending(), _show_in_progress(), _show_done(), _show_overdue()
+  * Action methods: _add_task(), _start_task(), _complete_task(), _reopen_task(), _delete_task()
+  * Helper methods: _get_selected_task_id(), _find_task_id_by_display_id()
+
+**UI Components:**
+- Task Treeview displaying: id, title, status, due_date, project
+- Filter buttons: All Tasks, Pending, In Progress, Done, Overdue
+- Action buttons: Add Task, Start Task, Complete Task, Reopen Task, Delete Task
+- Overdue task highlighting with red text color
+- Interactive dialogs for task addition and user feedback
+
+**Service Layer Integration:**
+- All task operations delegated to TodoService methods:
+  * service.list_tasks() - Retrieve and display tasks with optional filtering
+  * service.add_task() - Create new tasks via dialog
+  * service.start_task() - Mark task as in-progress
+  * service.complete_task() - Mark task as done
+  * service.reopen_task() - Reopen completed/in-progress tasks
+  * service.delete_task() - Remove tasks
+- Overdue detection via task.is_overdue() method
+- No duplicate business logic in GUI code
+
+**Deferred Initialization:**
+- GUI widgets only created on first run() call
+- Allows tests to instantiate TodoGUI without display environment
+- Compatible with headless environments and test runners
+
+**CLI/GUI Integration:**
+- New --gui flag in CLI: `python -m src --gui`
+- Updated src/__main__.py to detect --gui flag and launch TodoGUI
+- Maintains backward compatibility with existing interactive menu and CLI modes
+
+**Diagrams Updated:**
+- class_diagram.puml: Added gui package with TodoGUI class and all methods
+- component_diagram.puml: Added GUI Layer component showing TodoGUI → TodoService dependency
+- use_case_diagram.puml: Added GUI User actor with 8 GUI-specific use cases
+- activity_diagram.puml: Added GUI user interaction flow alongside CLI flow
+
+**Edge Cases Handled:**
+- Deferred widget creation avoids tkinter initialization in headless tests
+- Task list auto-refresh on each operation
+- Overdue detection uses existing Task.is_overdue() (CEST timezone-aware)
+- Filter state maintained across operations
+- Empty task list handled gracefully
+- No direct access to private service attributes (uses public API only)
+
+Duration: 269.5s | Cost: $0.531108 USD | Turns: 29
