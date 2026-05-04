@@ -491,4 +491,4 @@ Duration: 528.2s | Cost: $1.049736 USD | Turns: 19
 - Added GUI mode use cases to use case diagram
 - Updated entry points to show three modes: GUI, Interactive Menu, CLI
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 424.2s | Cost: $0.748123 USD | Turns: 19
