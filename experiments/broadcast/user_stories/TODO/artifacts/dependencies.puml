@@ -8,8 +8,9 @@ skinparam padding 10
 
 left to right direction
 
-' Layer 5: CLI - topmost
-rectangle "Layer 5: CLI" #FFE5E5 [
+' Layer 5: Presentation (GUI & CLI) - topmost
+rectangle "Layer 5: Presentation" #FFE5E5 [
+    <b>TodoGUI</b> (Tkinter)
     <b>TodoCLI</b>
     <b>InteractiveMenu</b>
 ]
@@ -54,7 +55,7 @@ rectangle "Layer 0: Domain Models" #DDEEFF [
 ]
 
 ' Dependencies: top to bottom
-"Layer 5: CLI" --> "Layer 4: Services" : uses
+"Layer 5: Presentation" --> "Layer 4: Services" : uses
 "Layer 4: Services" --> "Layer 3: Domain Repositories" : uses
 "Layer 3: Domain Repositories" --> "Layer 2: Protocol Contracts" : implements
 "Layer 2: Protocol Contracts" --> "Layer 1: Storage Backend" : defined by

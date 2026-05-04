@@ -8,7 +8,8 @@ skinparam padding 5
 
 top to bottom direction
 
-package "CLI Layer" #FFE5E5 {
+package "Presentation Layer" #FFE5E5 {
+    component [TodoGUI] as GUI
     component [TodoCLI] as CLI
     component [InteractiveMenu] as Menu
 }
@@ -52,7 +53,8 @@ package "Model Layer" #DDEEFF {
 
 database "todo_data.json" as DB
 
-' CLI layer dependencies
+' Presentation layer dependencies
+GUI --> Service
 CLI --> Service
 CLI --> IService
 Menu --> Service
