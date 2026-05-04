@@ -5,26 +5,48 @@ skinparam stateFontStyle bold
 
 top to bottom direction
 
-[*] --> Menu
+[*] --> StandardMode
 
-Menu --> FirstOperand : operation selected
-Menu --> Feedback : history/memory history selected
-Menu --> FilterInput : filter selected
-Menu --> StatsDisplay : statistics selected
-Menu --> ExportInput : export selected
-Menu --> ImportInput : import selected
-Menu --> Feedback : invalid choice
-Menu --> [*] : exit
+StandardMode --> StandardMenu : initialized
+ScientificMode --> ScientificMenu : switched to scientific
+
+StandardMenu --> FirstOperand : binary operation selected
+StandardMenu --> Feedback : history/memory history selected
+StandardMenu --> FilterInput : filter selected
+StandardMenu --> StatsDisplay : statistics selected
+StandardMenu --> ExportInput : export selected
+StandardMenu --> ImportInput : import selected
+StandardMenu --> ModeToggle : toggle mode
+StandardMenu --> Feedback : invalid choice
+StandardMenu --> [*] : exit
+
+ModeToggle --> ScientificMode : mode toggled
+
+ScientificMenu --> FirstOperand : unary operation selected (sin, cos, tan, log, ln, exp, sqrt, square)
+ScientificMenu --> FirstOperandBinary : binary operation selected (add, subtract, multiply, divide, power, modulo)
+ScientificMenu --> Feedback : history/memory history selected
+ScientificMenu --> FilterInput : filter selected
+ScientificMenu --> StatsDisplay : statistics selected
+ScientificMenu --> ExportInput : export selected
+ScientificMenu --> ImportInput : import selected
+ScientificMenu --> ModeToggle : toggle mode
+ScientificMenu --> Feedback : invalid choice
+ScientificMenu --> [*] : exit
+
+ModeToggle --> StandardMode : mode toggled
 
 StatsDisplay --> Feedback : stats displayed
 
-FirstOperand --> SecondOperand : valid number
+FirstOperand --> Calculating : valid number (unary)
 FirstOperand --> Feedback : invalid number
+
+FirstOperandBinary --> SecondOperand : valid number
+FirstOperandBinary --> Feedback : invalid number
 
 SecondOperand --> Calculating : valid number
 SecondOperand --> Feedback : invalid number
 
-Calculating --> Feedback : success / show result
+Calculating --> Feedback : success / show result (unary or binary)
 Calculating --> Feedback : error / show error
 
 FilterInput --> FilterApply : criteria entered
@@ -40,6 +62,7 @@ ImportInput --> Feedback : cancelled
 ImportOptions --> ImportPerform : overwrite option selected
 ImportPerform --> Feedback : import success/error
 
-Feedback --> Menu
+Feedback --> StandardMenu : (in standard mode)
+Feedback --> ScientificMenu : (in scientific mode)
 
 @enduml

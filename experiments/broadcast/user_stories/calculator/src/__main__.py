@@ -32,13 +32,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass flags for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory-history] [--history] [--memory-retrieve] [--memory-store OP OPERANDS... [--result R] | [--error MSG]] [--filter-op OP] [--filter-state STATE] [--export-history FILE] [--import-history FILE]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A [B]] [--memory-history] [--history] [--memory-retrieve] [--memory-store OP OPERANDS... [--result R] | [--error MSG]] [--filter-op OP] [--filter-state STATE] [--export-history FILE] [--import-history FILE]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
-        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo", "sin", "cos", "tan", "log", "ln", "exp"],
+        help="Operation to perform (standard: add | subtract | multiply | divide | square | sqrt | power | modulo; scientific: sin | cos | tan | log | ln | exp)",
     )
     parser.add_argument(
         "--memory-history",
@@ -114,12 +114,17 @@ def main() -> None:
     cli = CalculatorCLI(service, memory_service)
 
     if args.operation:
-        if len(args.operands) != 2:
-            parser.error("Exactly two operands are required when using --operation")
         try:
+            operation = Operation.from_string(args.operation)
+            required_arity = operation.arity()
+            if len(args.operands) != required_arity:
+                parser.error(f"Operation '{args.operation}' requires {required_arity} operand(s), but {len(args.operands)} provided")
+
             a = _as_number(args.operands[0])
-            b = _as_number(args.operands[1])
+            b = _as_number(args.operands[1]) if len(args.operands) > 1 else None
         except argparse.ArgumentTypeError as exc:
+            parser.error(str(exc))
+        except ValueError as exc:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)
     elif args.memory_retrieve:

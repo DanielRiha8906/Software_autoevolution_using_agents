@@ -11,6 +11,12 @@ _SYMBOLS = {
     "sqrt": "√",
     "power": "^",
     "modulo": "%",
+    "sin": "sin",
+    "cos": "cos",
+    "tan": "tan",
+    "log": "log",
+    "ln": "ln",
+    "exp": "exp",
 }
 
 
@@ -18,7 +24,7 @@ _SYMBOLS = {
 class CalculationResult:
     operation: str
     operand_a: float
-    operand_b: float
+    operand_b: float | None
     result: float
     timestamp: str = field(default="")
     execution_time_ms: float = field(default=0.0)
@@ -37,6 +43,12 @@ class CalculationResult:
     def __str__(self) -> str:
         symbol = _SYMBOLS.get(self.operation, self.operation)
         a = int(self.operand_a) if self.operand_a == int(self.operand_a) else self.operand_a
-        b = int(self.operand_b) if self.operand_b == int(self.operand_b) else self.operand_b
         r = int(self.result) if self.result == int(self.result) else self.result
+
+        # For unary operations, render as "op(a) = r"
+        if self.operand_b is None:
+            return f"{symbol}({a}) = {r}"
+
+        # For binary operations, render as "a op b = r"
+        b = int(self.operand_b) if self.operand_b == int(self.operand_b) else self.operand_b
         return f"{a} {symbol} {b} = {r}"

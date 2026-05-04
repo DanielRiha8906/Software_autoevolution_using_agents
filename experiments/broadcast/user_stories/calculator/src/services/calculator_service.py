@@ -11,9 +11,9 @@ class CalculatorService:
         self.calculator = calculator
         self.storage = storage
 
-    def perform(self, operation: Operation, a: float, b: float) -> CalculationResult:
+    def perform(self, operation: Operation, a: float, b: float | None = None) -> CalculationResult:
         start_time = time.perf_counter()
-        result = self.calculator.calculate(operation, a, b)
+        result = self.calculator.calculate(operation, a, b if b is not None else 0)
         end_time = time.perf_counter()
         execution_time_ms = (end_time - start_time) * 1000
 
@@ -27,20 +27,21 @@ class CalculatorService:
         self.storage.save(calc_result)
         return calc_result
 
-    def perform_with_memory(self, operation: Operation, a: float, b: float) -> ResultEntry | ErrorEntry:
+    def perform_with_memory(self, operation: Operation, a: float, b: float | None = None) -> ResultEntry | ErrorEntry:
         """
         Perform a calculation and return a memory entry (success or error).
         This method captures both successful and failed operations.
         """
         start_time = time.perf_counter()
         try:
-            result = self.calculator.calculate(operation, a, b)
+            result = self.calculator.calculate(operation, a, b if b is not None else 0)
             end_time = time.perf_counter()
             execution_time_ms = (end_time - start_time) * 1000
 
+            operands = [a] if b is None else [a, b]
             entry = ResultEntry(
                 operation=operation.value,
-                operands=[a, b],
+                operands=operands,
                 result=result,
                 execution_time_ms=execution_time_ms,
             )
@@ -50,9 +51,10 @@ class CalculatorService:
             end_time = time.perf_counter()
             execution_time_ms = (end_time - start_time) * 1000
 
+            operands = [a] if b is None else [a, b]
             entry = ErrorEntry(
                 operation=operation.value,
-                operands=[a, b],
+                operands=operands,
                 error_message=str(exc),
                 execution_time_ms=execution_time_ms,
             )
