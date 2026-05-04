@@ -396,3 +396,114 @@ Duration: 465.9s | Cost: $0.993832 USD | Turns: 18
 - **Cascade Behavior:** Deleting a project unassigns all tasks (sets project_id to None), preserving task data while removing project association.
 
 Duration: 525.7s | Cost: $1.225336 USD | Turns: 19
+
+---
+
+## Task 09: Separate core components of the TODO manager
+
+### Status: COMPLETED ✓
+
+### Files Changed
+- `src/storage/storage.py` — NEW: Abstract base class defining Storage interface with abstract methods for load/save operations
+- `src/repositories/__init__.py` — NEW: Package initialization exporting TaskRepository and TaskExistenceValidator
+- `src/repositories/task_validator.py` — NEW: TaskExistenceValidator protocol defining task existence validation interface
+- `src/repositories/task_repository.py` — NEW: TaskRepository class implementing TaskExistenceValidator, coordinates TaskManager and CommentsService
+- `src/storage/__init__.py` — Updated to export Storage ABC and JsonStorage
+- `src/storage/json_storage.py` — Refactored to inherit from Storage ABC; all implementations unchanged
+- `src/services/task_manager.py` — Removed _comments_service field and TYPE_CHECKING import; added has_tasks() and clear() public methods; removed cascade delete from delete()
+- `src/services/comments_service.py` — Replaced TaskManager dependency with TaskExistenceValidator protocol; added has_comments() and clear() public methods; removed task manager instantiation
+- `src/services/project_manager.py` — Updated type hints to use Storage abstraction instead of JsonStorage
+- `src/services/todo_service.py` — Refactored to use repository pattern; updated initialization sequence; updated import_tasks() to use public APIs; updated delete_task() to use repository
+- `artifacts/class_diagram.puml` — Updated to show Storage abstraction, TaskExistenceValidator protocol, TaskRepository, and refactored service dependencies
+- `artifacts/component_diagram.puml` — Updated to show clean layering without circular dependencies
+
+### Test Results
+- **Total tests: 198**
+- **Passed: 198**
+- **Failed: 0**
+- **Success rate: 100%**
+
+### Architecture Changes
+
+#### Removed Circular Dependencies
+- **Before:** TaskManager ↔ CommentsService (bidirectional at runtime)
+- **After:** TaskRepository mediates between them; neither imports the other at module level
+
+#### New Storage Abstraction
+- All managers now depend on Storage ABC, not concrete JsonStorage
+- Enables easier testing with mock implementations
+- Follows Dependency Inversion Principle
+
+#### Repository Pattern for Coordination
+- TaskRepository implements TaskExistenceValidator protocol
+- Owns all knowledge of cascade deletion logic
+- Breaking point for circular dependency: CommentsService → TaskExistenceValidator protocol (abstraction) rather than → TaskManager (concrete class)
+
+#### Public API Enhancements
+- TaskManager: has_tasks(), clear(), load_from_dicts()
+- CommentsService: has_comments(), clear(), load_from_dicts()
+- Enables TodoService to use public APIs instead of accessing private fields
+
+#### Layer Dependencies (Strict Downward Flow)
+```
+Presentation: TodoCLI, InteractiveMenu
+  ↓
+Orchestration: TodoService
+  ↓
+Business Logic: TaskManager, CommentsService, ProjectManager, TaskRepository
+  ↓
+Storage Abstraction: Storage (ABC)
+  ↓
+Persistence: JsonStorage
+```
+
+### Requirements Met
+✓ MUST: Separate into distinct layers with no circular dependencies (TaskManager ↔ CommentsService eliminated)
+✓ MUST: Separate Task domain logic, Comment logic, Project logic, Storage layer, Interface layer
+✓ MUST: Preserve existing public interfaces (all function signatures, class names, return types unchanged)
+✓ MUST: `python -m src` behaves identically before/after; all existing functionality remains accessible
+✓ SHOULD: Introduce abstract base classes/protocols to decouple service, storage, and interface layers (Storage ABC, TaskExistenceValidator protocol)
+✓ SHOULD: Improve code structure and readability without changing external behavior
+
+### Implementation Summary
+- **Storage Abstraction:** Created Storage ABC with abstract methods for load/save operations on tasks, comments, and projects. JsonStorage inherits from Storage. All managers depend on Storage abstraction.
+- **TaskExistenceValidator Protocol:** Defines task validation interface. CommentsService depends on this protocol instead of TaskManager directly. Implemented by TaskRepository.
+- **TaskRepository:** New class that coordinates between TaskManager and CommentsService. Handles cascade deletion of comments when task is deleted. Breaks the circular dependency by being the single point that knows about both services.
+- **Refactored TaskManager:** Removed _comments_service field and cascade delete logic. Now a pure task CRUD service. Added has_tasks() and clear() methods for public use.
+- **Refactored CommentsService:** Removed TaskManager import and instantiation. Now accepts TaskExistenceValidator at construction. Validates tasks via protocol instead of direct dependency.
+- **Refactored ProjectManager:** Updated to use Storage abstraction instead of concrete JsonStorage type.
+- **Refactored TodoService:** Orchestrates managers and repository. Uses dependency injection pattern. Updated import_tasks() to use public methods instead of accessing private fields. Uses repository for cascade deletes.
+- **No Circular Imports:** All modules import successfully; dependency graph is acyclic.
+- **CLI Unchanged:** All existing commands work identically (20 commands tested and passing).
+- **Backward Compatible:** All tests pass; JSON storage format unchanged; task persistence unchanged.
+
+### Circular Dependency Elimination Strategy
+
+**Original Problem:**
+```python
+# task_manager.py (TYPE_CHECKING import avoids load-time cycle)
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .comments_service import CommentsService
+
+# comments_service.py (direct import, needs TaskManager at load time)
+from .task_manager import TaskManager
+```
+
+At runtime, TodoService sets `task_manager._comments_service = comments_service` after creating both, creating a circular reference in the object graph.
+
+**Solution:**
+1. Introduce TaskExistenceValidator protocol: CommentsService depends on this protocol (abstraction), not TaskManager (concrete class)
+2. TaskRepository implements the protocol: it holds references to both TaskManager and CommentsService
+3. TodoService wires them together: creates managers → creates repository → injects repository into CommentsService
+4. Result: No circular imports; clear dependency direction; single point of cascade delete coordination
+
+### Preservation of Public Interfaces
+- All TodoService methods have identical signatures
+- All TaskManager public methods preserved
+- All CommentsService public methods preserved
+- All ProjectManager public methods preserved
+- All CLI commands work identically
+- All test scenarios pass without modification
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

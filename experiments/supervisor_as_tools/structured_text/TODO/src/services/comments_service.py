@@ -1,8 +1,12 @@
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from ..models.task_comment import TaskComment
+from ..repositories.task_validator import TaskExistenceValidator
+from ..storage.storage import Storage
 from ..storage.json_storage import JsonStorage
-from .task_manager import TaskManager, TaskNotFoundError
+
+if TYPE_CHECKING:
+    pass
 
 
 class CommentNotFoundError(Exception):
@@ -10,13 +14,9 @@ class CommentNotFoundError(Exception):
 
 
 class CommentsService:
-    def __init__(
-        self,
-        storage: Optional[JsonStorage] = None,
-        task_manager: Optional[TaskManager] = None,
-    ) -> None:
-        self._storage = storage or JsonStorage()
-        self._task_manager = task_manager or TaskManager(self._storage)
+    def __init__(self, storage: Storage, validator: TaskExistenceValidator) -> None:
+        self._storage = storage
+        self._validator = validator
         self._comments: dict[str, TaskComment] = {}
         self._load()
 
@@ -24,7 +24,7 @@ class CommentsService:
         raw = self._storage.load_comments()
         self._comments = {c["id"]: TaskComment.from_dict(c) for c in raw}
 
-    def _load_from_dicts(self, comment_dicts: list[dict]) -> None:
+    def load_from_dicts(self, comment_dicts: list[dict]) -> None:
         """Load comments from a list of dictionaries.
 
         Args:
@@ -39,7 +39,7 @@ class CommentsService:
     def add_comment(self, task_id: str, content: str) -> TaskComment:
         """Add a comment to a task. Raises TaskNotFoundError if task doesn't exist."""
         # Validate task exists
-        self._task_manager.get(task_id)
+        self._validator.task_exists(task_id)
         # Create and store comment
         comment = TaskComment(task_id=task_id, content=content)
         self._comments[comment.id] = comment
@@ -50,7 +50,7 @@ class CommentsService:
         """List all comments for a task, ordered by created_at ascending.
         Raises TaskNotFoundError if task doesn't exist."""
         # Validate task exists
-        self._task_manager.get(task_id)
+        self._validator.task_exists(task_id)
         # Return comments for this task, sorted by created_at
         comments = [c for c in self._comments.values() if c.task_id == task_id]
         return sorted(comments, key=lambda c: c.created_at)
@@ -66,4 +66,17 @@ class CommentsService:
         """Delete all comments for a task. No error if task has no comments."""
         # Filter out comments for this task
         self._comments = {cid: c for cid, c in self._comments.items() if c.task_id != task_id}
+        self._persist()
+
+    def has_comments(self) -> bool:
+        """Check if there are any comments.
+
+        Returns:
+            True if there are comments, False otherwise.
+        """
+        return bool(self._comments)
+
+    def clear(self) -> None:
+        """Clear all comments."""
+        self._comments.clear()
         self._persist()

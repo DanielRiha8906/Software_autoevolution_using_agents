@@ -1,12 +1,10 @@
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING, Optional
+from typing import Optional
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
+from ..storage.storage import Storage
 from ..storage.json_storage import JsonStorage
-
-if TYPE_CHECKING:
-    from .comments_service import CommentsService
 
 
 class TaskNotFoundError(Exception):
@@ -14,13 +12,8 @@ class TaskNotFoundError(Exception):
 
 
 class TaskManager:
-    def __init__(
-        self,
-        storage: Optional[JsonStorage] = None,
-        comments_service: Optional["CommentsService"] = None,
-    ) -> None:
+    def __init__(self, storage: Optional[Storage] = None) -> None:
         self._storage = storage or JsonStorage()
-        self._comments_service = comments_service
         self._tasks: dict[str, Task] = {}
         self._load()
 
@@ -28,7 +21,7 @@ class TaskManager:
         raw = self._storage.load()
         self._tasks = {d["id"]: Task.from_dict(d) for d in raw}
 
-    def _load_from_dicts(self, task_dicts: list[dict]) -> None:
+    def load_from_dicts(self, task_dicts: list[dict]) -> None:
         """Load tasks from a list of dictionaries.
 
         Args:
@@ -85,9 +78,6 @@ class TaskManager:
 
     def delete(self, task_id: str) -> None:
         task = self.get(task_id)  # resolves prefix; raises if missing
-        # Delete associated comments if comments_service is set
-        if self._comments_service is not None:
-            self._comments_service.delete_all_for_task(task.id)
         del self._tasks[task.id]
         self._persist()
 
@@ -174,4 +164,17 @@ class TaskManager:
             if task.project_id == project_id:
                 task.project_id = None
                 task.updated_at = datetime.now(timezone.utc)
+        self._persist()
+
+    def has_tasks(self) -> bool:
+        """Check if there are any tasks.
+
+        Returns:
+            True if there are tasks, False otherwise.
+        """
+        return bool(self._tasks)
+
+    def clear(self) -> None:
+        """Clear all tasks."""
+        self._tasks.clear()
         self._persist()

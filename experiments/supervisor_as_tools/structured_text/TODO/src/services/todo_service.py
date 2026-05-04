@@ -8,6 +8,8 @@ from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_statistics import TaskStatistics
 from ..models.task_status import TaskStatus
+from ..repositories.task_repository import TaskRepository
+from ..storage.storage import Storage
 from ..storage.json_storage import JsonStorage
 from .comments_service import CommentsService
 from .project_manager import ProjectManager
@@ -15,13 +17,15 @@ from .task_manager import TaskManager
 
 
 class TodoService:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
+    def __init__(self, storage: Optional[Storage] = None) -> None:
         storage = storage or JsonStorage()
-        self._manager = TaskManager(storage)
-        self._comments_service = CommentsService(storage, self._manager)
+        self._task_manager = TaskManager(storage)
+        self._repository = TaskRepository(self._task_manager)
+        self._comments_service = CommentsService(storage, self._repository)
+        self._repository.set_comments_service(self._comments_service)
         self._project_manager = ProjectManager(storage)
-        # Now set the comments_service on the manager for cascade deletes
-        self._manager._comments_service = self._comments_service
+        # Keep backward compatibility reference
+        self._manager = self._task_manager
 
     def add_task(self, title: str, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
         if not title or not title.strip():
@@ -29,7 +33,7 @@ class TodoService:
         return self._manager.add(title.strip(), description, project_id)
 
     def get_task(self, task_id: str) -> Task:
-        return self._manager.get(task_id)
+        return self._task_manager.get(task_id)
 
     def list_tasks(
         self,
@@ -52,35 +56,35 @@ class TodoService:
             Filtered list of tasks.
         """
         if project_id is not None:
-            return self._manager.list_by_project(project_id)
+            return self._task_manager.list_by_project(project_id)
         elif overdue:
-            return self._manager.list_overdue(status)
+            return self._task_manager.list_overdue(status)
         elif due_before is not None or due_after is not None:
-            return self._manager.list_by_due_date_range(due_after, due_before, status)
+            return self._task_manager.list_by_due_date_range(due_after, due_before, status)
         elif status is not None:
-            return self._manager.list_by_status(status)
+            return self._task_manager.list_by_status(status)
         else:
-            return self._manager.list_all()
+            return self._task_manager.list_all()
 
     def start_task(self, task_id: str) -> Task:
-        return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)
+        return self._task_manager.set_status(task_id, TaskStatus.IN_PROGRESS)
 
     def complete_task(self, task_id: str) -> Task:
-        return self._manager.set_status(task_id, TaskStatus.DONE)
+        return self._task_manager.set_status(task_id, TaskStatus.DONE)
 
     def reopen_task(self, task_id: str) -> Task:
-        return self._manager.set_status(task_id, TaskStatus.PENDING)
+        return self._task_manager.set_status(task_id, TaskStatus.PENDING)
 
     def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
         if title is not None and not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.update(task_id, title=title, description=description)
+        return self._task_manager.update(task_id, title=title, description=description)
 
     def delete_task(self, task_id: str) -> None:
-        self._manager.delete(task_id)
+        self._repository.delete_task_with_comments(task_id)
 
     def set_due_date(self, task_id: str, due_date: Optional[datetime] = None) -> Task:
-        return self._manager.set_due_date(task_id, due_date)
+        return self._task_manager.set_due_date(task_id, due_date)
 
     def add_comment(self, task_id: str, content: str) -> TaskComment:
         return self._comments_service.add_comment(task_id, content)
@@ -97,7 +101,7 @@ class TodoService:
         Returns:
             TaskStatistics with task counts, completion rate, and average days to completion.
         """
-        all_tasks = self._manager.list_all()
+        all_tasks = self._task_manager.list_all()
         total_count = len(all_tasks)
 
         # Count tasks by status
@@ -143,7 +147,7 @@ class TodoService:
         Returns:
             Tuple of (task_count, comment_count).
         """
-        all_tasks = self._manager.list_all()
+        all_tasks = self._task_manager.list_all()
         all_comments = []
         for task in all_tasks:
             all_comments.extend(self._comments_service.list_comments(task.id))
@@ -212,17 +216,17 @@ class TodoService:
             self._validate_comment_dict(comment_dict, i, valid_task_ids)
 
         # Check if database is not empty (before loading anything)
-        if not overwrite and (self._manager.list_all() or self._comments_service._comments):
+        if not overwrite and (self._task_manager.has_tasks() or self._comments_service.has_comments()):
             raise ValueError("Database is not empty. Use overwrite=True to replace existing data")
 
         # Clear existing data if overwrite is True
         if overwrite:
-            self._manager._tasks.clear()
-            self._comments_service._comments.clear()
+            self._task_manager.clear()
+            self._comments_service.clear()
 
         # Load tasks and comments
-        self._manager._load_from_dicts(tasks_data)
-        self._comments_service._load_from_dicts(comments_data)
+        self._task_manager.load_from_dicts(tasks_data)
+        self._comments_service.load_from_dicts(comments_data)
 
         return (len(tasks_data), len(comments_data), [])
 
@@ -343,6 +347,6 @@ class TodoService:
             project_id: The project ID to delete.
         """
         # Unassign all tasks from this project
-        self._manager.unassign_from_project(project_id)
+        self._task_manager.unassign_from_project(project_id)
         # Delete the project
         self._project_manager.delete(project_id)
