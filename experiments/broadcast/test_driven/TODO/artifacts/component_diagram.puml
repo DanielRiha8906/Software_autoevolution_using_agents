@@ -9,9 +9,10 @@ package "TODO Application" {
 
     component "Entry Point" as Main
 
-    package "CLI Layer" {
+    package "Interface Layer" {
         component "Interactive Menu" as IM
         component "TodoCLI" as CLI
+        component "TodoGUI" as GUI
     }
 
     package "Service Layer" {
@@ -48,6 +49,7 @@ database "todo_data.json" as DB
 
 Main --> IM
 Main --> CLI
+Main --> GUI
 
 IM --> SVC
 IM --> PS
@@ -59,6 +61,7 @@ CLI --> PS
 CLI --> CS
 CLI --> IES
 CLI --> SS
+GUI --> SVC
 
 SVC --> MGR
 PS --> SVC

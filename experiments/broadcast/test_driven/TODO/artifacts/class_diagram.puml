@@ -206,6 +206,20 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #F0E0FF {
+    class TodoGUI {
+        -service : TodoService
+        -root : tk.Tk [0..1]
+        -task_tree : ttk.Treeview [0..1]
+        --
+        +TodoGUI(service: TodoService)
+        +run() : void
+        -createWidgets() : void
+        -refreshTaskList() : void
+        -formatDueDate(due_date: DateTime [0..1]) : String
+    }
+}
+
 Task --> TaskStatus : status
 Task --> Project : references (project_id) [0..1]
 TaskComment --> Task : references (task_id)
@@ -242,5 +256,6 @@ InteractiveMenu --> TodoService : uses
 InteractiveMenu --> CommentsService : uses
 InteractiveMenu --> ProjectService : uses
 InteractiveMenu --> TaskImportExportService : uses
+TodoGUI --> TodoService : uses
 
 @enduml
