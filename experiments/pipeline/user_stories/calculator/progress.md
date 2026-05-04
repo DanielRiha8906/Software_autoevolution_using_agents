@@ -385,4 +385,4 @@ Duration: 842.9s | Cost: $1.765275 USD | Turns: 20
 - **Unary Operation Handling**: Operand B automatically disabled for unary operations
 - **History Management**: Fresh history retrieved after each calculation via MemoryService.retrieve()
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 933.4s | Cost: $1.644038 USD | Turns: 16
