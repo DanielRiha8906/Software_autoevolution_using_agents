@@ -52,13 +52,62 @@ package "models" #DDEEFF {
     }
 }
 
+package "domain" #E8F5E9 {
+    interface TaskDomain {
+        +add_task(title, description, due_date, project_id) : Task
+        +get_task(task_id) : Task
+        +list_all_tasks() : List<Task>
+        +list_tasks_by_status(status) : List<Task>
+        +update_task(task_id, title, description, project_id) : Task
+        +set_task_status(task_id, status) : Task
+        +delete_task(task_id) : void
+    }
+
+    interface CommentDomain {
+        +add_comment(task_id, content, author) : TaskComment
+        +list_comments_for_task(task_id) : List<TaskComment>
+        +get_all_comments() : List<TaskComment>
+    }
+
+    interface ProjectDomain {
+        +create_project(name) : Project
+        +list_all_projects() : List<Project>
+    }
+}
+
+package "persistence" #FFF9C4 {
+    class TaskPersistenceAdapter {
+        -storage : JsonStorage
+        --
+        +TaskPersistenceAdapter(storage: JsonStorage)
+        +load() : Dictionary<String, Task>
+        +save(tasks: Dictionary<String, Task>) : void
+    }
+
+    class CommentPersistenceAdapter {
+        -storage : JsonStorage
+        --
+        +CommentPersistenceAdapter(storage: JsonStorage)
+        +load() : Dictionary<String, List<TaskComment>>
+        +save(comments: Dictionary<String, List<TaskComment>>) : void
+    }
+
+    class ProjectPersistenceAdapter {
+        -storage : JsonStorage
+        --
+        +ProjectPersistenceAdapter(storage: JsonStorage)
+        +load() : Dictionary<String, Project>
+        +save(projects: Dictionary<String, Project>) : void
+    }
+}
+
 package "storage" #FFF3CC {
     class JsonStorage {
         -path : String
         --
         +JsonStorage(path: String [0..1])
-        +load() : List<Dictionary>
-        +save(tasks: List<Dictionary>) : void
+        +load() : List<Dictionary> | Dictionary
+        +save(data: List<Dictionary> | Dictionary) : void
     }
 }
 
@@ -70,36 +119,37 @@ package "services" #DDFFD4 {
         -tasks : Dictionary<String, Task>
         --
         +TaskManager(storage: JsonStorage [0..1])
-        +add(title: String, description: String [0..1], due_date: DateTime [0..1]) : Task
-        +get(taskId: String) : Task
+        +add(title, description, due_date, project_id) : Task
+        +get(taskId) : Task
         +listAll() : List<Task>
-        +listByStatus(status: TaskStatus) : List<Task>
-        +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
-        +setStatus(taskId: String, status: TaskStatus) : Task
-        +delete(taskId: String) : void
-        -load() : void
-        -persist() : void
+        +listByStatus(status) : List<Task>
+        +update(taskId, title, description, project_id) : Task
+        +setStatus(taskId, status) : Task
+        +delete(taskId) : void
     }
 
     class TodoService {
         -manager : TaskManager
         --
         +TodoService(storage: JsonStorage [0..1])
-        +addTask(title: String, description: String [0..1], due_date: DateTime [0..1], project_id: String [0..1]) : Task
-        +getTask(taskId: String) : Task
-        +listTasks(status: TaskStatus [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1], overdue: Boolean, project_id: String [0..1]) : List<Task>
-        +startTask(taskId: String) : Task
-        +completeTask(taskId: String) : Task
-        +reopenTask(taskId: String) : Task
-        +updateTask(taskId: String, title: String [0..1], description: String [0..1], project_id: String [0..1]) : Task
-        +deleteTask(taskId: String) : void
+        +addTask(title, description, due_date, project_id) : Task
+        +getTask(taskId) : Task
+        +listTasks(status, due_before, due_after, overdue, project_id) : List<Task>
+        +startTask(taskId) : Task
+        +completeTask(taskId) : Task
+        +reopenTask(taskId) : Task
+        +updateTask(taskId, title, description, project_id) : Task
+        +deleteTask(taskId) : void
+        +getStorage() : JsonStorage
     }
 
     class ProjectService {
         -todo_service : TodoService
+        -adapter : ProjectPersistenceAdapter
+        -projects : Dictionary<String, Project>
         --
         +ProjectService(todo_service: TodoService)
-        +create(name: String) : Project
+        +create(name) : Project
         +list() : List<Project>
     }
 
@@ -108,8 +158,8 @@ package "services" #DDFFD4 {
         -comments : Dictionary<String, List<TaskComment>>
         --
         +CommentsService(todo_service: TodoService [0..1])
-        +addComment(task_id: String, content: String, author: String [0..1]) : TaskComment
-        +listComments(task_id: String) : List<TaskComment>
+        +addComment(task_id, content, author) : TaskComment
+        +listComments(task_id) : List<TaskComment>
         +getAllComments() : List<TaskComment>
         +toDict() : Dictionary
         +fromDict(data: Dictionary) : void
@@ -159,24 +209,38 @@ package "cli" #FFE5E5 {
 Task --> TaskStatus : status
 Task --> Project : references (project_id) [0..1]
 TaskComment --> Task : references (task_id)
-TaskManager --> JsonStorage : storage
+
+TaskManager --> JsonStorage : uses
 TaskManager ..> TaskNotFoundError : raises
+TaskManager ..|> TaskDomain : realizes
+
 TodoService --> TaskManager : manager
-ProjectService --> TodoService : todo_service
+TodoService --> JsonStorage : accesses via manager
+ProjectService --> TodoService : uses
+ProjectService --> ProjectPersistenceAdapter : uses
 ProjectService --> Project : manages
 CommentsService --> TaskComment : manages
 CommentsService --> TodoService : optional ref
+CommentsService ..|> CommentDomain : realizes
 TaskImportExportService --> TodoService : uses
 TaskImportExportService --> CommentsService : uses
-TaskStatisticsService --> TodoService : todo_service
+TaskStatisticsService --> TodoService : uses
 TaskStatisticsService --> TaskStatisticsReport : returns
-TodoCLI --> TodoService : service
-TodoCLI --> CommentsService : service
-TodoCLI --> ProjectService : service
-TodoCLI --> TaskImportExportService : service
-InteractiveMenu --> TodoService : service
-InteractiveMenu --> CommentsService : service
-InteractiveMenu --> ProjectService : service
-InteractiveMenu --> TaskImportExportService : service
+
+TaskPersistenceAdapter --> JsonStorage : uses
+TaskPersistenceAdapter --> Task : loads/saves
+CommentPersistenceAdapter --> JsonStorage : uses
+CommentPersistenceAdapter --> TaskComment : loads/saves
+ProjectPersistenceAdapter --> JsonStorage : uses
+ProjectPersistenceAdapter --> Project : loads/saves
+
+TodoCLI --> TodoService : uses
+TodoCLI --> CommentsService : uses
+TodoCLI --> ProjectService : uses
+TodoCLI --> TaskImportExportService : uses
+InteractiveMenu --> TodoService : uses
+InteractiveMenu --> CommentsService : uses
+InteractiveMenu --> ProjectService : uses
+InteractiveMenu --> TaskImportExportService : uses
 
 @enduml

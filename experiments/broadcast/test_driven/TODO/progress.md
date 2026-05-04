@@ -592,3 +592,145 @@ The implementation maintains separation of concerns:
 This broadcast evaluation demonstrates the stability of the design: all three candidates independently converged on nearly identical implementations, validating the requirement specification and architectural choices.
 
 Duration: 311.5s | Cost: $1.552452 USD | Turns: 45
+
+---
+
+## Task 09: Refactor TODO manager into clearly separated components
+
+### Objective
+Refactor the TODO manager into clearly separated components: task domain logic, comment management, project management, storage layer, and interface layer, without changing external behaviour. Eliminate circular dependencies and use abstractions like protocols.
+
+### Broadcast Architecture Evaluation
+
+**Candidate Evaluation Results:**
+
+| Candidate | Status | Tests Passed | Approach |
+|-----------|--------|--------------|----------|
+| A | No commits | 111/111 | No visible changes; branch has no commits |
+| B | ✓ Success | 111/111 | Domain + Persistence layers with Protocols |
+| C | ✓ Success | 111/111 | Minimal refactoring with public methods |
+
+**Winner: Candidate B** — Selected for superior architecture. Created explicit domain/ and persistence/ layers with Protocols (TaskDomain, CommentDomain, ProjectDomain) and Adapters (TaskPersistenceAdapter, CommentPersistenceAdapter, ProjectPersistenceAdapter). Directly implements requirement to "use abstractions such as protocols". Clear separation of concerns with layered architecture and zero circular dependencies.
+
+### Files Changed
+
+**New Files Created:**
+- `src/domain/__init__.py` — Domain layer module exports
+- `src/domain/contracts.py` — Protocols defining TaskDomain, CommentDomain, ProjectDomain operation contracts
+- `src/persistence/__init__.py` — Persistence layer module exports
+- `src/persistence/task_adapter.py` — TaskPersistenceAdapter isolating task storage logic
+- `src/persistence/comment_adapter.py` — CommentPersistenceAdapter for comment persistence
+- `src/persistence/project_adapter.py` — ProjectPersistenceAdapter for project persistence
+
+**Files Modified:**
+- `src/services/task_manager.py` — Refactored to use TaskPersistenceAdapter for persistence
+- `src/services/project_service.py` — Refactored to use ProjectPersistenceAdapter, eliminating circular dependency
+- `src/services/import_export_service.py` — Updated to work with new adapter layer
+- `src/services/comments_service.py` — Enhanced documentation of in-memory design
+- `src/services/todo_service.py` — Enhanced docstrings clarifying responsibilities
+
+**Diagrams Updated:**
+- `artifacts/class_diagram.puml` — Added domain and persistence packages with protocols and adapters
+- `artifacts/component_diagram.puml` — Reorganized to show clear layered architecture
+
+### Architecture Changes
+
+**New Domain Layer (src/domain/):**
+- Defines operation contracts using Python Protocols
+- `TaskDomain`: add_task, get_task, list_all_tasks, list_tasks_by_status, update_task, set_task_status, delete_task
+- `CommentDomain`: add_comment, list_comments_for_task, get_all_comments
+- `ProjectDomain`: create_project, list_projects
+- No implementation — pure contracts for interface specification
+
+**New Persistence Layer (src/persistence/):**
+- Isolates all storage concerns from domain logic
+- `TaskPersistenceAdapter`: Handles task storage/loading with format compatibility (legacy list and new dict)
+- `CommentPersistenceAdapter`: Manages comment persistence (in-memory model)
+- `ProjectPersistenceAdapter`: Handles project storage with task coordination
+- All adapters use JsonStorage as backend
+- Eliminates circular dependencies between services and storage
+
+**Refactored Service Layer:**
+- `TaskManager`: Now uses TaskPersistenceAdapter for all load/save operations
+- `ProjectService`: Uses ProjectPersistenceAdapter instead of accessing internal TodoService storage
+- `CommentsService`: No changes (in-memory by design)
+- `TodoService`: Coordinates between services and adapters
+
+**Layered Architecture (No Circular Dependencies):**
+```
+CLI Layer (todo_cli, interactive_menu)
+         ↓
+Services Layer (TodoService, ProjectService, CommentsService, TaskStatisticsService, TaskImportExportService)
+         ↓
+Domain + Persistence Layers (Protocols + Adapters)
+         ↓
+Storage Layer (JsonStorage)
+         ↓
+Models Layer (Task, TaskComment, Project, TaskStatus)
+```
+
+### Separation of Concerns
+
+**Task Domain Logic** (src/models/task.py)
+- Pure domain entity with validation and status methods
+- No persistence code
+
+**Comment Management** (src/services/comments_service.py)
+- Manages task comments in-memory
+- Comments not persisted to main storage (export-only model)
+- Clear responsibility boundary
+
+**Project Management** (src/services/project_service.py)
+- Project creation and listing via ProjectPersistenceAdapter
+- Coordinates with TaskManager via storage layer
+- No direct access to private task storage
+
+**Storage Layer** (src/storage/json_storage.py + adapters)
+- JSON file I/O implementation isolated in adapters
+- No domain knowledge in persistence layer
+- Backward compatible with legacy format
+
+**Interface Layer** (src/cli/)
+- CLI command handling and output formatting
+- All domain logic delegated to services
+- No persistence or business logic
+
+### Key Improvements
+
+- **Clear Layer Separation**: Domain models → Domain contracts → Persistence adapters → Services → CLI
+- **Zero Circular Dependencies**: Complete dependency graph is acyclic
+- **Explicit Abstractions**: Uses Python Protocols for domain contracts
+- **Backward Compatibility**: All public APIs preserved, all tests pass
+- **Pluggable Persistence**: New storage backends can be added by implementing adapter interfaces
+- **Reduced Private Access**: Eliminated access to internal `_tasks`, `_storage`, `_persist()` between services
+
+### Test Results
+- **Total tests**: 111 passed (all 111 existing tests remain passing)
+- **New tests**: 0 new tests (refactoring only; all behavior preserved)
+- **Backward compatibility**: 100% — `python -m src` behaves identically before and after
+
+### Requirements Met
+- ✓ Refactored into clearly separated components with explicit layers
+- ✓ Used abstractions (Python Protocols for domain contracts)
+- ✓ Preserved all existing public behaviour
+- ✓ Preserved existing public method signatures
+- ✓ No circular dependencies — complete acyclic dependency graph
+- ✓ Persistence details isolated in adapter layer (outside domain models)
+- ✓ All 111 tests passing
+- ✓ Code compiles without syntax or import errors
+- ✓ `python -m src` behaves identically before and after
+- ✓ UML diagrams updated to reflect new architecture
+
+### Architecture Notes
+
+The refactoring demonstrates clear responsibility separation:
+
+1. **Protocols define contracts**, not implementations
+2. **Adapters isolate persistence**, allowing services to focus on logic
+3. **Services coordinate** between domain logic and persistence
+4. **No circular dependencies** — all dependencies flow downward
+5. **Backward compatibility** maintained through adapter layer handling legacy formats
+
+The layered approach makes the codebase more maintainable and testable, with clear boundaries between concerns.
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
