@@ -125,8 +125,8 @@ class ImportExportService:
 
         # Apply mode: clear storage first if replace mode
         if mode == "replace":
-            # Clear all existing entries by rewriting storage
-            self.memory_service.storage._write_raw([])
+            # Clear all existing entries
+            self.memory_service.clear()
 
         # Get existing entries for duplicate detection
         existing_entries = self.memory_service.retrieve()

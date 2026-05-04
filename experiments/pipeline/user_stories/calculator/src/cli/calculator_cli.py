@@ -2,10 +2,19 @@ import sys
 from json import JSONDecodeError
 
 from ..models.operation import Operation
-from ..models.memory_entry import MemoryEntry
 from ..services.calculator_service import CalculatorService
 from ..services.statistics_service import StatisticsService
 from ..services.import_export_service import ImportExportService
+from ..services.memory_service import MemoryService
+from ..services.memory.history_filter import OperationFilter, StateFilter
+from .formatters.memory_entry_formatter import MemoryEntryListFormatter
+from .formatters.statistics_formatter import StatisticsFormatter
+from .formatters.import_result_formatter import ImportResultFormatter
+from .commands.history_command import HistoryCommand
+from .commands.statistics_command import StatisticsCommand
+from .commands.filter_command import FilterCommand
+from .commands.export_command import ExportCommand
+from .commands.import_command import ImportCommand
 
 
 class CalculatorCLI:
@@ -31,10 +40,17 @@ class CalculatorCLI:
         service: CalculatorService,
         statistics_service: StatisticsService,
         import_export_service: ImportExportService | None = None,
+        memory_service: MemoryService | None = None,
     ) -> None:
         self.service = service
         self.statistics_service = statistics_service
         self.import_export_service = import_export_service
+        self.memory_service = memory_service
+
+        # Initialize formatters
+        self.memory_formatter = MemoryEntryListFormatter()
+        self.statistics_formatter = StatisticsFormatter()
+        self.import_formatter = ImportResultFormatter()
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -142,17 +158,15 @@ class CalculatorCLI:
             return None
 
     def _show_history(self) -> None:
-        history = self.service.get_history()
-        if not history:
-            print("\n  No calculations recorded yet.\n")
-            return
-        print()
-        for i, entry in enumerate(history, 1):
-            if entry.error:
-                print(f"  {i}. {entry.operation} ({entry.operand_a}, {entry.operand_b}) = ERROR: {entry.error}")
-            else:
-                print(f"  {i}. {entry}  [{entry.timestamp}]")
-        print()
+        """Display all calculation history using HistoryCommand."""
+        if self.memory_service:
+            cmd = HistoryCommand(self.memory_service, formatter=self.memory_formatter)
+            cmd.execute()
+        else:
+            # Fallback for backward compatibility if memory_service not available
+            history = self.service.get_history()
+            output = self.memory_formatter.format(history)
+            print(output)
 
     def _run_filter_menu(self) -> None:
         """Run the filter history submenu."""
@@ -227,46 +241,45 @@ class CalculatorCLI:
         operations: list[str] | None,
         state: str | None,
     ) -> None:
-        """Display filtered history.
+        """Display filtered history using FilterCommand.
 
         Args:
             operations: List of operation names to filter by, or None for all.
             state: One of 'success', 'error', or 'both', or None for both.
         """
-        filtered = self.service.filter_history(operations=operations, state=state)
-
-        if not filtered:
-            print("\n  No matching calculations found.\n")
+        if not self.memory_service:
+            # Fallback for backward compatibility
+            filtered = self.service.filter_history(operations=operations, state=state)
+            if not filtered:
+                print("\n  No matching calculations found.\n")
+                return
+            output = self.memory_formatter.format(filtered)
+            print(output)
             return
 
-        print()
-        for i, entry in enumerate(filtered, 1):
-            if entry.error:
-                print(f"  {i}. {entry.operation} ({entry.operand_a}, {entry.operand_b}) = ERROR: {entry.error}")
-            else:
-                print(f"  {i}. {entry}  [{entry.timestamp}]")
-        print()
+        # Build filter list
+        filters: list = []
+        if operations:
+            filters.append(OperationFilter(operations))
+        if state and state != "both":
+            filters.append(StateFilter(state))
+
+        # Use FilterCommand if we have filters
+        if filters:
+            cmd = FilterCommand(self.memory_service, filters, formatter=self.memory_formatter)
+            cmd.execute()
+        else:
+            # No filters, just show all history
+            cmd = HistoryCommand(self.memory_service, formatter=self.memory_formatter)
+            cmd.execute()
 
     def _show_statistics(self) -> None:
-        """Display calculation statistics."""
-        stats = self.statistics_service.calculate_statistics()
-        print()
-        print("  === Calculation Statistics ===")
-        print(f"  Total Calculations: {stats.total_calculations}")
-        print(f"  Total Errors: {stats.total_errors}")
-        print(f"  Error Rate: {stats.error_rate_percent}%")
-        print(f"  Average Execution Time: {stats.average_execution_time_ms} ms")
-        print("  Operations Count:")
-        if stats.operations_count:
-            for op_name in sorted(stats.operations_count.keys()):
-                count = stats.operations_count[op_name]
-                print(f"    {op_name}: {count}")
-        else:
-            print("    (none)")
-        print()
+        """Display calculation statistics using StatisticsCommand."""
+        cmd = StatisticsCommand(self.statistics_service, formatter=self.statistics_formatter)
+        cmd.execute()
 
     def _export_history(self) -> None:
-        """Interactive menu option: prompt for export filepath, call service."""
+        """Interactive menu option: prompt for export filepath, use ExportCommand."""
         if self.import_export_service is None:
             print("\n  Export service not available.\n")
             return
@@ -283,7 +296,7 @@ class CalculatorCLI:
             print(f"\n  Export error: {e}\n")
 
     def _import_history(self, filepath: str | None = None, mode: str = "merge") -> None:
-        """Interactive menu option: prompt for import filepath, call service, show results."""
+        """Interactive menu option: prompt for import filepath, use ImportCommand."""
         if self.import_export_service is None:
             print("\n  Import service not available.\n")
             return
@@ -313,11 +326,10 @@ class CalculatorCLI:
             print(f"\n  Import error: {e}\n")
 
     def _show_import_result(self, result: dict) -> None:
-        """Display import operation results (counts, skipped entries, etc.)."""
-        print()
-        print(f"  Imported {result['imported_count']} entries")
-        if result['skipped_count'] > 0:
-            print(f"  Skipped {result['skipped_count']} entries:")
-            print(f"    - {result['duplicates_count']} duplicates")
-            print(f"    - {result['invalid_count']} invalid entries")
-        print()
+        """Display import operation results (backward compatibility method).
+
+        This method is kept for backward compatibility with existing tests.
+        It delegates to the ImportResultFormatter.
+        """
+        output = self.import_formatter.format(result)
+        print(output)

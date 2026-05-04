@@ -4,41 +4,89 @@ skinparam componentStyle uml2
 skinparam defaultFontSize 13
 left to right direction
 
-package "Calculator Application" {
+package "Calculator Application (Refactored Layers)" {
 
     component "Entry Point\n(__main__)" as Main
-    component "CLI Interface\n(CalculatorCLI)" as CLI
-    component "Application Service\n(CalculatorService)" as Service
-    component "Statistics Service\n(StatisticsService)" as Statistics
-    component "Import/Export Service\n(ImportExportService)" as ImportExport
-    component "Calculation Engine\n(Calculator)" as Calc
-    component "Memory Service\n(MemoryService)" as Memory
-    component "JSON Storage\n(JsonStorage)" as Store
-    component "Domain Models\n(Operation, MemoryEntry,\nCalculationStatistics)" as Models
+
+    component "CLI Layer" {
+        component "Command Router\n(CalculatorCLI)" as CLI
+        component "Commands\n(Calculate, History,\nStatistics, Export,\nImport, Filter)" as Commands
+        component "Formatters\n(MemoryEntry, Statistics,\nImportResult)" as Formatters
+    }
+
+    component "Service Layer" {
+        component "Calculator Service\n(CalculatorService)" as Service
+        component "Statistics Service\n(StatisticsService)" as Statistics
+        component "Import/Export Service\n(ImportExportService)" as ImportExport
+        component "Memory Service\n(MemoryService)" as Memory
+        component "History Filters\n(OperationFilter,\nStateFilter,\nCompositeFilter)" as HistoryFilters
+    }
+
+    component "Storage Layer" {
+        component "Storage Backend\n(Interface)" as StorageInterface
+        component "JSON Storage\n(JsonStorage)" as Store
+    }
+
+    component "Domain Models\n(MemoryEntry,\nOperation,\nCalculationStatistics)" as Models
 
     Main --> CLI : initializes
     Main --> Service : initializes
     Main --> Statistics : initializes
     Main --> ImportExport : initializes
 
+    CLI --> Commands : routes to
+    CLI --> Formatters : uses
     CLI --> Service : uses
     CLI --> Statistics : uses
     CLI --> ImportExport : uses
-    Service --> Calc : uses
+    CLI --> Memory : queries
+
+    Commands --> Service : uses
+    Commands --> Statistics : uses
+    Commands --> ImportExport : uses
+    Commands --> Memory : queries
+    Commands --> Formatters : uses
+
     Service --> Memory : uses
     Statistics --> Memory : uses
     ImportExport --> Memory : uses
-    Memory --> Store : uses
+
+    Memory --> HistoryFilters : delegates
+    Memory --> StorageInterface : depends on
+
+    StorageInterface <|-- Store : implements
 
     Service ..> Models
     Statistics ..> Models
     ImportExport ..> Models
     Memory ..> Models
     Store ..> Models
+    Commands ..> Models
+    Formatters ..> Models
 }
 
 database "calculations.json" as DB
 
 Store --> DB : read/write
+
+note right of CLI
+    Entry point for all user
+    interactions; orchestrates
+    commands and formatters
+end note
+
+note right of Memory
+    Depends on StorageBackend
+    abstraction, not concrete
+    JsonStorage; delegates
+    filtering to HistoryFilter
+    implementations
+end note
+
+note right of Store
+    Implements StorageBackend
+    protocol; can be swapped
+    for alternative persistence
+end note
 
 @enduml

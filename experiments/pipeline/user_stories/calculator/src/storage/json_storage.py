@@ -2,9 +2,10 @@ import json
 from pathlib import Path
 
 from ..models.memory_entry import MemoryEntry
+from .storage import StorageBackend
 
 
-class JsonStorage:
+class JsonStorage(StorageBackend):
     def __init__(self, filepath: Path | str) -> None:
         self.filepath = Path(filepath)
 
@@ -15,6 +16,11 @@ class JsonStorage:
 
     def load_all(self) -> list[MemoryEntry]:
         return [MemoryEntry.from_dict(r) for r in self._read_raw()]
+
+    def save_all(self, entries: list[MemoryEntry]) -> None:
+        """Persist multiple entries (overwrites all existing)."""
+        records = [entry.to_dict() for entry in entries]
+        self._write_raw(records)
 
     def _read_raw(self) -> list:
         if not self.filepath.exists():

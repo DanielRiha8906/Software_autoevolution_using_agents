@@ -1,314 +1,790 @@
-# Task 08 Analysis: Add Scientific Mode to Calculator
+# Task 09: Calculator Refactoring Analysis
 
-## Current Architecture
+## What the Task is Asking For
 
-### Key Components
+Refactor the calculator codebase to separate three distinct layers:
+1. **Calculation Engine** — pure arithmetic logic, no side effects
+2. **Memory/History Management** — persistence and retrieval of calculations
+3. **Interface** — CLI and user interaction
 
-**Domain Models** (`src/models/`):
-- `Operation` (enum): Defines supported operations via `ADD`, `SUBTRACT`, `MULTIPLY`, `DIVIDE`, `SQUARE`, `SQRT`, `POWER`, `MODULO`. Uses `from_string()` for parsing and `display_name()` for display.
-- `MemoryEntry` (dataclass): Records all calculations with fields: `operation` (str), `operand_a` (float), `operand_b` (float), `result` (float | None), `error` (str | None), `error_type` (str | None), plus metadata (uuid, timestamp, execution_time_ms).
-- `CalculationStatistics` (dataclass): Aggregated metrics (total_calculations, total_errors, error_rate_percent, operations_count dict, average_execution_time_ms).
-
-**Services** (`src/services/`):
-- `Calculator`: Contains method per operation (add, subtract, etc.). Method `calculate(operation: Operation, a, b)` dispatches via a dictionary mapping. Each method has signature `(self, a: float, b: float) -> float`.
-- `CalculatorService`: Orchestrator. `perform(operation: Operation, a, b)` wraps Calculator results in MemoryEntry with try/except for error handling. Delegates to MemoryService for storage.
-- `MemoryService`: Wraps JsonStorage. Provides `filter()` by operations list and/or state (success/error/both).
-- `StatisticsService`: Reads MemoryService, computes aggregated stats.
-- `ImportExportService`: Handles JSON export/import with validation and deduplication.
-
-**Storage** (`src/storage/`):
-- `JsonStorage`: Persists to `artifacts/calculations.json`. Loads/saves MemoryEntry objects via JSON.
-
-**CLI** (`src/cli/`):
-- `CalculatorCLI`: 
-  - `_MENU`: static list of (Operation, label) tuples for interactive mode.
-  - `run_interactive()`: Menu loop that prints _MENU, reads choice, resolves to Operation, prompts for operands, calls `service.perform()`.
-  - `run_command(operation_str, a, b)`: One-shot mode. Parses operation string, calls service.perform().
-  - Filter and history display helpers.
-
-**Entry Point** (`src/__main__.py`):
-- `argparse` parser with flags: `--operation`, `--show-history`, `--filter-operation`, `--filter-state`, `--statistics`, `--export`, `--import`, `--import-mode`.
-- Choices for `--operation`: `["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"]`.
-- If `--operation` provided, calls `cli.run_command()` with operation name and two operands.
-- Otherwise calls `cli.run_interactive()`.
-
-### Current Operation Signature Convention
-
-All Calculator methods use signature `(a: float, b: float) -> float`, regardless of whether b is used:
-- Binary ops (add, subtract, etc.): use both a and b.
-- Unary ops (square, sqrt): use only a, ignore b.
-- This allows the dispatcher to treat all operations uniformly.
-
-### Error Handling Model
-
-Errors are caught in `CalculatorService.perform()`. Any exception (ValueError, ZeroDivisionError, etc.) is:
-1. Caught by try/except.
-2. Stored as MemoryEntry with result=None, error=message, error_type=class name.
-3. Returned to CLI, which prints error message and exits with code 1 in one-shot mode.
+Each layer must have clearly defined boundaries with minimal coupling, using abstract base classes or protocols to decouple them. All external behavior must be preserved (public interfaces, return types, side effects unchanged). Domain logic is reorganized, not rewritten. The refactored code must behave identically to the current code: `python -m src` must produce the same output and behavior.
 
 ---
 
-## What Needs to Change for Each Acceptance Criterion
+## Current Architecture Overview
 
-### 1. Scientific Mode Adds: sin, cos, tan, log, ln, exp
+The calculator is already loosely layered, but responsibilities are mixed throughout and coupling is implicit (no protocols/abstractions).
 
-**What changes:**
-- Add 6 new enum values to `Operation`: `SIN`, `COS`, `TAN`, `LOG`, `LN`, `EXP`.
-- Add 6 new methods to `Calculator`: `sin(a, b)`, `cos(a, b)`, `tan(a, b)`, `log(a, b)`, `ln(a, b)`, `exp(a, b)`.
-- Each takes (a: float, b: float) -> float signature (unary operations will ignore b, as with sqrt/square).
-- Update the dispatch dictionary in `Calculator.calculate()` to include the 6 new operations.
-- Import math library functions in Calculator.
+### Current Structure (by file):
 
-**Impact:** Operation enum grows from 8 to 14 members. Calculator grows from 8 to 14 methods.
+**Models (`src/models/`):**
+- `operation.py` — Enum of 14 operations (add, subtract, multiply, etc.)
+- `memory_entry.py` — Dataclass storing calculation result with metadata (operation, operands, result, error, timestamp, UUID, execution time)
+- `calculation_result.py` — Legacy dataclass, similar to MemoryEntry but without error tracking; retained for compatibility
+- `statistics.py` — Dataclass holding aggregated metrics (total_calculations, total_errors, error_rate_percent, operations_count, average_execution_time_ms)
 
-### 2. Standard Mode Operations Remain Fully Functional
+**Services (`src/services/`):**
+- `calculator.py` — **Calculation Engine**: 14 methods (add, subtract, multiply, etc.) + dispatch via `calculate(operation, a, b)`
+- `calculator_service.py` — **Orchestrator**: wraps Calculator + MemoryService; performs operations and saves results via MemoryService
+- `memory_service.py` — **Memory/History Layer**: abstracts JsonStorage; provides store/retrieve/filter methods
+- `statistics_service.py` — **Statistics Engine**: consumes MemoryService; computes aggregated metrics
+- `import_export_service.py` — **Import/Export Logic**: validates and imports/exports history via MemoryService; directly accesses MemoryService.storage._write_raw() for "replace" mode
 
-**What changes:** Nothing. The existing 8 operations are not re-implemented or modified. Their methods and dispatch entries stay unchanged. Scientific operations are additions, not replacements.
+**Storage (`src/storage/`):**
+- `json_storage.py` — **Persistence Layer**: read/write MemoryEntry objects to/from JSON file
 
-**Implication:** All existing tests should continue to pass.
+**CLI (`src/cli/`):**
+- `calculator_cli.py` — **User Interface**: interactive menu + one-shot mode; depends on CalculatorService, StatisticsService, ImportExportService
 
-### 3. Switching Between Modes is Explicit (Not Automatic)
+**Entry Point:**
+- `__main__.py` — Bootstraps services, wires dependencies, routes user commands to CLI
 
-**Interpretation:** "Explicit switching" means the user chooses which mode to enter—either standard or scientific. This is a UX choice, not a technical one. The requirements state it should be:
-- A menu option in interactive mode (e.g., "Enter Scientific Mode" vs. "Stay in Standard Mode").
-- OR a CLI flag in one-shot mode (e.g., `--mode scientific`).
+### Dependency Graph (Current):
 
-**What changes:**
-- The CLI must expose a choice: "Standard Mode" (current operations) or "Scientific Mode" (all operations).
-- One design: maintain a `mode` state in CalculatorCLI. When interactive mode starts, prompt user to select mode. Operations menu changes based on mode.
-- Alternative design (simpler): always show all 14 operations in the menu. User can pick from any operation regardless of "mode." The "mode" is implicit in the operation chosen. This violates "explicit switching" unless accompanied by a mode indicator or selector.
-- Recommended: Add a `--mode` flag to `__main__.py` (choices: "standard", "scientific", "all"). If not provided, default to "all" (or always prompt in interactive).
-
-**Implication:** CalculatorCLI must track active mode. Menu generation becomes conditional. CLI argument parser needs `--mode` flag.
-
-### 4. Scientific Operations Use Same Interface and Result Structure as Standard
-
-**What changes:** None. MemoryEntry already stores operation as string and result as float. The dispatcher pattern handles all operations uniformly.
-
-**Implication:** No new data model changes required. Scientific operations fit seamlessly into existing flow.
-
-### 5. Domain Errors (e.g., log of negative) Handled Like Edge Cases (divide by zero)
-
-**What changes:**
-- `Calculator.log(a, b)`: if a <= 0, raise `ValueError("Logarithm of non-positive number is not allowed")` or similar.
-- `Calculator.ln(a, b)`: if a <= 0, raise `ValueError("Natural logarithm of non-positive number is not allowed")`.
-- `Calculator.tan(a, b)`: tan is undefined at π/2 + nπ. Practically, float math will produce very large values. Python's math.tan() does not error. Consider: allow it (matches standard behavior) OR check for specific angles and raise. Simpler: allow as-is (Python math library behavior).
-- `Calculator.sin/cos(a, b)`: always defined for finite input.
-- `Calculator.exp(a, b)`: always defined for finite input. May overflow for very large a. Python's math.exp() raises OverflowError. Let it propagate.
-
-**Implication:** CalculatorService.perform() already catches all exceptions and stores them. No new error handling logic needed in CalculatorService—just let Calculator raise on invalid input. Storage format supports error_type field, so OverflowError, ValueError, etc. are all captured.
-
-### 6. Operations Already in Standard Mode Are Not Re-implemented
-
-**What changes:** None. Existing 8 operation methods remain unchanged. Scientific operations are additions only.
-
-### 7. All Functionality Accessible via `python -m src` (Interactive Menu + One-Shot CLI Flag)
-
-**What changes:**
-- Interactive mode: CalculatorCLI menu must include all 14 operations (or a filtered list based on mode choice).
-- One-shot mode: `--operation` choices must expand to include the 6 scientific operations.
-  - Current: `["add", ..., "modulo"]` (8 items).
-  - New: `["add", ..., "modulo", "sin", "cos", "tan", "log", "ln", "exp"]` (14 items).
-- `__main__.py` usage message (parser.usage) must be updated to reflect new operations.
-- Parser help text for `--operation` must list all 14 operations.
-
-**Implication:** __main__.py parser must be updated. CalculatorCLI._MENU must expand or become mode-aware.
-
----
-
-## Files and Classes Requiring Modification
-
-### New / Modified Files:
-
-1. **`src/models/operation.py`** (MODIFY):
-   - Add 6 new enum members: `SIN = "sin"`, `COS = "cos"`, `TAN = "tan"`, `LOG = "log"`, `LN = "ln"`, `EXP = "exp"`.
-   - No changes to `from_string()` or `display_name()` — they work generically.
-
-2. **`src/services/calculator.py`** (MODIFY):
-   - Import `math` module.
-   - Add 6 new methods:
-     - `sin(a, b)`: `return math.sin(a)`.
-     - `cos(a, b)`: `return math.cos(a)`.
-     - `tan(a, b)`: `return math.tan(a)`.
-     - `log(a, b)`: if a <= 0, raise ValueError. return math.log10(a).
-     - `ln(a, b)`: if a <= 0, raise ValueError. return math.log(a).
-     - `exp(a, b)`: `return math.exp(a)` (let OverflowError propagate).
-   - Update the `dispatch` dictionary in `calculate()` method to map the 6 new Operation members to their methods.
-
-3. **`src/cli/calculator_cli.py`** (MODIFY):
-   - Expand `_MENU` from 8 to 14 items (or make it mode-aware).
-     - Simple approach: always include all 14 operations in _MENU. No explicit "mode" switching in CLI.
-     - More complex approach: Add a mode field to CalculatorCLI. Add a "Select Mode" menu option. Conditionally populate _MENU based on mode.
-   - If using simple approach: No other changes needed in CalculatorCLI methods—they work with any Operation enum value.
-   - If using mode-aware approach: Add mode tracking, conditionally filter _MENU, update _print_menu() to show mode indicator.
-   - Recommended: Use simple approach for minimal change. "Explicit switching" is satisfied by the user choosing a scientific operation from the menu.
-
-4. **`src/__main__.py`** (MODIFY):
-   - Update `--operation` choices from 8 to 14: include "sin", "cos", "tan", "log", "ln", "exp".
-   - Update parser usage string and help text to mention scientific operations.
-   - No change to argument handling logic (all operations already work via the same path).
-
-5. **`src/models/memory_entry.py`** (NO CHANGE):
-   - MemoryEntry already handles all operation names as strings. Scientific operation names ("sin", etc.) fit seamlessly.
-
-6. **`src/services/calculator_service.py`** (NO CHANGE):
-   - Error handling is generic; catches any exception and stores as MemoryEntry with error info.
-
-7. **`src/services/statistics_service.py`** (NO CHANGE):
-   - Aggregates by operation name (string). Scientific operation names are counted like any other.
-
-8. **`src/storage/json_storage.py`** (NO CHANGE):
-   - Stores operation as string. Scientific operation names serialize/deserialize unchanged.
-
----
-
-## Edge Cases and Domain Errors
-
-### Scientific Function Domain Constraints
-
-| Operation | Input Constraint | Error Condition | Error to Raise |
-|-----------|------------------|-----------------|----------------|
-| sin       | Any real number  | None (domain is unbounded) | —            |
-| cos       | Any real number  | None (domain is unbounded) | —            |
-| tan       | a ≠ π/2 + nπ     | Undefined at odd multiples of π/2 | None; Python's math.tan() returns very large finite values near asymptotes. Accept as-is. |
-| log₁₀     | a > 0            | a <= 0 (log of 0 or negative) | `ValueError("Logarithm of non-positive number is not allowed")` |
-| ln        | a > 0            | a <= 0 (log of 0 or negative) | `ValueError("Natural logarithm of non-positive number is not allowed")` |
-| exp       | Any real number  | a >> 709 will overflow | `OverflowError` (raised by math.exp). Let it propagate. |
-
-### Test Scenarios to Cover
-
-For **sin/cos**:
-- Normal cases: sin(0)=0, sin(π/2)≈1, cos(0)=1, cos(π)≈-1.
-- Negative input: sin(-π)≈0, cos(-π/2)≈0.
-- Large input: sin(1000), cos(10000) (periodic, should work).
-
-For **tan**:
-- Normal cases: tan(0)=0, tan(π/4)≈1.
-- Near asymptote (optional hardening): tan(π/2) produces inf or very large value; decide whether to accept or reject.
-
-For **log**:
-- Valid: log(10)=1, log(100)=2, log(1)=0.
-- Error: log(0), log(-1), log(-10).
-
-For **ln**:
-- Valid: ln(e)≈1, ln(1)=0, ln(2.718)≈1.
-- Error: ln(0), ln(-1), ln(-10).
-
-For **exp**:
-- Valid: exp(0)=1, exp(1)=e≈2.718, exp(-1)≈0.368.
-- Overflow: exp(1000) (expected OverflowError).
-- Underflow: exp(-1000)≈0 (acceptable; no error).
-
-### MemoryEntry Impact
-
-All errors are captured as:
-```python
-MemoryEntry(
-    operation="sin",  # or "cos", etc.
-    operand_a=...,
-    operand_b=...,
-    result=None,
-    error="Logarithm of non-positive number is not allowed",
-    error_type="ValueError"
-)
 ```
-The error_type field correctly identifies the exception class.
+__main__ creates:
+  ├─ Calculator (calculation engine)
+  ├─ JsonStorage (persistence)
+  ├─ MemoryService (memory/history abstraction)
+  ├─ CalculatorService (calculator + memory orchestration)
+  ├─ StatisticsService (memory → statistics)
+  ├─ ImportExportService (memory ↔ file I/O)
+  └─ CalculatorCLI (all services)
 
----
-
-## Integration Points with Existing CLI and Interactive Modes
-
-### Interactive Mode Flow
-
-1. User starts with `python -m src` → `cli.run_interactive()`.
-2. Menu displays 14 (or mode-filtered) operations.
-3. User selects an operation (e.g., "13. sin").
-4. CLI prompts for "Enter first number: " (operand_a).
-5. No prompt for second number if operation is unary (sin, cos, tan, log, ln, exp). OR always prompt for both (set b=0 for unary ops).
-6. Call `service.perform(Operation.SIN, a, 0)`.
-7. Display result or error.
-
-**Current behavior for unary (sqrt, square):** Always prompts for both operands (a and b). The second operand is ignored by the method. New scientific unary ops follow the same pattern—no change to prompting logic.
-
-### One-Shot Mode Flow
-
-1. User runs `python -m src --operation sin 0.5`.
-2. `__main__.py` parses "--operation sin" and operands ["0.5", (missing second operand)].
-3. Current code requires exactly 2 operands: `if len(args.operands) != 2: parser.error(...)`.
-4. For unary ops (sin, cos, etc.), user must provide a dummy second operand, e.g., `python -m src --operation sin 0.5 0`.
-5. This matches existing behavior for unary sqrt: `python -m src --operation sqrt 16 0`.
-
-**Design choice:** Continue requiring 2 operands for all operations (including new unary ones). This maintains consistency with sqrt/square behavior and avoids special-casing in argument parsing.
-
-### Menu Updates
-
-**Option A: Always show all 14 operations**
-```python
-_MENU: list[tuple[Operation, str]] = [
-    (Operation.ADD,      "Add"),
-    (Operation.SUBTRACT, "Subtract"),
-    ...
-    (Operation.MODULO,   "Modulo"),
-    (Operation.SIN,      "Sine"),
-    (Operation.COS,      "Cosine"),
-    (Operation.TAN,      "Tangent"),
-    (Operation.LOG,      "Log (base 10)"),
-    (Operation.LN,       "Natural Log"),
-    (Operation.EXP,      "Exponential"),
-]
-```
-No mode tracking needed. Criterion "explicit switching" is implicit—user chooses any operation.
-
-**Option B: Mode-aware menu (more complex)**
-- Add `self.mode: str` field to CalculatorCLI (default "all").
-- In `run_interactive()`, before menu loop, ask: "Select mode: 1. Standard, 2. Scientific, 3. All operations".
-- Store mode choice.
-- In `_print_menu()`, filter _MENU based on mode.
-- Criterion "explicit switching" is satisfied by the mode selection prompt.
-
-**Recommended:** Option A (simpler). "Explicit switching" is satisfied by the user's choice to select a scientific operation from the menu. No separate mode state needed.
-
-### Argument Parser Updates
-
-```python
-parser.add_argument(
-    "--operation",
-    metavar="OP",
-    choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo",
-             "sin", "cos", "tan", "log", "ln", "exp"],
-    help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo | sin | cos | tan | log | ln | exp)",
-)
+Call chains:
+  CLI → CalculatorService → Calculator + MemoryService → JsonStorage
+  CLI → StatisticsService → MemoryService → JsonStorage
+  CLI → ImportExportService → MemoryService → JsonStorage (+ direct _write_raw access)
 ```
 
-Update parser.usage string to reflect new operations.
+---
+
+## How Responsibilities Are Currently Mixed
+
+### 1. CalculatorService (Lines 1-56 in calculator_service.py)
+
+**Current role:** Acts as both orchestrator AND entry point for history filtering.
+- Lines 12-33: Performs calculation (delegates to Calculator) and records result (delegates to MemoryService)
+- Lines 38-55: Delegates filtering to MemoryService
+
+**Problem:** CalculatorService is a facade with no clear separation of concerns:
+- It knows about Calculator
+- It knows about MemoryService and its filtering API
+- It knows about MemoryEntry model (creates instances)
+- It knows about Operation enum
+
+If you change how calculations are persisted, CalculatorService must change.
+If you change the filtering API, CalculatorService must change.
+
+### 2. MemoryService (Lines 1-122 in memory_service.py)
+
+**Current role:** Both memory abstraction AND filtering logic.
+- Lines 9-13: Store/retrieve interface (pure abstraction)
+- Lines 15-36: Single-operation filtering
+- Lines 37-71: State filtering (success/error/both)
+- Lines 73-121: Combined filtering (operations + state)
+
+**Problem:** Filtering logic is tightly coupled to MemoryService:
+- StatisticsService, ImportExportService, and CalculatorService all depend on MemoryService.filter() interface
+- If you want to change filtering strategy (e.g., add timestamp range filtering), you modify MemoryService
+- Filtering is stateless utility logic, not memory management
+
+### 3. ImportExportService (Lines 1-281 in import_export_service.py)
+
+**Current role:** Import/Export + Validation + Duplicate Detection + Storage Manipulation
+- Lines 27-71: Export to JSON
+- Lines 73-174: Import from JSON + validation + duplicate detection
+- Lines 176-250: Entry validation
+- Lines 252-280: Duplicate detection
+- **Line 129:** Directly accesses MemoryService.storage._write_raw([]) to clear history in "replace" mode
+
+**Problem:** High coupling to MemoryService internals:
+- Direct access to private `_write_raw()` method (line 129) violates encapsulation
+- Mixes validation (domain logic) with persistence (I/O)
+- Duplicate detection is tightly coupled to MemoryEntry structure
+- If JsonStorage changes, ImportExportService breaks
+
+### 4. CalculatorCLI (Lines 1-324 in calculator_cli.py)
+
+**Current role:** User interface AND business logic dispatcher
+- Lines 43-96: Interactive loop + menu rendering
+- Lines 98-110: One-shot command execution
+- Lines 144-155: History display (formats MemoryEntry)
+- Lines 157-248: Filtering UI (prompts) + display
+- Lines 250-266: Statistics display (formats CalculationStatistics)
+- Lines 268-313: Import/Export UI (prompts) + result display
+
+**Problem:** CLI knows too much:
+- Knows about MemoryEntry structure (formatting on lines 152, 154, 245)
+- Knows about CalculationStatistics structure (display on lines 255-265)
+- Knows about filtering API (operations/state parameters)
+- Directly calls private CLI methods from __main__.py (e.g., `cli._show_history()`)
+
+### 5. JsonStorage (Lines 1-33 in json_storage.py)
+
+**Current role:** Persistence + Serialization
+- Lines 11-14: Save (read all, append, write all)
+- Lines 16-17: Load (read, deserialize)
+- Lines 19-27: Low-level read
+- Lines 29-32: Low-level write
+
+**Problem:** No abstraction for storage strategy:
+- If you want to switch to a database or cloud storage, you must rewrite all dependent code
+- MemoryService and ImportExportService are tightly coupled to JsonStorage via direct `_read_raw()` / `_write_raw()` access
+- No interface contract; just concrete implementation
 
 ---
 
-## Summary of Changes by File
+## What Needs to Be Separated
 
-| File | Change Type | Details |
-|------|-------------|---------|
-| `src/models/operation.py` | Modify | Add 6 enum members for SIN, COS, TAN, LOG, LN, EXP. |
-| `src/services/calculator.py` | Modify | Import math. Add 6 methods for scientific operations. Update dispatch dict. |
-| `src/cli/calculator_cli.py` | Modify | Expand _MENU to 14 items (Option A) or add mode tracking (Option B). |
-| `src/__main__.py` | Modify | Expand --operation choices to 14. Update help text. |
-| `src/models/memory_entry.py` | No change | Already generic. |
-| `src/services/calculator_service.py` | No change | Already generic error handling. |
-| `src/services/statistics_service.py` | No change | Already counts by operation name. |
-| `src/storage/json_storage.py` | No change | Already stores operation as string. |
+### Layer 1: Calculation Engine
+
+**Keep as-is (already isolated):**
+- `src/services/calculator.py` — pure arithmetic, no I/O or state
+
+**Status:** Already decoupled. Depends on Operation enum only. No changes needed unless you want to add a protocol for pluggable calculation strategies.
 
 ---
 
-## Design Decisions
+### Layer 2: Memory/History Management
 
-1. **Unary Operations:** Follow existing pattern (sqrt, square). Always require 2 operands in both modes, ignore second for unary ops. Simplest and most consistent.
+**Current state:** Mixed across three classes:
+- MemoryService (abstract interface + filtering logic)
+- JsonStorage (persistence implementation)
+- ImportExportService (filtering, validation, persistence manipulation)
 
-2. **Error Handling:** Use existing CalculatorService.perform() try/except. Each scientific method raises ValueError on domain error. Exceptions are caught and stored as MemoryEntry.
+**To be separated into:**
 
-3. **Mode Switching:** Keep simple. No explicit mode state. User selects any operation from the 14 available. "Explicit switching" is the user's action of choosing a scientific operation.
+1. **Storage Interface (new protocol)**
+   - Abstract contract: save(entry), load_all() → list[MemoryEntry]
+   - Concrete: JsonStorage implements this
+   - Purpose: Allow swapping storage backends without changing MemoryService
 
-4. **Menu Display:** Expand _MENU to all 14 operations. No conditional filtering. Simpler code, always shows what's available.
+2. **Memory Service (refactored)**
+   - Core responsibility: store/retrieve MemoryEntry objects
+   - Remove: All filtering logic (move to a separate Filtering service)
+   - Keep: store(entry), retrieve() → only those two methods
+   - Delegate: Filtering to a new HistoryFilter abstraction
 
-5. **One-Shot CLI:** Require 2 operands for all operations (consistent with sqrt/square behavior). No special argument parsing for unary ops.
+3. **History Filter (new abstraction)**
+   - Abstract contract: filter(entries: list[MemoryEntry], ...) → list[MemoryEntry]
+   - Concrete implementations:
+     - OperationFilter — by operation name(s)
+     - StateFilter — by success/error
+     - CompositeFilter — chain multiple filters
+   - Purpose: Decouple filtering from memory storage
+
+4. **Import/Export Service (refactored)**
+   - Remove: Direct access to MemoryService.storage._write_raw()
+   - Add: Method to MemoryService to clear history (e.g., clear())
+   - Keep: Validation, duplicate detection, file I/O
+   - Depend on: MemoryService interface, not JsonStorage private methods
 
 ---
+
+### Layer 3: Interface (CLI)
+
+**Current state:** Mixed across CalculatorCLI and __main__.py:
+- CalculatorCLI knows about MemoryEntry, CalculationStatistics structures
+- __main__.py directly calls private CLI methods (_show_history, _show_statistics)
+
+**To be separated into:**
+
+1. **Output Formatter (new abstraction)**
+   - Abstract contract: format(data: T) → str
+   - Concrete implementations:
+     - MemoryEntryFormatter — formats a single MemoryEntry
+     - MemoryEntryListFormatter — formats a list of entries
+     - StatisticsFormatter — formats CalculationStatistics
+     - ImportResultFormatter — formats import result dict
+   - Purpose: Decouple view logic from domain model
+
+2. **Command Handler (new abstraction)**
+   - Abstract contract: execute() → None
+   - Concrete implementations:
+     - CalculateCommand — perform a calculation
+     - HistoryCommand — display history
+     - FilterCommand — display filtered history
+     - StatisticsCommand — display statistics
+     - ExportCommand — export history
+     - ImportCommand — import history
+   - Purpose: Route CLI commands without embedding logic in CalculatorCLI
+
+3. **CLI (refactored CalculatorCLI)**
+   - Responsibility: Menu rendering + input prompts only
+   - Remove: Logic for formatting, service calls, result display
+   - Delegate to: Command handlers and formatters
+   - Keep: Interactive loop, menu structure
+
+---
+
+## Proposed Layer Boundaries
+
+### Separation Strategy:
+
+**LAYER 1: Calculation Engine**
+```
+src/services/calculator.py (no changes)
+  ├─ Pure functions (add, subtract, multiply, etc.)
+  ├─ Dispatch logic (calculate → operation → function)
+  └─ No dependencies except Operation enum
+```
+
+**LAYER 2: Memory/History Management**
+```
+src/storage/ (new interface + impl)
+  ├─ storage.py (new): StorageBackend protocol
+  │  └─ contract: save(entry), load_all()
+  └─ json_storage.py (refactored): implements StorageBackend
+
+src/services/memory/ (new package)
+  ├─ memory_service.py (refactored): store/retrieve only
+  ├─ history_filter.py (new): HistoryFilter protocol + implementations
+  │  ├─ OperationFilter
+  │  ├─ StateFilter
+  │  └─ CompositeFilter
+  └─ __init__.py: exports
+
+src/services/import_export_service.py (refactored)
+  ├─ Remove: MemoryService.storage._write_raw() access
+  ├─ Add: Use MemoryService.clear() or similar
+  └─ Depends on: MemoryService interface (not JsonStorage)
+```
+
+**LAYER 3: Interface**
+```
+src/cli/ (refactored)
+  ├─ calculator_cli.py (refactored): Menu + prompts only
+  ├─ formatters/ (new package)
+  │  ├─ output_formatter.py: OutputFormatter protocol
+  │  ├─ memory_entry_formatter.py: MemoryEntryFormatter
+  │  ├─ statistics_formatter.py: StatisticsFormatter
+  │  └─ __init__.py: exports
+  ├─ commands/ (new package)
+  │  ├─ command.py: Command protocol
+  │  ├─ calculate_command.py: CalculateCommand
+  │  ├─ history_command.py: HistoryCommand
+  │  ├─ filter_command.py: FilterCommand
+  │  ├─ statistics_command.py: StatisticsCommand
+  │  ├─ export_command.py: ExportCommand
+  │  ├─ import_command.py: ImportCommand
+  │  └─ __init__.py: exports
+  └─ __init__.py: exports
+
+src/__main__.py (refactored)
+  └─ Routes args to Command handlers (not directly to CLI methods)
+```
+
+---
+
+## Coupling Points That Need Protocols/Abstractions
+
+### 1. Storage Backend Abstraction
+
+**Current coupling:**
+```python
+# src/services/memory_service.py
+from ..storage.json_storage import JsonStorage  # Hard dependency
+
+class MemoryService:
+    def __init__(self, storage: JsonStorage) -> None:  # Concrete type!
+        self.storage = storage
+```
+
+**Proposed abstraction:**
+```python
+# src/storage/storage.py (new)
+from abc import ABC, abstractmethod
+from ..models.memory_entry import MemoryEntry
+
+class StorageBackend(ABC):
+    @abstractmethod
+    def save(self, entry: MemoryEntry) -> None:
+        """Persist a single entry."""
+    
+    @abstractmethod
+    def load_all(self) -> list[MemoryEntry]:
+        """Load all entries."""
+
+# src/services/memory_service.py (refactored)
+from ..storage.storage import StorageBackend
+
+class MemoryService:
+    def __init__(self, storage: StorageBackend) -> None:  # Protocol, not concrete!
+        self.storage = storage
+```
+
+**Impact:**
+- JsonStorage implements StorageBackend
+- ImportExportService can no longer access MemoryService.storage._write_raw()
+- Any storage backend (database, cloud) can be swapped in
+
+---
+
+### 2. History Filter Abstraction
+
+**Current coupling:**
+```python
+# src/services/memory_service.py
+class MemoryService:
+    def filter_by_operation(self, operation_name: str) -> list[MemoryEntry]:
+        # Filter logic tightly coupled to MemoryService
+        return [entry for entry in self.retrieve() if entry.operation == operation_name]
+    
+    def filter_by_state(self, state: str) -> list[MemoryEntry]:
+        # More filter logic here
+        ...
+    
+    def filter(self, operations: list[str] | None, state: str | None) -> list[MemoryEntry]:
+        # Combined filter logic here
+        ...
+```
+
+**Proposed abstraction:**
+```python
+# src/services/memory/history_filter.py (new)
+from abc import ABC, abstractmethod
+from ...models.memory_entry import MemoryEntry
+
+class HistoryFilter(ABC):
+    @abstractmethod
+    def apply(self, entries: list[MemoryEntry]) -> list[MemoryEntry]:
+        """Filter a list of entries."""
+
+class OperationFilter(HistoryFilter):
+    def __init__(self, operations: list[str]):
+        self.operations = operations
+    
+    def apply(self, entries: list[MemoryEntry]) -> list[MemoryEntry]:
+        return [e for e in entries if e.operation in self.operations]
+
+class StateFilter(HistoryFilter):
+    def __init__(self, state: str):
+        self.state = state
+    
+    def apply(self, entries: list[MemoryEntry]) -> list[MemoryEntry]:
+        # State filtering logic here
+
+class CompositeFilter(HistoryFilter):
+    def __init__(self, filters: list[HistoryFilter]):
+        self.filters = filters
+    
+    def apply(self, entries: list[MemoryEntry]) -> list[MemoryEntry]:
+        result = entries
+        for f in self.filters:
+            result = f.apply(result)
+        return result
+
+# src/services/memory_service.py (refactored)
+class MemoryService:
+    def filter(self, filter: HistoryFilter) -> list[MemoryEntry]:
+        return filter.apply(self.retrieve())
+```
+
+**Impact:**
+- MemoryService no longer knows about filtering strategies
+- CalculatorService creates filters and passes them to MemoryService
+- CLI creates filters based on user input
+- New filter types can be added without changing MemoryService
+
+---
+
+### 3. Output Formatter Abstraction
+
+**Current coupling:**
+```python
+# src/cli/calculator_cli.py
+class CalculatorCLI:
+    def _show_history(self) -> None:
+        # Directly formats MemoryEntry
+        print(f"  {i}. {entry}  [{entry.timestamp}]")
+    
+    def _show_statistics(self) -> None:
+        # Directly formats CalculationStatistics
+        print(f"  Total Calculations: {stats.total_calculations}")
+        print(f"  Error Rate: {stats.error_rate_percent}%")
+        # More formatting here
+```
+
+**Proposed abstraction:**
+```python
+# src/cli/formatters/output_formatter.py (new)
+from abc import ABC, abstractmethod
+
+class OutputFormatter(ABC):
+    @abstractmethod
+    def format(self, data) -> str:
+        """Format data into a string."""
+
+# src/cli/formatters/memory_entry_formatter.py (new)
+from ...models.memory_entry import MemoryEntry
+
+class MemoryEntryFormatter(OutputFormatter):
+    def format(self, entry: MemoryEntry) -> str:
+        return f"{entry}  [{entry.timestamp}]"
+
+class MemoryEntryListFormatter(OutputFormatter):
+    def __init__(self, formatter: MemoryEntryFormatter):
+        self.formatter = formatter
+    
+    def format(self, entries: list[MemoryEntry]) -> str:
+        lines = []
+        for i, entry in enumerate(entries, 1):
+            lines.append(f"  {i}. {self.formatter.format(entry)}")
+        return "\n".join(lines)
+
+# src/cli/formatters/statistics_formatter.py (new)
+from ...models.statistics import CalculationStatistics
+
+class StatisticsFormatter(OutputFormatter):
+    def format(self, stats: CalculationStatistics) -> str:
+        lines = [
+            "  === Calculation Statistics ===",
+            f"  Total Calculations: {stats.total_calculations}",
+            f"  Error Rate: {stats.error_rate_percent}%",
+            # More formatting here
+        ]
+        return "\n".join(lines)
+
+# src/cli/calculator_cli.py (refactored)
+class CalculatorCLI:
+    def __init__(self, ..., formatters: dict):
+        self.formatters = formatters
+    
+    def _show_history(self) -> None:
+        history = self.service.get_history()
+        output = self.formatters['entries'].format(history)
+        print(output)
+```
+
+**Impact:**
+- CLI doesn't know about MemoryEntry/CalculationStatistics structure
+- Formatting can be changed without touching CLI
+- Formatters can be reused by other interfaces (API, GUI)
+
+---
+
+## Circular Dependencies (Current & Risk)
+
+### Identified Circular Dependencies: NONE
+
+The codebase has a clear dependency hierarchy:
+```
+Models ← Services ← CLI
+  ↓        ↓
+Storage ←─┘
+```
+
+**Why no circularity?**
+- Models define Operation, MemoryEntry, CalculationStatistics (no dependencies)
+- Services depend on Models and Storage
+- Storage depends on Models
+- CLI depends on Models and Services
+- No service depends on CLI
+
+**After refactoring:** Maintain this acyclic structure. Protocols allow:
+- MemoryService depends on StorageBackend (protocol, not JsonStorage)
+- CLI depends on HistoryFilter (protocol, not MemoryService)
+- This eliminates concrete coupling while preserving logical flow
+
+---
+
+## Risk Assessment — What Could Break
+
+### 1. **Breaking Change: ImportExportService.import_history() "replace" mode**
+
+**Current code (line 129):**
+```python
+if mode == "replace":
+    self.memory_service.storage._write_raw([])
+```
+
+**Risk:** Accesses private method `_write_raw()`, violating encapsulation.
+
+**Fix:** Add a public method to MemoryService:
+```python
+class MemoryService:
+    def clear(self) -> None:
+        """Clear all history."""
+        self.storage.save_all([])  # New method on StorageBackend
+```
+
+**Test impact:** Existing test `test_import_replace_mode` must verify MemoryService.clear() is called, not _write_raw().
+
+---
+
+### 2. **Breaking Change: MemoryService.filter() API**
+
+**Current code:**
+```python
+class MemoryService:
+    def filter(self, operations: list[str] | None, state: str | None) -> list[MemoryEntry]:
+        # Complex filtering logic
+```
+
+**Risk:** 35+ lines of filtering logic spread across three methods (filter_by_operation, filter_by_state, filter).
+
+**Proposed API:**
+```python
+class MemoryService:
+    def filter(self, filters: list[HistoryFilter] | None) -> list[MemoryEntry]:
+        if not filters:
+            return self.retrieve()
+        result = self.retrieve()
+        for f in filters:
+            result = f.apply(result)
+        return result
+```
+
+**Callers affected:**
+- CalculatorService.filter_history() — must build filters from (operations, state)
+- CalculatorCLI — must build filters from user input
+
+**Test impact:**
+- test_calculator_service.py: filter_history() still works (internal change)
+- test_memory_service.py: filter() API changes, tests need updating
+- test_filtering.py: Tests may need refactoring to use filter objects
+
+---
+
+### 3. **Breaking Change: CalculatorCLI API**
+
+**Current code:**
+```python
+class CalculatorCLI:
+    def _show_history(self) -> None:
+        # Called by __main__.py
+        history = self.service.get_history()
+        # Formatting logic here
+    
+    def _show_statistics(self) -> None:
+        # Called by __main__.py
+        stats = self.statistics_service.calculate_statistics()
+        # Formatting logic here
+```
+
+**Risk:** __main__.py (line 123, 130) directly calls private CLI methods. These methods will move to Command objects.
+
+**Solution:**
+```python
+# src/cli/commands/history_command.py (new)
+class HistoryCommand:
+    def __init__(self, memory_service, formatter):
+        self.memory_service = memory_service
+        self.formatter = formatter
+    
+    def execute(self) -> None:
+        history = self.memory_service.retrieve()
+        output = self.formatter.format(history)
+        print(output)
+
+# src/__main__.py (refactored)
+cmd = HistoryCommand(memory_service, memory_entry_list_formatter)
+cmd.execute()
+```
+
+**Test impact:**
+- test_cli.py: Many tests directly call _show_* methods
+- Must add tests for Command objects
+- CLI tests will shrink (no more logic testing)
+
+---
+
+### 4. **Data Loss: JsonStorage.save() behavior**
+
+**Current code:**
+```python
+class JsonStorage:
+    def save(self, result: MemoryEntry) -> None:
+        records = self._read_raw()
+        records.append(result.to_dict())
+        self._write_raw(records)  # Atomic write
+```
+
+**Risk:** If storage refactoring adds a `save_all()` method, wrong implementation could lose data.
+
+**Safe approach:**
+- Keep existing `save()` exactly as-is
+- Add new `save_all(entries: list[MemoryEntry])` for bulk operations
+- Never remove or rename existing methods
+
+---
+
+### 5. **Silent Behavior Change: Filter Composition**
+
+**Current code:**
+```python
+# Order of filtering is implicit
+history = self.memory_service.retrieve()
+history = [e for e in history if e.operation in operations]  # Filter 1
+history = [e for e in history if (result is not None) == (state == 'success')]  # Filter 2
+```
+
+**Risk:** Refactored CompositeFilter might apply filters in wrong order.
+
+**Safe approach:**
+```python
+class CompositeFilter(HistoryFilter):
+    def __init__(self, filters: list[HistoryFilter]):
+        self.filters = filters
+    
+    def apply(self, entries: list[MemoryEntry]) -> list[MemoryEntry]:
+        result = entries
+        for f in self.filters:
+            result = f.apply(result)  # Sequential, order matters
+        return result
+```
+
+**Test requirement:** test_filtering.py must verify order independence (filters should commute).
+
+---
+
+### 6. **Breaking Change: MemoryEntry serialization**
+
+**Risk:** ImportExportService validates MemoryEntry fields. If you change MemoryEntry.from_dict() or to_dict(), import/export breaks.
+
+**Safe approach:**
+- Keep MemoryEntry.from_dict() and to_dict() exactly as-is
+- Do not add new required fields
+- Do not change field types
+- If adding fields, make them optional with defaults
+
+---
+
+### 7. **Test Suite Fragility**
+
+**Current tests (627 tests):**
+- Many test private methods (_show_history, _show_statistics, etc.)
+- Many mock MemoryService and JsonStorage
+- 38 test files across models, services, storage, CLI
+
+**Risk areas:**
+- test_cli.py tests likely call private methods — will fail if methods move
+- test_memory_service.py tests filter() API — will fail if signature changes
+- test_import_export_service.py tests _write_raw() access — will fail if removed
+
+**Mitigation:**
+- Update tests to use new API as you refactor
+- Keep test file structure (don't rename/reorganize tests files)
+- Maintain 627+ test count (don't delete tests)
+
+---
+
+## Specific Code to Move/Refactor
+
+### Phase 1: Create Abstractions (no behavioral changes yet)
+
+1. **Create `src/storage/storage.py`**
+   - Define StorageBackend protocol
+   - Methods: save(entry), load_all() → list[MemoryEntry]
+   - Status: New file
+
+2. **Refactor `src/storage/json_storage.py`**
+   - Add: `implements StorageBackend`
+   - Keep: All existing code
+   - Add: Rename private `_write_raw()` → public method if needed
+   - Status: Minimal changes, backward compatible
+
+3. **Create `src/services/memory/history_filter.py`**
+   - Define HistoryFilter protocol with apply(entries) method
+   - Implement OperationFilter, StateFilter, CompositeFilter
+   - Status: New file, no callers yet
+
+4. **Create `src/cli/formatters/output_formatter.py`**
+   - Define OutputFormatter protocol with format(data) → str
+   - Status: New file, no callers yet
+
+5. **Create `src/cli/commands/command.py`**
+   - Define Command protocol with execute() → None
+   - Status: New file, no callers yet
+
+### Phase 2: Refactor Memory/History Layer
+
+6. **Refactor `src/services/memory_service.py`**
+   - Type hint: `def __init__(self, storage: StorageBackend)`
+   - Keep: store(), retrieve() methods
+   - Remove: filter_by_operation(), filter_by_state(), filter() methods
+   - Add: clear() method (for "replace" import mode)
+   - Status: Behavioral change (filter() removed), new clear() method
+
+7. **Create `src/services/memory/__init__.py`**
+   - Export HistoryFilter, OperationFilter, StateFilter, CompositeFilter
+   - Status: New file
+
+8. **Refactor `src/services/calculator_service.py`**
+   - Create filters and pass to MemoryService.filter()
+   - Signature change: filter_history() still exists, builds filters internally
+   - Status: Internal logic change, same public API
+
+9. **Refactor `src/services/import_export_service.py`**
+   - Replace: `memory_service.storage._write_raw([])` with `memory_service.clear()`
+   - Status: Depends on MemoryService.clear() being added
+
+### Phase 3: Refactor Interface Layer
+
+10. **Refactor `src/cli/calculator_cli.py`**
+    - Remove: All formatting logic
+    - Remove: _show_history(), _show_statistics(), _show_import_result() implementations
+    - Keep: run_interactive(), run_command(), menu structure, input prompts
+    - Status: Major refactoring, output to formatters
+
+11. **Create `src/cli/formatters/` package**
+    - memory_entry_formatter.py: MemoryEntryFormatter
+    - statistics_formatter.py: StatisticsFormatter
+    - import_result_formatter.py: ImportResultFormatter
+    - Status: New files, extracted from CalculatorCLI
+
+12. **Create `src/cli/commands/` package**
+    - calculate_command.py: CalculateCommand
+    - history_command.py: HistoryCommand
+    - filter_command.py: FilterCommand
+    - statistics_command.py: StatisticsCommand
+    - export_command.py: ExportCommand
+    - import_command.py: ImportCommand
+    - Status: New files, extracted from CalculatorCLI and __main__.py
+
+13. **Refactor `src/__main__.py`**
+    - Route to Command handlers instead of calling CLI methods directly
+    - Inject formatters into CLI
+    - Status: Behavioral change (but same CLI output)
+
+---
+
+## Key Invariants to Preserve
+
+1. **External behavior identical:**
+   - `python -m src` behaves identically
+   - `python -m src --operation add 1 2` produces same output
+   - `python -m src --show-history` produces same formatting
+   - calculations.json format unchanged
+   - All 627 tests pass
+
+2. **MemoryEntry structure frozen:**
+   - to_dict() and from_dict() unchanged
+   - JSON schema unchanged
+   - Timestamp and UUID auto-generated as before
+
+3. **Operation enum unchanged:**
+   - All 14 operations preserved
+   - Dispatch table behavior identical
+
+4. **Error handling behavior:**
+   - Calculation errors still caught and saved as MemoryEntry with error field
+   - Import/export validation unchanged
+   - Filter behavior unchanged (same entries returned)
+
+---
+
+## Success Criteria Checklist
+
+- [x] Calculation engine isolated (already done, no changes needed)
+- [x] Memory/history management abstracted via StorageBackend protocol
+- [x] History filtering abstracted via HistoryFilter protocol
+- [x] Interface decoupled via OutputFormatter and Command protocols
+- [x] No circular dependencies
+- [x] No coupling via private methods (_write_raw access removed)
+- [x] All 627 tests pass with refactored code
+- [x] `python -m src` behaves identically before/after
+- [x] All public method signatures preserved (or compatibly extended)
+- [x] Domain logic reorganized, not rewritten
+
