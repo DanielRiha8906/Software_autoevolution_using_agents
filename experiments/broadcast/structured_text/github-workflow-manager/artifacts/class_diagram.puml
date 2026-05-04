@@ -65,6 +65,16 @@ package "models" #DDEEFF {
 }
 
 package "storage" #FFF3CC {
+    abstract class WorkflowRunRepository {
+        {abstract} +save(runs: List[WorkflowRun]) : None
+        {abstract} +load() : List[WorkflowRun]
+    }
+
+    abstract class AttemptRepository {
+        {abstract} +save(attempts: List[WorkflowRunAttempt]) : None
+        {abstract} +load() : List[WorkflowRunAttempt]
+    }
+
     class WorkflowJsonStorage {
         +filepath : str
         --
@@ -80,14 +90,17 @@ package "storage" #FFF3CC {
         +save(attempts: List[WorkflowRunAttempt]) : None
         +load() : List[WorkflowRunAttempt]
     }
+
+    WorkflowRunRepository <|-- WorkflowJsonStorage
+    AttemptRepository <|-- AttemptJsonStorage
 }
 
 package "services" #DDFFD4 {
     class WorkflowRunService {
-        -_storage : WorkflowJsonStorage
+        -_repository : WorkflowRunRepository
         -_runs    : List[WorkflowRun]
         --
-        +__init__(storage: WorkflowJsonStorage)
+        +__init__(repository: WorkflowRunRepository)
         +add_workflow_run(run: WorkflowRun) : WorkflowRun
         +list_runs() : List[WorkflowRun]
         +get_run_detail(run_id: str) : Optional[WorkflowRun]
@@ -115,10 +128,10 @@ package "services" #DDFFD4 {
     }
 
     class AttemptService {
-        -_storage : AttemptJsonStorage
+        -_repository : AttemptRepository
         -_attempts : List[WorkflowRunAttempt]
         --
-        +__init__(storage: AttemptJsonStorage)
+        +__init__(repository: AttemptRepository)
         +add_workflow_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
         +get_attempts_by_run_id(run_id: int) : List[WorkflowRunAttempt]
         +list_attempts() : List[WorkflowRunAttempt]
@@ -145,17 +158,25 @@ package "services" #DDFFD4 {
     }
 
     class GitHubFetchService {
+        -_adapter : GitHubAdapter
+        --
+        +__init__()
+        +validate_token(token: str) : bool
+        +fetch_workflow_runs(owner: str, repo: str,\n  workflow_id: Optional[str],\n  token: Optional[str]) : List[WorkflowRun]
+    }
+}
+
+package "adapters" #FFE5CC {
+    class GitHubAdapter {
         -_token : Optional[str]
         --
         +__init__()
         +_resolve_token(token: Optional[str]) : str
         +_read_env_file(env_path: Path) : Optional[str]
-        +validate_token(token: str) : bool
         +fetch_workflow_runs(owner: str, repo: str,\n  workflow_id: Optional[str],\n  token: Optional[str]) : List[WorkflowRun]
         -_convert_github_run(github_run: dict) : WorkflowRun
         -_map_github_status(github_status: str) : WorkflowStatus
         -_map_github_conclusion(github_conclusion: str) : WorkflowConclusion
-        -_parse_timestamp(timestamp_str: str) : datetime
     }
 }
 
@@ -178,17 +199,19 @@ package "cli" #FFE5E5 {
 WorkflowRun                "1" --> "*" WorkflowRunAttempt   : contains >
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
-WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
+WorkflowRunService    "1" --> "1" WorkflowRunRepository : -_repository
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
 WorkflowRunTracker         ..>  WorkflowRun
-AttemptService       "1" --> "1" AttemptJsonStorage   : -_storage
+AttemptService       "1" --> "1" AttemptRepository   : -_repository
 AttemptService             ..>  WorkflowRunAttempt
 StatisticsService    "1" --> "1" WorkflowRunService  : -_workflow_run_service
 StatisticsService    "1" --> "1" AttemptService      : -_attempt_service
 StatisticsService          ..>  WorkflowStatisticsReport : returns
+GitHubFetchService   "1" --> "1" GitHubAdapter       : -_adapter
+GitHubFetchService         ..>  WorkflowRun
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  WorkflowRunTracker
 "workflow_cli"             ..>  AttemptService
@@ -199,7 +222,8 @@ StatisticsService          ..>  WorkflowStatisticsReport : returns
 "interactive_menu"         ..>  AttemptService
 "interactive_menu"         ..>  StatisticsService
 "interactive_menu"         ..>  GitHubFetchService
-GitHubFetchService         ..>  WorkflowStatus
-GitHubFetchService         ..>  WorkflowConclusion
+GitHubAdapter              ..>  WorkflowRun
+GitHubAdapter              ..>  WorkflowStatus
+GitHubAdapter              ..>  WorkflowConclusion
 
 @enduml
