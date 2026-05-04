@@ -8,6 +8,7 @@ from .services.calculator_service import CalculatorService
 from .services.memory_store_impl import MemoryStoreImpl
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
+from .gui.gui_application import GUIApplication
 
 
 def _build_service() -> CalculatorService:
@@ -101,6 +102,11 @@ def main() -> None:
         help="When importing, overwrite existing entries with same ID (use with --import-history)",
     )
     parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch the graphical user interface",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -112,7 +118,10 @@ def main() -> None:
     memory_store = _build_memory_store()
     cli = CalculatorCLI(service, memory_store)
 
-    if args.operation:
+    if args.gui:
+        gui = GUIApplication(service, memory_store)
+        gui.run()
+    elif args.operation:
         try:
             operation = Operation.from_string(args.operation)
             required_arity = operation.arity()
