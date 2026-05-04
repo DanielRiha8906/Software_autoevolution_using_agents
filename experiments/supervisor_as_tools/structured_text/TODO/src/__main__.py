@@ -6,6 +6,12 @@ from .cli.todo_cli import TodoCLI
 
 def main() -> None:
     if len(sys.argv) > 1:
+        # Check for GUI flag
+        if sys.argv[1] == "--gui":
+            from .gui import TodoGUI
+            gui = TodoGUI()
+            gui.run()
+            return
         sys.exit(TodoCLI().run())
 
     menu = InteractiveMenu()

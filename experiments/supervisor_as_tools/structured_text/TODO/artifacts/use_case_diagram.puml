@@ -28,6 +28,7 @@ rectangle "TODO Manager" {
     usecase "View statistics" as I_STATS
     usecase "Export tasks and comments" as I_EXPORT
     usecase "Import tasks and comments" as I_IMPORT
+    usecase "Launch GUI" as I_LAUNCH_GUI
     usecase "Quit application" as I_QUIT
   }
 
@@ -54,10 +55,24 @@ rectangle "TODO Manager" {
     usecase "Export tasks and comments" as C_EXPORT
     usecase "Import tasks and comments" as C_IMPORT
   }
+
+  package "GUI mode" {
+    usecase "Use GUI window" as GUI
+    usecase "Add task" as G_ADD
+    usecase "List / filter tasks" as G_LIST
+    usecase "Filter by status" as G_STATUS
+    usecase "Filter by project" as G_PROJECT
+    usecase "Show task details" as G_SHOW
+    usecase "Change task status" as G_STATUS_CHANGE
+    usecase "Update task" as G_UPDATE
+    usecase "Set due date" as G_DUE
+    usecase "Delete task" as G_DELETE
+  }
 }
 
 User --> UI
 User --> CLI
+User --> GUI
 
 UI ..> I_ADD       : <<exclude>>
 UI ..> I_LIST      : <<exclude>>
@@ -79,6 +94,7 @@ I_COMMENTS ..> I_DELETE_COMMENT   : <<include>>
 UI ..> I_STATS     : <<exclude>>
 UI ..> I_EXPORT    : <<exclude>>
 UI ..> I_IMPORT    : <<exclude>>
+UI ..> I_LAUNCH_GUI : <<exclude>>
 UI ..> I_QUIT      : <<exclude>>
 
 CLI ..> C_ADD            : <<exclude>>
@@ -101,5 +117,15 @@ CLI ..> C_DELETE_COMMENT : <<exclude>>
 CLI ..> C_STATS          : <<exclude>>
 CLI ..> C_EXPORT         : <<exclude>>
 CLI ..> C_IMPORT         : <<exclude>>
+
+GUI ..> G_ADD       : <<exclude>>
+GUI ..> G_LIST      : <<exclude>>
+G_LIST ..> G_STATUS : <<include>>
+G_LIST ..> G_PROJECT : <<include>>
+GUI ..> G_SHOW      : <<exclude>>
+GUI ..> G_STATUS_CHANGE : <<exclude>>
+GUI ..> G_UPDATE    : <<exclude>>
+GUI ..> G_DUE      : <<exclude>>
+GUI ..> G_DELETE    : <<exclude>>
 
 @enduml

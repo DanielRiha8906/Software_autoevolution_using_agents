@@ -63,6 +63,13 @@ repeat
       :Run export flow;
     case (12 — Import tasks)
       :Run import flow;
+    case (13 — Open GUI)
+      :Initialize TodoGUI;
+      :Load tasks from service;
+      :Launch tkinter event loop;
+      :Display task list in table view;
+      :Wait for GUI interaction;
+      :Return to menu on GUI close;
     case (0/q — Quit)
       :Clear screen;
       stop

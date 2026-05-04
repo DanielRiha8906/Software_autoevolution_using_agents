@@ -97,6 +97,8 @@ class InteractiveMenu:
                 self._do_export()
             elif choice == "12":
                 self._do_import()
+            elif choice == "13":
+                self._do_gui()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -129,6 +131,7 @@ class InteractiveMenu:
         print(" 10. Delete task")
         print(" 11. Export tasks and comments")
         print(" 12. Import tasks and comments")
+        print(" 13. Open GUI")
         print("  0. Quit")
         print()
 
@@ -739,3 +742,9 @@ class InteractiveMenu:
             _clear()
             print(f"  Import failed: {e}")
         input("  Press Enter to continue...")
+
+    def _do_gui(self) -> None:
+        """Launch the GUI."""
+        from ..gui import TodoGUI
+        gui = TodoGUI()
+        gui.run()
