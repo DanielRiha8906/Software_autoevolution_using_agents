@@ -610,3 +610,113 @@ Key design decisions:
 5. Returns (count, errors) tuple to allow graceful handling of partial failures
 
 Duration: 541.8s | Cost: $2.712057 USD | Turns: 61
+
+## Task 08: Add scientific mode
+
+### Broadcast Evaluation
+
+Three independent implementers were spawned on separate branches to solve this task:
+
+**Candidate-A** — Smart operand detection with conditional prompting
+- Modified 4 files: `src/models/operation.py`, `src/services/calculator.py`, `src/cli/calculator_cli.py`, `src/__main__.py`
+- Extended Operation enum with six new operations: SIN, COS, TAN, LOG, LN, EXP
+- Added six methods to Calculator class with proper domain error handling
+- Split CalculatorCLI menu into `_STANDARD_MENU` and `_SCIENTIFIC_MENU` (8 and 14 operations respectively)
+- Added `scientific_mode` parameter to enable/disable menu mode
+- Smart operand detection: skips second operand prompt for unary scientific operations
+- Added `--scientific` flag to enable scientific mode at launch
+- **Test result: 87/87 passed**
+
+**Candidate-B** — Standard implementation with both-operand prompting
+- Modified 4 files: same scope as candidate-a
+- Extended Operation enum with six new operations (SIN, COS, TAN, LOG, LN, EXP)
+- Added six methods to Calculator class with proper error handling
+- Split menu into `_MENU_STANDARD` and `_MENU_SCIENTIFIC` (instance variable `self._menu`)
+- Always prompts for both operands, even for unary scientific operations
+- Added `--scientific` flag support and dynamic menu display
+- **Test result: 87/87 passed**
+
+**Candidate-C** — Dynamic menu with simple operand handling
+- Modified 4 files: same scope as candidate-a and candidate-b
+- Extended Operation enum and Calculator with all six scientific operations
+- Split menu into `_STANDARD_MENU` and `_SCIENTIFIC_MENU` as instance variables
+- Always prompts for two operands regardless of operation type
+- Dynamic menu display with mode name in title
+- `--scientific` flag enables scientific mode
+- **Test result: 87/87 passed**
+
+### Winner Selection: Candidate-A
+
+**Rationale**:
+1. **Best user experience** — Smart operand detection skips unnecessary second prompt for unary operations (sin, cos, tan, log, ln, exp)
+2. **All tests passing** — 87/87 tests pass (equal with B and C)
+3. **Clean menu architecture** — Split menus with dynamic selection based on scientific_mode parameter
+4. **Consistent with calculator philosophy** — Respects operation type (unary vs binary) in prompting
+5. **Complete CLI integration** — Both interactive menu with mode splitting and `--scientific` CLI flag
+6. **Proper error handling** — Domain errors for log/ln of non-positive numbers handled same as existing patterns (sqrt, divide)
+
+### Files Changed
+
+- `src/models/operation.py` — Extended Operation enum with SIN, COS, TAN, LOG, LN, EXP
+- `src/services/calculator.py` — Added six new methods implementing scientific operations with domain error checking
+- `src/cli/calculator_cli.py` — Split menu into `_STANDARD_MENU` and `_SCIENTIFIC_MENU`, added `scientific_mode` parameter, smart operand detection for unary operations
+- `src/__main__.py` — Added `--scientific` argument to argparse, pass scientific_mode to CalculatorCLI
+- `artifacts/class_diagram.puml` — Updated Operation enum with new operations, Calculator with new methods, CalculatorCLI with scientific_mode field
+- `artifacts/component_diagram.puml` — Added note documenting scientific mode (8 standard + 6 scientific operations)
+- `artifacts/architecture_diagram.puml` — Enhanced Presentation Layer note with scientific mode capability
+- `artifacts/sequence_diagram.puml` — Added alt block showing conditional operand prompting based on mode
+
+### Test Results
+
+**Before**: 87 tests passing (from previous tasks)
+**After**: 87 tests passing
+
+All existing tests continue to pass. The implementation maintains full backward compatibility with standard mode being the default.
+
+### Implementation Details
+
+- **Operation Enum Extension**:
+  - Added SIN, COS, TAN, LOG, LN, EXP operations
+  - from_string() method automatically supports all new operations
+  - display_name() works for all operations
+
+- **Calculator Methods**:
+  - `sin(a, b)` — Sine in radians (ignores b)
+  - `cos(a, b)` — Cosine in radians (ignores b)
+  - `tan(a, b)` — Tangent in radians (ignores b)
+  - `log(a, b)` — Base-10 logarithm (ignores b), raises ValueError for a ≤ 0
+  - `ln(a, b)` — Natural logarithm (ignores b), raises ValueError for a ≤ 0
+  - `exp(a, b)` — Exponential e^a (ignores b)
+  - Updated calculate() dispatch to include all new operations
+
+- **Menu Structure**:
+  - Standard mode (8 operations): add, subtract, multiply, divide, square, sqrt, power, modulo
+  - Scientific mode (14 operations): above 8 plus sin, cos, tan, log, ln, exp
+  - Dynamic menu selection based on scientific_mode boolean
+  - Menu length auto-adjusts option numbers for utility functions (history, query, stats, etc.)
+
+- **CLI Integration**:
+  - `python -m src` — Default standard mode with 8 operations
+  - `python -m src --scientific` — Scientific mode with 14 operations in interactive menu
+  - `python -m src --operation sin 1.57` — One-shot scientific operation (without --scientific flag, standard operations only)
+  - `python -m src --scientific --operation sin 1.57` — One-shot scientific operation with flag
+
+- **Smart Operand Prompting**:
+  - Unary operations (sin, cos, tan, log, ln, exp) detected by set membership
+  - When detected, sets b=0.0 and skips second operand prompt
+  - Binary operations still prompt for both operands as expected
+  - Improves user experience by not asking for unnecessary input
+
+- **Error Handling**:
+  - Domain errors handled same way as existing operations
+  - log() and ln() reject non-positive arguments with descriptive ValueError
+  - Trig functions accept any numeric value (per IEEE 754)
+  - exp() handles all numeric values safely
+
+- **Backward Compatibility**:
+  - Default behavior unchanged (standard mode only)
+  - All existing operations remain accessible
+  - No breaking changes to Operation enum or Calculator interface
+  - Standard mode menu identical to previous version
+
+Duration: 473.4s | Cost: $1.023617 USD | Turns: 38

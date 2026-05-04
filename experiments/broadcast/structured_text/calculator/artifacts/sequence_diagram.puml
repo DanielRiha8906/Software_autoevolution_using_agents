@@ -18,8 +18,14 @@ User -> CLI: run_interactive()
 activate CLI
 
 loop While not exiting
-  CLI -> User: display menu
+  CLI -> User: display menu (standard or scientific)
   User -> CLI: choose operation + numbers
+
+  alt Scientific operation (sin, cos, tan, log, ln, exp)
+    CLI -> User: prompt for first number only
+  else Standard operation (binary)
+    CLI -> User: prompt for two numbers
+  end
 
   CLI -> CalcService: perform(operation, a, b)
   activate CalcService

@@ -42,13 +42,18 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--query-by-operation OP] [--query-by-state STATE] [--stats] [--export-history FILE] [--import-history FILE] [--append|--replace]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B] [--scientific] [--query-by-operation OP] [--query-by-state STATE] [--stats] [--export-history FILE] [--import-history FILE] [--append|--replace]",
+    )
+    parser.add_argument(
+        "--scientific",
+        action="store_true",
+        help="Enable scientific mode with trigonometric and logarithmic operations",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
-        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo", "sin", "cos", "tan", "log", "ln", "exp"],
+        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo | sin | cos | tan | log | ln | exp)",
     )
     parser.add_argument(
         "operands",
@@ -95,7 +100,7 @@ def main() -> None:
 
     args = parser.parse_args()
     calc_service, query_service, statistics_service, history_manager = _build_service()
-    cli = CalculatorCLI(calc_service, query_service, statistics_service, history_manager)
+    cli = CalculatorCLI(calc_service, query_service, statistics_service, history_manager, scientific_mode=args.scientific)
 
     # Export history mode (CLI flag)
     if args.export_history:
@@ -159,11 +164,13 @@ def main() -> None:
             sys.exit(1)
     elif args.operation:
         # Operation mode (CLI flag)
-        if len(args.operands) != 2:
-            parser.error("Exactly two operands are required when using --operation")
+        scientific_ops = {"sin", "cos", "tan", "log", "ln", "exp"}
+        required_operands = 1 if args.operation in scientific_ops else 2
+        if len(args.operands) != required_operands:
+            parser.error(f"Operation '{args.operation}' requires {required_operands} operand(s)")
         try:
             a = _as_number(args.operands[0])
-            b = _as_number(args.operands[1])
+            b = _as_number(args.operands[1]) if len(args.operands) > 1 else 0.0
         except argparse.ArgumentTypeError as exc:
             parser.error(str(exc))
         cli.run_command(args.operation, a, b)

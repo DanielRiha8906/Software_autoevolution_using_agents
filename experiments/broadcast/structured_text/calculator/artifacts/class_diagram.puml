@@ -15,6 +15,12 @@ package "models" {
     SQRT
     POWER
     MODULO
+    SIN
+    COS
+    TAN
+    LOG
+    LN
+    EXP
     --
     +from_string(value: str): Operation
     +display_name(): str
@@ -61,6 +67,21 @@ package "models" {
 
 package "services" {
   class Calculator {
+    +add(a: float, b: float): float
+    +subtract(a: float, b: float): float
+    +multiply(a: float, b: float): float
+    +divide(a: float, b: float): float
+    +square(a: float, b: float): float
+    +sqrt(a: float, b: float): float
+    +power(a: float, b: float): float
+    +modulo(a: float, b: float): float
+    +sin(a: float, b: float): float
+    +cos(a: float, b: float): float
+    +tan(a: float, b: float): float
+    +log(a: float, b: float): float
+    +ln(a: float, b: float): float
+    +exp(a: float, b: float): float
+    --
     +calculate(op: Operation, a: float, b: float): float
   }
 
@@ -120,6 +141,8 @@ package "cli" {
     -query_service: Optional[QueryService]
     -statistics_service: Optional[StatisticsService]
     -history_manager: Optional[HistoryManager]
+    -scientific_mode: bool
+    -_MENU: list[tuple[Operation, str]]
     --
     +run_interactive(): None
     +run_command(op_str: str, a: float, b: float): None
