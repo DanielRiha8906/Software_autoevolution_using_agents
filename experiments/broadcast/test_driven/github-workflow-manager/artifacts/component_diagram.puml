@@ -16,6 +16,7 @@ package "GitHub Workflow Manager" {
   }
 
   package "Service layer" {
+    component "GitHubFetchService" as FETCH_SVC
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
     component "AttemptService" as ATTEMPT_SVC
@@ -47,7 +48,11 @@ IM --> SVC
 CLI --> STATS_SVC
 IM --> STATS_SVC
 
+CLI --> FETCH_SVC
+IM --> FETCH_SVC
+
 TRACKER --> SVC
+FETCH_SVC ..> RUN
 SVC --> STOR
 STOR --> JSON_FILE
 
