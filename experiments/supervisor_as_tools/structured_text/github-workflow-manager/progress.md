@@ -833,4 +833,4 @@ Successfully implemented a tkinter-based GUI viewer for displaying workflow runs
 - Service calls wrapped in try-except for error handling
 - Attempt count calculated via service.get_attempts_by_run_id() for each displayed run
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 548.2s | Cost: $1.044262 USD | Turns: 13
