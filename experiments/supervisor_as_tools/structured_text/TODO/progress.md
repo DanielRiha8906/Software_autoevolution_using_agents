@@ -620,4 +620,4 @@ Followed supervisor-as-tools architecture:
 - Date parsing/display uses consistent YYYY-MM-DD HH:MM format matching CLI
 - No database schema changes; all data persisted via existing JsonStorage
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 463.8s | Cost: $0.888699 USD | Turns: 19
