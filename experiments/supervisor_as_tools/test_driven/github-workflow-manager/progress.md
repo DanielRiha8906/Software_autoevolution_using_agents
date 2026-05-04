@@ -198,3 +198,35 @@ Duration: 160.3s | Cost: $0.327618 USD | Turns: 18
 - **Testability**: Services can be instantiated with or without storage/dependencies for flexible test scenarios
 
 Duration: 422.3s | Cost: $0.799162 USD | Turns: 26
+
+## Task 10: Implement tkinter-based GUI for workflow visualization
+
+**Status:** ✅ Completed
+
+**Files Changed:**
+- `src/gui/__init__.py` — Created new package init file to establish gui module
+- `src/gui/workflow_gui.py` — Implemented WorkflowGUI class with tkinter-based interface for displaying and filtering workflow runs. Constructor accepts WorkflowRunService instance via dependency injection (no service instantiation). Provides tabular display with Treeview widget showing run details (id, workflow_name, branch, status, conclusion, duration_seconds), filter controls for branch/status/conclusion, detail panel for selected run, visual failure indicators (red text, bold styling), and status bar for user feedback. All filtering logic delegates to service methods (filter_by_branch, filter_by_status, filter_by_conclusion). Includes run() method that starts tkinter event loop (not called in constructor)
+- `src/__main__.py` — Added WorkflowGUI import and implemented --gui flag support. main() function now checks for --gui flag in sys.argv; if present, instantiates WorkflowGUI with service and calls gui.run() to start GUI event loop; otherwise continues with existing CLI/interactive menu logic
+- `artifacts/class_diagram.puml` — Added new gui package with WorkflowGUI class showing private fields (_service, _root, _current_runs, _selected_run_id), public interface (constructor, run() method), and private helper methods. Added relationships showing WorkflowGUI depends on WorkflowRunService (composition), references WorkflowRun, WorkflowStatus, and WorkflowConclusion models
+- `artifacts/component_diagram.puml` — Added WorkflowGUI component to Interface layer with arrow from MAIN showing GUI mode invocation and arrow to Service layer showing GUI delegates all business logic to WorkflowRunService
+- `artifacts/use_case_diagram.puml` — Added GUI Mode package with use cases: "Launch workflow GUI", "View workflow runs", "Filter runs" (with extensions for branch/status/conclusion filters), and "View run details", showing User actor interactions with GUI mode entry point
+
+**Test Results:**
+- All 102 tests pass (including 6 new GUI-specific tests)
+- GUI module can be imported successfully
+- GUI constructor accepts service instance without errors
+- GUI code contains zero direct service instantiation (no "WorkflowRunService()" or "AttemptService()" strings)
+- No subprocess module imports or "gh " CLI calls detected in source
+- GUI code explicitly references "service" parameter throughout
+- Visual failure handling implemented: failed runs displayed in red with bold text, error messages shown in messageboxes
+- Backward compatibility preserved: existing CLI and interactive menu modes remain fully functional
+- GUI launchable via `python -m src --gui` command
+
+**Architecture Notes:**
+- **Dependency Injection Pattern**: GUI receives WorkflowRunService via constructor, enabling loose coupling and testability
+- **Delegation of Business Logic**: All filtering, querying, and data retrieval delegated to service layer methods
+- **Clean Separation**: GUI contains only UI logic (widget creation, event handling, display) and no domain/business logic
+- **Minimal State**: GUI maintains only current_runs list and selected_run_id; all data access through service
+- **Error Resilience**: Try-except blocks wrap all service calls with user-friendly error feedback via messagebox and status bar
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

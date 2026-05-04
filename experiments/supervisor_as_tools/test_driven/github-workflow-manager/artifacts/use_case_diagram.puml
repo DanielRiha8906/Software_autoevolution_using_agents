@@ -27,10 +27,21 @@ rectangle "GitHub Workflow Manager" {
     usecase "Filter by conclusion"     as C_FCONCL
     usecase "Get run detail"           as C_DETAIL
   }
+
+  package "GUI Mode" {
+    usecase "Launch workflow GUI"      as GUI
+    usecase "View workflow runs"       as G_VIEW
+    usecase "Filter runs"              as G_FILTER
+    usecase "Filter by branch"         as G_FBRANCH
+    usecase "Filter by status"         as G_FSTATUS
+    usecase "Filter by conclusion"     as G_FCONCL
+    usecase "View run details"         as G_DETAIL
+  }
 }
 
 User --> UI
 User --> CLI
+User --> GUI
 
 UI --> I_ADD
 UI --> I_LIST
@@ -49,5 +60,13 @@ CLI --> C_DETAIL
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>
 C_LIST --> C_FCONCL   : <<extend>>
+
+GUI --> G_VIEW
+GUI --> G_DETAIL
+
+G_VIEW --> G_FILTER
+G_FILTER --> G_FBRANCH  : <<extend>>
+G_FILTER --> G_FSTATUS  : <<extend>>
+G_FILTER --> G_FCONCL   : <<extend>>
 
 @enduml
