@@ -1,9 +1,23 @@
 @startuml class_diagram
 
+!define PUBLIC_COLOR DDFFD4
+!define INTERNAL_COLOR D4E8D4
+!define MODELS_COLOR DDEEFF
+!define STORAGE_COLOR FFF3CC
+!define INTERFACE_COLOR FFE5E5
+
 skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
+skinparam noteBkgColor FFFFCC
+skinparam noteTextColor 333333
 
-package "models" #DDEEFF {
+note top of Task
+  Phase 1: Layer Separation
+  Only TodoService is public from services.
+  Models and Storage have no internal dependencies.
+end note
+
+package "DOMAIN MODELS" #MODELS_COLOR {
     enum TaskStatus {
         PENDING
         IN_PROGRESS
@@ -67,7 +81,7 @@ package "models" #DDEEFF {
     }
 }
 
-package "storage" #FFF3CC {
+package "PERSISTENCE LAYER" #STORAGE_COLOR {
     class JsonStorage {
         -path : String
         --
@@ -77,9 +91,18 @@ package "storage" #FFF3CC {
     }
 }
 
-package "services" #DDFFD4 {
-    exception TaskNotFoundError
-    exception ProjectNotFoundError
+package "SERVICE LAYER (Internal)" #INTERNAL_COLOR {
+    note bottom of ServiceError
+        Exception hierarchy - base
+        for all service errors
+    end note
+
+    exception ServiceError {
+        Base exception for service layer
+    }
+
+    exception TaskNotFoundError extends ServiceError
+    exception ProjectNotFoundError extends ServiceError
 
     class ImportValidator {
         --
@@ -98,19 +121,20 @@ package "services" #DDFFD4 {
         +list_by_status(status: TaskStatus) : List<Task>
         +list_by_project(project_id: String) : List<Task>
         +list_by_due_date_range(before: DateTime [0..1], after: DateTime [0..1], status: TaskStatus [0..1], overdue_only: Boolean) : List<Task>
+        +get_week_boundaries(year: Integer, week: Integer) : Tuple<DateTime, DateTime>
+        +get_month_boundaries(year: Integer, month: Integer) : Tuple<DateTime, DateTime>
+        +get_year_boundaries(year: Integer) : Tuple<DateTime, DateTime>
         +update(task_id: String, title: String [0..1], description: String [0..1], due_date: DateTime [0..1]) : Task
         +set_status(task_id: String, status: TaskStatus) : Task
         +set_due_date(task_id: String, due_date: DateTime [0..1]) : Task
         +set_project(task_id: String, project_id: String [0..1]) : Task
+        +set_task(task_id: String, task: Task) : void
         +delete(task_id: String) : void
         +orphan_project_tasks(project_id: String) : Integer
         +add_comment(task_id: String, content: String, author: String [0..1]) : TaskComment
         +get_comments(task_id: String) : List<TaskComment>
         +delete_comment(task_id: String, comment_id: String) : void
         +edit_comment(task_id: String, comment_id: String, content: String) : TaskComment
-        -_get_week_boundaries(year: Integer, week: Integer) : Tuple<DateTime, DateTime>
-        -_get_month_boundaries(year: Integer, month: Integer) : Tuple<DateTime, DateTime>
-        -_get_year_boundaries(year: Integer) : Tuple<DateTime, DateTime>
         -load() : void
         -persist() : void
     }
@@ -127,7 +151,9 @@ package "services" #DDFFD4 {
         -load() : void
         -persist() : void
     }
+}
 
+package "SERVICE LAYER (Public)" #PUBLIC_COLOR {
     class TodoService {
         -manager : TaskManager
         -project_manager : ProjectManager
@@ -161,7 +187,7 @@ package "services" #DDFFD4 {
     }
 }
 
-package "cli" #FFE5E5 {
+package "INTERFACE LAYER" #INTERFACE_COLOR {
     class TodoCLI {
         -service : TodoService
         --
@@ -192,18 +218,40 @@ package "cli" #FFE5E5 {
     }
 }
 
+note bottom of TodoCLI
+  Interface layer imports:
+  - TodoService (public API)
+  - Exceptions from services
+  - Models for type hints only
+end note
+
 Task --> TaskStatus : status
 Task *-- TaskComment : comments
 Task --> Project : project_id [0..1]
+
 TodoService --> TaskSummaryReport : generates
-TaskManager --> JsonStorage : storage
+TodoService --> TaskManager : <<internal>>
+TodoService --> ProjectManager : <<internal>>
+TodoService --> ImportValidator : <<internal>>
+
+TaskManager --> JsonStorage : imports
+TaskManager --> Task : manages
+TaskManager --> TaskComment : manages
 TaskManager ..> TaskNotFoundError : raises
-ProjectManager --> JsonStorage : storage
+
+ProjectManager --> JsonStorage : imports
+ProjectManager --> Project : manages
 ProjectManager ..> ProjectNotFoundError : raises
-TodoService --> TaskManager : manager
-TodoService --> ProjectManager : project_manager
-TodoService --> ImportValidator : uses
-TodoCLI --> TodoService : service
-InteractiveMenu --> TodoService : service
+
+ServiceError <|-- TaskNotFoundError
+ServiceError <|-- ProjectNotFoundError
+
+TodoCLI --> TodoService : imports
+TodoCLI --> TaskNotFoundError : catches
+TodoCLI --> ProjectNotFoundError : catches
+
+InteractiveMenu --> TodoService : imports
+InteractiveMenu --> TaskNotFoundError : catches
+InteractiveMenu --> ProjectNotFoundError : catches
 
 @enduml

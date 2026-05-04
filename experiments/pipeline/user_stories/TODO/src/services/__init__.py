@@ -1,4 +1,4 @@
-from .task_manager import TaskManager, TaskNotFoundError
+from .exceptions import ServiceError, TaskNotFoundError, ProjectNotFoundError
 from .todo_service import TodoService
 
-__all__ = ["TaskManager", "TaskNotFoundError", "TodoService"]
+__all__ = ["ServiceError", "TaskNotFoundError", "ProjectNotFoundError", "TodoService"]

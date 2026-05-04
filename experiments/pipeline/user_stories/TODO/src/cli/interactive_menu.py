@@ -7,8 +7,7 @@ from typing import Optional
 from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..models.project import Project
-from ..services.task_manager import TaskNotFoundError
-from ..services.project_manager import ProjectNotFoundError
+from ..services import TaskNotFoundError, ProjectNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
 

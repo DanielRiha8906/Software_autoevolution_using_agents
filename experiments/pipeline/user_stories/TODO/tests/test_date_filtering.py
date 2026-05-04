@@ -2,7 +2,7 @@
 
 Covers:
 - TaskManager.list_by_due_date_range() with before, after, status, overdue filtering
-- TaskManager boundary calculation methods (_get_week_boundaries, _get_month_boundaries, _get_year_boundaries)
+- TaskManager boundary calculation methods (get_week_boundaries, get_month_boundaries, get_year_boundaries)
 - TodoService.list_tasks() with date parameters
 - TodoService period-based listing (list_tasks_by_week/month/year)
 - TodoCLI._cmd_list() with date flags
@@ -233,11 +233,11 @@ class TestListByDueDateRange:
 
 
 class TestWeekBoundaries:
-    """Test _get_week_boundaries() calculation."""
+    """Test get_week_boundaries() calculation."""
 
     def test_valid_week(self, manager):
         """Should return correct start and end for valid ISO week."""
-        start, end = manager._get_week_boundaries(2026, 20)
+        start, end = manager.get_week_boundaries(2026, 20)
 
         # Week 20, 2026: Monday May 11 to Sunday May 17
         assert start.year == 2026
@@ -255,7 +255,7 @@ class TestWeekBoundaries:
 
     def test_week_1(self, manager):
         """Week 1 should start on the first Monday of the year."""
-        start, end = manager._get_week_boundaries(2026, 1)
+        start, end = manager.get_week_boundaries(2026, 1)
         # 2026-01-01 is a Thursday, so week 1 starts Mon 2025-12-29
         assert start.month == 12
         assert start.year == 2025
@@ -263,7 +263,7 @@ class TestWeekBoundaries:
 
     def test_week_52(self, manager):
         """Week 52/53 calculation."""
-        start, end = manager._get_week_boundaries(2026, 52)
+        start, end = manager.get_week_boundaries(2026, 52)
         assert start.tzinfo == timezone.utc
         assert end.tzinfo == timezone.utc
         # Just verify it's consistent
@@ -272,31 +272,31 @@ class TestWeekBoundaries:
     def test_invalid_week_zero(self, manager):
         """Should raise ValueError for week 0."""
         with pytest.raises(ValueError, match="Week must be 1-53"):
-            manager._get_week_boundaries(2026, 0)
+            manager.get_week_boundaries(2026, 0)
 
     def test_invalid_week_54(self, manager):
         """Should raise ValueError for week 54."""
         with pytest.raises(ValueError, match="Week must be 1-53"):
-            manager._get_week_boundaries(2026, 54)
+            manager.get_week_boundaries(2026, 54)
 
     def test_invalid_week_negative(self, manager):
         """Should raise ValueError for negative week."""
         with pytest.raises(ValueError, match="Week must be 1-53"):
-            manager._get_week_boundaries(2026, -1)
+            manager.get_week_boundaries(2026, -1)
 
     def test_week_boundaries_timezone_utc(self, manager):
         """Week boundaries should be in UTC."""
-        start, end = manager._get_week_boundaries(2026, 20)
+        start, end = manager.get_week_boundaries(2026, 20)
         assert start.tzinfo is timezone.utc
         assert end.tzinfo is timezone.utc
 
 
 class TestMonthBoundaries:
-    """Test _get_month_boundaries() calculation."""
+    """Test get_month_boundaries() calculation."""
 
     def test_valid_month(self, manager):
         """Should return correct start and end for valid month."""
-        start, end = manager._get_month_boundaries(2026, 5)
+        start, end = manager.get_month_boundaries(2026, 5)
 
         assert start.year == 2026
         assert start.month == 5
@@ -316,42 +316,42 @@ class TestMonthBoundaries:
 
     def test_february_non_leap_year(self, manager):
         """February in non-leap year should end on 28th."""
-        start, end = manager._get_month_boundaries(2025, 2)
+        start, end = manager.get_month_boundaries(2025, 2)
         assert end.day == 28
 
     def test_february_leap_year(self, manager):
         """February in leap year should end on 29th."""
-        start, end = manager._get_month_boundaries(2024, 2)
+        start, end = manager.get_month_boundaries(2024, 2)
         assert end.day == 29
 
     def test_invalid_month_zero(self, manager):
         """Should raise ValueError for month 0."""
         with pytest.raises(ValueError, match="Month must be 1-12"):
-            manager._get_month_boundaries(2026, 0)
+            manager.get_month_boundaries(2026, 0)
 
     def test_invalid_month_13(self, manager):
         """Should raise ValueError for month 13."""
         with pytest.raises(ValueError, match="Month must be 1-12"):
-            manager._get_month_boundaries(2026, 13)
+            manager.get_month_boundaries(2026, 13)
 
     def test_invalid_month_negative(self, manager):
         """Should raise ValueError for negative month."""
         with pytest.raises(ValueError, match="Month must be 1-12"):
-            manager._get_month_boundaries(2026, -1)
+            manager.get_month_boundaries(2026, -1)
 
     def test_month_boundaries_timezone_utc(self, manager):
         """Month boundaries should be in UTC."""
-        start, end = manager._get_month_boundaries(2026, 5)
+        start, end = manager.get_month_boundaries(2026, 5)
         assert start.tzinfo is timezone.utc
         assert end.tzinfo is timezone.utc
 
 
 class TestYearBoundaries:
-    """Test _get_year_boundaries() calculation."""
+    """Test get_year_boundaries() calculation."""
 
     def test_valid_year(self, manager):
         """Should return correct start and end for valid year."""
-        start, end = manager._get_year_boundaries(2026)
+        start, end = manager.get_year_boundaries(2026)
 
         assert start.year == 2026
         assert start.month == 1
@@ -371,13 +371,13 @@ class TestYearBoundaries:
 
     def test_leap_year(self, manager):
         """Should handle leap years correctly."""
-        start, end = manager._get_year_boundaries(2024)
+        start, end = manager.get_year_boundaries(2024)
         assert start.year == 2024
         assert end.year == 2024
 
     def test_year_boundaries_timezone_utc(self, manager):
         """Year boundaries should be in UTC."""
-        start, end = manager._get_year_boundaries(2026)
+        start, end = manager.get_year_boundaries(2026)
         assert start.tzinfo is timezone.utc
         assert end.tzinfo is timezone.utc
 
