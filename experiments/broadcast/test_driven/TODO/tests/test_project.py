@@ -1,0 +1,75 @@
+import pytest
+from datetime import datetime, timezone
+from src.models.project import Project
+from src.services.todo_service import TodoService
+from src.services.project_service import ProjectService
+from src.storage.json_storage import JsonStorage
+
+
+@pytest.fixture
+def services(tmp_path):
+    storage = JsonStorage(str(tmp_path / "tasks.json"))
+    todo = TodoService(storage)
+    return todo, ProjectService(todo)
+
+
+def test_project_can_be_created():
+    assert Project(name="Work") is not None
+
+
+def test_project_has_unique_id():
+    assert Project(name="Work").id != Project(name="Work").id
+
+
+def test_empty_project_name_raises():
+    with pytest.raises(Exception):
+        Project(name="")
+
+
+def test_create_and_list_projects(services):
+    _, projects = services
+    p = projects.create("Work")
+    assert any(x.id == p.id for x in projects.list())
+
+
+def test_task_assigned_to_project(services):
+    todo, projects = services
+    p = projects.create("Work")
+    task = todo.add_task("Task", project_id=p.id)
+    assert task.project_id == p.id
+
+
+def test_list_tasks_by_project(services):
+    todo, projects = services
+    p = projects.create("Work")
+    todo.add_task("Task A", project_id=p.id)
+    todo.add_task("Task B")
+    assert all(t.project_id == p.id for t in todo.list_tasks(project_id=p.id))
+
+
+def test_task_without_project_id_is_none(services):
+    todo, _ = services
+    assert todo.add_task("No project").project_id is None
+
+def test_project_id_is_uuid_string():
+    import uuid
+    project = Project(name="Work")
+    parsed = uuid.UUID(project.id)
+    assert str(parsed) == project.id
+
+def test_old_tasks_without_project_id_load_fine(tmp_path):
+    storage = JsonStorage(str(tmp_path / "tasks.json"))
+    storage.save([{
+        "id": "abc", "title": "Old", "description": None, "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }])
+    assert TodoService(storage).list_tasks()[0].project_id is None
+
+
+def test_move_task_between_projects(services):
+    todo, projects = services
+    p1 = projects.create("Alpha")
+    p2 = projects.create("Beta")
+    task = todo.add_task("Movable", project_id=p1.id)
+    assert todo.update_task(task.id, project_id=p2.id).project_id == p2.id

@@ -8,6 +8,7 @@ from ..models.task import CEST
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
+from ..services.project_service import ProjectService
 from ..services.statistics_service import TaskStatisticsService
 from ..services.comments_service import CommentsService
 from ..services.import_export_service import TaskImportExportService
@@ -24,6 +25,7 @@ class TodoCLI:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._project_service = ProjectService(self._service)
         self._comments_service = CommentsService()
         self._import_export_service = TaskImportExportService(self._service, self._comments_service)
 
@@ -133,11 +135,31 @@ class TodoCLI:
         p_import.add_argument("path", help="Input file path")
         p_import.set_defaults(func=self._cmd_import)
 
+        # project create
+        p_project_create = sub.add_parser("project-create", help="Create a new project")
+        p_project_create.add_argument("name", help="Project name")
+        p_project_create.set_defaults(func=self._cmd_project_create)
+
+        # project list
+        p_project_list = sub.add_parser("project-list", help="List all projects")
+        p_project_list.set_defaults(func=self._cmd_project_list)
+
+        # add with project
+        p_add.add_argument("-p", "--project", help="Project ID to assign task to")
+
+        # list with project filter
+        p_list.add_argument("--project", help="Filter tasks by project ID")
+
+        # update with project
+        p_update.add_argument("-p", "--project", help="Assign task to a project")
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
-        task = self._service.add_task(args.title, args.description)
-        print(f"Added task {task.id[:8]}  {task.title}")
+        project_id = getattr(args, "project", None)
+        task = self._service.add_task(args.title, args.description, project_id=project_id)
+        project_info = f" to project {project_id[:8]}" if project_id else ""
+        print(f"Added task {task.id[:8]}  {task.title}{project_info}")
         return 0
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
@@ -167,12 +189,14 @@ class TodoCLI:
                 print("Error: due_after must be in ISO format", file=sys.stderr)
                 return 1
 
+        project_id = getattr(args, "project", None)
         try:
             tasks = self._service.list_tasks(
                 status=status,
                 overdue=args.overdue,
                 due_before=due_before,
                 due_after=due_after,
+                project_id=project_id,
             )
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
@@ -213,7 +237,8 @@ class TodoCLI:
         return 0
 
     def _cmd_update(self, args: argparse.Namespace) -> int:
-        task = self._service.update_task(args.id, title=args.title, description=args.description)
+        project_id = getattr(args, "project", None)
+        task = self._service.update_task(args.id, title=args.title, description=args.description, project_id=project_id)
         print(f"Updated {task.id[:8]}  {task.title}")
         return 0
 
@@ -252,3 +277,21 @@ class TodoCLI:
         except (FileNotFoundError, ValueError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+
+    def _cmd_project_create(self, args: argparse.Namespace) -> int:
+        try:
+            project = self._project_service.create(args.name)
+            print(f"Created project {project.id[:8]}  {project.name}")
+            return 0
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+
+    def _cmd_project_list(self, args: argparse.Namespace) -> int:
+        projects = self._project_service.list()
+        if not projects:
+            print("No projects found.")
+            return 0
+        for project in projects:
+            print(f"{project.id[:8]}  {project.name}")
+        return 0

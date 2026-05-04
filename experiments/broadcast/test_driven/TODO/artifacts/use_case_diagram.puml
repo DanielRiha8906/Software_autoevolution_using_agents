@@ -14,6 +14,8 @@ rectangle "TODO Manager" {
     usecase "Change task status" as I_STATUS
     usecase "Update task" as I_UPDATE
     usecase "Delete task" as I_DELETE
+    usecase "Create project" as I_PROJECT_CREATE
+    usecase "List projects" as I_PROJECT_LIST
     usecase "View statistics" as I_STATS
     usecase "Export to JSON" as I_EXPORT
     usecase "Import from JSON" as I_IMPORT
@@ -30,6 +32,8 @@ rectangle "TODO Manager" {
     usecase "Reopen task" as C_REOPEN
     usecase "Update task" as C_UPDATE
     usecase "Delete task" as C_DELETE
+    usecase "Create project" as C_PROJECT_CREATE
+    usecase "List projects" as C_PROJECT_LIST
     usecase "View statistics" as C_STATS
     usecase "Export to JSON" as C_EXPORT
     usecase "Import from JSON" as C_IMPORT
@@ -45,6 +49,8 @@ UI ..> I_SHOW     : <<exclude>>
 UI ..> I_STATUS   : <<exclude>>
 UI ..> I_UPDATE   : <<exclude>>
 UI ..> I_DELETE   : <<exclude>>
+UI ..> I_PROJECT_CREATE : <<exclude>>
+UI ..> I_PROJECT_LIST : <<exclude>>
 UI ..> I_STATS    : <<exclude>>
 UI ..> I_EXPORT   : <<exclude>>
 UI ..> I_IMPORT   : <<exclude>>
@@ -58,6 +64,8 @@ CLI ..> C_DONE    : <<exclude>>
 CLI ..> C_REOPEN  : <<exclude>>
 CLI ..> C_UPDATE  : <<exclude>>
 CLI ..> C_DELETE  : <<exclude>>
+CLI ..> C_PROJECT_CREATE : <<exclude>>
+CLI ..> C_PROJECT_LIST : <<exclude>>
 CLI ..> C_STATS   : <<exclude>>
 CLI ..> C_EXPORT  : <<exclude>>
 CLI ..> C_IMPORT  : <<exclude>>
