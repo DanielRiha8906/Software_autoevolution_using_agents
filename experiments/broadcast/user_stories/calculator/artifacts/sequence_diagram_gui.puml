@@ -1,0 +1,75 @@
+@startuml sequence_diagram_gui
+
+title GUI User Interaction: Calculation with Service Delegation
+
+actor User
+participant GUIApplication as GUI
+participant CalculatorService as Service
+participant InterfaceLayer as Interface
+participant CalculationLayer as CalcLayer
+participant MemoryStore as MemStore
+
+User -> GUI: Click "+" button (Add operation)
+activate GUI
+
+User -> GUI: Enter operands, click "="
+activate GUI
+
+GUI -> Service: perform(add, 5, 3)
+activate Service
+
+Service -> Interface: perform(add, 5, 3)
+activate Interface
+
+' Calculate phase
+Interface -> CalcLayer: perform_calculation(add, 5, 3)
+activate CalcLayer
+CalcLayer --> Interface: return CalculationResult(add, [5,3], 8.0)
+deactivate CalcLayer
+
+' Store phase (automatic in perform_with_memory)
+Interface -> MemStore: store(ResultEntry)
+activate MemStore
+MemStore --> Interface: return
+deactivate MemStore
+
+Interface --> Service: return CalculationResult
+deactivate Interface
+
+Service --> GUI: return 8.0
+deactivate Service
+
+GUI -> GUI: display_var.set("8.0")
+GUI --> User: Show result in display
+deactivate GUI
+
+User -> GUI: Click History Tab
+activate GUI
+
+GUI -> MemStore: retrieve()
+activate MemStore
+MemStore --> GUI: list[MemoryEntry]
+deactivate MemStore
+
+GUI -> GUI: _refresh_history()
+GUI -> GUI: Populate listbox with formatted entries
+GUI --> User: Display history with error highlighting
+deactivate GUI
+
+note right of GUI
+  **GUIApplication:**
+  - No business logic
+  - No calculation code
+  - Pure presentation layer
+  - Delegates to CalculatorService
+  - Accesses MemoryStore for history
+end note
+
+note right of Service
+  **CalculatorService:**
+  - Orchestrates InterfaceLayer
+  - All results persist to storage
+  - No GUI-specific code
+end note
+
+@enduml

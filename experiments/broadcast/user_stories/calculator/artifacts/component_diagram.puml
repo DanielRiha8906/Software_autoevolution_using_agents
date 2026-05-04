@@ -30,11 +30,12 @@ package "Calculator System" {
         MemStoreImpl -- Storage: uses
     }
 
-    ' Layer 3: Interface & CLI
-    package "Layer 3: Interface Layer" #FFF9E6 {
+    ' Layer 3: Interface & Presentation
+    package "Layer 3: Presentation Layer" #FFF9E6 {
         component [InterfaceLayer\n(Orchestration)] as Interface
         component [CalculatorService\n(High-level API)] as CalcService
-        component [CalculatorCLI\n(User Interaction)] as CLI
+        component [CalculatorCLI\n(CLI UI)] as CLI
+        component [GUIApplication\n(Tkinter UI)] as GUI
     }
 
     ' Inter-layer Communication
@@ -43,11 +44,14 @@ package "Calculator System" {
     CalcService --> Interface: perform()
     CLI --> CalcService: execute operation
     CLI --> MemProtocol: access memory
+    GUI --> CalcService: execute operation
+    GUI --> MemProtocol: access memory
 
     ' External Dependencies
     Interface --> Storage: access history
     CalcService --> Storage: access history
     CLI --> Storage: import/export
+    GUI --> Storage: load history
 
 }
 

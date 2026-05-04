@@ -37,12 +37,20 @@ package "User Interaction (CLI)" #FFFFCC {
     usecase "View Statistics" as cli_statistics
 }
 
+package "User Interaction (GUI)" #FFFFCC {
+    usecase "Standard Tab" as gui_standard
+    usecase "Scientific Tab" as gui_scientific
+    usecase "History Tab" as gui_history
+    usecase "Display Tabbed Interface" as gui_interface
+}
+
 ' Relationships
 user --> cli_interactive: use
 user --> cli_oneshot: use
 user --> cli_history: use
 user --> cli_import_export: use
 user --> cli_statistics: use
+user --> gui_interface: use
 
 cli_interactive --> iface_coord: delegates to
 cli_oneshot --> iface_coord: delegates to
@@ -50,6 +58,13 @@ cli_history --> mem_retrieve: queries
 cli_import_export --> mem_export: uses
 cli_import_export --> mem_import: uses
 cli_statistics --> mem_stats: uses
+
+gui_interface --> gui_standard: provides
+gui_interface --> gui_scientific: provides
+gui_interface --> gui_history: provides
+gui_standard --> iface_coord: delegates to
+gui_scientific --> iface_coord: delegates to
+gui_history --> mem_retrieve: queries
 
 iface_coord --> calc_arithmetic: calls
 iface_coord --> calc_validate: calls
@@ -88,9 +103,16 @@ note right of iface_coord
 end note
 
 note right of cli_interactive
-  **User Interaction:**
+  **CLI User Interaction:**
   Menu-driven or CLI args
-  Human-friendly output
+  Text-based output
+end note
+
+note right of gui_interface
+  **GUI User Interaction:**
+  Tabbed tkinter interface
+  Standard & Scientific modes
+  Integrated history display
 end note
 
 @enduml

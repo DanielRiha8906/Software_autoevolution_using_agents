@@ -971,3 +971,113 @@ Updated artifacts/*.puml to reflect three-layer architecture:
 - **sequence_diagram.puml**: Shows interlayer communication through protocol contracts
 
 Duration: 707.6s | Cost: $1.696739 USD | Turns: 41
+
+## Task 10
+
+**Description:** Create a graphical user interface (GUI) for the calculator using tkinter
+
+**Status:** ✅ Complete
+
+### Broadcast Evaluation
+
+**Candidate A:**
+- Approach: Clean layout with input fields, operation dropdown, calculate button, and scrollable history panel
+- Implementation: Single `calculator_gui.py` module with straightforward UI design
+- Test Result: 311/311 passed
+- Features: Standard mode operations, history display, scientific mode toggle, error highlighting
+
+**Candidate B:**
+- Approach: Tabbed interface with three separate tabs: Standard Mode, Scientific Mode, and History Tab
+- Implementation: `gui_application.py` with comprehensive tabbed architecture
+- Test Result: 322/322 passed ✅
+- Features: Clean tab-based mode switching, all standard and scientific operations accessible, unified history view with error highlighting, comprehensive test coverage (29 new tests)
+
+**Candidate C:**
+- Approach: Compact button-grid calculator interface mimicking traditional physical calculators with history panel on the right
+- Implementation: `tkinter_calculator.py` with numeric keypad grid layout
+- Test Result: 0/293 (code not properly committed in worktree, implementation incomplete)
+- Features: Numeric keypad grid, right-side history panel, mode toggle button
+
+**Winner:** Candidate B (322/322 tests passed, most comprehensive implementation with tabbed interface providing excellent UX, 29 new GUI tests demonstrating thorough coverage)
+
+### Files Changed
+
+**New Files:**
+1. `src/gui/__init__.py`
+   - Module initialization exporting GUIApplication
+
+2. `src/gui/gui_application.py` (429 lines)
+   - GUIApplication class implementing the main GUI using tkinter
+   - Three tabs: Standard Mode, Scientific Mode, History Tab
+   - Features:
+     - Standard tab: add, subtract, multiply, divide, square, sqrt, power, modulo operations
+     - Scientific tab: sin, cos, tan, log, ln, exp operations
+     - History tab: scrollable list of all calculation entries with error highlighting (red background)
+     - Number input with decimal support
+     - Operation chaining (execute previous operation when new operation clicked)
+     - Clear button to reset state
+     - Reuses existing CalculatorService and MemoryStore — no business logic duplication
+   - Methods: run(), setup_standard_tab(), setup_scientific_tab(), setup_history_tab(), on_number_click(), on_operation_click(), on_equals_click(), on_clear_click(), on_mode_toggle(), execute_operation(), update_history()
+
+3. `tests/test_gui_application.py` (321 lines)
+   - Comprehensive test suite with 29 tests covering:
+     - GUI initialization and widget creation
+     - Number input and decimal handling
+     - Binary and unary operations (both standard and scientific)
+     - Operation chaining and calculation flow
+     - Clear functionality
+     - Mode switching between standard and scientific
+     - History refresh and error entry formatting
+     - Service and memory store integration
+     - Memory entry formatting (success and error cases)
+     - Verification that no business logic duplication exists
+
+**Modified Files:**
+1. `src/__main__.py`
+   - Added `--gui` flag to argparse parser
+   - Added logic to instantiate and launch GUIApplication when `--gui` flag is provided
+   - GUI launch integrated cleanly with existing CLI structure
+
+### Test Results
+
+- Total tests: 322
+- Passed: 322
+- Failed: 0
+- Status: ✅ All tests pass
+- Duration: ~0.6s
+
+### Acceptance Criteria Met
+
+- ✅ GUI provided using `tkinter` (stdlib), no external dependencies required
+- ✅ All standard mode operations accessible from GUI (add, subtract, multiply, divide, square, sqrt, power, modulo)
+- ✅ Calculation history (MemoryEntry records) displayed in scrollable list on History tab
+- ✅ GUI calls existing calculation logic — no business logic duplicated in UI layer
+  - All calculations delegate to CalculatorService.perform()
+  - All history retrieved from MemoryStore.retrieve()
+- ✅ Bonus: Toggling between standard and scientific mode in GUI supported (via tabs)
+- ✅ Bonus: Error entries in history list visually highlighted with red background
+- ✅ GUI launchable via `python -m src --gui`
+
+### Architecture Integration
+
+**GUI Layer as Alternative Presentation Interface:**
+- GUIApplication joins CalculatorCLI as a peer presentation layer
+- Both delegate to identical underlying services (CalculatorService, MemoryStore)
+- Shared calculation history: GUI and CLI see the same entries
+- No cross-layer logic coupling: UI concerns stay in GUI, business logic stays in services
+
+**Design Pattern: Separation of Concerns**
+- GUI layer: Tkinter window management, button grid, input validation, display formatting
+- Service layer: All arithmetic operations, memory/history management, calculations
+- Storage layer: JSON persistence (unchanged)
+
+### Diagrams Updated
+
+All PlantUML diagrams updated to reflect GUI addition:
+- **class_diagram.puml**: Added GUIApplication class with relationships to CalculatorService and MemoryStore
+- **component_diagram.puml**: Renamed "Layer 3" to "Presentation Layer", added GUI component alongside CLI UI
+- **use_case_diagram.puml**: Added new "User Interaction (GUI)" package with use cases for tabs and GUI workflows
+- **sequence_diagram_gui.puml**: New diagram showing GUI interaction pattern (user click → GUIApplication → CalculatorService → calculation)
+- **activity_diagram.puml, state_diagram_interactive.puml, state_diagram_command.puml, sequence_diagram.puml**: Kept unchanged (focused on CLI workflows, not affected by GUI addition)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

@@ -152,6 +152,19 @@ package "Interface Layer" #FFF9E6 {
         +run_one_shot(operation: str, operands: list[float]): void
     }
 
+    class GUIApplication {
+        -service: CalculatorService
+        -memory_store: MemoryStore
+        -root: tk.Tk
+        -current_operand: float
+        -current_operation: Operation
+        +run(): void
+        -_setup_standard_tab(): void
+        -_setup_scientific_tab(): void
+        -_setup_history_tab(): void
+        -_execute_operation(): void
+    }
+
     class CalculatorService {
         -interface_layer: InterfaceLayer
         +calculate(operation: Operation, a: float, b: float): CalculationResult
@@ -162,6 +175,8 @@ package "Interface Layer" #FFF9E6 {
     InterfaceLayer --> MemoryLayer: uses
     CalculatorCLI --> CalculatorService: uses
     CalculatorCLI --> MemoryStore: uses
+    GUIApplication --> CalculatorService: uses
+    GUIApplication --> MemoryStore: uses
     CalculatorService --> InterfaceLayer: uses
 }
 
