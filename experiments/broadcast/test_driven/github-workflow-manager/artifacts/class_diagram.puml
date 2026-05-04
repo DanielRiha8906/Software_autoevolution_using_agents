@@ -92,7 +92,10 @@ package "services" #DDFFD4 {
         +get_run_detail(run_id: str) : Optional[WorkflowRun]
         +filter_by_branch(branch: str) : List[WorkflowRun]
         +filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
-        +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+        +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowConclusion]
+        +query(min_duration, max_duration,\n  created_before, created_after,\n  has_attempts) : List[WorkflowRun]
+        +get_attempts_for_run(run_id: str) : List[WorkflowRunAttempt]
+        +add_attempt(attempt: WorkflowRunAttempt) : None
         +attempt_service : Optional[AttemptService]
         -_persist() : None
     }

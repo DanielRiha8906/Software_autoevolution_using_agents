@@ -335,3 +335,61 @@ Candidate A was selected as the representative solution based on being the first
 ✅ All 73 tests passing (8 new GitHubFetchService tests + 65 existing tests)
 
 Duration: 335.8s | Cost: $0.659097 USD | Turns: 38
+
+---
+
+# Task 09: Refactor workflow manager into clearly separated components
+
+## Broadcast Results
+
+### Candidate A
+**Approach:** Refactored to establish clearer architectural boundaries by introducing public APIs in `WorkflowRunService`:
+- Added `get_attempts_for_run(run_id)` public method to expose attempt access without revealing private `_attempt_service`
+- Added `add_attempt(attempt)` public method for attempt creation
+- Updated `StatisticsService` to use `get_attempts_for_run()` instead of accessing private fields
+- Updated `ImportExportService` to use public APIs instead of private field access
+- Added explicit service exports in `src/services/__init__.py`
+
+**Test Score:** 73/73 passed
+
+### Candidate B
+**Approach:** Identical implementation to Candidate A with the same refactoring approach. Added public methods to `WorkflowRunService` and updated dependent services to use public APIs. All tests passing.
+
+**Test Score:** 73/73 passed
+
+### Candidate C
+**Approach:** Identical implementation to Candidates A and B. All tests passing with 100% convergence on approach.
+
+**Test Score:** 73/73 passed
+
+## Winner: Candidate A
+
+All three candidates achieved identical test scores (73/73) with complete convergence on implementation. All correctly implement:
+- Public API methods (`get_attempts_for_run()`, `add_attempt()`) in `WorkflowRunService` for encapsulated access to attempt management
+- Elimination of private field access between services through public interfaces
+- Clear architectural layers: Domain (models), Services (business logic with public APIs), Storage (persistence), Integrations (GitHub), CLI
+- No circular dependencies or violations of separation of concerns
+- Backward compatibility: all existing tests pass, public signatures preserved
+
+Candidate A was selected as the representative solution based on being the first successful implementation.
+
+## Files Changed
+- `src/services/workflow_run_service.py` — Added `get_attempts_for_run()` and `add_attempt()` public methods; updated `query()` to use new public API; added `WorkflowRunAttempt` import
+- `src/services/statistics_service.py` — Refactored to use `get_attempts_for_run()` instead of accessing private `_attempt_service`
+- `src/services/import_export_service.py` — Refactored `export()` and `import_from()` to use public `get_attempts_for_run()` and `add_attempt()` methods
+- `src/services/__init__.py` — Added explicit exports for all service classes (WorkflowRunService, WorkflowRunTracker, GitHubFetchService, AttemptService, WorkflowStatisticsService, WorkflowImportExportService)
+- `artifacts/class_diagram.puml` — Updated WorkflowRunService to show new public methods: `get_attempts_for_run()`, `add_attempt()`, and `query()`
+
+## Test Result
+✅ All 73 tests passing (0 new tests, all existing tests maintained)
+
+**Architectural Improvements:**
+- Domain Layer (models/): Pure data structures (WorkflowRun, WorkflowRunAttempt, enums) with no external dependencies
+- Service Layer (services/): Clear public APIs with proper encapsulation; services depend on public interfaces, not private implementation
+- Storage Layer (storage/): Isolated persistence logic (WorkflowJsonStorage)
+- Integration Layer: GitHub CLI interaction remains isolated in GitHubFetchService
+- CLI Layer: Clean separation between presentation and business logic
+- No circular dependencies: All layers properly separated with unidirectional dependencies
+- Backward compatible: All existing public method signatures preserved; new methods are additive
+
+Duration: 538.4s | Cost: $2.926064 USD | Turns: 56
