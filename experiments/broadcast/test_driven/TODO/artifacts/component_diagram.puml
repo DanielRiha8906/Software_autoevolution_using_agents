@@ -1,17 +1,17 @@
 @startuml component_diagram
 
 skinparam componentStyle uml2
-skinparam defaultFontSize 13
+skinparam defaultFontSize 12
 
 left to right direction
 
 package "TODO Application" {
 
-    component "Entry Point\n(main)" as Main
+    component "Entry Point" as Main
 
     package "CLI Layer" {
         component "Interactive Menu" as IM
-        component "Command-line Interface\n(TodoCLI)" as CLI
+        component "TodoCLI" as CLI
     }
 
     package "Service Layer" {
@@ -19,43 +19,66 @@ package "TODO Application" {
         component "Task Manager" as MGR
         component "Project Service" as PS
         component "Comments Service" as CS
-        component "Import/Export Service" as IES
+        component "Import Export" as IES
+        component "Statistics" as SS
     }
 
-    package "Domain Model" {
-        component "Task Model\n(Task, TaskStatus)" as Model
+    package "Domain Contracts" {
+        component "TaskDomain" as TD
+        component "CommentDomain" as CD
+        component "ProjectDomain" as PD
     }
 
     package "Persistence Layer" {
-        component "JSON Storage\n(JsonStorage)" as Storage
+        component "Task Adapter" as TA
+        component "Comment Adapter" as CA
+        component "Project Adapter" as PA
+    }
+
+    package "Storage Layer" {
+        component "JsonStorage" as Storage
+    }
+
+    package "Models" {
+        component "Domain Models" as DM
     }
 }
 
 database "todo_data.json" as DB
 
-Main --> IM : interactive mode
-Main --> CLI : command mode
+Main --> IM
+Main --> CLI
 
 IM --> SVC
 IM --> PS
 IM --> CS
 IM --> IES
+IM --> SS
 CLI --> SVC
 CLI --> PS
 CLI --> CS
 CLI --> IES
+CLI --> SS
 
 SVC --> MGR
 PS --> SVC
 CS --> SVC
 IES --> SVC
 IES --> CS
+SS --> SVC
 
 MGR --> Storage
-MGR ..> Model
-Storage ..> Model
-CS ..> Model
+TA --> Storage
+CA --> Storage
+PA --> Storage
 
-Storage --> DB : read/write
+MGR ..> DM
+CS ..> DM
+TA ..> DM
+CA ..> DM
+PA ..> DM
+Storage ..> DM
+
+Storage --> DB
 
 @enduml

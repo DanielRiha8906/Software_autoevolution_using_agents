@@ -106,33 +106,54 @@ class TaskImportExportService:
 
         # Import tasks (skip duplicates)
         existing_task_ids = {t.id for t in self._todo_service.list_tasks()}
+        imported_tasks = []
         for task_data in data["tasks"]:
             task_id = task_data["id"]
             if task_id not in existing_task_ids:
                 task = Task.from_dict(task_data)
-                # Add task directly to the manager
-                self._todo_service._manager._tasks[task.id] = task
+                imported_tasks.append(task)
                 existing_task_ids.add(task.id)
 
-        # Persist tasks after all have been added
-        self._todo_service._manager._persist()
+        # Persist imported tasks through storage interface
+        if imported_tasks:
+            self._import_tasks_to_storage(imported_tasks)
+            # Reload tasks in the service's TaskManager to reflect the import
+            self._todo_service._reload_tasks()
 
         # Import comments (skip duplicates)
         existing_comments = self._comments_service.get_all_comments()
         existing_comment_ids = {c.id for c in existing_comments}
 
-        comments_added = False
         for comment_data in data["comments"]:
             comment_id = comment_data["id"]
             if comment_id not in existing_comment_ids:
                 comment = TaskComment.from_dict(comment_data)
-                task_id = comment.task_id
-                if task_id not in self._comments_service._comments:
-                    self._comments_service._comments[task_id] = []
-                self._comments_service._comments[task_id].append(comment)
-                existing_comment_ids.add(comment_id)
-                comments_added = True
+                self._comments_service.add_comment(
+                    comment.task_id, comment.content, author=comment.author
+                )
 
-        # Persist comments if any were added
-        if comments_added and hasattr(self._comments_service, '_persist'):
-            self._comments_service._persist()
+    def _import_tasks_to_storage(self, tasks: list[Task]) -> None:
+        """Import tasks using storage interface (not direct attribute access).
+
+        Args:
+            tasks: List of Task objects to import.
+        """
+        storage = self._todo_service.get_storage()
+        raw = storage.load()
+
+        # Handle both list format (legacy) and dict format
+        if isinstance(raw, dict):
+            tasks_data = raw.get("__tasks__", [])
+        else:
+            tasks_data = raw if isinstance(raw, list) else []
+
+        # Add new tasks
+        for task in tasks:
+            tasks_data.append(task.to_dict())
+
+        # Save with format preservation
+        if isinstance(raw, dict):
+            raw["__tasks__"] = tasks_data
+            storage.save(raw)
+        else:
+            storage.save(tasks_data)
