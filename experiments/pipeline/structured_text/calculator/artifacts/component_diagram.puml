@@ -7,7 +7,11 @@ left to right direction
 package "Calculator Application" {
 
     component "Entry Point\n(__main__)" as Main
-    component "CLI Interface\n(CalculatorCLI)" as CLI
+
+    package "Presentation Layer" {
+        component "CLI Interface\n(CalculatorCLI)" as CLI
+        component "GUI Interface\n(CalculatorGUI)" as GUI
+    }
 
     package "Protocols (Interfaces)" {
         interface "CalculationService" as CalcServiceProto
@@ -29,12 +33,16 @@ package "Calculator Application" {
 
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry, CalculationStatistics)" as Models
 
-    Main --> CLI : initializes
+    Main --> CLI : initializes (--gui flag disabled)
+    Main --> GUI : initializes (--gui flag enabled)
     Main --> Service : initializes
     Main --> MemService : initializes
 
     CLI --> CalcServiceProto : depends on
     CLI --> MemServiceProto : depends on
+
+    GUI --> CalcServiceProto : depends on
+    GUI --> MemServiceProto : depends on
 
     Service ..|> CalcServiceProto : implements
     MemService ..|> MemServiceProto : implements
