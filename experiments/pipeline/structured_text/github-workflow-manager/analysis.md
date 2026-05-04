@@ -1,566 +1,417 @@
-# Task 09 Analysis: Service Layer, Storage Layer, and GitHub Adapter Separation
+# Task 10 Analysis: GUI Viewer for Workflow Runs
 
-## Current State Assessment
+## Task Overview
 
-The codebase currently has **three partially-formed layers** with **no abstract interfaces** and **multiple tight couplings**:
+Task 10 requires implementing a **GUI (Graphical User Interface) viewer** to display workflow runs in a structured format with scrollable display, filtering capabilities, and optional visual enhancements. The GUI must be launchable via `python -m src --gui` and display critical workflow metadata in a read-only interface.
 
-### 1. Models Layer (Clean)
-- `/src/models/`: Domain models are well-separated
-  - `WorkflowRun`, `WorkflowRunAttempt` (dataclasses)
-  - `WorkflowStatus`, `WorkflowConclusion` (enums)
-  - `WorkflowStatisticsReport` (dataclass)
-- **Status**: Clean. No dependencies on services or storage.
+## Current Architecture Understanding
 
-### 2. Storage Layer (Minimal, Coupled)
-Located: `/src/storage/`
+### 1. Current State Assessment
 
-**Current Classes:**
-- `WorkflowJsonStorage` (workflow_json_storage.py)
-  - Loads/saves `List[WorkflowRun]` from/to JSON
-  - Direct dependency: imports `WorkflowRun` model only
-  - Uses `Path`, `json` stdlib
+**Entry Point Architecture** (`src/__main__.py`):
+- Main function initializes storage, services, and GitHub integration
+- Decision logic: if `len(sys.argv) == 1` → interactive menu, else → CLI parser
+- **Problem**: No handling for `--gui` flag; decision assumes binary choice between interactive or CLI
 
-- `WorkflowAttemptJsonStorage` (workflow_attempt_json_storage.py)
-  - Loads/saves `List[WorkflowRunAttempt]` from/to JSON
-  - Direct dependency: imports `WorkflowRunAttempt` model only
-  - Uses `Path`, `json` stdlib
+**Current Interface Layers**:
+- **CLI Layer** (`src/cli/workflow_cli.py`): argparse-based, command-driven, text output
+- **Interactive Menu** (`src/cli/interactive_menu.py`): text-based prompting with stdin/stdout
+- **No GUI layer exists**: No tkinter, PyQt, or equivalent
 
-**Coupling Issues:**
-- No abstract interface → services assume concrete implementations
-- Services hardcode calls to `.save()` and `.load()` with specific signatures
-- No way to swap storage backends (e.g., database, S3) without modifying services
-- Storage classes are simple but cannot be polymorphic
+**Data Access Patterns**:
+- `WorkflowRunService.list_runs()` → returns `List[WorkflowRun]`
+- `WorkflowRunService.filter_*()` → returns filtered lists
+- `WorkflowRunService.filter_runs()` → composite filter method
+- `WorkflowAttemptService.filter_by_run_id(run_id)` → returns attempts for a run
+- All services maintain in-memory lists (no lazy loading)
 
-**Status**: Minimal separation achieved; lacks abstraction.
-
----
-
-### 3. Service Layer (Mixed Concerns, No Clear Boundaries)
-Located: `/src/services/`
-
-**Core Business Logic Services:**
-
-1. **WorkflowRunService** (workflow_run_service.py)
-   - Manages `WorkflowRun` in-memory list
-   - Depends on: `WorkflowJsonStorage`, `WorkflowRun`, enums
-   - Public methods: `add_workflow_run()`, `list_runs()`, `get_run_detail()`, `filter_*()`, `filter_runs()`
-   - Private: `_persist()` (calls storage)
-   - **Status**: Pure service, good boundaries, but storage is hardcoded concrete type
-
-2. **WorkflowAttemptService** (workflow_attempt_service.py)
-   - Manages `WorkflowRunAttempt` in-memory list
-   - Depends on: `WorkflowAttemptJsonStorage`, `WorkflowRunAttempt`, enums
-   - Public methods: `add_attempt()`, `list_attempts()`, `get_attempt_detail()`, `filter_*()`, `filter_attempts()`
-   - Private: `_persist()` (calls storage)
-   - **Status**: Pure service, good boundaries, but storage is hardcoded concrete type
-
-3. **WorkflowStatisticsService** (workflow_statistics_service.py)
-   - Reads-only aggregation over runs and attempts
-   - Depends on: `WorkflowRunService`, `WorkflowAttemptService`, models
-   - Public methods: `compute_report()`, `compute_report_for_runs()`
-   - Private: Various `_compute_*()` methods for statistics
-   - **Status**: Pure service, good separation; depends on other services (acceptable)
-
-4. **WorkflowDataPortabilityService** (workflow_data_portability_service.py)
-   - Exports/imports runs and attempts to/from files
-   - Depends on: `WorkflowRunService`, `WorkflowAttemptService`, models
-   - **Problem**: Uses `json` and `Path` directly for file I/O (storage concerns bleeding into service)
-   - Public methods: `export_runs()`, `import_runs()`, `export_attempts()`, `import_attempts()`
-   - Private: `_validate_run_schema()`, `_validate_attempt_schema()`
-   - **Status**: Service with storage logic mixed in; should delegate JSON I/O to storage layer
-
-5. **WorkflowRunTracker** (workflow_run_tracker.py)
-   - High-level facade for creating/tracking runs
-   - Depends on: `WorkflowRunService`, `WorkflowAttemptService`, models
-   - Public methods: `track()`, `create_attempt()`
-   - **Status**: Pure service, acceptable dependencies
-
-6. **WorkflowAttemptTracker** (workflow_attempt_tracker.py)
-   - High-level facade for tracking attempts (currently minimal)
-   - Depends on: `WorkflowAttemptService`, models
-   - **Status**: Simple; likely superseded by `WorkflowRunTracker.create_attempt()`
-
----
-
-### 4. GitHub Adapter Layer (Not Separated)
-Located: `/src/services/github_integration_service.py`
-
-**Current Class:**
-- **GitHubIntegrationService**
-  - Handles token resolution, validation, and GitHub API/CLI calls
-  - **Core Concerns (Mixed):**
-    1. **Token Management**: `_resolve_token()`, `_validate_token()` (env var, secrets file, interactive)
-    2. **GitHub API Client**: Direct `requests` calls, `subprocess` for `gh` CLI
-    3. **Data Transformation**: `_convert_api_run()`, `_convert_api_attempt()` (GitHub → domain models)
-    4. **Timestamp Parsing**: `_parse_github_timestamp()` (ISO 8601 → datetime)
-    5. **Fetch Modes**: Supports both REST API and `gh` CLI as backends
-  - **Public Methods**:
-    - `fetch_runs(owner, repo, workflow_name, limit, token)` → `List[WorkflowRun]`
-    - `fetch_run_attempts(owner, repo, run_id, token)` → `List[WorkflowRunAttempt]`
-  - **Private Methods**: 8+ internal methods handling token, API calls, data conversion
-  - **Dependencies**:
-    - Direct: `requests`, `subprocess`, `os`, `logging`
-    - Domain: `WorkflowRun`, `WorkflowRunAttempt`, `WorkflowStatus`, `WorkflowConclusion`
-  - **Issues**:
-    - Too many responsibilities in one class (token mgmt + API client + transformation)
-    - No separation between GitHub client and domain conversion
-    - No abstraction interface → CLI and menu directly import and instantiate
-    - Interacts with services/storage only indirectly (through CLI layer)
-
-**Status**: Exists but is NOT separated; blends external API concerns with domain logic.
-
----
-
-## Separation Requirements
-
-### Layer 1: Storage Layer (Abstract)
-
-**Current:**
-- `WorkflowJsonStorage` (concrete JSON implementation)
-- `WorkflowAttemptJsonStorage` (concrete JSON implementation)
-
-**Required Abstract Interface:**
-- `WorkflowRunRepository` (protocol/ABC)
-  ```python
-  class WorkflowRunRepository(Protocol):
-      def save(self, runs: List[WorkflowRun]) -> None: ...
-      def load(self) -> List[WorkflowRun]: ...
-  ```
-- `WorkflowAttemptRepository` (protocol/ABC)
-  ```python
-  class WorkflowAttemptRepository(Protocol):
-      def save(self, attempts: List[WorkflowRunAttempt]) -> None: ...
-      def load(self) -> List[WorkflowRunAttempt]: ...
-  ```
-
-**Concrete Implementations to Keep:**
-- `WorkflowJsonStorage` (implements `WorkflowRunRepository`)
-- `WorkflowAttemptJsonStorage` (implements `WorkflowAttemptRepository`)
-
-**Future Extensibility:**
-- New implementations: `WorkflowDatabaseStorage`, `WorkflowS3Storage`, etc.
-
----
-
-### Layer 2: Service Layer (Core Business Logic)
-
-**Classes That Stay as Services:**
-
-1. **WorkflowRunService**
-   - Constructor change: `__init__(storage: WorkflowRunRepository)` (abstract)
-   - No other changes needed
-   - Already a pure service
-
-2. **WorkflowAttemptService**
-   - Constructor change: `__init__(storage: WorkflowAttemptRepository)` (abstract)
-   - No other changes needed
-   - Already a pure service
-
-3. **WorkflowStatisticsService**
-   - No changes required
-   - Pure aggregation service
-
-4. **WorkflowDataPortabilityService**
-   - **REFACTOR REQUIRED**: Move file I/O logic out
-   - Create new storage classes: `WorkflowRunExportStorage`, `WorkflowAttemptExportStorage`
-   - Service should delegate JSON file export/import to these storage classes
-   - Keep only validation and orchestration in service
-
-5. **WorkflowRunTracker**
-   - No changes required
-   - Service facade
-
-6. **WorkflowAttemptTracker**
-   - No changes required (or possibly deprecate if unused)
-
----
-
-### Layer 3: GitHub Adapter Layer (Separate External Concerns)
-
-**Current Problem:**
-- `GitHubIntegrationService` mixes token management, API calls, and domain transformation
-
-**Required Separation:**
-
-**A. GitHub API Client (New)**
-- Class: `GitHubApiClient` (or `GitHubRestApiClient`)
-  - Private HTTP client (requests-based)
-  - Methods: `get_runs()`, `get_run_attempts()` → return raw dicts
-  - Handles: Authorization header, endpoint construction, HTTP methods, error handling
-  - **Does NOT touch domain models**
-
-**B. GitHub CLI Adapter (New)**
-- Class: `GitHubCliAdapter`
-  - Wraps `subprocess` calls to `gh`
-  - Methods: `run_gh_command()` → returns raw JSON output
-  - Handles: Command construction, subprocess lifecycle, output parsing to dict
-  - **Does NOT touch domain models**
-
-**C. Token Resolution (New or Moved)**
-- Class: `GitHubTokenResolver` or move to config layer
-  - Methods: `resolve()` → str
-  - Handles: Env vars, secrets files, interactive prompts
-  - **Separate from API client**
-
-**D. GitHub Data Converter (New)**
-- Class: `GitHubToWorkflowConverter`
-  - Methods: `convert_run(api_data: dict) -> WorkflowRun`
-  - Methods: `convert_attempt(api_data: dict) -> WorkflowRunAttempt`
-  - Handles: Enum validation, timestamp parsing
-  - **Pure transformation, no I/O**
-
-**E. GitHub Integration Service (Refactored)**
-- Becomes a thin facade: `GitHubIntegrationService`
-  - Composes: `GitHubApiClient`, `GitHubCliAdapter`, `GitHubTokenResolver`, `GitHubToWorkflowConverter`
-  - Public methods: `fetch_runs()`, `fetch_run_attempts()` (unchanged signature)
-  - Orchestrates the layers, returns domain models
-  - **Clear separation of concerns**
-
----
-
-## Circular Dependency Analysis
-
-### Current Circular Dependencies: NONE DETECTED
-
-**Dependency Graph (Acyclic):**
-```
-CLI/Menu
-    ↓
-Services (WorkflowRunService, WorkflowAttemptService, etc.)
-    ↓
-Storage (WorkflowJsonStorage, WorkflowAttemptJsonStorage)
-    ↓
-Models (WorkflowRun, WorkflowAttempt, Enums)
-```
-
-**GitHub Integration:**
-```
-CLI/Menu → GitHubIntegrationService → (requests, subprocess) → Models
-```
-
-**No circular edges detected**. However, services are tightly coupled to concrete storage implementations, which limits flexibility.
-
----
-
-## Public Interfaces to Preserve
-
-### Function Signatures and Return Types (MUST NOT CHANGE)
-
-**WorkflowRunService:**
+**WorkflowRun Model** (`src/models/workflow_run.py`):
 ```python
-def add_workflow_run(self, run: WorkflowRun) -> WorkflowRun
-def list_runs(self) -> List[WorkflowRun]
-def get_run_detail(self, run_id: str) -> Optional[WorkflowRun]
-def filter_by_branch(self, branch: str) -> List[WorkflowRun]
-def filter_by_status(self, status: WorkflowStatus) -> List[WorkflowRun]
-def filter_by_conclusion(self, conclusion: WorkflowConclusion) -> List[WorkflowRun]
-def filter_by_duration_range(self, min_s: Optional[float], max_s: Optional[float]) -> List[WorkflowRun]
-def filter_by_created_at(self, before: Optional[datetime], after: Optional[datetime]) -> List[WorkflowRun]
-def filter_by_updated_at(self, before: Optional[datetime], after: Optional[datetime]) -> List[WorkflowRun]
-def filter_by_has_attempts(self, has_attempts: bool, attempt_service: WorkflowAttemptService) -> List[WorkflowRun]
-def filter_runs(...) -> List[WorkflowRun]  # all parameters
+@dataclass
+class WorkflowRun:
+    id: str
+    workflow_name: str
+    branch: str
+    status: WorkflowStatus
+    conclusion: Optional[WorkflowConclusion]
+    created_at: datetime
+    updated_at: Optional[datetime]
+    run_number: Optional[int]
+    commit_sha: Optional[str]
+    duration_seconds: float
+    # Methods: is_terminal(), is_running(), is_successful(), is_failed(), is_cancelled()
 ```
 
-**WorkflowAttemptService:**
+**WorkflowRunAttempt Model** (`src/models/workflow_attempt.py`):
 ```python
-def add_attempt(self, attempt: WorkflowRunAttempt) -> WorkflowRunAttempt
-def list_attempts(self) -> List[WorkflowRunAttempt]
-def get_attempt_detail(self, attempt_id: str) -> Optional[WorkflowRunAttempt]
-def filter_by_run_id(self, run_id: str) -> List[WorkflowRunAttempt]
-def filter_by_status(self, status: WorkflowStatus) -> List[WorkflowRunAttempt]
-def filter_by_conclusion(self, conclusion: WorkflowConclusion) -> List[WorkflowRunAttempt]
-def filter_by_duration_range(self, min_s: Optional[float], max_s: Optional[float]) -> List[WorkflowRunAttempt]
-def filter_by_started_at(self, before: Optional[datetime], after: Optional[datetime]) -> List[WorkflowRunAttempt]
-def filter_by_completed_at(self, before: Optional[datetime], after: Optional[datetime]) -> List[WorkflowRunAttempt]
-def filter_attempts(...) -> List[WorkflowRunAttempt]
+@dataclass
+class WorkflowRunAttempt:
+    id: str
+    run_id: str
+    attempt_number: int
+    status: WorkflowStatus
+    conclusion: Optional[WorkflowConclusion]
+    started_at: datetime
+    completed_at: Optional[datetime]
+    duration_seconds: float
+    logs_url: Optional[str]
 ```
 
-**WorkflowStatisticsService:**
+---
+
+## Key Findings
+
+### 1. Data Model is GUI-Ready
+
+**Strengths**:
+- All required fields for display are present in `WorkflowRun`:
+  - `status` (enum with human-readable values)
+  - `duration_seconds` (numeric, directly displayable)
+  - `attempt_number` (can be derived from attempts list)
+  - `created_at`, `updated_at` (timestamps)
+  - `conclusion` (optional enum)
+
+- `WorkflowRunAttempt` model includes all necessary metadata:
+  - `attempt_number` (explicitly stored)
+  - `status`, `conclusion` (state tracking)
+  - `duration_seconds` (execution time)
+
+**No structural changes needed to models.**
+
+### 2. Service Layer Provides Necessary APIs
+
+**Available for GUI Use**:
+- `WorkflowRunService.list_runs()` → full list
+- `WorkflowRunService.filter_by_status(status)` → filter by status
+- `WorkflowRunService.filter_by_conclusion(conclusion)` → filter by conclusion
+- `WorkflowRunService.filter_runs(...)` → composite filter with status, conclusion, duration, timestamps
+- `WorkflowAttemptService.filter_by_run_id(run_id)` → attempts for a run
+
+**No new service methods required.** GUI can use existing service APIs directly.
+
+### 3. Current CLI Parsing Model Must Change
+
+**Current Logic**:
 ```python
-def compute_report(self) -> WorkflowStatisticsReport
-def compute_report_for_runs(self, runs: List[WorkflowRun]) -> WorkflowStatisticsReport
+if len(sys.argv) == 1:
+    run_interactive(...)  # Interactive menu
+else:
+    run_cli(...)  # Parse args
 ```
 
-**WorkflowDataPortabilityService:**
+**Problem**: This binary decision cannot accommodate three modes (interactive/CLI/GUI).
+
+**Required Change**:
+- Move to explicit argument parsing that checks for `--gui` flag early
+- If `--gui` is present → launch GUI
+- If no args → launch interactive menu (unchanged)
+- If other args → launch CLI (unchanged)
+
+**Example logic**:
 ```python
-def export_runs(self, filepath: str, runs: Optional[List[WorkflowRun]]) -> int
-def import_runs(self, filepath: str, skip_duplicates: bool) -> Dict[str, Any]
-def export_attempts(self, filepath: str, attempts: Optional[List[WorkflowRunAttempt]]) -> int
-def import_attempts(self, filepath: str, skip_duplicates: bool) -> Dict[str, Any]
-```
-
-**WorkflowRunTracker:**
-```python
-def track(self, workflow_name: str, branch: str, status: WorkflowStatus,
-          conclusion: Optional[WorkflowConclusion], run_number: Optional[int],
-          commit_sha: Optional[str], run_id: Optional[str], duration_seconds: float) -> WorkflowRun
-def create_attempt(self, run_id: str, attempt_number: int, status: WorkflowStatus,
-                   conclusion: Optional[WorkflowConclusion], completed_at: Optional[datetime],
-                   duration_seconds: float, logs_url: Optional[str], attempt_id: Optional[str]) -> WorkflowRunAttempt
-```
-
-**GitHubIntegrationService:**
-```python
-def fetch_runs(self, owner: str, repo: str, workflow_name: Optional[str] = None,
-               limit: int = 30, token: Optional[str] = None) -> List[WorkflowRun]
-def fetch_run_attempts(self, owner: str, repo: str, run_id: str, token: Optional[str] = None) -> List[WorkflowRunAttempt]
-```
-
-### Class Names (MUST REMAIN)
-- `WorkflowRunService`
-- `WorkflowAttemptService`
-- `WorkflowStatisticsService`
-- `WorkflowDataPortabilityService`
-- `WorkflowRunTracker`
-- `GitHubIntegrationService` (existing name)
-
-### Import Paths (MUST REMAIN)
-- Expect imports from `src.services.*` for all service classes
-- Expect imports from `src.storage.*` for storage implementations
-- Expect `GitHubIntegrationService` from `src.services.github_integration_service`
-
----
-
-## Proposed Abstract Layer Interfaces
-
-### 1. Storage Repository Protocols
-
-**File:** `/src/storage/base.py` (or `__init__.py`)
-
-```python
-from typing import Protocol, List
-from ..models.workflow_run import WorkflowRun
-from ..models.workflow_attempt import WorkflowRunAttempt
-
-class WorkflowRunRepository(Protocol):
-    """Abstract interface for WorkflowRun persistence."""
-    def save(self, runs: List[WorkflowRun]) -> None:
-        """Save runs to storage."""
-        ...
-    
-    def load(self) -> List[WorkflowRun]:
-        """Load all runs from storage."""
-        ...
-
-class WorkflowAttemptRepository(Protocol):
-    """Abstract interface for WorkflowRunAttempt persistence."""
-    def save(self, attempts: List[WorkflowRunAttempt]) -> None:
-        """Save attempts to storage."""
-        ...
-    
-    def load(self) -> List[WorkflowRunAttempt]:
-        """Load all attempts from storage."""
-        ...
+if "--gui" in sys.argv:
+    run_gui(...)
+elif len(sys.argv) == 1:
+    run_interactive(...)
+else:
+    run_cli(...)
 ```
 
 ---
 
-### 2. GitHub Adapter Interfaces
+## Requirements Mapping
 
-**File:** `/src/adapters/github/base.py` (new module)
+### Must Have (Mandatory Features)
 
-```python
-from typing import Protocol, Dict, List, Optional
+1. **Implement GUI Viewer**
+   - Use tkinter (standard library, no dependencies)
+   - Create a window-based interface
 
-class GitHubClient(Protocol):
-    """Abstract interface for GitHub API calls."""
-    def get_runs(self, owner: str, repo: str, limit: int) -> List[Dict]:
-        """Fetch raw run data from GitHub."""
-        ...
-    
-    def get_run_attempts(self, owner: str, repo: str, run_id: str) -> List[Dict]:
-        """Fetch raw attempt data for a run from GitHub."""
-        ...
+2. **Display Workflow Runs in Scrollable List or Table**
+   - Options:
+     - `tkinter.Treeview` widget (table-like with columns)
+     - `tkinter.Listbox` with scrollbar (simple list)
+     - Custom frame with Canvas + scrollbar (flexible layout)
+   - **Recommendation**: Treeview offers best UX (columns, sorting, native appearance)
 
-class GitHubDataConverter(Protocol):
-    """Abstract interface for GitHub API → domain model conversion."""
-    def convert_run(self, api_data: Dict) -> "WorkflowRun":
-        """Convert GitHub run data to WorkflowRun."""
-        ...
-    
-    def convert_attempt(self, api_data: Dict, run_id: str) -> "WorkflowRunAttempt":
-        """Convert GitHub attempt data to WorkflowRunAttempt."""
-        ...
+3. **Show Status, Duration, and Attempt Count per Run**
+   - **Columns needed**:
+     - Run ID (or first 8 chars for brevity)
+     - Workflow Name
+     - Branch
+     - Status (enum value or icon)
+     - Duration (seconds, formatted as "123.45s" or "1m 23s")
+     - Attempt Count (count of attempts for this run)
+     - Created At (ISO timestamp or formatted)
 
-class TokenProvider(Protocol):
-    """Abstract interface for GitHub token resolution."""
-    def resolve(self) -> str:
-        """Resolve and return a GitHub token."""
-        ...
+4. **Read-Only Interface**
+   - Display only; no edit/delete operations
+   - No modify buttons in GUI
+   - Clicking rows may show detail view (optional enhancement)
+
+5. **Launchable via `python -m src --gui`**
+   - Add `--gui` flag detection in `src/__main__.py`
+   - Create GUI module in `src/gui/` or `src/cli/gui_viewer.py`
+   - Must not break existing `python -m src` (interactive) or CLI modes
+
+### Should Have (High Priority)
+
+1. **Filter Runs by Status or Conclusion**
+   - Dropdown or input field for status filter
+   - Dropdown or input field for conclusion filter
+   - "Clear filters" button to reset
+   - **Implementation**: Add dropdown widgets, re-query service on change
+
+### Could Have (Nice-to-Have)
+
+1. **Highlight Rows for Failed Runs**
+   - Detect `run.is_failed()` or `conclusion == FAILURE`
+   - Apply different background color (e.g., light red)
+   - Treeview supports row tagging for styling
+
+2. **Support Editing of Workflow Runs**
+   - **Note**: This conflicts with "Read-Only Interface" in Must Have
+   - **Interpretation**: "Could Have" suggests this is secondary; prioritize read-only
+
+3. **Launchable via Interactive Menu**
+   - Add menu option "View runs in GUI" in interactive menu
+   - Call GUI module from menu handler
+
+---
+
+## Scope Signals
+
+### In Scope
+
+- Adding `--gui` flag and entry point logic
+- Creating a tkinter-based GUI with Treeview or equivalent
+- Displaying columns: ID, workflow name, branch, status, conclusion, duration, attempt count
+- Status/conclusion filtering via dropdowns
+- Row highlighting for failed runs
+- Calling existing service methods (no service changes needed)
+
+### Out of Scope
+
+- Database visualization or advanced charting
+- Network communication (data already loaded into memory)
+- Real-time updates (static snapshot of current data)
+- Multi-window workflows or complex navigation
+- Authentication UI (GitHub token is handled at CLI/menu level)
+
+### Borderline / Clarification Needed
+
+1. **"Edit workflow runs" (Could Have)**
+   - This contradicts "Read-Only Interface" (Must Have)
+   - **Assumption**: Read-Only is mandatory; editing is explicitly out of scope for Task 10
+   - Could be a future task
+
+2. **Attempt Count Display**
+   - Not explicitly mentioned in "Must Have" but implied by "Show ... attempt count per run"
+   - Must have code to look up and count attempts for each run
+
+---
+
+## Design Constraints & Decisions
+
+### 1. GUI Framework: tkinter
+
+**Why tkinter**:
+- Part of Python standard library (no external dependencies)
+- Cross-platform (Windows, macOS, Linux)
+- Simple widgets sufficient for tabular display
+- Matches project's minimal-dependency philosophy
+
+**Why not alternatives**:
+- PyQt / PySide: require external package installation
+- wxPython: requires external package
+- Web UI (Flask/HTML): out of scope for desktop CLI tool
+
+### 2. Widget Choice: Treeview
+
+**Why Treeview**:
+- Native table-like widget with columns and sorting
+- Built-in scrollbar support
+- Can apply tags for row styling (highlighting failed runs)
+- Better UX than Listbox for multi-column data
+
+**Alternative**: Custom Frame + Canvas + scrollbar (more work, less polished)
+
+### 3. Data Flow for GUI
+
+```
+src/__main__.py (detect --gui flag)
+  ↓
+src/gui/gui_viewer.py (or src/cli/gui_viewer.py)
+  ↓
+WorkflowRunService.list_runs() / filter_runs()
+  ↓
+WorkflowAttemptService.filter_by_run_id(run_id) [for attempt counts]
+  ↓
+Treeview widget populated with rows
 ```
 
----
+**Key design**: GUI reads services, never writes (read-only).
 
-## Blockers and Ambiguities
+### 4. Filtering Implementation
 
-### 1. **Module Organization Ambiguity**
+**Status Options** (from `WorkflowStatus` enum):
+- queued, in_progress, completed, waiting, requested, pending
 
-**Question:** Should GitHub adapter be a new top-level package?
+**Conclusion Options** (from `WorkflowConclusion` enum):
+- success, failure, cancelled, skipped, timed_out, action_required, neutral, stale
 
-**Current:** `src/services/github_integration_service.py`
+**Dropdown Behavior**:
+- Initially show "All" (no filter applied)
+- User selects a value → call `service.filter_by_status()` or `filter_by_conclusion()`
+- Empty the Treeview and repopulate with filtered results
 
-**Options:**
-1. Keep in `services/` (simpler, service-like responsibility)
-2. Move to `src/adapters/github/` (clearer separation, implies external integration)
-3. Move to `src/integrations/github/` (alternative naming)
+### 5. Attempt Count Retrieval
 
-**Assumption for this analysis:** Moving to `src/adapters/github/` for clarity, but existing public name `GitHubIntegrationService` is preserved for backward compatibility.
+**Implementation Strategy**:
+- For each run displayed, call `attempt_service.filter_by_run_id(run.id)`
+- len(result) = attempt count
+- Display in column
 
----
+**Performance Note**: With small datasets (< 1000 runs), this is acceptable. For large datasets, could optimize with a pre-computed cache.
 
-### 2. **Abstract Class vs Protocol**
+### 6. Module Structure
 
-**Question:** Use `typing.Protocol` (structural subtyping) or `ABC` (nominal)?
+**Option A**: `src/gui/gui_viewer.py`
+- Cleaner separation, mirrors `src/cli/` structure
+- Requires creating `src/gui/__init__.py`
 
-**Current codebase:** No abstract bases in use.
+**Option B**: `src/cli/gui_viewer.py`
+- Simpler (no new folder)
+- Slightly inconsistent with "GUI is a different interface layer"
 
-**Options:**
-1. `Protocol` from `typing` (more flexible, duck-typing)
-2. `ABC` from `abc` (explicit contracts, checked at runtime)
-3. Both (protocols for clearer intent, ABC as fallback)
-
-**Assumption:** Use `Protocol` for interfaces (more Pythonic, aligns with modern typing). Add `ABC` if explicit base class is needed for `isinstance()` checks.
-
----
-
-### 3. **WorkflowDataPortabilityService Scope**
-
-**Question:** Should export/import logic stay in a service or move to storage?
-
-**Current:** Service does JSON file I/O directly.
-
-**Options:**
-1. Create new storage classes for export/import (`ExportRunStorage`, etc.)
-2. Add export/import methods to existing `WorkflowJsonStorage`
-3. Keep in service but abstract the file operations
-
-**Assumption:** Create dedicated storage classes. Allows export/import to coexist with standard load/save, and keeps `WorkflowDataPortabilityService` as pure orchestration.
+**Recommendation**: Option A (separate folder) for clarity, but either works.
 
 ---
 
-### 4. **GitHubIntegrationService Constructor Change**
+## Ambiguities & Working Assumptions
 
-**Question:** Should token resolution be injected or resolved internally?
+### 1. "Attempt Count" Calculation
 
-**Current:** `__init__(fetch_mode: str = "api")`; token resolved on demand.
+**Question**: Should attempt count include failed/retried attempts only, or all attempts?
 
-**Options:**
-1. Add `token_provider: TokenProvider` parameter (dependency injection)
-2. Keep current lazy resolution (simpler for CLI)
-3. Both (constructor optional, falls back to lazy)
+**Assumption**: Include all attempts for a run. The `WorkflowRunAttempt.attempt_number` field tracks retry sequence; we display the count.
 
-**Assumption:** Support both. Constructor can optionally accept a `token_provider`. If omitted, fall back to current `_resolve_token()` logic.
+**Evidence**: Class diagram notes "filter_by_run_id() returns all attempts for given run_id, sorted by attempt_number".
 
----
+### 2. Row Detail on Click
 
-### 5. **Trackers: Needed or Deprecated?**
+**Question**: Should clicking a row show full details (modal dialog or right panel)?
 
-**Question:** Are `WorkflowRunTracker` and `WorkflowAttemptTracker` facade classes or legacy?
+**Assumption**: Not required for Task 10. Must Have specifies "display workflow runs in scrollable list or table" but doesn't mandate detail view. Could be a Could Have.
 
-**Current:** `WorkflowRunTracker` is actively used. `WorkflowAttemptTracker` is minimal.
+### 3. Sort Order
 
-**Assumption:** Keep both. They serve as convenient facades for CLI/menu code. Refactoring does not require changes to public signatures.
+**Question**: What is the default sort order for rows?
 
----
+**Assumption**: Most recent first (by `created_at` descending). Treeview allows user to click columns to re-sort.
 
-## Scope: In, Out, Borderline
+### 4. Duration Formatting
 
-### IN (Must Fix)
-1. Abstract storage interfaces (Repository pattern)
-2. Separate GitHub adapter into distinct concerns (client, converter, token provider)
-3. Remove tight coupling between services and concrete storage
-4. Preserve all public method signatures and class names
-5. Move file I/O from `WorkflowDataPortabilityService` to storage layer
+**Question**: Display as raw seconds (123.45) or formatted (1m 23.45s)?
 
-### OUT (Out of Scope)
-1. Rewrite CLI or interactive menu
-2. Add database support (only design for it)
-3. Refactor model classes or enums
-4. Change existing tests beyond what refactoring requires
-5. Add new features (e.g., webhooks, caching)
+**Assumption**: Display as raw seconds with 2 decimal places for consistency with CLI output format.
 
-### BORDERLINE (May Need Clarification)
-1. **Module reorganization**: Move GitHub service to `adapters/` package?
-   - **Pragmatic decision:** Keep in `src/services/` for now, document intent
-2. **Backward compatibility of imports**: Do we need compatibility shims?
-   - **Pragmatic decision:** No; breaking imports are acceptable if documented
-3. **Test updates**: How many test updates are acceptable?
-   - **Pragmatic decision:** Update tests to match refactored code; don't modify baseline test suite unless necessary
+### 5. Read-Only Constraint with Editing (Could Have)
+
+**Contradiction Identified**: 
+- Must Have: "Read-only interface"
+- Could Have: "Support editing of workflow runs"
+
+**Assumption for Task 10**: 
+- **Must Have dominates**: Implement read-only GUI
+- **Could Have (Editing) is deferred**: Out of scope for this task, would be a separate enhancement
+- GUI will have no edit/delete buttons
 
 ---
 
-## Priorities
+## Required Files to Create/Modify
 
-### High Priority (Blocks Adoption)
-1. **Create abstract storage interfaces** (Repository pattern)
-   - Services cannot be properly tested without this
-   - Enables multiple storage backends
-   - ~2-3 hours of work
+### New Files
 
-2. **Separate GitHub adapter from integration service**
-   - Current service is >500 lines with 8+ private methods
-   - Token handling, API client, and domain conversion need clear boundaries
-   - ~3-4 hours of work
+1. **`src/gui/` (new folder)**
+   - `src/gui/__init__.py` (empty or import gui_viewer)
+   - `src/gui/gui_viewer.py` (main GUI implementation)
 
-3. **Move file I/O out of WorkflowDataPortabilityService**
-   - Service is currently violating single responsibility
-   - Should orchestrate storage, not perform I/O
-   - ~1-2 hours of work
+**Responsibilities**:
+- `WorkflowRunsGUIViewer` class (or similar)
+- Methods: `__init__(service, attempt_service)`, `run()`, `_populate_table()`, `_apply_filter()`, `_highlight_failed_rows()`
+- tkinter widget setup (Treeview, dropdowns, buttons)
 
-### Medium Priority (Nice to Have)
-1. **Add `__all__` exports to module `__init__.py` files**
-   - Clarifies public API
-   - Documents what is exported at each layer
-   - ~1 hour of work
+### Modified Files
 
-2. **Create explicit base classes or protocols for extension points**
-   - Currently implicit (only docs and naming)
-   - Future maintainers need clear guidance
-   - ~1 hour of work
+1. **`src/__main__.py`**
+   - Add early check for `--gui` flag
+   - Import and call GUI runner
+   - Update conditional logic to handle three modes
 
-### Low Priority (Can Defer)
-1. **Rename GitHubIntegrationService to reflect refactoring**
-   - Current name is acceptable; internal structure is what matters
-   - Defer unless a major re-release happens
+2. **`src/cli/interactive_menu.py`** (Optional for Should Have)
+   - Add menu option "View runs in GUI" (if including interactive menu launcher)
+   - Call GUI runner from menu handler
 
-2. **Consolidate WorkflowAttemptTracker logic**
-   - Currently minimal; not blocking anything
-   - Can be left as-is
+### Test Files
+
+1. **`tests/test_gui_viewer.py`** (new)
+   - Unit tests for GUI logic (without actually launching windows)
+   - Mock tkinter widgets or test data population logic
+   - Test filter application, attempt count retrieval
 
 ---
 
-## Summary of Classes and Their Layers
+## Implementation Priorities
 
-| Class Name | File | Current Layer | Target Layer | Action |
-|---|---|---|---|---|
-| `WorkflowRun` | `models/workflow_run.py` | Models | Models | No change |
-| `WorkflowRunAttempt` | `models/workflow_attempt.py` | Models | Models | No change |
-| `WorkflowStatus` | `models/workflow_status.py` | Models | Models | No change |
-| `WorkflowConclusion` | `models/workflow_conclusion.py` | Models | Models | No change |
-| `WorkflowStatisticsReport` | `models/workflow_statistics_report.py` | Models | Models | No change |
-| `WorkflowJsonStorage` | `storage/workflow_json_storage.py` | Storage (Concrete) | Storage (Concrete) | Update to use abstract interface |
-| `WorkflowAttemptJsonStorage` | `storage/workflow_attempt_json_storage.py` | Storage (Concrete) | Storage (Concrete) | Update to use abstract interface |
-| **(NEW)** `WorkflowRunRepository` | `storage/base.py` | — | Storage (Abstract) | Create Protocol |
-| **(NEW)** `WorkflowAttemptRepository` | `storage/base.py` | — | Storage (Abstract) | Create Protocol |
-| `WorkflowRunService` | `services/workflow_run_service.py` | Services | Services | Update constructor to accept abstract repo |
-| `WorkflowAttemptService` | `services/workflow_attempt_service.py` | Services | Services | Update constructor to accept abstract repo |
-| `WorkflowStatisticsService` | `services/workflow_statistics_service.py` | Services | Services | No change |
-| `WorkflowDataPortabilityService` | `services/workflow_data_portability_service.py` | Services | Services | Refactor to delegate I/O to storage |
-| `WorkflowRunTracker` | `services/workflow_run_tracker.py` | Services | Services | No change |
-| `WorkflowAttemptTracker` | `services/workflow_attempt_tracker.py` | Services | Services | No change |
-| `GitHubIntegrationService` | `services/github_integration_service.py` | Services (Mixed) | Adapters (GitHub) | Refactor; split concerns; keep public API |
-| **(NEW)** `GitHubApiClient` | `adapters/github/api_client.py` | — | Adapters (GitHub) | Create; extract HTTP client logic |
-| **(NEW)** `GitHubCliAdapter` | `adapters/github/cli_adapter.py` | — | Adapters (GitHub) | Create; extract CLI wrapper logic |
-| **(NEW)** `GitHubTokenResolver` | `adapters/github/token_resolver.py` | — | Adapters (GitHub) | Create; extract token resolution logic |
-| **(NEW)** `GitHubToWorkflowConverter` | `adapters/github/converter.py` | — | Adapters (GitHub) | Create; extract domain conversion logic |
+### Phase 1 (Must Have)
+
+1. Create `src/gui/gui_viewer.py` with basic Treeview table
+2. Modify `src/__main__.py` to detect and launch `--gui`
+3. Populate table with: ID, workflow_name, branch, status, conclusion, duration_seconds, attempt_count
+4. Ensure read-only interface (no edit controls)
+
+### Phase 2 (Should Have)
+
+1. Add status dropdown filter
+2. Add conclusion dropdown filter
+3. Implement filter apply logic (re-query service, refresh table)
+
+### Phase 3 (Could Have)
+
+1. Row highlighting for failed runs (use Treeview tagging)
+2. Interactive menu option to launch GUI
+
+### Phase 4 (Test & Polish)
+
+1. Write unit tests for GUI data logic
+2. Ensure `python -m src --gui` works end-to-end
+3. Verify scrolling, filtering, and display accuracy
 
 ---
 
-## Next Steps for System Architect
+## Summary
 
-1. **Design file layout** for `/src/adapters/github/` module
-2. **Define constructors** for refactored `GitHubIntegrationService` (token provider injection, etc.)
-3. **Plan test coverage** for new abstract interfaces and concrete implementations
-4. **Write migration guide** for CLI layer to use refactored GitHub service
-5. **Identify any hidden dependencies** in interactive menu or CLI that assume concrete storage types
+The task requires adding a tkinter-based GUI viewer for workflow runs. The existing service layer provides all necessary data access methods; no changes to models or services are needed. The main work is:
+
+1. **Architecture change**: Modify `src/__main__.py` to handle `--gui` flag alongside existing interactive and CLI modes
+2. **New GUI module**: Create tkinter interface with Treeview for tabular display
+3. **Filtering**: Wire status/conclusion dropdowns to service filter methods
+4. **Styling**: Highlight failed runs with distinct colors
+5. **Testing**: Unit and manual tests to verify functionality
+
+The read-only constraint is explicit in Must Have; editing is deferred to potential future work. Tkinter is chosen for simplicity and zero external dependencies.
+
+---
+
+## Key File Paths
+
+Relevant source files to understand:
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/__main__.py` — Entry point
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/cli/workflow_cli.py` — CLI implementation (reference for structure)
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/cli/interactive_menu.py` — Interactive menu (reference for structure)
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/services/workflow_run_service.py` — Service APIs
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/services/workflow_attempt_service.py` — Attempt service for counting
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/models/workflow_run.py` — Data model
+- `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/artifacts/class_diagram.puml` — Architecture diagram
 

@@ -13,6 +13,7 @@ package "GitHub Workflow Manager" {
   package "Interface layer" {
     component "workflow_cli" as CLI
     component "interactive_menu" as IM
+    component "gui_viewer" as GUI
   }
 
   package "Utilities layer" {
@@ -58,12 +59,16 @@ package "GitHub Workflow Manager" {
 
 MAIN --> CLI
 MAIN --> IM
+MAIN --> GUI
 
 CLI --> TZ
 IM --> TZ
 
 CLI --> TRACKER
 IM --> TRACKER
+GUI --> SVC
+GUI --> ASVC
+
 CLI --> ATRACKER
 IM --> ATRACKER
 

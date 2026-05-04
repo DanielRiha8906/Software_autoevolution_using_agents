@@ -334,6 +334,36 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #E5F5FF {
+    class WorkflowRunsGUIViewer {
+        -_run_service       : WorkflowRunService
+        -_attempt_service   : WorkflowAttemptService
+        -_root              : tk.Tk
+        -_treeview          : Optional[ttk.Treeview]
+        -_status_filter     : Optional[ttk.Combobox]
+        -_conclusion_filter : Optional[ttk.Combobox]
+        -_current_runs      : List[WorkflowRun]
+        --
+        +__init__(run_service: WorkflowRunService,\n  attempt_service: WorkflowAttemptService,\n  root: Optional[tk.Tk])
+        +run() : None
+        -_setup_window() : None
+        -_create_widgets() : None
+        -_populate_treeview(runs: List[WorkflowRun]) : None
+        -_get_attempt_count(run_id: str) : int
+        -_apply_filters() : None
+        -_clear_filters() : None
+        -_on_filter_changed(event: Optional[tk.Event]) : None
+        -_format_duration(seconds: float) : str
+        -_format_conclusion(conclusion: Optional[WorkflowConclusion]) : str
+        -_format_timestamp(dt: datetime) : str
+        -_highlight_failed_rows() : None
+    }
+
+    class "gui_viewer" <<module>> {
+        +run_gui(run_service: WorkflowRunService,\n  attempt_service: WorkflowAttemptService) : None
+    }
+}
+
 ' Domain model relationships
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
@@ -375,6 +405,14 @@ WorkflowAttemptTracker     ..>  WorkflowRunAttempt
 "interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  "timezone_converter"
 "interactive_menu"         ..>  GitHubIntegrationService
+
+' GUI relationships
+WorkflowRunsGUIViewer      "1" --> "1" WorkflowRunService : -_run_service
+WorkflowRunsGUIViewer      "1" --> "1" WorkflowAttemptService : -_attempt_service
+WorkflowRunsGUIViewer      ..>  WorkflowRun
+WorkflowRunsGUIViewer      ..>  WorkflowStatus
+WorkflowRunsGUIViewer      ..>  WorkflowConclusion
+"gui_viewer"               ..>  WorkflowRunsGUIViewer
 
 ' Statistics service relationships
 WorkflowStatisticsService  "1" --> "1" WorkflowRunService : -_run_service
