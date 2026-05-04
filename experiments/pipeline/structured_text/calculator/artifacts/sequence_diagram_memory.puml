@@ -7,7 +7,9 @@ skinparam sequenceParticipantBorderColor #66AA33
 
 actor User
 participant "CalculatorCLI" as CLI
-participant "MemoryService" as MemService
+participant "MemoryService\n(interface)" as MemServiceProto
+participant "MemoryService\n(impl)" as MemService
+participant "Storage<MemoryEntry>\n(interface)" as StorageProto
 participant "MemoryJsonStorage" as MemStore
 database "memory_entries.json" as DB
 
@@ -15,19 +17,27 @@ database "memory_entries.json" as DB
 
 User -> CLI: show_memory()
 activate CLI
-CLI -> MemService: retrieve_all()
+CLI -> MemServiceProto: retrieve_all()
+activate MemServiceProto
+MemServiceProto -> MemService: retrieve_all()
 activate MemService
-MemService -> MemStore: load_all()
+MemService -> StorageProto: load_all()
+activate StorageProto
+StorageProto -> MemStore: load_all()
 activate MemStore
 MemStore -> DB: read file
 activate DB
 DB --> MemStore: JSON data
 deactivate DB
 MemStore -> MemStore: parse entries to MemoryEntry objects
-MemStore --> MemService: List<MemoryEntry>
+MemStore --> StorageProto: List<MemoryEntry>
 deactivate MemStore
-MemService --> CLI: List<MemoryEntry>
+StorageProto --> MemService: List<MemoryEntry>
+deactivate StorageProto
+MemService --> MemServiceProto: List<MemoryEntry>
 deactivate MemService
+MemServiceProto --> CLI: List<MemoryEntry>
+deactivate MemServiceProto
 CLI -> CLI: display entries
 CLI --> User: show memory list
 deactivate CLI
@@ -36,65 +46,56 @@ deactivate CLI
 
 User -> CLI: filter_by_operation(operation_name)
 activate CLI
-CLI -> MemService: filter_by_operation(operation_name)
+CLI -> MemServiceProto: filter_by_operation(operation_name)
+activate MemServiceProto
+MemServiceProto -> MemService: filter_by_operation(operation_name)
 activate MemService
-MemService -> MemStore: load_all()
+MemService -> StorageProto: load_all()
+activate StorageProto
+StorageProto -> MemStore: load_all()
 activate MemStore
 MemStore -> DB: read file
 activate DB
 DB --> MemStore: JSON data
 deactivate DB
-MemStore --> MemService: List<MemoryEntry>
+MemStore --> StorageProto: List<MemoryEntry>
 deactivate MemStore
+StorageProto --> MemService: List<MemoryEntry>
+deactivate StorageProto
 MemService -> MemService: filter by operation name
-MemService --> CLI: filtered List<MemoryEntry>
+MemService --> MemServiceProto: filtered List<MemoryEntry>
 deactivate MemService
+MemServiceProto --> CLI: filtered List<MemoryEntry>
+deactivate MemServiceProto
 CLI -> CLI: display filtered entries
 CLI --> User: show filtered memory list
-deactivate CLI
-
-== Store New Entry (implicit via CalculatorService) ==
-
-User -> CLI: run_command(operation)
-activate CLI
-CLI -> CLI: perform calculation via CalculatorService
-CLI -> CLI: create MemoryEntry from result
-note right of CLI: Application layer creates entry
-
-User -> CLI: CLI calls store indirectly
-MemService -> MemStore: save(entry: MemoryEntry)
-activate MemStore
-MemStore -> MemStore: _read_raw()
-note right of MemStore: Load existing entries
-MemStore -> MemStore: entry.to_dict()
-note right of MemStore: Convert to dictionary
-MemStore -> MemStore: _write_raw(records)
-note right of MemStore: Write updated list to file
-MemStore -> DB: write JSON array
-activate DB
-deactivate DB
-MemStore --> MemService: void
-deactivate MemStore
-MemService --> CLI: complete
 deactivate CLI
 
 == Compute Statistics ==
 
 User -> CLI: show_statistics()
 activate CLI
-CLI -> MemService: compute_statistics()
+CLI -> MemServiceProto: compute_statistics()
+activate MemServiceProto
+MemServiceProto -> MemService: compute_statistics()
 activate MemService
-MemService -> MemStore: load_all()
+MemService -> StorageProto: load_all()
+activate StorageProto
+StorageProto -> MemStore: load_all()
 activate MemStore
 MemStore -> DB: read file
 activate DB
 DB --> MemStore: JSON data
 deactivate DB
-MemStore --> MemService: List<MemoryEntry>
+MemStore --> StorageProto: List<MemoryEntry>
 deactivate MemStore
+StorageProto --> MemService: List<MemoryEntry>
+deactivate StorageProto
 MemService -> MemService: aggregate stats (counts, errors, times)
-MemService --> CLI: CalculationStatistics
+MemService --> MemServiceProto: CalculationStatistics
 deactivate MemService
+MemServiceProto --> CLI: CalculationStatistics
+deactivate MemServiceProto
 CLI -> CLI: format and display statistics
 CLI --> User: show statistics report
 deactivate CLI

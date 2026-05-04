@@ -3,7 +3,7 @@ from pathlib import Path
 
 from ..models.memory_entry import MemoryEntry
 from ..models.calculation_statistics import CalculationStatistics
-from ..storage.memory_json_storage import MemoryJsonStorage
+from ..protocols import Storage
 
 
 class MemoryService:
@@ -11,16 +11,16 @@ class MemoryService:
     Manages the lifecycle of MemoryEntry objects.
 
     Coordinates storage and retrieval of calculation memory entries,
-    delegating persistence to MemoryJsonStorage. Provides a clean
+    delegating persistence to Storage backend. Provides a clean
     separation between service logic and storage implementation.
     """
 
-    def __init__(self, storage: MemoryJsonStorage) -> None:
+    def __init__(self, storage: Storage[MemoryEntry]) -> None:
         """
         Initialize the memory service with a storage backend.
 
         Args:
-            storage: MemoryJsonStorage instance for persisting entries.
+            storage: Storage[MemoryEntry] instance for persisting entries.
         """
         self.storage = storage
 

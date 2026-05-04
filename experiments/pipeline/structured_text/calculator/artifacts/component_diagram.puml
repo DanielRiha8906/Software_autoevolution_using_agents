@@ -9,12 +9,23 @@ package "Calculator Application" {
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
 
-    component "Application Service\n(CalculatorService)" as Service
-    component "Memory Service\n(MemoryService)" as MemService
+    package "Protocols (Interfaces)" {
+        interface "CalculationService" as CalcServiceProto
+        interface "MemoryService" as MemServiceProto
+        interface "Storage<T>" as StorageProto
+    }
+
+    component "Service Implementations" {
+        component "CalculatorService\n(CalculatorServiceImpl)" as Service
+        component "MemoryService\n(MemoryServiceImpl)" as MemService
+    }
 
     component "Calculation Engine\n(Calculator)" as Calc
-    component "JSON Storage\n(JsonStorage)" as Store
-    component "Memory JSON Storage\n(MemoryJsonStorage)" as MemStore
+
+    package "Storage Implementations" {
+        component "JSON Storage\n(JsonStorage)" as Store
+        component "Memory JSON Storage\n(MemoryJsonStorage)" as MemStore
+    }
 
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry, CalculationStatistics)" as Models
 
@@ -22,16 +33,24 @@ package "Calculator Application" {
     Main --> Service : initializes
     Main --> MemService : initializes
 
-    CLI --> Service : uses
-    CLI --> MemService : uses
-    Service --> Calc : uses
-    Service --> Store : uses
-    MemService --> MemStore : uses
+    CLI --> CalcServiceProto : depends on
+    CLI --> MemServiceProto : depends on
 
-    Service ..> Models
-    Store ..> Models
-    MemService ..> Models
-    MemStore ..> Models
+    Service ..|> CalcServiceProto : implements
+    MemService ..|> MemServiceProto : implements
+
+    Service --> Calc : uses
+    Service --> StorageProto : depends on
+    MemService --> StorageProto : depends on
+
+    Store ..|> StorageProto : implements
+    MemStore ..|> StorageProto : implements
+
+    Service ..> Models : uses
+    Store ..> Models : uses
+    MemService ..> Models : uses
+    MemStore ..> Models : uses
+    Calc ..> Models : uses
 }
 
 database "calculations.json" as DB
@@ -47,6 +66,11 @@ note on link MemService, UserFiles
   Export: serialize memory entries to JSON
   Import: load and validate JSON array
   Support --export, --import, --skip-invalid flags
+end note
+
+note on link StorageProto
+  Generic protocol decoupling
+  services from storage implementation
 end note
 
 @enduml

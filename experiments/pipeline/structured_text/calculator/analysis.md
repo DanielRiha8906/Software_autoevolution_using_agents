@@ -1,316 +1,485 @@
-# Calculator Scientific Mode — Analysis Report
+# Calculator Project - Component Separation Analysis
 
-**Date:** 2026-05-03  
-**Working Directory:** `/experiments/pipeline/structured_text/calculator/`  
-**Task:** Add scientific mode with sin, cos, tan, log (base 10), ln (natural log), and exp operations
-
-## Executive Summary
-
-The calculator project is a well-structured OOP Python application with layered architecture (models, services, storage, CLI). Adding scientific mode requires minimal architectural changes: extend the Operation enum, add corresponding methods to Calculator, update the CLI menu system, and expose new operations via CLI flags. The design supports explicit mode switching through a menu option or implicit switching when scientific operations are selected.
+**Task 09: Separate Core Components**
+**Status:** Analysis Complete
+**Date:** 2026-05-04
 
 ---
 
-## Current Architecture Overview
+## Summary
 
-### Layered Design
+The calculator project is a well-structured OOP application with clear logical separation between calculation logic, memory/history management, and CLI interface. However, components are currently **tightly coupled** at the service and CLI layers, with both `CalculatorService` and `MemoryService` being direct dependencies of the CLI. The memory tracking system is **separate but not formalized** — there are no abstract protocols defining component boundaries.
 
-1. **Models Layer** (`src/models/`)
-   - `operation.py`: Operation enum with factory methods
-   - `calculation_result.py`: Result dataclass with symbol mapping
-   - `memory_entry.py`: Audit trail dataclass
-   - `calculation_statistics.py`: Statistics computation
-
-2. **Services Layer** (`src/services/`)
-   - `calculator.py`: Pure arithmetic logic (8 operations)
-   - `calculator_service.py`: Orchestrates Calculator + persists via JsonStorage
-   - `memory_service.py`: Memory queries, filters, statistics, import/export
-
-3. **Storage Layer** (`src/storage/`)
-   - `json_storage.py`: Persists CalculationResult
-   - `memory_json_storage.py`: Persists MemoryEntry
-
-4. **CLI Layer** (`src/cli/`)
-   - `calculator_cli.py`: Interactive menu (16 options: 8 operations + 8 admin) and one-shot mode
-
-5. **Entry Point**
-   - `src/__main__.py`: Argument parser, service instantiation, delegation to CLI
-
-### Data Flow
-
-```
-argparse → CalculatorCLI → CalculatorService → Calculator → (math)
-                        ↓
-                   JsonStorage (history)
-                   MemoryService (audit)
-```
-
-### Current Operations (8 total)
-
-All take two operands (a, b):
-- **Binary:** add, subtract, multiply, divide, power, modulo
-- **Unary (ignores b):** square, sqrt
-
-All results persisted to `artifacts/calculations.json` and `artifacts/memory_entries.json`.
-
-### CLI Menu Structure
-
-Interactive mode shows 16 options:
-1. Add (operation 1)
-2. Subtract (operation 2)
-...
-8. Modulo (operation 8)
-9. View history
-10. View memory
-11. Filter by operation
-12. Filter by status
-13. View statistics
-14. Export to file
-15. Import from file
-16. Exit
-
-Menu calculations: `len(_MENU) + N` where `_MENU` has 8 entries, admin options start at 9.
+The refactoring task requires introducing abstract base classes/protocols and clearer encapsulation while preserving all existing functionality and external behavior.
 
 ---
 
-## What Operations Are Implemented and How
+## Current Architecture
 
-### Operation Enum (`src/models/operation.py`)
+### Directory Structure
+
+```
+src/
+├── __main__.py                 # CLI entry point and argparse setup
+├── models/                     # Data models (domain entities)
+│   ├── operation.py            # Operation enum with fromString factory
+│   ├── calculation_result.py   # Dataclass: represents a completed calc
+│   ├── memory_entry.py         # Dataclass: represents a stored attempt (success/failure)
+│   └── calculation_statistics.py # Dataclass: aggregated metrics
+├── services/                   # Business logic and orchestration
+│   ├── calculator.py           # Pure calculation engine
+│   ├── calculator_service.py   # Orchestrates Calculator + storage for calcs
+│   └── memory_service.py       # Manages MemoryEntry lifecycle & filtering
+├── storage/                    # Persistence layer
+│   ├── json_storage.py         # Persists CalculationResult to JSON
+│   └── memory_json_storage.py  # Persists MemoryEntry to JSON
+└── cli/
+    └── calculator_cli.py       # Interactive & one-shot command interface
+```
+
+### Component Responsibilities (Current)
+
+#### 1. Calculation Engine: `Calculator`
+- **File:** `src/services/calculator.py`
+- **Responsibility:** Pure arithmetic logic
+- **Methods:**
+  - `add(a, b)`, `subtract(a, b)`, `multiply(a, b)`, `divide(a, b)` — binary ops
+  - `square(a, b)`, `sqrt(a, b)`, `power(a, b)`, `modulo(a, b)` — unary/binary mixed
+  - `sin(a, b)`, `cos(a, b)`, `tan(a, b)`, `log(a, b)`, `ln(a, b)`, `exp(a, b)` — trigonometric/logarithmic
+  - `calculate(operation: Operation, a, b)` — dispatch by enum
+- **No Dependencies:** Uses only Python stdlib (`math`)
+- **Error Handling:** Raises `ValueError` for invalid inputs (division by zero, negative sqrt, etc.)
+- **Coupling:** NONE. This is a pure, stateless calculation library.
+
+**Current Status:** Well-isolated. No refactoring needed here.
+
+---
+
+#### 2. Memory/History Management: Mixed Layers
+This is where the complexity lies. History is tracked in **two separate ways**:
+
+**2a. Short-term calculation history: `CalculatorService` + `JsonStorage`**
+- **Class:** `CalculatorService` (`src/services/calculator_service.py`)
+- **Purpose:** Perform a calculation and immediately persist it
+- **Dependency Chain:** 
+  ```
+  CalculatorService
+    ├── Owns: Calculator (injection)
+    ├── Owns: JsonStorage (injection)
+    └── Delegates:
+        ├── calculation → Calculator.calculate()
+        ├── timing measurement → time.perf_counter()
+        └── persistence → JsonStorage.save()
+  ```
+- **Output Model:** `CalculationResult` — simple dataclass with operation, operands, result, timestamp, execution_time_ms
+- **Storage:** `JsonStorage` persists to `artifacts/calculations.json` (append-only JSON array)
+- **Methods:**
+  - `perform(operation, a, b) → CalculationResult` — execute and save, returns result. **On error, raises exception WITHOUT saving.**
+  - `get_history() → List[CalculationResult]` — delegates to storage
+
+**2b. Full audit trail: `MemoryService` + `MemoryJsonStorage`**
+- **Class:** `MemoryService` (`src/services/memory_service.py`)
+- **Purpose:** Store and query a complete audit log of all calculation attempts (including failures with error messages)
+- **Dependency Chain:**
+  ```
+  MemoryService
+    ├── Owns: MemoryJsonStorage (injection)
+    └── Delegates persistence to storage
+  ```
+- **Output Model:** `MemoryEntry` — richer dataclass capturing:
+  - `operation, operand_a, operand_b` — what was tried
+  - `result, success, error_message` — outcome and error details
+  - `execution_timestamp, execution_time_ms` — timing
+  - `memory_entry_id` — unique identifier (UUID auto-generated)
+- **Storage:** `MemoryJsonStorage` persists to `artifacts/memory_entries.json` (append-only JSON array)
+- **Methods:**
+  - `store(entry: MemoryEntry) → None`
+  - `retrieve_all() → List[MemoryEntry]`
+  - `filter_by_operation(name) → List[MemoryEntry]` — case-insensitive
+  - `filter_by_success(bool) → List[MemoryEntry]`
+  - `filter_by_execution_time(min_ms, max_ms) → List[MemoryEntry]`
+  - `compute_statistics() → CalculationStatistics` — aggregates metrics over all entries
+  - `export_to_file(path) → int` — serializes all entries to JSON
+  - `import_from_file(path, skip_invalid) → tuple[int, list]` — deserializes and imports with validation
+
+**Key Coupling Issue:**
+- `CalculatorService` and `MemoryService` are **separate** but **not coordinated**.
+- The CLI must manually decide to store results in both systems (not shown in `CalculatorService`, happens elsewhere).
+- There is **no abstract protocol** defining what a "memory" or "storage" component should do.
+- Two different storage classes (`JsonStorage`, `MemoryJsonStorage`) with **no common interface** — similar responsibilities but no base class.
+
+---
+
+#### 3. Interface/CLI: `CalculatorCLI`
+- **File:** `src/cli/calculator_cli.py`
+- **Responsibility:** User interaction and presentation
+- **Dependency Chain:**
+  ```
+  CalculatorCLI
+    ├── Owns: CalculatorService (injection)
+    ├── Owns: MemoryService | None (optional injection)
+    ├── Imports: Operation enum
+    └── No direct dependency on storage classes
+  ```
+- **Public Methods (entry points):**
+  - `run_interactive() → None` — main menu loop
+  - `run_command(operation_str, a, b) → None` — one-shot execution
+  - `show_memory() → None` — display all memory entries
+  - `show_statistics() → None` — display aggregated stats
+  - `export_memory(filepath=None) → None` — export to file (prompts if path missing)
+  - `import_memory(filepath=None, skip_invalid=False) → None` — import from file
+- **Private Helpers (pure UI):**
+  - `_print_menu()` — render menu
+  - `_resolve_menu_choice(choice)` → Operation | None
+  - `_prompt_number(prompt)` → float | None
+  - `_show_history()` — display calculation history (from `CalculatorService`)
+  - `_show_memory()` — display memory entries (from `MemoryService`)
+  - `_filter_memory_by_operation()` — interactive filter UI
+  - `_filter_memory_by_status()` — interactive filter UI
+  - `_show_statistics()` — display stats (computed by `MemoryService`)
+
+**Key Coupling Issues:**
+- CLI directly calls `service.perform()` and `memory_service.*()`, mixing **computation orchestration** with **presentation logic**.
+- The CLI knows too much about both `CalculatorService` and `MemoryService` internals (methods, parameters).
+- No abstraction layer; replacing or extending either service requires CLI changes.
+- `MemoryService` is **optional** (can be None), forcing defensive null-checks throughout CLI.
+
+---
+
+## Data Flow
+
+### Success Path: Add 3 + 5 (Interactive)
+
+```
+1. CLI: show menu
+2. User: enter choice "1" (add)
+3. CLI: prompt operands → 3, 5
+4. CLI: run_interactive() → cli.service.perform(Operation.ADD, 3.0, 5.0)
+5. CalculatorService.perform():
+   - time measurement starts
+   - Calculator.calculate(Operation.ADD, 3, 5) → 8.0
+   - CalculationResult created with result=8.0, timestamp, execution_time
+   - JsonStorage.save(result) → appends to calculations.json
+   - returns CalculationResult
+6. CLI: display result "3 + 5 = 8"
+7. (MemoryService NOT called in current path — memory entry is NOT stored)
+```
+
+### Failure Path: Divide by 0
+
+```
+1. CLI: prompt operation (divide), operands (10, 0)
+2. CLI: cli.service.perform(Operation.DIVIDE, 10, 0)
+3. CalculatorService.perform():
+   - Calculator.calculate(Operation.DIVIDE, 10, 0)
+   - Calculator.divide() checks: if b == 0 → raise ValueError("Division by zero...")
+   - Exception propagates up; JsonStorage.save() NEVER CALLED
+4. CLI: catches ValueError, prints "Error: Division by zero..."
+5. (MemoryService NOT called — no audit trail of the failed attempt)
+```
+
+**Critical Gap:** Failed calculations are **not** recorded. Only `MemoryService` can capture failures, but the CLI doesn't automatically wire them together.
+
+---
+
+## Couplings and Dependencies
+
+### Tight Couplings
+
+1. **CLI → CalculatorService**
+   - Direct method calls: `service.perform()`, `service.get_history()`
+   - Knows about return type: `CalculationResult`
+   - No abstraction layer
+
+2. **CLI → MemoryService**
+   - Direct method calls: `memory_service.store()`, `memory_service.retrieve_all()`, `memory_service.filter_*()`, `memory_service.compute_statistics()`, `memory_service.export_to_file()`, `memory_service.import_from_file()`
+   - Knows about return types: `List[MemoryEntry]`, `CalculationStatistics`, tuple
+   - Optional dependency with repeated null-checks
+
+3. **CalculatorService → JsonStorage**
+   - Direct injection dependency
+   - Knows about storage interface: `save(result)`, `load_all()`
+   - No abstraction; storage implementation detail exposed
+
+4. **MemoryService → MemoryJsonStorage**
+   - Direct injection dependency
+   - Knows about storage interface: `save(entry)`, `load_all()`, `_read_raw()`, `_write_raw()`
+   - No abstraction
+
+5. **Two Storage Implementations with No Common Interface**
+   - `JsonStorage` and `MemoryJsonStorage` are both persistence layers
+   - **No shared base class or protocol**
+   - Similar method signatures (`save()`, `load_all()`) but unrelated
+   - Different model types (`CalculationResult` vs `MemoryEntry`)
+
+### Loose Couplings
+
+- **CLI → Operation enum:** Uses `Operation.from_string()` and display names. Acceptable; enum is a stable model.
+- **CLI → Models (CalculationResult, MemoryEntry, CalculationStatistics):** Uses for display/inspection. Acceptable; models are stable data containers.
+
+---
+
+## What Exists Now
+
+| Component | Type | Purpose | Hidden Behavior |
+|-----------|------|---------|-----------------|
+| `Calculator` | Pure logic | Arithmetic operations | None; deterministic and stateless |
+| `CalculatorService` | Orchestrator | Calc + persist to history | Timing measurement; exception stops save |
+| `MemoryService` | Orchestrator + Query | Manage audit trail | Filtering logic; statistics computation |
+| `JsonStorage` | Persistence | Store CalculationResult | File I/O, error recovery (silently ignores corruption) |
+| `MemoryJsonStorage` | Persistence | Store MemoryEntry | File I/O, error recovery (silently ignores corruption) |
+| `CalculatorCLI` | Interface | Menu + one-shot mode | Menu numbering depends on `_MENU` length; complex state machine |
+
+---
+
+## What Needs Separation
+
+### 1. **Abstract Storage Interface(s)**
+   
+**Problem:** Two storage classes do the same thing but with different models. No interface to swap implementations.
+
+**Solution:** Create an abstract base class or protocol.
+
 ```python
-class Operation(Enum):
-    ADD = "add"
-    SUBTRACT = "subtract"
-    # ... (8 members)
+# Option A: ABC (Abstract Base Class)
+from abc import ABC, abstractmethod
+
+class Storage(ABC):
+    @abstractmethod
+    def save(self, entry) -> None: ...
+    
+    @abstractmethod
+    def load_all(self) -> List: ...
+
+# Option B: Protocol (duck typing + type hints)
+from typing import Protocol
+
+class Storage(Protocol):
+    def save(self, entry) -> None: ...
+    def load_all(self) -> List: ...
 ```
-- Each operation maps string name to enum member
-- `from_string()` factory resolves CLI args to enum
-- `display_name()` returns capitalized label for menu
 
-### Calculator Class (`src/services/calculator.py`)
-- 8 methods: `add()`, `subtract()`, `multiply()`, `divide()`, `square()`, `sqrt()`, `power()`, `modulo()`
-- All have signature `func(a: float, b: float) -> float`
-- Some methods ignore `b` (unary ops like square, sqrt)
-- Validation: division by zero, sqrt of negative → ValueError
-- Dispatch via `calculate(operation: Operation, a: float, b: float)` method
-
-### CalculationResult (`src/models/calculation_result.py`)
-- Stores operation as string: `"add"`, `"sqrt"`, etc.
-- Renders via `_SYMBOLS` dict: maps operation string to Unicode symbol
-- For unary ops (square, sqrt), both operands stored even though b ignored
-
-### CalculatorCLI (`src/cli/calculator_cli.py`)
-- `_MENU` tuple list: `[(Operation.ADD, "Add"), ...]` — order matters for menu indexing
-- Interactive: loops until exit, resolves menu choice → Operation enum → prompts numbers → calls `service.perform()`
-- One-shot: `run_command(op_string, a, b)` converts op_string → Operation enum → same path
-- Memory filtering by operation name uses string comparison: `filter_by_operation("add")`
-
-### MemoryEntry (`src/models/memory_entry.py`)
-- Stores `operation: str` — operation name as string, not enum
-- Backward compatible: handles old `timestamp` field
-- Filter queries match on `operation` field string directly
+**Scope:**
+- `JsonStorage` → implements `Storage[CalculationResult]`
+- `MemoryJsonStorage` → implements `Storage[MemoryEntry]`
+- Both follow same contract: append-only JSON persistence
 
 ---
 
-## Which Classes/Modules Need Modification
+### 2. **Abstract Service Interfaces**
 
-### 1. `src/models/operation.py` — MUST MODIFY
-- Add 6 new enum members: SIN, COS, TAN, LOG, LN, EXP
-- All new operations need `from_string()` to recognize them
-- `display_name()` already handles all enums generically via `.value.capitalize()`
+**Problem:** `CalculatorService` and `MemoryService` have different contracts. CLI must know about both.
 
-### 2. `src/services/calculator.py` — MUST MODIFY
-- Add 6 new methods: `sin()`, `cos()`, `tan()`, `log()`, `ln()`, `exp()`
-- Decide operand signature:
-  - **Unary scientific ops** (sin, cos, tan, log, ln, exp) ignore `b` parameter, only use `a`
-  - Match existing unary pattern (square, sqrt) for consistency
-- Add imports: `import math` (already imported)
-- Update `calculate()` dispatch dict with new operations
-- Error handling: domain validation (e.g., log/ln of non-positive)
+**Solution:** Formalize service contracts with protocols or ABCs.
 
-### 3. `src/cli/calculator_cli.py` — MUST MODIFY
-- Extend `_MENU` tuple list with 6 new operations: `(Operation.SIN, "Sin"), ...`
-- Menu numbering auto-adjusts via `len(_MENU)`, so option numbers shift
-- Update hardcoded prompts if any mention operation list (e.g., in filter prompt at line 241)
-- New menu will have 14 operations + 8 admin = 22 total options
+**Calculation Service Protocol:**
+```python
+class CalculationService(Protocol):
+    """Execute a single calculation and return result."""
+    def perform(self, operation: Operation, a: float, b: float) -> CalculationResult: ...
+    def get_history(self) -> List[CalculationResult]: ...
+```
 
-### 4. `src/__main__.py` — MUST MODIFY
-- Extend `--operation` argument choices to include: `["add", ..., "sin", "cos", "tan", "log", "ln", "exp"]`
-- Update help text / usage string to reflect new operations
-- Update argparse `--filter-operation` help text to list all operations
-- No logic change: `Operation.from_string()` already handles new members
-
-### 5. `src/models/calculation_result.py` — CONDITIONAL MODIFY
-- Add symbol mappings for new operations to `_SYMBOLS` dict:
-  - `"sin": "sin"`, `"cos": "cos"`, etc. (or use Unicode if preferred)
-  - Unary ops (square: `²`, sqrt: `√`, power: `^`) have special symbols
-  - Scientific ops commonly use their function names
-- If new operations are truly unary (ignore b), check if `__str__()` needs adjustment
-  - Current code: `f"{a} {symbol} {b} = {r}"` works for binary
-  - For unary: renders as "5 sin 0 = 0.959..." (confusing because b is shown)
-  - Consider: format unary ops differently, e.g., `"sin(5) = 0.959..."`
-
-### 6. Tests — MUST ADD
-- `test_calculator.py`: Add test methods for each new operation (sin, cos, tan, log, ln, exp)
-  - Test valid domains, boundary cases, error cases
-  - Test dispatch via `calculate()` method
-- `test_cli.py`: Add interactive menu tests for new operations (test indices 9-14)
-  - Update exit test index (currently 16, will be 22)
-  - Test new menu items trigger correct operations
-- `test_cli_flags.py`: Add one-shot CLI tests for each new operation
-  - Test `python -m src --operation sin 1` etc.
-  - Test invalid inputs (negative log, etc.)
-- No changes needed to storage, service integration tests — operations are transparent to them
+**Memory Service Protocol:**
+```python
+class MemoryManagement(Protocol):
+    """Store, retrieve, and query calculation attempts."""
+    def store(self, entry: MemoryEntry) -> None: ...
+    def retrieve_all(self) -> List[MemoryEntry]: ...
+    def filter_by_operation(self, name: str) -> List[MemoryEntry]: ...
+    def filter_by_success(self, success: bool) -> List[MemoryEntry]: ...
+    def filter_by_execution_time(self, min_ms: float, max_ms: float) -> List[MemoryEntry]: ...
+    def compute_statistics(self) -> CalculationStatistics: ...
+    def export_to_file(self, filepath) -> int: ...
+    def import_from_file(self, filepath, skip_invalid) -> tuple[int, list]: ...
+```
 
 ---
 
-## How Mode Switching Should Be Implemented
+### 3. **Decouple CLI from Service Details**
 
-### Option 1: Implicit Mode Switching (Recommended for simplicity)
-- **No explicit mode toggle** — the menu naturally shows all 14 operations
-- User sees operations 1-8 (standard) and 9-14 (scientific) in same menu
-- Selecting operation 1-8 uses standard mode; selecting 9-14 uses scientific mode
-- **Advantage:** Minimal code change, matches existing architecture, no state to manage
-- **Implementation:** Just add operations to enum and menu
+**Problem:** CLI directly calls service methods and knows their signatures. Hard to test; hard to extend.
 
-### Option 2: Explicit Mode Switching (If mode separation required)
-- Add a "mode" field to Calculator or CalculatorService to track state
-- New menu option: "Switch to Scientific Mode" (or vice versa)
-- Show different operation subsets based on mode
-- Requires maintaining mode state across interactive loop
-- **Disadvantage:** More complex, breaks symmetry of current design, adds state management
+**Solution:** Introduce a facade or coordinator that sits between CLI and services.
 
-### Recommended Approach: Implicit + Optional Menu Split
-- **Primary (Implicit):** Single menu with all 14 operations
-- **Optional Enhancement:** Add visual grouping in menu output:
-  ```
-  === Standard Operations ===
-  1. Add
-  ...
-  8. Modulo
-  
-  === Scientific Operations ===
-  9. Sin
-  ...
-  14. Exp
-  
-  === Other ===
-  15. View history
-  ...
-  22. Exit
-  ```
-- No functional mode switching, just organizational UX
+**Current:** CLI → CalculatorService/MemoryService
+**Proposed:** CLI → CalculatorFacade → (CalculatorService + MemoryService)
+
+The facade would:
+- Coordinate between calculation and memory services
+- Present a unified interface to CLI
+- Handle error cases (e.g., capture failures in both systems)
+- Manage orchestration logic (e.g., "when a calc fails, create a MemoryEntry")
 
 ---
 
-## Summary of All Required Changes
+## Tests Verify Current Behavior
 
-### Files to Modify
+- **433 tests, all passing** ✓
+- Coverage includes:
+  - Calculator pure logic (30+ tests)
+  - CalculatorService orchestration (15+ tests)
+  - MemoryService store/retrieve (50+ tests)
+  - MemoryService filtering & statistics (50+ tests)
+  - Storage persistence (20+ tests)
+  - CLI interactive mode (20+ tests)
+  - CLI one-shot flags (50+ tests)
+  - Import/export (30+ tests)
+  - Data models serialization (50+ tests)
 
-#### 1. `/src/models/operation.py`
-- Add 6 enum members: SIN, COS, TAN, LOG, LN, EXP
-- No other changes needed (from_string and display_name already generic)
-
-#### 2. `/src/services/calculator.py`
-- Add 6 methods: sin(a, b), cos(a, b), tan(a, b), log(a, b), ln(a, b), exp(a, b)
-- Update `calculate()` dispatch dict: add 6 new mappings
-- Error handling: check domain validity (e.g., log(a) requires a > 0)
-- All use `import math` (already present)
-
-#### 3. `/src/models/calculation_result.py`
-- Extend `_SYMBOLS` dict with 6 new entries (e.g., `"sin": "sin"`)
-- Optionally refactor `__str__()` for better unary operation formatting
-
-#### 4. `/src/cli/calculator_cli.py`
-- Extend `_MENU` tuple list with 6 new (Operation, label) pairs
-- Update hardcoded operation list in filter prompt (line 241) if needed
-- Consider adding section header comments to clarify standard vs. scientific
-
-#### 5. `/src/__main__.py`
-- Extend `--operation` choices: add `"sin", "cos", "tan", "log", "ln", "exp"`
-- Update argparse usage/help strings
-- Update --filter-operation help to list all operations
-- No logic changes required
-
-#### 6. `/tests/` — New Test Coverage
-- Extend `test_calculator.py`: Add ~30-40 tests for new operations
-- Extend `test_cli.py`: Add ~10 tests for new menu items
-- Extend `test_cli_flags.py`: Add ~10 tests for new CLI flags
-- Update exit option index tests (16 → 22)
-
-### No Changes Required
-- Storage layer: transparent to operation names
-- MemoryService: works with string operation names, no enum changes
-- JsonStorage: same persistence mechanism
-- MemoryEntry: already stores operations as strings
-- ServiceIntegration: CalculatorService.perform() handles any Operation enum member
-
-### Files That Benefit From Optional Refactoring
-- `/src/models/calculation_result.py`: `__str__()` could format unary operations better
-- `/src/cli/calculator_cli.py`: Could add visual section headers to menu
+**Requirement:** All 433 tests must pass after refactoring.
 
 ---
 
-## Implementation Constraints & Considerations
+## External Behavior (Must Not Change)
 
-### Operand Handling for Scientific Functions
-- **Current:** All Calculator methods have signature `(a: float, b: float) -> float`
-- **Scientific ops are unary:** sin(x), cos(x), tan(x), log(x), ln(x), exp(x)
-- **Solutions:**
-  1. **Keep `(a, b)` signature, ignore b:** Matches square(), sqrt() pattern. User prompted for both numbers in interactive mode (second ignored).
-  2. **Change signature:** Would require refactoring Calculator dispatch logic.
-- **Recommendation:** Option 1 — maintain signature consistency, ignore b for unary.
+### CLI Entry Point: `python -m src`
+- **Interactive:** No args → show menu, accept user input
+- **One-shot:** `--operation add 3 5` → execute and print result
+- **Flags:** `--memory`, `--statistics`, `--export`, `--import`, etc.
+- **Output:** Same format and messages as before
+- **Side Effects:** Same JSON files created/updated
 
-### Interactive Mode Prompts
-- Current: `"Enter first number: "` and `"Enter second number: "`
-- For scientific ops (e.g., sin), users enter two numbers but second is ignored
-- **Options:**
-  1. Keep generic prompts (minimal change, slight UX awkwardness)
-  2. Detect operation type and show context-aware prompts
-  3. For scientific ops, show only one prompt
-- **Recommendation:** Option 1 for simplicity; Option 2 is future enhancement.
-
-### Validation & Error Handling
-- **log(x) requires x > 0** — log(0) and log(negative) are undefined
-- **ln(x) requires x > 0** — same as log
-- **tan(x) undefined at x = π/2 + nπ** — edge case, likely acceptable to let math.tan() return near-infinite values
-- **Negative square roots already handled** — pattern is in place
-- Strategy: Add domain checks in method, raise ValueError with clear message
-- All errors propagate to MemoryEntry as failure records
-
-### Operation Names in Memory
-- All stored as strings (e.g., "sin", "cos")
-- Backward compatible: MemoryEntry.from_dict() handles string → filter
-- Filter queries already work: `filter_by_operation("sin")` ✓
+### Return Types
+- `CalculatorService.perform()` → `CalculationResult` (same fields, same serialization)
+- `MemoryService.retrieve_all()` → `List[MemoryEntry]` (same fields, same serialization)
+- Storage JSON format must remain compatible (backward compat required)
 
 ---
 
-## Estimated Scope & Complexity
+## Ambiguities and Working Assumptions
 
-| Category | Count | Complexity |
-|----------|-------|------------|
-| Enum members to add | 6 | Trivial |
-| Calculator methods to add | 6 | Low (each 2-4 lines) |
-| Menu entries to add | 6 | Trivial |
-| CLI choices to add | 6 | Trivial |
-| Test methods to add | ~50 | Medium (domain coverage) |
-| **Total new lines** | ~150-200 | Medium (mostly tests) |
-| **Files to modify** | 6 | Low (focused changes) |
-| **Risk level** | Low | No refactoring; additive only |
+### 1. **Are we creating a "memory" abstraction separate from "storage"?**
+   - **Current state:** Memory (audit trail) and History (short-term calc log) are logically separate.
+   - **Assumption:** Keep them separate. A "memory service" is not just persistence; it's a query/analytics layer on top of storage.
+   - **Implication:** Abstract storage, but memory service remains domain-specific.
+
+### 2. **Should the CLI talk to a facade, or directly to services with abstract interfaces?**
+   - **Option A (Facade):** CLI → Facade → Services. Cleaner separation, easier testing.
+   - **Option B (Direct + Protocols):** CLI → CalculationService (protocol) + MemoryService (protocol). Simpler, less indirection.
+   - **Assumption:** Use **Option B** (protocols). Aligns with Python idiom; simpler to implement; tests can mock protocols directly.
+
+### 3. **Who is responsible for linking Calculator → MemoryService (when failures occur)?**
+   - **Current:** Never. Failures are not recorded.
+   - **Assumption:** This is a **missing feature**, not part of separation. Don't add it during refactoring; preserve current behavior.
+   - **Implication:** After refactoring, failures still won't be recorded automatically. That's fine; it's out of scope.
+
+### 4. **Should abstract types be in a new module?**
+   - **Option A:** Create `src/protocols/` directory with `calculation_service.py`, `memory_service.py`, `storage.py`
+   - **Option B:** Add protocols to existing modules (e.g., `calculation_protocol.py` in services)
+   - **Option C:** Use inline Protocol definitions (no new files)
+   - **Assumption:** Use **Option A** for clarity. New `src/protocols/` module with 2-3 protocol files.
+
+### 5. **Rename "CalculatorService" to avoid confusion with protocol?**
+   - **Current:** `CalculatorService` implements the service, no separate name for the interface.
+   - **Assumption:** Keep the name. Use `from src.protocols import CalculationService` (interface); concrete class remains `CalculatorService`.
+   - **Implication:** No breaking API changes; type hints can reference protocol.
 
 ---
 
-## Verification Checklist (for implementer)
+## Scope Boundaries
 
-- [ ] All 6 scientific operations appear in Operation enum
-- [ ] All 6 operations accessible via `Operation.from_string()`
-- [ ] All 6 have methods in Calculator class
-- [ ] All 6 in Calculator.calculate() dispatch dict
-- [ ] All 6 have menu entries in CLI._MENU
-- [ ] All 6 added to --operation choices in argparse
-- [ ] All 6 have symbol mappings in CalculationResult._SYMBOLS
-- [ ] Domain validation in place (log, ln require positive x)
-- [ ] Interactive menu works: options 1-14 functional
-- [ ] CLI one-shot works: `python -m src --operation sin 0.5` outputs result
-- [ ] Tests pass: pytest tests/ -q returns no failures
-- [ ] Memory storage works: new operations recorded in memory_entries.json
-- [ ] Help text accurate: `python -m src --help` lists all operations
+### IN SCOPE (must be addressed)
+- Introduce abstract storage interface (base class or protocol)
+- Introduce abstract service interfaces (protocols for calculation and memory)
+- Make concrete services implement these interfaces
+- Ensure CLI uses interfaces, not concrete types
+- Preserve all external behavior and tests
+
+### OUT OF SCOPE
+- Rewrite calculation algorithms
+- Add new features (e.g., auto-store failures in memory)
+- Change CLI commands or flags
+- Refactor the data models (`CalculationResult`, `MemoryEntry`, `CalculationStatistics`)
+- Optimize performance
+- Change JSON storage format (must maintain backward compatibility)
+
+### BORDERLINE (clarify with stakeholder)
+- Should `CalculatorService` automatically create `MemoryEntry` for all attempts? → NO, preserve current behavior
+- Should storage classes share code? → No explicit code sharing required; just unified interface
+- Should filters/statistics move to separate class? → No; keep as part of `MemoryService`
+
+---
+
+## Suggested Implementation Order
+
+1. **Create protocols module** (`src/protocols/__init__.py`)
+   - Define `Storage[T]` protocol (generic)
+   - Define `CalculationService` protocol
+   - Define `MemoryService` protocol
+
+2. **Make storage classes implement protocol**
+   - Update `JsonStorage` type hints
+   - Update `MemoryJsonStorage` type hints
+   - No code changes; just confirm they match protocol
+
+3. **Update service constructors**
+   - Change `CalculatorService.__init__(calculator: Calculator, storage: Storage)` (instead of `JsonStorage`)
+   - Change `MemoryService.__init__(storage: Storage)` (instead of `MemoryJsonStorage`)
+   - Allow dependency injection of protocol implementations
+
+4. **Update CLI type hints**
+   - Change `__init__(self, service: CalculationService, memory_service: MemoryService | None)`
+   - Import protocols; use in type hints
+   - No behavioral changes
+
+5. **Test and verify**
+   - Run all 433 tests → must all pass
+   - Test `python -m src --operation add 3 5` → output unchanged
+   - Test CLI interactive mode → behavior unchanged
+
+---
+
+## Key Metrics
+
+| Metric | Current | Target |
+|--------|---------|--------|
+| Storage implementations | 2 classes, no interface | 2 classes + 1 protocol |
+| Service implementations | 2 classes, no interface | 2 classes + 2 protocols |
+| Tests | 433 passing | 433 passing |
+| CLI entry points | All working | All unchanged |
+| Public method signatures | As-is | No breaking changes |
+| Dependencies | Circular potential | Clearly acyclic |
+
+---
+
+## Risk Assessment
+
+**Low Risk:**
+- Adding protocols/abstract classes doesn't break concrete implementations
+- Type hints are not enforced at runtime; old code still works
+- Tests use mocks, so they're compatible with protocols
+
+**Medium Risk:**
+- Import paths change if protocols added to new module (need to update imports in services + CLI)
+- Type checkers (mypy) will flag protocol mismatches if not careful
+
+**High Risk:**
+- None identified; this is a low-impact refactoring
+
+---
+
+## Files to Modify
+
+| File | Change | Reason |
+|------|--------|--------|
+| `src/protocols/__init__.py` | **Create** | Define Storage, CalculationService, MemoryService protocols |
+| `src/services/calculator_service.py` | **Minor** | Update type hints; no logic changes |
+| `src/services/memory_service.py` | **Minor** | Update type hints; no logic changes |
+| `src/storage/json_storage.py` | **Minor** | Add `# implements Storage` comment; verify signature match |
+| `src/storage/memory_json_storage.py` | **Minor** | Add `# implements Storage` comment; verify signature match |
+| `src/cli/calculator_cli.py` | **Minor** | Update type hints in `__init__` |
+| `src/__main__.py` | **Minimal** | Update imports if protocols moved to new module |
+| `tests/` | **No changes** | Tests should pass without modification |
+
+---
+
+## Success Criteria
+
+1. All 433 tests pass without modification
+2. `python -m src` runs identically before and after
+3. All public interfaces (methods, return types, side effects) are unchanged
+4. Type hints now reference protocols where appropriate
+5. Coupling metrics improve (fewer direct dependencies on concrete classes)
+6. Code review confirms component boundaries are now clear and formalized
 
