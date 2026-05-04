@@ -605,4 +605,4 @@ python -m src
 - **component_diagram.puml**: Added GUI layer component depending on Services and Models layers
 - **activity_diagram_interactive.puml**: Added GUI mode workflow showing filter → select → view/edit flow
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 475.1s | Cost: $0.867982 USD | Turns: 16
