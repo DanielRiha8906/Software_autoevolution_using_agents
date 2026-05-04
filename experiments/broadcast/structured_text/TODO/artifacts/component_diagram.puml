@@ -10,7 +10,12 @@ package "TODO Application - 5-Layer Architecture" {
 
     component "Entry Point\n(__main__)" as Main
 
-    package "5. CLI Layer" {
+    package "5. GUI Layer" {
+        component "TodoGUI\n(tkinter interface)" as GUI
+        component "Dialogs\n(Add, View, Edit, Status)" as Dialogs
+    }
+
+    package "6. CLI Layer" {
         component "TodoCLI\n(commands)" as CLI
         component "InteractiveMenu\n(user interface)" as IM
     }
@@ -46,9 +51,12 @@ package "TODO Application - 5-Layer Architecture" {
 
 database "~/.todo_data.json" as DB
 
+Main --> GUI : gui mode
 Main --> CLI : command mode
 Main --> IM : interactive mode
 
+GUI --> SVC : uses
+Dialogs --> SVC : uses
 CLI --> SVC : uses
 IM --> SVC : uses
 CLI --> ImpExpSvc : uses
