@@ -500,3 +500,108 @@ All functionality is accessible via `python -m src`:
 - `artifacts/activity_diagram_main.puml`: Added github-fetch CLI subcommand flow
 
 Duration: 508.1s | Cost: $3.770724 USD | Turns: 57
+
+## Task 09: Refactor to Separate Concerns into Service, Storage, and GitHub Adapter Layers
+
+### Approach
+Broadcast architecture with 3 independent implementers (candidate-a, candidate-b, candidate-c).
+
+### Results
+- **Candidate-A**: 138/138 tests passing. Complete layer separation with repository abstractions and adapter layer.
+- **Candidate-B**: 138/138 tests passing. Identical implementation to Candidate-A.
+- **Candidate-C**: 138/138 tests passing. Identical implementation to Candidate-A and B.
+
+### Winner: Candidate-A
+**Reason**: All three candidates converged on identical, fully functional implementations with 138/138 tests passing. All implementations successfully separated concerns into three distinct layers with proper abstractions and no circular dependencies. Selected Candidate-A arbitrarily as first successful implementation.
+
+### Architecture Achieved
+
+**Three-Layer Separation with Abstractions:**
+
+1. **Storage Layer** (Abstraction + Implementation)
+   - Abstract repositories: `WorkflowRunRepository`, `AttemptRepository` (ABC pattern)
+   - Concrete implementations: `WorkflowJsonStorage`, `AttemptJsonStorage`
+   - Services depend on abstractions, enabling swappable storage backends
+
+2. **Service Layer** (Business Logic)
+   - `WorkflowRunService` depends on `WorkflowRunRepository` abstraction
+   - `AttemptService` depends on `AttemptRepository` abstraction
+   - `StatisticsService`, `GitHubFetchService` independent services
+   - Services decouple from storage implementation details
+
+3. **Adapter Layer** (External System Integration)
+   - `GitHubAdapter` handles all GitHub API communication
+   - Isolated from business logic and storage concerns
+   - Converts external data to domain models
+
+4. **Supporting Layers** (unchanged)
+   - Models: Domain objects with no external dependencies
+   - CLI: User interface layer depends on services
+
+### Files Changed
+
+**New Files Created:**
+- `src/storage/repository.py` (NEW): Abstract repository interfaces
+  - `WorkflowRunRepository` ABC
+  - `AttemptRepository` ABC
+- `src/adapters/__init__.py` (NEW): Adapter layer module
+- `src/adapters/github_adapter.py` (NEW): GitHub API adapter
+
+**Modified Files:**
+- `src/storage/workflow_json_storage.py`: Now inherits from `WorkflowRunRepository`
+- `src/storage/attempt_json_storage.py`: Now inherits from `AttemptRepository`
+- `src/storage/__init__.py`: Added abstract repositories to exports, module docstring
+- `src/services/workflow_run_service.py`: Depends on `WorkflowRunRepository` abstraction, backward compatibility via `_storage` property alias
+- `src/services/attempt_service.py`: Depends on `AttemptRepository` abstraction, backward compatibility via `_storage` property alias
+- `src/services/github_fetch_service.py`: Delegates to `GitHubAdapter` internally
+- `src/services/__init__.py`: Enhanced with module documentation
+
+### Requirements Met
+
+**MUST HAVE:** ✓
+- Separated service layer, storage layer, GitHub adapter layer
+- No circular dependencies (Models → Storage → Services → Adapters/CLI, all unidirectional)
+- Preserved all existing public interfaces (function signatures, class names, return types)
+
+**SHOULD HAVE:** ✓
+- Introduced abstract base classes (WorkflowRunRepository, AttemptRepository)
+- Services depend on abstractions, not concrete implementations
+- `python -m src` behaves identically before and after refactor
+
+**COULD HAVE:** ✓
+- Module-level `__all__` declarations in storage and services modules
+
+**WON'T HAVE:** ✓
+- Domain logic not rewritten, all existing functionality preserved
+
+### Test Results
+- pytest: 138/138 tests passing ✓
+- All existing tests pass without modification
+- Full backward compatibility verified
+
+### Dependency Flow (No Circular Dependencies)
+```
+Models
+  ↓
+Storage Abstractions (Repositories)
+  ↓
+Storage Implementations
+  ↓
+Services (depend on Abstractions, not Implementations)
+  ↓
+Adapters (depend only on Models)
+  ↓
+CLI (depends on Services)
+```
+
+### Backward Compatibility
+- `WorkflowRunService` and `AttemptService` maintain `_storage` property as alias to `_repository`
+- Constructor signatures changed to accept abstract repositories but maintain compatibility
+- `GitHubFetchService` remains unchanged at public API level
+- All test suites pass without modification
+
+### Diagrams Updated
+- `artifacts/component_diagram.puml`: Added Adapter layer, Storage abstraction layer, showing dependency flow
+- `artifacts/class_diagram.puml`: Added repository abstractions, updated service dependencies, added GitHubAdapter class
+
+Duration: 383.6s | Cost: $2.033201 USD | Turns: 48

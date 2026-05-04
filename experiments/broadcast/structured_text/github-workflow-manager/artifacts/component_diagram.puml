@@ -10,7 +10,7 @@ package "GitHub Workflow Manager" {
     component "main" as MAIN
   }
 
-  package "Interface layer" {
+  package "Interface/CLI layer" {
     component "workflow_cli" as CLI
     component "interactive_menu" as IM
   }
@@ -19,9 +19,20 @@ package "GitHub Workflow Manager" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
     component "AttemptService" as ASVC
+    component "StatisticsService" as STATS
+    component "GitHubFetchService" as GHS
   }
 
-  package "Persistence layer" {
+  package "Adapter layer" {
+    component "GitHubAdapter" as ADAPTER
+  }
+
+  package "Storage layer (Abstraction)" {
+    component "WorkflowRunRepository" as WREPO
+    component "AttemptRepository" as AREPO
+  }
+
+  package "Storage layer (Implementation)" {
     component "WorkflowJsonStorage" as STOR
     component "AttemptJsonStorage" as ASTOR
     artifact "workflow_runs.json" as JSON_FILE
@@ -48,11 +59,26 @@ IM --> SVC
 CLI --> ASVC
 IM --> ASVC
 
-TRACKER --> SVC
-SVC --> STOR
-STOR --> JSON_FILE
+CLI --> STATS
+IM --> STATS
 
-ASVC --> ASTOR
+CLI --> GHS
+IM --> GHS
+
+TRACKER --> SVC
+SVC --> WREPO
+ASVC --> AREPO
+
+STATS --> SVC
+STATS --> ASVC
+
+GHS --> ADAPTER
+ADAPTER ..> RUN
+
+WREPO <|-- STOR
+AREPO <|-- ASTOR
+
+STOR --> JSON_FILE
 ASTOR --> AJSON_FILE
 
 SVC ..> RUN
