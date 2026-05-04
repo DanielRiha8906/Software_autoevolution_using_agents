@@ -1468,4 +1468,4 @@ All 205 existing tests pass without modification, confirming:
 
 ✅ **Launchable via python -m src --gui** - Entry point implemented with early --gui flag detection in __main__.py
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 61.5s | Cost: $1.573982 USD | Turns: 17
