@@ -455,4 +455,4 @@ All test suites pass completely:
 ✅ Models are framework-agnostic pure data
 ✅ Acyclic dependency graph
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 528.2s | Cost: $1.049736 USD | Turns: 19
