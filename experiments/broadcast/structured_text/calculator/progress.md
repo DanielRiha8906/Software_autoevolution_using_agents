@@ -853,4 +853,4 @@ All existing tests pass without modification. No regressions introduced.
 9. History listbox updated with new entry
 10. Repeat from step 3
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 679.4s | Cost: $1.493722 USD | Turns: 67
