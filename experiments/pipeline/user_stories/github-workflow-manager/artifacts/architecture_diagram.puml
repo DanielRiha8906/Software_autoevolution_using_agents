@@ -7,7 +7,7 @@ skinparam linetype ortho
 top to bottom direction
 
 ' ============================================================================
-' LAYER 1: PRESENTATION / CLI LAYER
+' LAYER 1: PRESENTATION / CLI & GUI LAYER
 ' ============================================================================
 package "Layer 1: Presentation" #FFE5E5 {
     component [workflow_cli] as CLI_CMDS
@@ -15,8 +15,15 @@ package "Layer 1: Presentation" #FFE5E5 {
     component [__main__] as ENTRY_POINT
 }
 
+package "Layer 1b: GUI (Tkinter)" #E5F3FF {
+    component [WorkflowRunMainWindow] as GUI_MAIN
+    component [WorkflowRunDetailsDialog] as GUI_DETAILS
+    component [WorkflowRunEditDialog] as GUI_EDIT
+}
+
 ENTRY_POINT --> CLI_CMDS
 ENTRY_POINT --> CLI_MENU
+ENTRY_POINT --> GUI_MAIN : launches with --gui flag
 
 ' ============================================================================
 ' LAYER 2: SERVICE LAYER (Business Logic)
@@ -40,6 +47,14 @@ CLI_MENU --> SVC_ATTEMPT
 CLI_MENU --> SVC_TRACKER
 CLI_MENU --> SVC_STATS
 CLI_MENU --> SVC_EXPORT
+
+GUI_MAIN --> SVC_RUN
+GUI_MAIN --> SVC_ATTEMPT
+GUI_MAIN ..> GUI_DETAILS : creates
+GUI_MAIN ..> GUI_EDIT : creates
+
+GUI_DETAILS --> SVC_ATTEMPT
+GUI_EDIT --> SVC_RUN
 
 SVC_TRACKER --> SVC_RUN
 

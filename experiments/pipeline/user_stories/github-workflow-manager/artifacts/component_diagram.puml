@@ -10,9 +10,15 @@ package "GitHub Workflow Manager" {
     component "main" as MAIN
   }
 
-  package "Interface layer" {
+  package "Interface layer (CLI)" {
     component "workflow_cli" as CLI
     component "interactive_menu" as IM
+  }
+
+  package "Interface layer (GUI)" {
+    component "WorkflowRunMainWindow" as GUI_MAIN
+    component "WorkflowRunDetailsDialog" as GUI_DETAILS
+    component "WorkflowRunEditDialog" as GUI_EDIT
   }
 
   package "Service layer" {
@@ -52,21 +58,29 @@ package "GitHub Workflow Manager" {
 
 MAIN --> CLI
 MAIN --> IM
+MAIN --> GUI_MAIN : with --gui flag
 
 CLI --> TRACKER
 IM --> TRACKER
 
 CLI --> SVC
 IM --> SVC
+GUI_MAIN --> SVC
 
 CLI --> ATTEMPT_SVC
 IM --> ATTEMPT_SVC
+GUI_MAIN --> ATTEMPT_SVC
 
 CLI --> STATS_SVC
 IM --> STATS_SVC
 
 CLI --> EXPORT_SVC
 IM --> EXPORT_SVC
+
+GUI_MAIN --> GUI_DETAILS : creates
+GUI_MAIN --> GUI_EDIT : creates
+GUI_DETAILS --> ATTEMPT_SVC
+GUI_EDIT --> SVC
 
 CLI --> API_FETCH
 IM --> API_FETCH
