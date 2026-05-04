@@ -508,3 +508,104 @@ Successfully implemented scientific mode by adding six advanced mathematical ope
 - Existing CLI tests adapted for new menu structure, no test logic changes
 
 Duration: 366.8s | Cost: $0.718551 USD | Turns: 22
+
+---
+
+## Task 09: Separate core components of the calculator
+
+**Status**: Completed
+
+### Summary
+Successfully refactored the calculator to separate core components with clear boundaries: calculation engine, memory/history system, and interface layer. Introduced Protocol-based abstractions for storage backends and repository operations, extracted EventRecorder service to decouple persistence logic from orchestration, and centralized service wiring through a factory pattern. All 169 existing tests pass without modification; external behavior is preserved perfectly.
+
+### Files Changed
+- `src/storage/storage_protocol.py` — NEW: Created StorageInterface and MemoryStorageInterface protocols for polymorphic storage backend abstraction
+- `src/services/memory_repository.py` — NEW: Created MemoryRepository protocol documenting all query/store operations that MemoryService provides
+- `src/services/event_recorder.py` — NEW: Created EventRecorder service that encapsulates persistence logic (record_success, record_failure) for both storage backends
+- `src/services/calculator_service.py` — Refactored: Changed storage type hint from JsonStorage to StorageInterface; updated memory_service type to MemoryRepository; delegated recording to EventRecorder; preserved all public APIs and behavior
+- `src/services/service_factory.py` — NEW: Created build_service() factory function to centralize dependency injection and service wiring
+- `src/__main__.py` — Refactored: Removed _build_service() function; imported build_service from service_factory; all CLI behavior unchanged
+- `artifacts/class_diagram.puml` — Updated: Added storage and services protocols; showed concrete implementations as protocol implementers; updated dependency arrows to abstract interfaces
+- `artifacts/component_diagram.puml` — Updated: Added abstraction layer components (StorageInterface, MemoryStorageInterface, MemoryRepository); clarified event recording component separation
+
+### Test Results
+- Total tests: 169 (all existing tests from prior tasks)
+- Passed: 169
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Implementation Details
+
+**Storage Abstraction Layer:**
+- `StorageInterface` (typing.Protocol) — Defines save() and load_all() contract for CalculationResult storage
+- `MemoryStorageInterface` (typing.Protocol) — Defines save(), load_all(), clear() contract for MemoryEntry storage
+- Both existing classes (JsonStorage, MemoryJsonStorage) satisfy their respective protocols without modification (duck typing)
+- Future storage implementations (database, cloud, etc.) can implement these protocols
+
+**Repository Pattern:**
+- `MemoryRepository` (typing.Protocol) — Formalizes the contract that MemoryService already implements (13 methods for query/storage)
+- Separates "store" operations from "retrieve and query" operations conceptually
+- Enables testing with mock repositories that conform to the protocol
+
+**Event Recording Service:**
+- `EventRecorder` class — Handles all persistence decisions and routing
+  - `record_success(result: CalculationResult, elapsed_ms: float)` — Saves to both calculation and memory storage
+  - `record_failure(operation, operand_a, operand_b, elapsed_ms, error_message)` — Records only to memory storage
+- Encapsulates the business logic of "when and where to record" in a single place
+- Removes this responsibility from CalculatorService, achieving single responsibility principle
+- Preserves exact behavior: same timing measurements, same error handling, same optional memory support
+
+**Service Factory Pattern:**
+- `build_service()` function — Centralizes all dependency wiring
+- Creates Calculator, JsonStorage, MemoryJsonStorage, MemoryService, and CalculatorService in correct dependency order
+- Uses correct artifact paths relative to src/ directory
+- Enables multiple entry points (CLI, API, tests) to use consistent service configuration
+- Testable: can inject dependencies if needed, but factory provides sensible defaults
+
+**Component Separation Achieved:**
+
+| Component | Responsibility | Key Classes |
+|-----------|---|---|
+| **Calculation Engine** | Pure arithmetic operations | Calculator (no dependencies on storage/CLI) |
+| **Memory/History** | Persistent storage and queries | MemoryService, MemoryJsonStorage, EventRecorder (query + persistence) |
+| **Storage Abstraction** | Polymorphic backends | StorageInterface, MemoryStorageInterface (protocols) |
+| **Orchestration** | Timing + error handling + delegation | CalculatorService, EventRecorder (service coordination) |
+| **Interface** | User interaction | CalculatorCLI (depends only on services, not storage) |
+| **Factory** | Service wiring | build_service() (dependency injection point) |
+
+**Type Safety Improvements:**
+- CalculatorService now depends on StorageInterface (abstract) not JsonStorage (concrete)
+- MemoryService dependency typed as MemoryRepository (abstract) not MemoryService (concrete)
+- Enables static type checking to verify dependency contracts
+- Protocol-based design allows for better IDE support and refactoring
+
+**Backward Compatibility:**
+- All public method signatures on all classes remain unchanged
+- All CLI commands work identically: `python -m src`, one-shot mode, interactive menu, memory operations all function exactly as before
+- JSON file formats unchanged (calculations.json, memory.json)
+- Test mocks continue to work (protocols are structural, not nominal)
+- Exception propagation behavior unchanged (failures still raise, memory still records failures)
+
+**Design Patterns Applied:**
+- **Protocol-Based Polymorphism** — Storage backends implement protocols without inheritance
+- **Repository Pattern** — MemoryService formalizes the repository contract
+- **Service Locator / Factory** — build_service() centralizes configuration
+- **Dependency Injection** — All services receive dependencies in constructor
+- **Single Responsibility** — EventRecorder focuses solely on recording; CalculatorService focuses on orchestration
+- **Separation of Concerns** — Clear boundaries: calculation, persistence, queries, CLI
+
+**Architecture Benefits:**
+1. **Testability** — Services can be tested with protocol-conforming mocks
+2. **Extensibility** — New storage backends just implement StorageInterface protocol
+3. **Clarity** — Component responsibilities are explicit and formalized
+4. **Maintainability** — Changes to one component don't leak into others
+5. **Type Safety** — Protocol-based dependencies enable better static analysis
+
+**Diagram Updates:**
+- Class diagram now shows protocols as <<interface>> elements
+- Storage implementations shown implementing their respective protocols
+- Service dependencies point to abstract protocols (StorageInterface) not concrete classes (JsonStorage)
+- Component diagram shows abstraction layer as separate components
+- Event recording flow visualized as separate component responsibility
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

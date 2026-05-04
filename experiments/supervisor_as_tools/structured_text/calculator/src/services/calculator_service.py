@@ -2,18 +2,18 @@ import time
 
 from ..models.operation import Operation
 from ..models.calculation_result import CalculationResult
-from ..models.memory_entry import MemoryEntry
-from ..storage.json_storage import JsonStorage
+from ..storage.storage_protocol import StorageInterface
 from .calculator import Calculator
-from .memory_service import MemoryService
+from .memory_repository import MemoryRepository
+from .event_recorder import EventRecorder
 
 
 class CalculatorService:
     def __init__(
         self,
         calculator: Calculator,
-        storage: JsonStorage,
-        memory_service: MemoryService | None = None,
+        storage: StorageInterface,
+        memory_service: MemoryRepository | None = None,
     ) -> None:
         self.calculator = calculator
         self.storage = storage
@@ -31,35 +31,14 @@ class CalculatorService:
                 result=result,
                 execution_time_ms=elapsed_ms,
             )
-            self.storage.save(calc_result)
-
-            # Record successful operation to memory
-            if self.memory_service:
-                memory_entry = MemoryEntry(
-                    operation=operation.value,
-                    operand_a=a,
-                    operand_b=b,
-                    success=True,
-                    execution_time_ms=elapsed_ms,
-                    result=result,
-                )
-                self.memory_service.store(memory_entry)
+            recorder = EventRecorder(self.storage, self.memory_service)
+            recorder.record_success(calc_result, elapsed_ms)
 
             return calc_result
         except Exception as exc:
             elapsed_ms = (time.perf_counter() - start) * 1000
-
-            # Record failed operation to memory
-            if self.memory_service:
-                memory_entry = MemoryEntry(
-                    operation=operation.value,
-                    operand_a=a,
-                    operand_b=b,
-                    success=False,
-                    execution_time_ms=elapsed_ms,
-                    error_message=str(exc),
-                )
-                self.memory_service.store(memory_entry)
+            recorder = EventRecorder(self.storage, self.memory_service)
+            recorder.record_failure(operation.value, a, b, elapsed_ms, str(exc))
 
             # Re-raise the exception so failure is still raised to caller
             raise

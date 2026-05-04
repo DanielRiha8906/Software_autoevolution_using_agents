@@ -90,5 +90,45 @@
     "result": 2.0,
     "timestamp": "2026-05-03T22:55:46.906024",
     "execution_time_ms": 0.009697999985291972
+  },
+  {
+    "operation": "add",
+    "operand_a": 5.0,
+    "operand_b": 3.0,
+    "result": 8.0,
+    "timestamp": "2026-05-04T13:36:58.548209",
+    "execution_time_ms": 0.009032999969349476
+  },
+  {
+    "operation": "divide",
+    "operand_a": 10.0,
+    "operand_b": 2.0,
+    "result": 5.0,
+    "timestamp": "2026-05-04T13:36:59.945695",
+    "execution_time_ms": 0.009063999982572568
+  },
+  {
+    "operation": "sqrt",
+    "operand_a": 16.0,
+    "operand_b": 0,
+    "result": 4.0,
+    "timestamp": "2026-05-04T13:37:01.313235",
+    "execution_time_ms": 0.010636000013164448
+  },
+  {
+    "operation": "add",
+    "operand_a": 5,
+    "operand_b": 3,
+    "result": 8,
+    "timestamp": "2026-05-04T13:37:16.779364",
+    "execution_time_ms": 0.01387000003205685
+  },
+  {
+    "operation": "add",
+    "operand_a": 3.0,
+    "operand_b": 5.0,
+    "result": 8.0,
+    "timestamp": "2026-05-04T13:37:42.021632",
+    "execution_time_ms": 0.009865000038189464
   }
 ]
