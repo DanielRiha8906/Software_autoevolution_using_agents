@@ -568,4 +568,4 @@ The refactoring analysis identified that the codebase is already well-structured
 - ✅ Codebase has clear separation of responsibilities
 - ✅ `python -m src` behaves identically before and after
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 408.7s | Cost: $0.826316 USD | Turns: 24
