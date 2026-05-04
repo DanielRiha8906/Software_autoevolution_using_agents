@@ -445,3 +445,115 @@ class TestIsOverdueAfterStatusChanges:
         task.mark_in_progress()
         task.mark_done()
         assert task.is_overdue() is False
+
+
+# ===== Project ID Feature Tests (Task 08) =====
+
+class TestProjectId:
+    """Tests for Task.project_id field (new in Task 08)."""
+
+    def test_project_id_defaults_to_none(self):
+        """Task.project_id defaults to None when not provided."""
+        task = Task(title="No project")
+        assert task.project_id is None
+
+    def test_project_id_can_be_set_explicitly(self):
+        """Task can be created with explicit project_id."""
+        task = Task(title="With project", project_id="proj-123")
+        assert task.project_id == "proj-123"
+
+    def test_project_id_to_dict_omits_none(self):
+        """to_dict() omits project_id key when None (backward compatible)."""
+        task = Task(title="No project")
+        task_dict = task.to_dict()
+        assert "project_id" not in task_dict
+
+    def test_project_id_to_dict_includes_when_set(self):
+        """to_dict() includes project_id key when project_id is set."""
+        task = Task(title="With project", project_id="proj-123")
+        task_dict = task.to_dict()
+        assert "project_id" in task_dict
+        assert task_dict["project_id"] == "proj-123"
+
+    def test_project_id_from_dict_handles_missing_key(self):
+        """from_dict() handles missing project_id key (backward compatibility)."""
+        old_data = {
+            "id": "task-123",
+            "title": "Old Task",
+            "description": None,
+            "status": "pending",
+            "created_at": "2025-01-01T00:00:00+00:00",
+            "updated_at": "2025-01-01T00:00:00+00:00"
+        }
+        task = Task.from_dict(old_data)
+        assert task.project_id is None
+
+    def test_project_id_from_dict_loads_when_present(self):
+        """from_dict() loads project_id when present in dict."""
+        data = {
+            "id": "task-123",
+            "title": "Task with project",
+            "description": None,
+            "status": "pending",
+            "project_id": "proj-456",
+            "created_at": "2025-01-01T00:00:00+00:00",
+            "updated_at": "2025-01-01T00:00:00+00:00"
+        }
+        task = Task.from_dict(data)
+        assert task.project_id == "proj-456"
+
+    def test_project_id_roundtrip_when_none(self):
+        """Round-trip preserves project_id=None (omitted from dict)."""
+        original = Task(title="Test", project_id=None)
+        restored = Task.from_dict(original.to_dict())
+        assert restored.project_id is None
+
+    def test_project_id_roundtrip_when_set(self):
+        """Round-trip preserves project_id value exactly."""
+        original = Task(title="Test", project_id="proj-789")
+        restored = Task.from_dict(original.to_dict())
+        assert restored.project_id == "proj-789"
+
+    def test_project_id_with_due_date_roundtrip(self):
+        """Round-trip preserves both project_id and due_date."""
+        due_date = datetime(2025, 12, 31, 10, 0, 0, tzinfo=timezone.utc)
+        original = Task(
+            title="Test",
+            due_date=due_date,
+            project_id="proj-xyz"
+        )
+        restored = Task.from_dict(original.to_dict())
+        assert restored.project_id == "proj-xyz"
+        assert restored.due_date == due_date
+
+    def test_project_id_independent_of_status(self):
+        """project_id is independent of task status."""
+        for status in TaskStatus:
+            task = Task(title="Test", status=status, project_id="proj-123")
+            assert task.project_id == "proj-123"
+
+    def test_project_id_can_change(self):
+        """project_id can be modified after creation."""
+        task = Task(title="Test", project_id="proj-1")
+        task.project_id = "proj-2"
+        assert task.project_id == "proj-2"
+
+    def test_project_id_can_be_cleared(self):
+        """project_id can be set to None after being set."""
+        task = Task(title="Test", project_id="proj-123")
+        task.project_id = None
+        assert task.project_id is None
+
+    def test_to_dict_after_project_id_change(self):
+        """to_dict() reflects project_id changes."""
+        task = Task(title="Test", project_id="proj-1")
+        dict1 = task.to_dict()
+        assert "project_id" in dict1
+
+        task.project_id = "proj-2"
+        dict2 = task.to_dict()
+        assert dict2["project_id"] == "proj-2"
+
+        task.project_id = None
+        dict3 = task.to_dict()
+        assert "project_id" not in dict3

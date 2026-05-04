@@ -7,6 +7,7 @@ from ..models.task_status import TaskStatus
 from ..services.comment_manager import CommentNotFoundError
 from ..services.import_export_service import ImportExportError
 from ..services.task_manager import TaskNotFoundError
+from ..services.project_manager import ProjectNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
 
@@ -30,7 +31,7 @@ class TodoCLI:
             return 0
         try:
             return args.func(args)
-        except (TaskNotFoundError, CommentNotFoundError, ImportExportError) as e:
+        except (TaskNotFoundError, CommentNotFoundError, ProjectNotFoundError, ImportExportError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
         except ValueError as e:
@@ -160,6 +161,42 @@ class TodoCLI:
             help="How to handle ID conflicts: fail (default), skip, or replace",
         )
         p_import.set_defaults(func=self._cmd_import)
+
+        # project create
+        p_project_create = sub.add_parser("project-create", help="Create a new project")
+        p_project_create.add_argument("name", help="Project name")
+        p_project_create.set_defaults(func=self._cmd_project_create)
+
+        # project list
+        p_project_list = sub.add_parser("project-list", help="List all projects")
+        p_project_list.set_defaults(func=self._cmd_project_list)
+
+        # project show
+        p_project_show = sub.add_parser("project-show", help="Show project details")
+        p_project_show.add_argument("id", help="Project ID")
+        p_project_show.set_defaults(func=self._cmd_project_show)
+
+        # project update
+        p_project_update = sub.add_parser("project-update", help="Update project name")
+        p_project_update.add_argument("id", help="Project ID")
+        p_project_update.add_argument("-n", "--name", required=True, help="New project name")
+        p_project_update.set_defaults(func=self._cmd_project_update)
+
+        # project delete
+        p_project_delete = sub.add_parser("project-delete", help="Delete a project")
+        p_project_delete.add_argument("id", help="Project ID")
+        p_project_delete.set_defaults(func=self._cmd_project_delete)
+
+        # assign
+        p_assign = sub.add_parser("assign", help="Assign a task to a project")
+        p_assign.add_argument("task_id", help="Task ID")
+        p_assign.add_argument("project_id", help="Project ID")
+        p_assign.set_defaults(func=self._cmd_assign)
+
+        # unassign
+        p_unassign = sub.add_parser("unassign", help="Unassign a task from its project")
+        p_unassign.add_argument("task_id", help="Task ID")
+        p_unassign.set_defaults(func=self._cmd_unassign)
 
         return parser
 
@@ -308,15 +345,15 @@ class TodoCLI:
         return 0
 
     def _cmd_export(self, args: argparse.Namespace) -> int:
-        tasks_exported, comments_exported = self._service.export_tasks_and_comments(args.filepath)
-        print(f"Exported {tasks_exported} task(s) and {comments_exported} comment(s) to {args.filepath}")
+        tasks_exported, comments_exported, projects_exported = self._service.export_tasks_and_comments(args.filepath)
+        print(f"Exported {tasks_exported} task(s), {comments_exported} comment(s), and {projects_exported} project(s) to {args.filepath}")
         return 0
 
     def _cmd_import(self, args: argparse.Namespace) -> int:
-        tasks_imported, comments_imported, conflicts = self._service.import_tasks_and_comments(
+        tasks_imported, comments_imported, projects_imported, conflicts = self._service.import_tasks_and_comments(
             args.filepath, mode=args.mode
         )
-        print(f"Imported {tasks_imported} task(s) and {comments_imported} comment(s) from {args.filepath}")
+        print(f"Imported {tasks_imported} task(s), {comments_imported} comment(s), and {projects_imported} project(s) from {args.filepath}")
         if conflicts > 0:
             if args.mode == "fail":
                 print(f"Warning: {conflicts} conflict(s) skipped (mode=fail)")
@@ -324,4 +361,46 @@ class TodoCLI:
                 print(f"Skipped {conflicts} conflicting record(s) (mode=skip)")
             elif args.mode == "replace":
                 print(f"Replaced {conflicts} existing record(s) (mode=replace)")
+        return 0
+
+    def _cmd_project_create(self, args: argparse.Namespace) -> int:
+        project = self._service.create_project(args.name)
+        print(f"Created project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_project_list(self, args: argparse.Namespace) -> int:
+        projects = self._service.list_projects()
+        if not projects:
+            print("No projects found.")
+            return 0
+        for project in projects:
+            print(f"  {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_project_show(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        print(f"ID:         {project.id}")
+        print(f"Name:       {project.name}")
+        print(f"Created:    {project.created_at.isoformat()}")
+        return 0
+
+    def _cmd_project_update(self, args: argparse.Namespace) -> int:
+        project = self._service.update_project(args.id, args.name)
+        print(f"Updated project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_project_delete(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        self._service.delete_project(args.id)
+        print(f"Deleted project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_assign(self, args: argparse.Namespace) -> int:
+        task = self._service.assign_task_to_project(args.task_id, args.project_id)
+        print(f"Assigned task {task.id[:8]} to project {args.project_id[:8]}")
+        return 0
+
+    def _cmd_unassign(self, args: argparse.Namespace) -> int:
+        task = self._service.unassign_task_from_project(args.task_id)
+        print(f"Unassigned task {task.id[:8]} from project")
         return 0

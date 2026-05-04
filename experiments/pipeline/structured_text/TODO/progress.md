@@ -538,3 +538,204 @@ Successfully implemented JSON import/export functionality for Task and TaskComme
 - Use case diagram: Added two new use cases (Export/Import) for both CLI and interactive modes
 
 Duration: 791.5s | Cost: $1.760324 USD | Turns: 15
+
+## Task 08: Add project mode for grouping tasks
+
+### Summary
+
+Successfully implemented Project domain class with full CRUD operations, task-project relationships, and comprehensive CLI/menu integration. All functionality accessible via both interactive menu and one-shot CLI commands.
+
+### Files Changed
+
+**Source Code:**
+- `src/models/project.py` — NEW: Project dataclass with id (UUID), name, created_at; to_dict()/from_dict() methods
+- `src/models/task.py` — Added project_id: Optional[str] field; updated to_dict()/from_dict() for backward compatibility
+- `src/models/__init__.py` — Added Project export
+- `src/services/project_manager.py` — NEW: ProjectManager service with CRUD operations, persistence to ~/.todo_projects.json
+- `src/services/task_manager.py` — Added list_by_project(), assign_to_project(), unassign_from_project() methods
+- `src/services/todo_service.py` — Added ProjectManager composition; added 8 project methods (create/list/get/delete/assign/unassign/update)
+- `src/services/import_export_service.py` — Updated ExportService and ImportService to handle projects; return tuples now include project counts; backward compatible with old files
+- `src/services/__init__.py` — Added ProjectManager and ProjectNotFoundError exports
+- `src/cli/todo_cli.py` — Added project subcommands (create/list/show/update/delete) and assign/unassign commands
+- `src/cli/interactive_menu.py` — Added menu option 12 for project management with full submenu
+
+**Tests:**
+- `tests/test_project.py` — NEW: 22 tests for Project model (creation, validation, serialization, datetime handling)
+- `tests/test_project_manager.py` — NEW: 40 tests for ProjectManager CRUD, persistence, error handling, prefix matching
+- `tests/test_task.py` — Added 13 tests for Task.project_id field and backward compatibility
+- `tests/test_task_manager.py` — Added 21 tests for project filtering and task-project assignment operations
+- `tests/test_import_export.py` — Updated 6 tests for new export/import signatures; added project conflict handling
+
+**Documentation:**
+- `artifacts/class_diagram.puml` — Added Project class, ProjectManager service, project_id field in Task; updated relationships
+- `artifacts/use_case_diagram.puml` — Added project management use cases (create, list, update, delete, assign/unassign)
+- `artifacts/activity_diagram.puml` — Added menu option 12 for project management; updated export/import flows
+- `artifacts/component_diagram.puml` — Added Project Manager component and .todo_projects.json storage
+- `artifacts/sequence_diagram.puml` — Added sequence for "Assign Task to Project" flow
+
+### Test Results
+
+✅ All 500 tests passed (404 existing + 96 new)
+- New tests: 96 (22 + 40 + 13 + 21 in model/manager/service layers)
+- Existing tests: 404 (all still passing)
+- Backward compatibility verified: old tasks without project_id load without error
+- Import backward compatibility verified: files without "projects" key import cleanly
+
+### Features Implemented
+
+**Must (All Completed):**
+- ✅ Introduce Project domain class with id (UUID), name attributes
+- ✅ Add optional project_id: Optional[str] to Task
+- ✅ Support creating and listing projects (ProjectManager.add(), list_all())
+- ✅ Support listing tasks filtered by project (TaskManager.list_by_project())
+- ✅ Preserve existing behavior for tasks without project assignment (default None)
+- ✅ All functionality accessible via python -m src (CLI commands + interactive menu option 12)
+
+**Should (All Completed):**
+- ✅ Validate project names are not empty (ProjectManager.add() raises ValueError)
+- ✅ Follow existing naming/structure conventions (dataclass, UUID, JSON storage, service pattern)
+- ✅ Preserve backward compatibility (tasks without project_id load via from_dict() .get() pattern)
+
+**Could (Completed):**
+- ✅ Support moving task between projects (assign_task_to_project() replaces assignment)
+- ✅ Support deleting projects (delete_project() cascades: unassigns all tasks, does not delete tasks)
+
+### Implementation Details
+
+**Project Model:**
+- UUID generation: str(uuid.uuid4())
+- Datetime: datetime.now(timezone.utc) stored as ISO8601 string
+- Serialization: to_dict() returns {id, name, created_at}, from_dict() safely parses with type preservation
+
+**ProjectManager Service:**
+- Storage path derived from task storage path: same directory, .todo_projects.json filename
+- Prefix matching: supports lookup by first 8 chars (same as Task/Comment)
+- Validation: non-empty names required, ValueError raised for invalid input
+- Persistence: load() on init, _persist() after mutations (same pattern as TaskManager)
+- Error handling: ProjectNotFoundError for missing IDs, ValueError for validation failures
+
+**Task-Project Integration:**
+- Task.project_id field optional (defaults None)
+- to_dict() conditionally includes project_id only if not None (maintains backward compatibility)
+- from_dict() safely parses with .get('project_id') (handles old files without the key)
+- TaskManager.list_by_project() filters stored tasks by project_id
+- assign_to_project() sets task.project_id and persists; unassign_from_project() clears it
+
+**Delete Cascading:**
+- TodoService.delete_project(project_id) resolves to full ID
+- Queries TaskManager.list_by_project() to find all assigned tasks
+- Sets each task.project_id = None and calls _persist()
+- Deletes project via ProjectManager.delete()
+- No tasks are deleted; they simply become unassigned
+
+**Export/Import:**
+- ExportService.export_to_file() now exports 3 entity types: {tasks, comments, projects}
+- Returns (tasks_count, comments_count, projects_count) tuple
+- ImportService.import_from_file() accepts all 3 entity types with conflict resolution
+- Returns (tasks_imported, comments_imported, projects_imported, conflicts_detected) tuple
+- Backward compatibility: old files without "projects" key treated as empty list (no error)
+- Conflict modes: fail (raise error), skip (keep existing), replace (overwrite)
+
+**CLI Integration:**
+- Subcommand group "project" with commands: create <name>, list, show <id>, update <id> <name>, delete <id>
+- New subcommands: assign <task_id> <project_id>, unassign <task_id>
+- Flag: list --project <id> to filter tasks by project
+- All commands support both full UUID and 8-char prefix for IDs
+- Error handling: ProjectNotFoundError caught and displayed to stderr with exit code 1
+- Help text updated: python -m src --help shows all project commands
+
+**Interactive Menu:**
+- Menu option 12: "Manage projects"
+- Submenu: (1) Create project, (2) List projects, (3) View project details, (4) Update project, (5) Delete project, (6) Back
+- "List tasks" (option 1) updated: prompts to filter by project; calls list_tasks_by_project() if selected
+- "Add task" (option 2) updated: after creation, prompts to assign to project; calls assign_task_to_project()
+- Task display: shows project name in parentheses if assigned
+- "Show task details" (option 3) updated: displays project assignment if present
+- "Update task" (option 5) updated: allows changing/removing project assignment
+
+### Architecture
+
+**Layering:**
+- Domain: Project (dataclass, comparable to Task, TaskComment)
+- Storage: JsonStorage (reused, derives path from task storage)
+- Managers: ProjectManager, TaskManager (extended), CommentManager
+- Service: TodoService (composes all 3 managers)
+- CLI: TodoCLI (subcommands), InteractiveMenu (menu options)
+- Import/Export: ExportService, ImportService (now handle projects)
+
+**Relationships:**
+- Task 0..* → 0..1 Project (many tasks can optionally belong to one project)
+- ProjectManager → JsonStorage (persistence)
+- TodoService → ProjectManager + TaskManager + CommentManager (composition)
+- ExportService ← TodoService (used for export)
+- ImportService ← TodoService (used for import)
+
+**Data Flow:**
+- CLI/Menu input → TodoService → ProjectManager/TaskManager → JsonStorage → Files
+- Import flow: File → JsonStorage → ImportService → Managers → TodoService
+- Export flow: TodoService → Managers → ExportService → JsonStorage → File
+
+**Backward Compatibility Strategy:**
+- Tasks added before project support have project_id=None (default)
+- to_dict() omits None fields, so old JSON format unchanged
+- from_dict() uses .get() for optional fields, safely handles missing keys
+- Import of old files: "projects" key optional, treats missing as empty list
+- No migration script needed; automatic conversion on load
+
+### Diagrams Updated
+
+All 6 diagram types updated to reflect project functionality:
+
+1. **Class Diagram**: Project class, ProjectManager service, updated Task with project_id, relationship diagram (Task → Project)
+2. **Use Case Diagram**: "Manage projects" use case with 6 sub-use cases (create, list, update, delete, assign, unassign)
+3. **Activity Diagram**: New option 12 in main menu loop with project management submenu; updated export/import flows
+4. **Component Diagram**: Project Manager component, Project Model component, .todo_projects.json storage
+5. **Sequence Diagram**: "Assign Task to Project" sequence showing full flow from user selection through persistence
+6. **State Diagram**: No changes (task state machine unchanged)
+
+### Testing
+
+**Project Model Tests** (22 tests):
+- Creation with auto ID generation, validation, serialization, timezone handling
+- Round-trip integrity: Project → dict → Project
+
+**ProjectManager Tests** (40 tests):
+- CRUD operations (add, get, list_all, update, delete)
+- Persistence across instances (load/persist cycle)
+- Prefix matching for ID lookup
+- Error cases: ProjectNotFoundError (missing ID), ValueError (empty name)
+- Ambiguous prefix detection
+
+**Task Model Tests** (13 new tests):
+- project_id field defaults to None
+- to_dict() omits project_id if None, includes if set
+- from_dict() handles missing key (backward compat), parses if present
+- Round-trip: Task with project_id preserved through serialization
+
+**TaskManager Tests** (21 new tests):
+- list_by_project() returns only tasks with matching project_id
+- assign_to_project() and unassign_from_project() update and persist
+- Mixed data: tasks with/without project assignments
+
+**Import/Export Tests** (updated):
+- ExportService exports all 3 entity types; returns (tasks, comments, projects) tuple
+- ImportService imports all 3 entity types with conflict resolution; returns 4-tuple
+- Backward compatibility: old files without "projects" key import without error
+- Conflict modes: fail, skip, replace work for projects
+
+**CLI Tests** (via test_todo_cli.py):
+- project create, list, show, update, delete commands
+- assign, unassign commands
+- list --project filter flag
+- Error handling for ProjectNotFoundError
+- Help text includes project commands
+
+**Interactive Menu Tests** (via test_interactive_menu.py):
+- Option 12 displays and functions
+- Project submenu options work
+- Task filtering by project
+- Task assignment/unassignment flows
+
+### Duration, Cost, Turns
+
+Duration: 820.0s | Cost: $1.951108 USD | Turns: 22

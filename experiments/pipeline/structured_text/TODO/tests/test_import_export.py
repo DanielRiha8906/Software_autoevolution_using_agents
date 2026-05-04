@@ -57,15 +57,21 @@ def comment_manager(service):
 
 
 @pytest.fixture
-def export_service(task_manager, comment_manager):
-    """Create an ExportService."""
-    return ExportService(task_manager, comment_manager)
+def project_manager(service):
+    """Get the project manager from the service."""
+    return service._project_manager
 
 
 @pytest.fixture
-def import_service(task_manager, comment_manager):
+def export_service(task_manager, comment_manager, project_manager):
+    """Create an ExportService."""
+    return ExportService(task_manager, comment_manager, project_manager)
+
+
+@pytest.fixture
+def import_service(task_manager, comment_manager, project_manager):
     """Create an ImportService."""
-    return ImportService(task_manager, comment_manager)
+    return ImportService(task_manager, comment_manager, project_manager)
 
 
 # ============================================================================
@@ -78,24 +84,27 @@ class TestExportServiceHappyPath:
     def test_export_zero_tasks_and_comments(self, service, export_service, tmp_path):
         """Export with no tasks or comments yields empty arrays."""
         export_file = tmp_path / "empty.json"
-        tasks_count, comments_count = export_service.export_to_file(str(export_file))
+        tasks_count, comments_count, projects_count = export_service.export_to_file(str(export_file))
 
         assert tasks_count == 0
         assert comments_count == 0
+        assert projects_count == 0
 
         # Verify JSON structure
         data = json.loads(export_file.read_text())
         assert data["tasks"] == []
         assert data["comments"] == []
+        assert data["projects"] == []
 
     def test_export_single_task_no_comments(self, service, export_service, tmp_path):
         """Export with one task and zero comments."""
         task = service.add_task("Single task")
         export_file = tmp_path / "single_task.json"
-        tasks_count, comments_count = export_service.export_to_file(str(export_file))
+        tasks_count, comments_count, projects_count = export_service.export_to_file(str(export_file))
 
         assert tasks_count == 1
         assert comments_count == 0
+        assert projects_count == 0
 
         # Verify JSON
         data = json.loads(export_file.read_text())
@@ -113,14 +122,16 @@ class TestExportServiceHappyPath:
         c3 = service.add_comment(t2.id, "Comment 2 on task 2")
 
         export_file = tmp_path / "multi.json"
-        tasks_count, comments_count = export_service.export_to_file(str(export_file))
+        tasks_count, comments_count, projects_count = export_service.export_to_file(str(export_file))
 
         assert tasks_count == 2
         assert comments_count == 3
+        assert projects_count == 0
 
         data = json.loads(export_file.read_text())
         assert len(data["tasks"]) == 2
         assert len(data["comments"]) == 3
+        assert len(data["projects"]) == 0
 
     def test_export_preserves_task_to_dict_format(self, service, export_service, tmp_path):
         """Exported JSON uses Task.to_dict() format."""
@@ -185,10 +196,10 @@ class TestExportServiceHappyPath:
         assert len(second_data["tasks"]) == 2
 
         # Verify file was overwritten, not appended
-        assert export_file.read_text().count("[") == 2  # Only 2 arrays in JSON
+        assert export_file.read_text().count("[") == 3  # 3 arrays in JSON: tasks, comments, projects
 
     def test_export_return_tuple_counts(self, service, export_service, tmp_path):
-        """Export returns correct tuple (tasks_count, comments_count)."""
+        """Export returns correct tuple (tasks_count, comments_count, projects_count)."""
         t1 = service.add_task("T1")
         t2 = service.add_task("T2")
         service.add_comment(t1.id, "C1")
@@ -199,8 +210,8 @@ class TestExportServiceHappyPath:
         result = export_service.export_to_file(str(export_file))
 
         assert isinstance(result, tuple)
-        assert len(result) == 2
-        assert result == (2, 3)
+        assert len(result) == 3
+        assert result == (2, 3, 0)
 
     def test_export_creates_parent_directories(self, export_service, tmp_path):
         """Export creates parent directories if they don't exist."""
@@ -293,10 +304,11 @@ class TestImportServiceHappyPath:
 
         import_file.write_text(json.dumps(export_data))
 
-        tasks_imported, comments_imported, conflicts = import_service.import_from_file(str(import_file))
+        tasks_imported, comments_imported, projects_imported, conflicts = import_service.import_from_file(str(import_file))
 
         assert tasks_imported == 1
         assert comments_imported == 1
+        assert projects_imported == 0
         assert conflicts == 0
 
         # Verify data was actually imported
@@ -557,7 +569,7 @@ class TestImportServiceHappyPath:
 
         import_file.write_text(json.dumps(export_data))
 
-        tasks_imported, comments_imported, conflicts = import_service.import_from_file(
+        tasks_imported, comments_imported, projects_imported, conflicts = import_service.import_from_file(
             str(import_file), mode="skip"
         )
 
@@ -600,7 +612,7 @@ class TestImportServiceHappyPath:
 
         import_file.write_text(json.dumps(export_data))
 
-        tasks_imported, comments_imported, conflicts = import_service.import_from_file(
+        tasks_imported, comments_imported, projects_imported, conflicts = import_service.import_from_file(
             str(import_file), mode="skip"
         )
 
@@ -639,7 +651,7 @@ class TestImportServiceHappyPath:
 
         import_file.write_text(json.dumps(export_data))
 
-        tasks_imported, comments_imported, conflicts = import_service.import_from_file(
+        tasks_imported, comments_imported, projects_imported, conflicts = import_service.import_from_file(
             str(import_file), mode="skip"
         )
 
@@ -672,7 +684,7 @@ class TestImportServiceHappyPath:
 
         import_file.write_text(json.dumps(export_data))
 
-        tasks_imported, comments_imported, conflicts = import_service.import_from_file(
+        tasks_imported, comments_imported, projects_imported, conflicts = import_service.import_from_file(
             str(import_file), mode="replace"
         )
 
@@ -714,7 +726,7 @@ class TestImportServiceHappyPath:
 
         import_file.write_text(json.dumps(export_data))
 
-        tasks_imported, comments_imported, conflicts = import_service.import_from_file(
+        tasks_imported, comments_imported, projects_imported, conflicts = import_service.import_from_file(
             str(import_file), mode="replace"
         )
 
@@ -755,8 +767,8 @@ class TestImportServiceHappyPath:
         result = import_service.import_from_file(str(import_file), mode="fail")
 
         assert isinstance(result, tuple)
-        assert len(result) == 3
-        assert result == (1, 1, 0)
+        assert len(result) == 4
+        assert result == (1, 1, 0, 0)
 
 
 # ============================================================================
@@ -927,7 +939,7 @@ class TestImportServiceErrors:
         import_file.write_text(json.dumps(export_data))
 
         # Should not raise; orphaned comments are imported as-is (no foreign key validation)
-        tasks_imported, comments_imported, conflicts = import_service.import_from_file(
+        tasks_imported, comments_imported, projects_imported, conflicts = import_service.import_from_file(
             str(import_file), mode="fail"
         )
 
@@ -1039,13 +1051,13 @@ class TestRoundTrip:
         service.add_comment(t3.id, "C3")
 
         export_file = tmp_path / "roundtrip.json"
-        exported_tasks, exported_comments = service.export_tasks_and_comments(str(export_file))
+        exported_tasks, exported_comments, exported_projects = service.export_tasks_and_comments(str(export_file))
 
         fresh_storage_path = str(tmp_path / "fresh5" / "tasks.json")
         fresh_storage = JsonStorage(fresh_storage_path)
         fresh_service = TodoService(fresh_storage)
 
-        imported_tasks, imported_comments, conflicts = fresh_service.import_tasks_and_comments(
+        imported_tasks, imported_comments, imported_projects, conflicts = fresh_service.import_tasks_and_comments(
             str(export_file), mode="fail"
         )
 
@@ -1148,7 +1160,7 @@ class TestCLIExportImport:
         cli.run(["export", export_file])
 
         captured = capsys.readouterr()
-        assert "Exported 2 task(s) and 0 comment(s)" in captured.out
+        assert "Exported 2 task(s), 0 comment(s), and 0 project(s)" in captured.out
 
     def test_cli_import_output_message(self, capsys, tmp_path):
         """CLI import prints correct output message."""
@@ -1168,7 +1180,7 @@ class TestCLIExportImport:
         cli2.run(["import", export_file])
 
         captured = capsys.readouterr()
-        assert "Imported 1 task(s) and 1 comment(s)" in captured.out
+        assert "Imported 1 task(s), 1 comment(s), and 0 project(s)" in captured.out
 
     def test_cli_import_output_with_conflicts_skip_mode(self, capsys, tmp_path):
         """CLI import prints conflict message in skip mode."""

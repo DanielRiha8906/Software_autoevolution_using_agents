@@ -18,11 +18,13 @@ package "TODO Application" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
         component "Comment Manager" as CMT
+        component "Project Manager" as PROJ
     }
 
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus)" as Model
         component "TaskComment Model" as CMTModel
+        component "Project Model" as ProjModel
         component "TaskStatistics Model" as StatsModel
     }
 
@@ -36,6 +38,7 @@ package "TODO Application" {
 }
 
 database "todo_data.json" as DB
+database ".todo_projects.json" as PROJDB
 
 Main --> IM : interactive mode
 Main --> CLI : command mode
@@ -45,15 +48,20 @@ CLI --> SVC
 
 SVC --> MGR
 SVC --> CMT
+SVC --> PROJ
 MGR --> Storage
 CMT --> Storage
+PROJ --> Storage
 MGR --> TZ : uses (for filtering)
 MGR ..> Model
 CMT ..> CMTModel
+PROJ ..> ProjModel
 SVC ..> StatsModel : returns (get_statistics)
 Storage ..> Model
 Storage ..> CMTModel
+Storage ..> ProjModel
 
-Storage --> DB : read/write
+Storage --> DB : read/write (tasks/comments)
+Storage --> PROJDB : read/write (projects)
 
 @enduml

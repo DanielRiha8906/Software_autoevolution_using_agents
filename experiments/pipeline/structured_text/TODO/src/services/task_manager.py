@@ -121,3 +121,51 @@ class TaskManager:
             tasks = [t for t in tasks if t.is_overdue() == overdue]
 
         return tasks
+
+    def list_by_project(self, project_id: str) -> list[Task]:
+        """Get all tasks assigned to a specific project.
+
+        Args:
+            project_id: ID of the project
+
+        Returns:
+            List of Task instances assigned to that project
+        """
+        return [t for t in self._tasks.values() if t.project_id == project_id]
+
+    def assign_to_project(self, task_id: str, project_id: str) -> Task:
+        """Assign a task to a project.
+
+        Args:
+            task_id: ID of the task (full or prefix)
+            project_id: ID of the project to assign to
+
+        Returns:
+            The updated Task instance
+
+        Raises:
+            TaskNotFoundError: If task not found or prefix is ambiguous
+        """
+        task = self.get(task_id)
+        task.project_id = project_id
+        task.updated_at = datetime.now(timezone.utc)
+        self._persist()
+        return task
+
+    def unassign_from_project(self, task_id: str) -> Task:
+        """Unassign a task from its project.
+
+        Args:
+            task_id: ID of the task (full or prefix)
+
+        Returns:
+            The updated Task instance
+
+        Raises:
+            TaskNotFoundError: If task not found or prefix is ambiguous
+        """
+        task = self.get(task_id)
+        task.project_id = None
+        task.updated_at = datetime.now(timezone.utc)
+        self._persist()
+        return task

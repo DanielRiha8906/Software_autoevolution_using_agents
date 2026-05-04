@@ -24,6 +24,13 @@ rectangle "TODO Manager" {
     usecase "Import / export" as I_IMPORT_EXPORT
     usecase "Export tasks and comments" as I_EXPORT
     usecase "Import tasks and comments" as I_IMPORT
+    usecase "Manage projects" as I_PROJECTS
+    usecase "Create project" as I_CREATE_PROJECT
+    usecase "List projects" as I_LIST_PROJECTS
+    usecase "Update project" as I_UPDATE_PROJECT
+    usecase "Delete project" as I_DELETE_PROJECT
+    usecase "Assign task to project" as I_ASSIGN_TASK
+    usecase "Unassign task from project" as I_UNASSIGN_TASK
     usecase "Quit application" as I_QUIT
   }
 
@@ -70,6 +77,13 @@ UI ..> I_STATS     : <<exclude>>
 UI ..> I_IMPORT_EXPORT : <<exclude>>
 I_IMPORT_EXPORT ..> I_EXPORT : <<include>>
 I_IMPORT_EXPORT ..> I_IMPORT : <<include>>
+UI ..> I_PROJECTS   : <<exclude>>
+I_PROJECTS ..> I_CREATE_PROJECT : <<include>>
+I_PROJECTS ..> I_LIST_PROJECTS : <<include>>
+I_PROJECTS ..> I_UPDATE_PROJECT : <<include>>
+I_PROJECTS ..> I_DELETE_PROJECT : <<include>>
+I_PROJECTS ..> I_ASSIGN_TASK : <<include>>
+I_PROJECTS ..> I_UNASSIGN_TASK : <<include>>
 UI ..> I_QUIT      : <<exclude>>
 
 CLI ..> C_ADD            : <<exclude>>

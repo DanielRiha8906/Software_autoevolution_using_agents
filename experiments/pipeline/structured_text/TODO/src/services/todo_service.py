@@ -5,16 +5,19 @@ from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..models.task_statistics import TaskStatistics
+from ..models.project import Project
 from ..storage.json_storage import JsonStorage
 from .comment_manager import CommentManager
 from .import_export_service import ExportService, ImportService
 from .task_manager import TaskManager
+from .project_manager import ProjectManager
 
 
 class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
         self._comment_manager = CommentManager(storage)
+        self._project_manager = ProjectManager(storage)
 
     def add_task(self, title: str, description: Optional[str] = None) -> Task:
         if not title or not title.strip():
@@ -149,33 +152,154 @@ class TodoService:
             with_due_date_count=with_due_date_count,
         )
 
-    def export_tasks_and_comments(self, filepath: str) -> tuple[int, int]:
-        """Export all tasks and comments to a JSON file.
+    def export_tasks_and_comments(self, filepath: str) -> tuple[int, int, int]:
+        """Export all tasks, comments, and projects to a JSON file.
 
         Args:
             filepath: Path to write the JSON file to
 
         Returns:
-            Tuple of (tasks_exported, comments_exported)
+            Tuple of (tasks_exported, comments_exported, projects_exported)
 
         Raises:
             ImportExportError: If export fails
         """
-        service = ExportService(self._manager, self._comment_manager)
+        service = ExportService(self._manager, self._comment_manager, self._project_manager)
         return service.export_to_file(filepath)
 
-    def import_tasks_and_comments(self, filepath: str, mode: str = "fail") -> tuple[int, int, int]:
-        """Import tasks and comments from a JSON file.
+    def import_tasks_and_comments(self, filepath: str, mode: str = "fail") -> tuple[int, int, int, int]:
+        """Import tasks, comments, and projects from a JSON file.
 
         Args:
             filepath: Path to the JSON file to import from
             mode: How to handle ID conflicts ('fail', 'skip', or 'replace')
 
         Returns:
-            Tuple of (tasks_imported, comments_imported, conflicts_detected)
+            Tuple of (tasks_imported, comments_imported, projects_imported, conflicts_detected)
 
         Raises:
             ImportExportError: If import fails
         """
-        service = ImportService(self._manager, self._comment_manager)
+        service = ImportService(self._manager, self._comment_manager, self._project_manager)
         return service.import_from_file(filepath, mode)
+
+    def create_project(self, name: str) -> Project:
+        """Create a new project.
+
+        Args:
+            name: Project name (required, non-empty)
+
+        Returns:
+            The created Project instance
+
+        Raises:
+            ValueError: If name is empty or whitespace-only
+        """
+        if not name or not name.strip():
+            raise ValueError("Project name cannot be empty")
+        return self._project_manager.add(name.strip())
+
+    def list_projects(self) -> list[Project]:
+        """List all projects.
+
+        Returns:
+            List of all Project instances
+        """
+        return self._project_manager.list_all()
+
+    def get_project(self, project_id: str) -> Project:
+        """Get a project by ID or ID prefix.
+
+        Args:
+            project_id: Full project ID or unique prefix
+
+        Returns:
+            The Project instance
+
+        Raises:
+            ProjectNotFoundError: If project not found or prefix is ambiguous
+        """
+        return self._project_manager.get(project_id)
+
+    def delete_project(self, project_id: str) -> None:
+        """Delete a project and unassign all its tasks.
+
+        Args:
+            project_id: Full project ID or unique prefix
+
+        Raises:
+            ProjectNotFoundError: If project not found or prefix is ambiguous
+        """
+        project = self._project_manager.get(project_id)
+        # Unassign all tasks in this project
+        tasks_in_project = self._manager.list_by_project(project.id)
+        for task in tasks_in_project:
+            self._manager.unassign_from_project(task.id)
+        # Delete the project
+        self._project_manager.delete(project.id)
+
+    def list_tasks_by_project(self, project_id: str) -> list[Task]:
+        """List all tasks assigned to a project.
+
+        Args:
+            project_id: Full project ID or unique prefix
+
+        Returns:
+            List of Task instances assigned to that project
+
+        Raises:
+            ProjectNotFoundError: If project not found or prefix is ambiguous
+        """
+        # Verify project exists
+        self._project_manager.get(project_id)
+        return self._manager.list_by_project(project_id)
+
+    def assign_task_to_project(self, task_id: str, project_id: str) -> Task:
+        """Assign a task to a project.
+
+        Args:
+            task_id: Full task ID or unique prefix
+            project_id: Full project ID or unique prefix
+
+        Returns:
+            The updated Task instance
+
+        Raises:
+            TaskNotFoundError: If task not found
+            ProjectNotFoundError: If project not found
+        """
+        # Verify project exists
+        self._project_manager.get(project_id)
+        return self._manager.assign_to_project(task_id, project_id)
+
+    def unassign_task_from_project(self, task_id: str) -> Task:
+        """Unassign a task from its project.
+
+        Args:
+            task_id: Full task ID or unique prefix
+
+        Returns:
+            The updated Task instance
+
+        Raises:
+            TaskNotFoundError: If task not found
+        """
+        return self._manager.unassign_from_project(task_id)
+
+    def update_project(self, project_id: str, name: str) -> Project:
+        """Update a project's name.
+
+        Args:
+            project_id: Full project ID or unique prefix
+            name: New project name (required, non-empty)
+
+        Returns:
+            The updated Project instance
+
+        Raises:
+            ValueError: If name is empty or whitespace-only
+            ProjectNotFoundError: If project not found
+        """
+        if not name or not name.strip():
+            raise ValueError("Project name cannot be empty")
+        return self._project_manager.update(project_id, name.strip())
