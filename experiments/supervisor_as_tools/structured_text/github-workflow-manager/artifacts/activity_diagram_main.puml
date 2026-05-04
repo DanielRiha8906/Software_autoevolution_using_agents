@@ -45,8 +45,21 @@ if (CLI arguments provided?) then (yes)
   stop
 
 else (no)
-  :Launch interactive menu\n(see activity_diagram_interactive);
-  stop
+  :Display launch options;
+  switch (choice)
+    case (Interactive menu)
+      :Launch interactive menu\n(see activity_diagram_interactive);
+      stop
+
+    case (GUI)
+      :Create WorkflowRunGUI instance;
+      :Initialize FilterState;
+      :Load all workflow runs;
+      :WorkflowRunGUI.run();
+      :Display tkinter window;
+      stop
+
+  endswitch
 endif
 
 @enduml

@@ -722,3 +722,115 @@ src/
 ```
 
 Duration: 548.5s | Cost: $1.067697 USD | Turns: 19
+
+## Task 10: Implement GUI Viewer for Workflow Runs
+
+**Status:** Completed
+
+### Summary
+Successfully implemented a tkinter-based GUI viewer for displaying workflow runs in a scrollable table with filtering and detail views. The GUI is read-only and launchable via `python -m src --gui`. All 185 tests pass (163 existing + 22 new GUI tests).
+
+### Files Changed
+- `src/gui/__init__.py` — NEW: Empty module marker file to make src/gui a Python package
+- `src/gui/filters.py` — NEW: FilterState class to encapsulate filter state (status, conclusion) with is_active(), to_filter_params(), reset() methods
+- `src/gui/workflow_run_gui.py` — NEW: WorkflowRunGUI class implementing tkinter GUI with:
+  - Scrollable Treeview table displaying runs (7 columns: ID, Workflow Name, Status, Conclusion, Duration sec, Attempt Count, Updated At)
+  - Filter panel with Status/Conclusion dropdowns and Apply/Reset buttons
+  - Detail panel showing selected run's full information
+  - Attempts sub-table showing run attempts sorted by attempt_number
+  - Row coloring: Failed runs (conclusion="failure") highlighted in light red (#ffcccc)
+  - Error handling with messagebox dialogs
+- `src/__main__.py` — MODIFIED: Added --gui flag detection in main(), routes to launch_gui() function that instantiates and runs WorkflowRunGUI
+- `tests/test_workflow_run_gui.py` — NEW: 22 comprehensive unit tests covering:
+  - FilterState initialization, state management, and reset
+  - GUI initialization and data population
+  - Empty table handling
+  - Row selection and detail view
+  - Status/conclusion filtering (AND logic)
+  - Combined filter application
+  - Failed run highlighting
+  - Error handling for service failures
+- `artifacts/class_diagram.puml` — UPDATED: Added GUI package with FilterState and WorkflowRunGUI classes, showing dependencies on services
+- `artifacts/component_diagram.puml` — UPDATED: Added WorkflowRunGUI component in Interface layer with dependencies on services
+- `artifacts/activity_diagram_main.puml` — UPDATED: Added GUI launch path showing decision between interactive menu and GUI
+
+### Test Results
+- **Total Tests:** 185 (22 new GUI tests + 163 existing)
+- **Passed:** 185
+- **Failed:** 0
+- **Status:** ✅ All tests pass with zero regressions
+
+### Implementation Details
+
+**Must Have:** ✅
+- ✅ Implemented GUI viewer displaying workflow runs in scrollable table (tkinter Treeview with Scrollbar)
+- ✅ Display status, duration, and attempt count per run (7 columns: ID, Workflow Name, Status, Conclusion, Duration, Attempt Count, Updated At)
+- ✅ Read-only interface (Treeview configured immutable, no cell editing)
+- ✅ Launchable via `python -m src --gui`
+
+**Should Have:** ✅
+- ✅ Filter runs by status or conclusion via dropdowns with Apply button
+- ✅ Reset filters button to restore full list
+
+**Could Have:**
+- ✅ Highlight failed runs (conclusion="failure") in light red (#ffcccc)
+- ❌ Support editing of workflow runs (not implemented; read-only as required)
+
+### Key Features
+- **Treeview Table (7 columns)**:
+  - ID (120px), Workflow Name (150px), Status (100px), Conclusion (100px)
+  - Duration (sec) (100px), Attempt Count (100px), Updated At (200px)
+  - Scrollable with custom column widths
+  - Sortable by clicking column headers
+
+- **Filter Panel**:
+  - Status dropdown: blank (all) + WorkflowStatus enum values (queued, in_progress, completed, waiting, requested, pending)
+  - Conclusion dropdown: blank (all) + WorkflowConclusion enum values (success, failure, cancelled, skipped, timed_out, action_required, neutral, stale)
+  - Apply button: calls service.filter_runs() with AND logic for both criteria
+  - Reset button: clears filters and restores full list
+
+- **Detail Panel**:
+  - Shows full WorkflowRun information when row selected
+  - Displays: ID, Workflow, Branch, Status, Conclusion, Created At, Updated At, Duration
+  - Sub-table: Attempts for selected run (attempt_number, status, conclusion, duration_seconds)
+
+- **Row Coloring**:
+  - Failed runs (conclusion="failure") display with light red background (#ffcccc)
+  - All other rows display with white background
+
+- **Error Handling**:
+  - Catches ValueError from service.filter_runs() and displays messagebox
+  - Handles missing JSON files gracefully (empty table shown)
+  - Shows "No workflow runs available" message when list is empty
+
+### Entry Point
+- **Command**: `python -m src --gui`
+- **Flow**: Detects --gui flag in sys.argv before CLI parsing, initializes services, creates WorkflowRunGUI instance, calls .run() to start tkinter mainloop
+
+### Dependencies
+- **No new external dependencies**: Uses only Python standard library (tkinter)
+- **Technology**: tkinter (stdlib) - Treeview widget for tabular display, StringVar for filter state, messagebox for error dialogs
+
+### Service Integration
+- GUI receives WorkflowRunService, AttemptService, StatisticsService via constructor (dependency injection)
+- All data access through services: list_runs(), filter_runs(), get_attempts_by_run_id()
+- Attempts counted dynamically for display (no pre-computation)
+
+### Test Coverage (22 new tests)
+- FilterState tests: initialization (1), is_active (1), to_filter_params (1), reset (1) = 4 tests
+- GUI initialization: window creation (1), column setup (1), initial data load (1) = 3 tests
+- Table population: with runs (1), empty table (1), attempt count accuracy (1) = 3 tests
+- Row selection: detail view display (1), attempts sub-table (1) = 2 tests
+- Status filtering: apply status filter (1), apply conclusion filter (1), combined AND logic (1) = 3 tests
+- Filter reset: restore full list (1), clear dropdowns (1) = 2 tests
+- Row coloring: failed runs highlighted (1) = 1 test
+- Error handling: service filter error (1), data load error (1) = 2 tests
+
+### Design Notes
+- GUI loads all runs once at startup into memory (no background refresh)
+- FilterState encapsulates filter state separately from GUI widgets for clean testing
+- All tkinter widget creation isolated in _setup_ui() method
+- Service calls wrapped in try-except for error handling
+- Attempt count calculated via service.get_attempts_by_run_id() for each displayed run
+
+Duration: 548.2s | Cost: $1.044262 USD | Turns: 13
