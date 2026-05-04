@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from ..models.project import Project
+from ..storage.repositories import ProjectRepository
 from ..storage.project_storage import ProjectStorage
 
 
@@ -10,7 +11,7 @@ class ProjectNotFoundError(Exception):
 
 
 class ProjectManager:
-    def __init__(self, storage: Optional[ProjectStorage] = None) -> None:
+    def __init__(self, storage: Optional[ProjectRepository] = None) -> None:
         self._storage = storage or ProjectStorage()
         self._projects: dict[str, Project] = {}
         self._load()
