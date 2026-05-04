@@ -14,6 +14,10 @@ package "TODO Application" {
         component "Command-line Interface\n(TodoCLI)" as CLI
     }
 
+    package "GUI Layer" {
+        component "Graphical Interface\n(TodoGUI)" as GUI
+    }
+
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
@@ -38,6 +42,7 @@ database "todo_data.json" as DB
 
 Main --> IM : interactive mode
 Main --> CLI : command mode
+Main --> GUI : gui mode
 
 IM --> SVC
 IM --> CSVC
@@ -45,6 +50,7 @@ IM --> IEXVC
 CLI --> SVC
 CLI --> CSVC
 CLI --> IEXVC
+GUI --> SVC
 
 SVC --> MGR
 CSVC --> SVC

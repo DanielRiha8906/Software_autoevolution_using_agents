@@ -201,6 +201,35 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #F0E5FF {
+    class TodoGUI {
+        -service : TodoService
+        -root : Tk [0..1]
+        -tree : Treeview [0..1]
+        -filter_status : TaskStatus [0..1]
+        -filter_overdue : Boolean
+        --
+        +TodoGUI(service: TodoService)
+        +run() : void
+        -_ensure_root() : void
+        -_create_widgets() : void
+        -_refresh_task_list() : void
+        -_highlight_overdue_tasks() : void
+        -_show_all() : void
+        -_show_pending() : void
+        -_show_in_progress() : void
+        -_show_done() : void
+        -_show_overdue() : void
+        -_add_task() : void
+        -_start_task() : void
+        -_complete_task() : void
+        -_reopen_task() : void
+        -_delete_task() : void
+        -_get_selected_task_id() : String [0..1]
+        -_find_task_id_by_display_id(display_id: String) : String [0..1]
+    }
+}
+
 Task --> TaskStatus : status
 Task --> Project : references (0..1)
 TaskComment --> Task : references
@@ -227,5 +256,6 @@ TodoCLI --> TaskImportExportService : import_export
 InteractiveMenu --> TodoService : service
 InteractiveMenu --> CommentsService : comments_service
 InteractiveMenu --> TaskImportExportService : import_export
+TodoGUI --> TodoService : service
 
 @enduml
