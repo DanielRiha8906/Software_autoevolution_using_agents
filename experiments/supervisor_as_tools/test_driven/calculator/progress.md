@@ -597,4 +597,4 @@ Implemented a tkinter GUI for the calculator that delegates all calculation logi
 - Layered architecture: GUI layer → Service layer → Calculation engine
 - Testability: GUI can be instantiated and tested without running main loop
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 389.1s | Cost: $0.676915 USD | Turns: 14
