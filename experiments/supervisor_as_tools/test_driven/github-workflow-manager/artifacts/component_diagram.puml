@@ -18,18 +18,25 @@ package "GitHub Workflow Manager" {
   package "Service layer" {
     component "WorkflowRunTracker" as TRACKER
     component "WorkflowRunService" as SVC
+    component "AttemptService" as ATTEMPTS
+    component "WorkflowStatisticsService" as STATS
+    component "WorkflowImportExportService" as IMPORT_EXPORT
     component "GitHubFetchService" as FETCH
   }
 
-  package "Persistence layer" {
+  package "Storage layer" {
     component "WorkflowJsonStorage" as STOR
+    component "AttemptJsonStorage" as ATTEMPT_STOR
     artifact "workflow_runs.json" as JSON_FILE
+    artifact "workflow_attempts.json" as ATTEMPT_FILE
   }
 
   package "Domain model" {
     component "WorkflowRun" as RUN
+    component "WorkflowRunAttempt" as ATTEMPT
     component "WorkflowStatus" as STATUS
     component "WorkflowConclusion" as CONCLUSION
+    component "WorkflowStatisticsReport" as REPORT
   }
 
   package "External integrations" {
@@ -47,12 +54,26 @@ CLI --> SVC
 IM --> SVC
 
 TRACKER --> SVC
+
 SVC --> STOR
 STOR --> JSON_FILE
 
+ATTEMPTS --> ATTEMPT_STOR
+ATTEMPT_STOR --> ATTEMPT_FILE
+
+SVC --> ATTEMPTS
+STATS --> SVC
+STATS --> ATTEMPTS
+IMPORT_EXPORT --> SVC
+IMPORT_EXPORT --> ATTEMPTS
+
 SVC ..> RUN
+ATTEMPTS ..> ATTEMPT
 RUN --> STATUS
 RUN --> CONCLUSION
+ATTEMPT --> RUN
+STATS ..> REPORT
+REPORT --> CONCLUSION
 
 FETCH --> GH_CLI
 FETCH ..> RUN

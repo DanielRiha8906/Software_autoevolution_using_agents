@@ -1,13 +1,16 @@
 import json
 from pathlib import Path
+from typing import Optional
 from src.services.workflow_run_service import WorkflowRunService
+from src.services.attempt_service import AttemptService
 from src.models.workflow_run import WorkflowRun
 from src.models.workflow_run_attempt import WorkflowRunAttempt
 
 
 class WorkflowImportExportService:
-    def __init__(self, workflow_run_service: WorkflowRunService):
+    def __init__(self, workflow_run_service: WorkflowRunService, attempt_service: Optional[AttemptService] = None):
         self._workflow_run_service = workflow_run_service
+        self._attempt_service = attempt_service
 
     def export(self, filepath: str) -> None:
         """Export all workflow runs and attempts to JSON file."""
@@ -16,8 +19,9 @@ class WorkflowImportExportService:
 
         # Collect all attempts
         all_attempts = []
-        for run in runs:
-            all_attempts.extend(self._workflow_run_service.attempt_service.get_by_run_id(run.id))
+        if self._attempt_service is not None:
+            for run in runs:
+                all_attempts.extend(self._attempt_service.get_by_run_id(run.id))
 
         # Serialize and write
         data = {
@@ -49,9 +53,10 @@ class WorkflowImportExportService:
                 self._workflow_run_service.add_workflow_run(run)
 
         # Deduplication for attempts: skip if attempt already exists
-        for attempt in attempts:
-            try:
-                self._workflow_run_service.attempt_service.create(attempt)
-            except Exception:
-                # Attempt already exists, skip
-                pass
+        if self._attempt_service is not None:
+            for attempt in attempts:
+                try:
+                    self._attempt_service.create(attempt)
+                except Exception:
+                    # Attempt already exists, skip
+                    pass

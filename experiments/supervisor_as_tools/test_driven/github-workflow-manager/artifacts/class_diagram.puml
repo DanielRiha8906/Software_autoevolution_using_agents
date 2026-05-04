@@ -75,6 +75,14 @@ package "storage" #FFF3CC {
         +save(runs: List[WorkflowRun]) : None
         +load() : List[WorkflowRun]
     }
+
+    class AttemptJsonStorage {
+        +filepath : str
+        --
+        +__init__(filepath: str)
+        +save(attempts: List[WorkflowRunAttempt]) : None
+        +load() : List[WorkflowRunAttempt]
+    }
 }
 
 package "services" #DDFFD4 {
@@ -104,23 +112,28 @@ package "services" #DDFFD4 {
 
     class AttemptService {
         -_attempts : Dict[Tuple[int, int], WorkflowRunAttempt]
+        -_storage : Optional[AttemptJsonStorage]
         --
-        +__init__()
+        +__init__(storage: Optional[AttemptJsonStorage])
         +create(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
         +get_by_run_id(run_id: int) : List[WorkflowRunAttempt]
+        -_persist() : None
+        -_load_from_storage() : List[WorkflowRunAttempt]
     }
 
     class WorkflowStatisticsService {
         -_workflow_run_service : WorkflowRunService
+        -_attempt_service : Optional[AttemptService]
         --
-        +__init__(workflow_run_service: WorkflowRunService)
+        +__init__(workflow_run_service: WorkflowRunService, attempt_service: Optional[AttemptService])
         +compute() : WorkflowStatisticsReport
     }
 
     class WorkflowImportExportService {
         -_workflow_run_service : WorkflowRunService
+        -_attempt_service : Optional[AttemptService]
         --
-        +__init__(workflow_run_service: WorkflowRunService)
+        +__init__(workflow_run_service: WorkflowRunService, attempt_service: Optional[AttemptService])
         +export(filepath: str) : None
         +import_from(filepath: str) : None
     }
@@ -163,10 +176,13 @@ WorkflowRunService         ..>  WorkflowConclusion
 WorkflowRunTracker    "1" --> "1" WorkflowRunService      : -_service
 WorkflowRunTracker         ..>  WorkflowRun
 AttemptService       "1" --> "*" WorkflowRunAttempt       : -_attempts
+AttemptService       "1" --> "0..1" AttemptJsonStorage    : -_storage
 WorkflowStatisticsService "1" --> "1" WorkflowRunService  : -_workflow_run_service
+WorkflowStatisticsService "1" --> "0..1" AttemptService   : -_attempt_service
 WorkflowStatisticsService      ..>  WorkflowStatisticsReport
 WorkflowStatisticsReport       ..>  WorkflowConclusion
 WorkflowImportExportService "1" --> "1" WorkflowRunService  : -_workflow_run_service
+WorkflowImportExportService "1" --> "0..1" AttemptService   : -_attempt_service
 WorkflowImportExportService    ..>  WorkflowRun
 WorkflowImportExportService    ..>  WorkflowRunAttempt
 GitHubFetchService        ..>  WorkflowRun

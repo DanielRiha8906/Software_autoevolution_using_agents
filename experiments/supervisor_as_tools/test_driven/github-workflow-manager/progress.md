@@ -164,3 +164,37 @@ Duration: 354.9s | Cost: $0.694199 USD | Turns: 23
 - No OAuth or token refresh logic implemented
 
 Duration: 160.3s | Cost: $0.327618 USD | Turns: 18
+
+## Task 09: Refactor workflow manager into clearly separated components
+
+**Status:** ✅ Completed
+
+**Files Changed:**
+- `src/storage/attempt_json_storage.py` — Created new storage class mirroring WorkflowJsonStorage pattern for WorkflowRunAttempt persistence. Implements `save()` and `load()` methods with automatic parent directory creation and timezone-aware serialization
+- `src/services/workflow_run_service.py` — Maintained backward compatibility by keeping optional `attempt_service` parameter and `@property` getter. Preserved all public method signatures while internal decoupling through optional dependency injection
+- `src/services/attempt_service.py` — Updated to accept optional `AttemptJsonStorage` dependency. Added `_persist()` and `_load_from_storage()` private methods for automatic persistence when storage is provided. In-memory mode unchanged for test compatibility
+- `src/services/workflow_statistics_service.py` — Updated constructor to accept optional injected `attempt_service` parameter. Maintains fallback to `workflow_run_service.attempt_service` for backward compatibility with existing tests
+- `src/services/import_export_service.py` — Updated constructor to accept optional injected `attempt_service` parameter. Added null-safety checks in `export()` and `import_from()` methods to gracefully handle missing attempt service
+- `src/__main__.py` — Enhanced bootstrap to create `AttemptJsonStorage` instance, initialize `AttemptService` with storage, and wire all services with proper dependency injection. `WorkflowRunService` instantiated without attempt_service parameter
+- `artifacts/class_diagram.puml` — Added AttemptJsonStorage class to storage package. Updated service classes to show optional dependencies via injected constructor parameters rather than property getters. Clarified all relationships
+- `artifacts/component_diagram.puml` — Reorganized to explicitly show 5 distinct layers: Interface (CLI), Service (6 components with clear responsibilities), Storage (2 independent implementations), Domain Model (5 data models), External Integrations (GitHub CLI)
+
+**Test Results:**
+- All 102 tests pass (same suite, zero test modifications required)
+- Backward compatibility fully maintained through optional parameter injection and fallback logic
+- New AttemptJsonStorage successfully round-trips WorkflowRunAttempt objects
+- Persistence automatically triggered on attempt creation when storage is wired
+- Services function correctly with and without injected dependencies
+- No circular dependencies introduced
+- Runtime verified: `python -m src` starts successfully and displays interactive menu
+- CLI functionality unchanged: all commands work as before
+
+**Architecture Improvements:**
+- **Clear Separation of Concerns**: Five distinct architectural layers (interface → services → storage → domain → external)
+- **Dependency Injection**: Optional dependencies injected at service initialization rather than hard-coded property access
+- **Persistence Options**: Attempt storage is now persistent when requested, optional for backward compatibility
+- **Decoupled Services**: Statistics and import/export services no longer tightly coupled to WorkflowRunService internals
+- **Acyclic Dependencies**: Zero circular dependency issues; all relationships are uni-directional
+- **Testability**: Services can be instantiated with or without storage/dependencies for flexible test scenarios
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
