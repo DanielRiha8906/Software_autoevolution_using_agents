@@ -213,9 +213,61 @@ package "4. Services Layer" #FFF9C4 {
 }
 
 ' ============================================================================
-' CLI LAYER - Layer 5
+' GUI LAYER - Layer 5
 ' ============================================================================
-package "5. CLI Layer" #FFE5E5 {
+package "5. GUI Layer" #E8DAEF {
+    class TodoGUI {
+        -service : TodoService
+        -root : Tk
+        -selected_task : Task [0..1]
+        --
+        +run() : void
+        -_setup_ui() : void
+        -_refresh_tasks() : void
+        -_apply_filters() : void
+        -_add_task() : void
+        -_view_task() : void
+        -_change_status() : void
+        -_delete_task() : void
+        -_manage_projects() : void
+    }
+
+    class AddTaskDialog {
+        -service : TodoService
+        -result : Boolean
+        --
+        +_save() : void
+    }
+
+    class ViewTaskDialog {
+        -service : TodoService
+        -task : Task
+        -updated : Boolean
+        --
+        +_update() : void
+    }
+
+    class ChangeStatusDialog {
+        -service : TodoService
+        -task : Task
+        -updated : Boolean
+        --
+        +_save() : void
+    }
+
+    class ManageProjectsDialog {
+        -service : TodoService
+        -updated : Boolean
+        --
+        +_add_project() : void
+        +_delete_project() : void
+    }
+}
+
+' ============================================================================
+' CLI LAYER - Layer 6
+' ============================================================================
+package "6. CLI Layer" #FFE5E5 {
     class TodoCLI {
         -service : TodoService
         -stats_service : StatisticsService
@@ -280,6 +332,16 @@ StatisticsService --> TaskStatistics : returns
 
 ImportExportService --> JsonStorage : uses
 ImportExportService ..> ImportExportValidationError : raises
+
+' GUI
+TodoGUI --> TodoService : uses
+TodoGUI --> Task : displays
+AddTaskDialog --> TodoService : uses
+ViewTaskDialog --> TodoService : uses
+ViewTaskDialog --> Task : displays
+ChangeStatusDialog --> TodoService : uses
+ChangeStatusDialog --> Task : modifies
+ManageProjectsDialog --> TodoService : uses
 
 ' CLI
 TodoCLI --> TodoService : uses

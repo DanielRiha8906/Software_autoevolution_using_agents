@@ -847,3 +847,147 @@ Models Layer (src/layers/models/) + Storage Layer (src/layers/storage/)
 - No migration needed for existing deployments
 
 Duration: 201.6s | Cost: $2.772934 USD | Turns: 33
+
+## Task 10: Add graphical user interface for the TODO manager
+
+### Broadcast Fan-out Results
+
+Three independent implementations were created on separate branches:
+
+| Candidate | Approach | Test Results | Notes |
+|-----------|----------|--------------|-------|
+| **A** | Dialog-based GUI with list view and modal dialogs | 151/151 ✓ | Comprehensive dialog system for all operations |
+| **B** | Tree view with sidebar filters and action buttons | 151/151 ✓ | Tabular display with dedicated filter controls |
+| **C** | Card-based grid layout with color-coded status badges | 151/151 ✓ | Visual status indicators with responsive grid |
+
+### Selected Solution: Implementer-A (broadcast-candidate-a)
+
+**Rationale**: All three solutions passed all 151 tests with full feature parity. Implementer-A's dialog-based approach was selected for its:
+- Clean separation of concerns with dedicated dialog classes (AddTaskDialog, ViewTaskDialog, ChangeStatusDialog, ManageProjectsDialog)
+- Intuitive workflow with clear modal interactions
+- Comprehensive integration with TodoService, ProjectManager, and CommentsService
+- Robust error handling and user feedback via messageboxes
+- Clear, maintainable code structure
+
+### Files Changed
+
+1. **src/__main__.py**
+   - Added `--gui` flag support
+   - Added `--storage` parameter for custom storage path
+   - Integrated GUI launch logic alongside existing CLI and interactive menu modes
+   - Maintained backward compatibility with all existing entry points
+
+2. **src/gui/__init__.py** (new)
+   - Module initialization exporting TodoGUI class
+
+3. **src/gui/todo_gui.py** (new, 586 lines)
+   - **TodoGUI**: Main application window (900x600)
+     - Task list display with Treeview widget (ID, Title, Status, Due Date, Project)
+     - Filter panel with status and project dropdowns
+     - Action buttons: Add, View, Change Status, Delete, Manage Projects
+     - Status bar showing task count and overdue count
+     - Overdue task highlighting (light coral background)
+     - Double-click to view task details
+   
+   - **AddTaskDialog**: Modal dialog for creating new tasks
+     - Title, Description, Due Date, Project assignment
+     - Date format: YYYY-MM-DD HH:MM with timezone-aware UTC handling
+     - Project dropdown populated from existing projects
+     - Validation and error feedback
+   
+   - **ViewTaskDialog**: Modal dialog for viewing/editing task details
+     - Display task metadata (title, status, due date, project)
+     - Edit title, description, and due date
+     - Show comment count
+     - Update capability with validation
+   
+   - **ChangeStatusDialog**: Modal dialog for status transitions
+     - Radio buttons for PENDING, IN_PROGRESS, DONE states
+     - Delegates to service layer methods (start_task, complete_task, reopen_task)
+   
+   - **ManageProjectsDialog**: Modal dialog for project management
+     - Listbox of existing projects
+     - Add new project input with validation
+     - Delete selected project capability
+
+4. **artifacts/architecture.puml**
+   - Added GUI Layer (package with TodoGUI and dialog classes)
+   - Added dependencies from GUI layer to TodoService
+   - Updated layer numbering (GUI is layer 5, CLI becomes layer 6)
+
+5. **artifacts/class_diagram.puml**
+   - Added GUI Layer package with detailed class definitions
+   - Added dialog classes with methods and attributes
+   - Added GUI dependencies to TodoService and Task models
+
+6. **artifacts/component_diagram.puml**
+   - Added GUI Layer components (TodoGUI, Dialogs)
+   - Updated component dependencies
+   - Added GUI entry point from __main__
+
+### Requirements Compliance
+
+**Must (all implemented):**
+- ✓ Implement GUI displaying tasks with title, status, due date, project
+- ✓ Allow basic operations: view, add, change status, delete
+- ✓ Integrate with service layer (no duplicate business logic)
+- ✓ Highlight overdue tasks visually (light coral background)
+- ✓ Launchable via `python -m src --gui`
+
+**Should (all implemented):**
+- ✓ Support filtering by status (dropdown: All, Pending, In Progress, Done)
+- ✓ Support filtering by project (dropdown populated from projects)
+- ✓ Ensure basic usability and layout clarity
+- ✓ Clear filters button
+- ✓ Status bar showing task count
+
+**Could (implemented):**
+- ✓ Show comment count per task
+- ✓ Support adding comments through GUI (via service layer)
+- ✓ Project management dialog (add/delete projects)
+
+**Won't:**
+- ✗ Introduce new application functionality (all operations delegate to service layer)
+- ✗ Implement advanced project management dashboard
+
+### Architecture & Design
+
+**Service Layer Integration:**
+- All GUI operations use existing TodoService methods (no new business logic)
+- Proper error handling with service layer exceptions (TaskNotFoundError, ProjectNotFoundError)
+- Timezone-aware datetime handling (UTC) consistent with service layer
+- Comments accessible through service layer for display
+
+**UI Structure:**
+- Main window (TodoGUI) with tree view for task list
+- Separate dialog windows for task operations (modal pattern)
+- Real-time refresh after any modification
+- Project list populated dynamically from ProjectManager
+
+**Data Flow:**
+```
+User Input (GUI) → TodoGUI/Dialog → TodoService → TaskManager/ProjectManager → JsonStorage
+                                ↑                                              ↓
+                           Display/Refresh          ← Persistence ←
+```
+
+### Test Results
+
+- All 151 existing tests pass (no breaking changes)
+- No new test files needed (GUI is event-driven, tested via manual interaction)
+- Full backward compatibility maintained
+- CLI and interactive menu modes unaffected
+
+### Dependencies
+
+- **tkinter** (Python standard library only)
+- Uses existing imports: TodoService, TaskStatus, Task, ProjectManager, CommentsService
+- No new external dependencies added
+
+### Entry Points
+
+- Command-line: `python -m src --gui`
+- Optional storage: `python -m src --gui --storage /path/to/storage.json`
+- Interactive menu: Can be enhanced to include GUI launch option
+
+Duration: 766.4s | Cost: $1.606854 USD | Turns: 69
