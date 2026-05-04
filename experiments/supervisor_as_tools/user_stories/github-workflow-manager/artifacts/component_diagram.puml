@@ -30,6 +30,7 @@ package "GitHub Workflow Manager" {
   }
 
   package "Persistence layer" {
+    interface "StorageAdapter" as ADAPTER
     component "WorkflowJsonStorage" as STOR
     artifact "workflow_runs.json" as JSON_FILE
   }
@@ -65,7 +66,8 @@ TRACKER --> SVC
 ATTEMPT --> SVC
 IMPORT --> SVC
 STATS --> SVC
-SVC --> STOR
+SVC --> ADAPTER
+STOR ..|> ADAPTER
 STOR --> JSON_FILE
 
 IMPORT --> GITHUB_CLIENT

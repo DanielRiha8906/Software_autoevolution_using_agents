@@ -147,6 +147,13 @@ package "github_api" #CCDDFF {
 }
 
 package "storage" #FFF3CC {
+    interface StorageAdapter <<interface>> {
+        +load() : List[WorkflowRun]
+        +save(runs: List[WorkflowRun]) : None
+        +export_to_file(runs: List[WorkflowRun], output_path: str) : None
+        +import_from_file(input_path: str) : List[WorkflowRun]
+    }
+
     class WorkflowJsonStorage {
         +filepath : str
         --
@@ -156,6 +163,8 @@ package "storage" #FFF3CC {
         +export_to_file(runs: List[WorkflowRun], output_path: str) : None
         +import_from_file(input_path: str) : List[WorkflowRun]
     }
+
+    WorkflowJsonStorage ..|> StorageAdapter : implements
 }
 
 package "services" #DDFFD4 {
@@ -169,10 +178,10 @@ package "services" #DDFFD4 {
         +per_status_avg_duration : dict[WorkflowStatus, float]
     }
     class WorkflowRunService {
-        -_storage : WorkflowJsonStorage
+        -_storage : StorageAdapter
         -_runs    : List[WorkflowRun]
         --
-        +__init__(storage: WorkflowJsonStorage)
+        +__init__(storage: StorageAdapter)
         +add_workflow_run(run: WorkflowRun) : WorkflowRun
         +list_runs() : List[WorkflowRun]
         +get_run_detail(run_id: str) : Optional[WorkflowRun]
@@ -252,7 +261,7 @@ WorkflowRunAttempt         ..>  WorkflowAttemptConclusion : conclusion
 WorkflowRunAttempt         ..>  ValidationError          : raises
 WorkflowJsonStorage        ..>  WorkflowRun
 WorkflowJsonStorage        ..>  ValidationError          : raises
-WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
+WorkflowRunService    "1" --> "1" StorageAdapter : -_storage
 WorkflowRunService         ..>  WorkflowRun
 WorkflowRunService         ..>  WorkflowStatus
 WorkflowRunService         ..>  WorkflowConclusion

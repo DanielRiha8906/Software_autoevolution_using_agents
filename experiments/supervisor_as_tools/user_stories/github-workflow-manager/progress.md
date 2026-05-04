@@ -456,3 +456,51 @@ Successfully imported 5 run(s)
 ```
 
 Duration: 586.0s | Cost: $1.177924 USD | Turns: 24
+
+---
+
+# Task 09: Service, Storage, and GitHub Adapter Layer Boundaries
+
+## Summary
+Successfully refactored the codebase to introduce clear boundaries between service, storage, and GitHub adapter layers through the introduction of a `StorageAdapter` protocol. This decouples the service layer from concrete storage implementations while preserving all existing public interfaces and behavior.
+
+## Files Changed
+- `src/storage/base.py` — NEW: Created StorageAdapter protocol with four methods (load, save, export_to_file, import_from_file)
+- `src/storage/__init__.py` — Updated to export StorageAdapter protocol alongside WorkflowJsonStorage
+- `src/services/workflow_run_service.py` — Updated type hints to depend on StorageAdapter protocol instead of concrete WorkflowJsonStorage class
+- `artifacts/class_diagram.puml` — Updated to show StorageAdapter interface and WorkflowJsonStorage implementing it
+- `artifacts/component_diagram.puml` — Updated to show StorageAdapter component and dependency relationships
+
+## Test Results
+- **Total tests**: 206
+- **Passed**: 206 ✓
+- **Failed**: 0
+- **Command**: `pytest tests/ -q`
+
+## Acceptance Criteria Met
+✓ Service, storage, and GitHub adapter layers have clear boundaries with no circular dependencies
+✓ All existing public interfaces (function signatures, class names, return types) preserved
+✓ Abstract base classes/protocols decouple service, storage, and adapter layers (StorageAdapter protocol introduced)
+✓ Module-level `__all__` declarations present in storage and services packages
+✓ Domain logic not rewritten, only reorganized through abstraction
+✓ File/module structure changes minimal and traceable (1 new file, 2 modified files)
+✓ `python -m src` behaves identically before and after refactoring
+
+## Feature Coverage
+- **Abstraction layer**: StorageAdapter Protocol defines contract for storage implementations (load, save, export_to_file, import_from_file)
+- **Backward compatibility**: WorkflowJsonStorage continues to work without modification; implements protocol via duck typing
+- **Type safety**: WorkflowRunService now uses StorageAdapter type hints, enabling type checkers to verify compatibility
+- **Decoupling**: Service layer no longer depends on concrete WorkflowJsonStorage; any StorageAdapter-compliant object works
+- **Testing support**: Protocol-based design enables easy creation of mock storage for unit tests
+- **UML documentation**: Diagrams updated to show protocol relationships and implementation
+
+## Architecture Changes
+- **Before**: WorkflowRunService → concrete WorkflowJsonStorage dependency
+- **After**: WorkflowRunService → StorageAdapter protocol ← WorkflowJsonStorage implementation
+
+This change enables:
+- Future storage backends (SQL, in-memory, cloud APIs) without modifying service code
+- Better testability through mock storage objects
+- Clearer layer separation and dependency flow
+
+Duration: 411.2s | Cost: $0.734635 USD | Turns: 23

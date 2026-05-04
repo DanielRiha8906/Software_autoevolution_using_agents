@@ -6,11 +6,11 @@ from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.import_result import ImportResult
-from ..storage.workflow_json_storage import WorkflowJsonStorage
+from ..storage.base import StorageAdapter
 
 
 class WorkflowRunService:
-    def __init__(self, storage: WorkflowJsonStorage):
+    def __init__(self, storage: StorageAdapter):
         self._storage = storage
         self._runs: List[WorkflowRun] = storage.load()
 
