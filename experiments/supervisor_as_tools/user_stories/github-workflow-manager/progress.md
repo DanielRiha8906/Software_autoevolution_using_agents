@@ -503,4 +503,4 @@ This change enables:
 - Better testability through mock storage objects
 - Clearer layer separation and dependency flow
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 411.2s | Cost: $0.734635 USD | Turns: 23
