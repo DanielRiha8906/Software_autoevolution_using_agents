@@ -721,4 +721,4 @@ src/
 └── __main__.py (updated: creates and injects adapters)
 ```
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 548.5s | Cost: $1.067697 USD | Turns: 19
