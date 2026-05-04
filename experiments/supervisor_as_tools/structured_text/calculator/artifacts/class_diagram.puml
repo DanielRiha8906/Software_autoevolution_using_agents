@@ -85,18 +85,15 @@ package "services" #DDFFD4 {
 
     class CalculatorService {
         -calculator : Calculator
-        -storage : JsonStorage
-        -memory_service : MemoryService [0..1]
+        -storage : StorageInterface
+        -memory_service : MemoryRepository [0..1]
         --
-        +CalculatorService(calculator: Calculator, storage: JsonStorage, memory_service: MemoryService | None)
+        +CalculatorService(calculator: Calculator, storage: StorageInterface, memory_service: MemoryRepository | None)
         +perform(operation: Operation, a: float, b: float) : CalculationResult
         +getHistory() : List<CalculationResult>
     }
 
-    class MemoryService {
-        -storage : MemoryJsonStorage
-        --
-        +MemoryService(storage: MemoryJsonStorage)
+    interface MemoryRepository {
         +store(entry: MemoryEntry) : void
         +retrieve_by_id(entry_id: str) : MemoryEntry | None
         +retrieve_all() : List<MemoryEntry>
@@ -105,11 +102,39 @@ package "services" #DDFFD4 {
         +retrieve_failures() : List<MemoryEntry>
         +retrieve_by_filter(operation: str | None, success: bool | None) : List<MemoryEntry>
         +count() : int
-        +count_by_status() : Dict<str, int>
-        +count_by_operation() : Dict<str, int>
+        +count_by_status() : Dict[str, int]
+        +count_by_operation() : Dict[str, int]
         +clear() : void
         +get_operation_error_rates() : Dict[str, float]
         +compute_statistics(filter_operation: str | None) : MemoryStatistics
+    }
+
+    class MemoryService {
+        -storage : MemoryStorageInterface
+        --
+        +MemoryService(storage: MemoryStorageInterface)
+        +store(entry: MemoryEntry) : void
+        +retrieve_by_id(entry_id: str) : MemoryEntry | None
+        +retrieve_all() : List<MemoryEntry>
+        +retrieve_by_operation(operation: str) : List<MemoryEntry>
+        +retrieve_successes() : List<MemoryEntry>
+        +retrieve_failures() : List<MemoryEntry>
+        +retrieve_by_filter(operation: str | None, success: bool | None) : List<MemoryEntry>
+        +count() : int
+        +count_by_status() : Dict[str, int]
+        +count_by_operation() : Dict[str, int]
+        +clear() : void
+        +get_operation_error_rates() : Dict[str, float]
+        +compute_statistics(filter_operation: str | None) : MemoryStatistics
+    }
+
+    class EventRecorder {
+        -calculation_storage : StorageInterface
+        -memory_repo : MemoryRepository [0..1]
+        --
+        +EventRecorder(calculation_storage: StorageInterface, memory_repo: MemoryRepository | None)
+        +record_success(result: CalculationResult, elapsed_ms: float) : void
+        +record_failure(operation: str, operand_a: float, operand_b: float, elapsed_ms: float, error_message: str) : void
     }
 
     class MemoryImportExportService {
@@ -122,6 +147,17 @@ package "services" #DDFFD4 {
 }
 
 package "storage" #FFF3CC {
+    interface StorageInterface {
+        +save(result: CalculationResult) : void
+        +load_all() : List<CalculationResult>
+    }
+
+    interface MemoryStorageInterface {
+        +save(entry: MemoryEntry) : void
+        +load_all() : List<MemoryEntry>
+        +clear() : void
+    }
+
     class JsonStorage {
         -filepath : String
         --
@@ -175,11 +211,17 @@ CalculatorCLI ..> MemoryService : memory_service [0..1]
 CalculatorCLI ..> MemoryImportExportService : import_export_service [0..1]
 CalculatorCLI ..> MemoryStatistics : displays
 CalculatorService --> Calculator : calculator
-CalculatorService --> JsonStorage : storage
-CalculatorService ..> MemoryService : memory_service [0..1]
-MemoryService --> MemoryJsonStorage : storage
+CalculatorService --> StorageInterface : storage
+CalculatorService ..> MemoryRepository : memory_service [0..1]
+CalculatorService --> EventRecorder : uses
+EventRecorder --> StorageInterface : calculation_storage
+EventRecorder ..> MemoryRepository : memory_repo [0..1]
+MemoryService ..|> MemoryRepository : implements
+MemoryService --> MemoryStorageInterface : storage
 MemoryService ..> MemoryEntry : manages
 MemoryService ..> MemoryStatistics : creates
+JsonStorage ..|> StorageInterface : implements
+MemoryJsonStorage ..|> MemoryStorageInterface : implements
 MemoryImportExportService ..> MemoryEntry : imports/exports
 
 CalculatorService ..> CalculationResult : create
@@ -187,7 +229,7 @@ CalculatorService ..> MemoryEntry : creates
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
 Calculator ..> Operation
-JsonStorage ..> CalculationResult : stores
-MemoryJsonStorage ..> MemoryEntry : stores
+StorageInterface ..> CalculationResult : stores
+MemoryStorageInterface ..> MemoryEntry : stores
 
 @enduml
