@@ -14,9 +14,9 @@ from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
 
-def _build_service() -> CalculatorService:
+def _build_service(memory_service: Optional[MemoryService] = None) -> CalculatorService:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
-    return CalculatorService(ScientificCalculator(), JsonStorage(storage_path))
+    return CalculatorService(ScientificCalculator(), JsonStorage(storage_path), memory_service=memory_service)
 
 
 def _as_number(value: str) -> float:
@@ -94,8 +94,8 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    service = _build_service()
     memory_service = MemoryService()
+    service = _build_service(memory_service)
     cli = CalculatorCLI(service, memory_service)
     import_export_service = ImportExportService()
 

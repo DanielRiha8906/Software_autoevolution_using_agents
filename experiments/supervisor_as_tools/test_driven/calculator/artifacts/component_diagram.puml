@@ -2,26 +2,56 @@
 
 skinparam componentStyle uml2
 skinparam defaultFontSize 13
-left to right direction
+top to bottom direction
 
 package "Calculator Application" {
 
-    component "Entry Point\n(__main__)" as Main
-    component "CLI Interface\n(CalculatorCLI)" as CLI
-    component "Application Service\n(CalculatorService)" as Service
-    component "Scientific Calculator\n(ScientificCalculator)" as Calc
-    component "JSON Storage\n(JsonStorage)" as Store
-    component "Domain Models\n(Operation, CalculationResult)" as Models
+    package "Interface Layer" #FFE5E5 {
+        component "CLI Interface\n(CalculatorCLI)" as CLI
+        component "Entry Point\n(__main__)" as Main
+        Main --> CLI : initializes
+    }
 
-    Main --> CLI : initializes
-    Main --> Service : initializes
+    package "Calculation Engine" #DDFFD4 {
+        component "Scientific Calculator\n(ScientificCalculator)" as Calc
+        component "Base Calculator\n(Calculator)" as BasCalc
+        BasCalc <|-- Calc : extends
+    }
 
-    CLI --> Service : uses
-    Service --> Calc : uses
-    Service --> Store : uses
+    package "Memory & History" #E5F5FF {
+        component "Memory Service\n(MemoryService)" as Memory
+        component "Memory Entry\n(MemoryEntry)" as MemEntry
+        component "Import/Export\n(ImportExportService)" as ImportExport
+        component "Statistics\n(StatisticsService)" as Stats
+        Memory --> MemEntry : manages
+        ImportExport --> MemEntry : handles
+        Stats --> Memory : analyzes
+    }
 
-    Service ..> Models
-    Store ..> Models
+    package "Persistence" #FFF3CC {
+        component "JSON Storage\n(JsonStorage)" as Store
+    }
+
+    package "Domain Models" #EEEEEE {
+        component "Operation Enum" as Op
+        component "CalculationResult" as CalcResult
+    }
+
+    CLI --> Calc : execute(operation, a, b)
+    Calc --> Op : uses
+    CLI --> Memory : retrieve history
+    CLI --> ImportExport : uses
+
+    component "CalculatorService" as Service
+    Service --> Calc : delegate calculation
+    Service --> Memory : store MemoryEntry
+    Service --> Store : persist CalculationResult
+    Service --> CalcResult : create
+    Service --> MemEntry : create
+
+    CLI --> Service : orchestrate
+    Store --> CalcResult : serialize/deserialize
+    Memory --> Store : import/export via
 }
 
 database "calculations.json" as DB
