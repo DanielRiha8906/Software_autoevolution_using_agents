@@ -13,6 +13,7 @@ from .services.statistics_service import StatisticsService
 from .storage.json_storage import JsonStorage
 from .storage.memory_storage import MemoryStorage
 from .cli.calculator_cli import CalculatorCLI
+from .gui.calculator_gui import CalculatorGUI
 
 
 def _build_service() -> tuple[CalculatorService, QueryService, StatisticsService, HistoryManager]:
@@ -42,7 +43,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B] [--scientific] [--query-by-operation OP] [--query-by-state STATE] [--stats] [--export-history FILE] [--import-history FILE] [--append|--replace]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B] [--scientific] [--gui] [--query-by-operation OP] [--query-by-state STATE] [--stats] [--export-history FILE] [--import-history FILE] [--append|--replace]",
+    )
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch the graphical user interface",
     )
     parser.add_argument(
         "--scientific",
@@ -100,6 +106,22 @@ def main() -> None:
 
     args = parser.parse_args()
     calc_service, query_service, statistics_service, history_manager = _build_service()
+
+    # GUI mode (GUI flag)
+    if args.gui:
+        memory_storage_path = Path(__file__).parent.parent / "artifacts" / "memory.json"
+        memory_storage = MemoryStorage(memory_storage_path)
+        memory_service = MemoryService(memory_storage)
+        gui = CalculatorGUI(
+            calc_service,
+            query_service,
+            statistics_service,
+            memory_service,
+            scientific_mode=args.scientific,
+        )
+        gui.run_interactive()
+        return
+
     cli = CalculatorCLI(calc_service, query_service, statistics_service, history_manager, scientific_mode=args.scientific)
 
     # Export history mode (CLI flag)
