@@ -507,3 +507,117 @@ At runtime, TodoService sets `task_manager._comments_service = comments_service`
 - All test scenarios pass without modification
 
 Duration: 699.8s | Cost: $1.128198 USD | Turns: 23
+
+---
+
+## Task 10: Add graphical user interface for the TODO manager
+
+### Status: COMPLETED ✓
+
+### Files Changed
+
+**New files:**
+- `src/gui/__init__.py` — Module export of TodoGUI
+- `src/gui/styles.py` — Color schemes, fonts, and treeview tag styling
+- `src/gui/task_display.py` — TaskRow class for task formatting and display
+- `src/gui/dialogs.py` — Dialog classes: AddTaskDialog, ChangeStatusDialog, ConfirmDeleteDialog, SetDueDateDialog, UpdateTaskDialog
+- `src/gui/main_window.py` — TodoGUI main window class with complete GUI implementation
+
+**Modified files:**
+- `src/__main__.py` — Added --gui flag support with lazy import
+- `src/cli/interactive_menu.py` — Added menu option 13 "Open GUI"
+- `artifacts/class_diagram.puml` — Added gui package with all GUI classes
+- `artifacts/component_diagram.puml` — Added GUI (tkinter) component to presentation layer
+- `artifacts/use_case_diagram.puml` — Added GUI use cases
+- `artifacts/activity_diagram.puml` — Added "Open GUI" activity to main menu flow
+
+### Test Results
+- **Total tests: 198**
+- **Passed: 198**
+- **Failed: 0**
+- **Success rate: 100%**
+
+### Requirements Met
+
+#### Must (All Implemented ✓)
+✓ Display tasks with: title, status, due date, and project (if assigned)
+✓ Allow basic task operations: view, add, change status, delete
+✓ Integrate with existing service layer logic (no duplicate business logic in UI)
+✓ Highlight overdue tasks visually (red background)
+✓ GUI launchable via `python -m src --gui`
+
+#### Should (All Implemented ✓)
+✓ Support filtering tasks by status or project via dropdown filters
+✓ Ensure basic usability and layout clarity
+
+#### Could (Partially Implemented)
+✓ No GUI for adding comments through the dialog-based approach (service layer supports it)
+- Comment count per task in task list (not visible in table, but service layer supports listing)
+
+#### Won't (None Required)
+- No new application functionality outside service layer
+- No advanced project management dashboard
+
+### Implementation Summary
+
+**GUI Architecture:**
+- **TodoGUI (main_window.py):** Main window class managing the application lifecycle, task list display, filtering, and event coordination
+- **Dialogs (dialogs.py):** Reusable dialog classes for AddTask, ChangeStatus, ConfirmDelete, SetDueDate, and UpdateTask operations
+- **TaskRow (task_display.py):** Wrapper class formatting Task objects for treeview display with status symbols and tag styling
+- **Styles (styles.py):** Centralized color scheme (overdue red: #ff6b6b, normal white) and font definitions
+
+**UI Layout:**
+- Header with window title "TODO Manager"
+- Filter bar with dropdown menus for status (All/Pending/In Progress/Done) and project selection
+- Task treeview with columns: Status (symbol), Title, Due Date, Project, ID (hidden)
+- Action buttons: Add, Change Status, Update, Set Due Date, Delete
+- Status bar showing: task count, overdue count, completed count
+
+**Visual Indicators:**
+- Status symbols: [ ] for PENDING, [~] for IN_PROGRESS, [x] for DONE
+- Overdue tasks highlighted with red background (#ff6b6b) and white text
+- Due date format: YYYY-MM-DD or "No due date"
+- Dynamic filter dropdowns populated from service (status enum, project list)
+
+**Key Features:**
+1. **Task Display:** Treeview with all task attributes, sortable and filterable
+2. **Task Management:** Add, view, edit, delete, change status, set due date via dialogs
+3. **Filtering:** By status (All/Pending/In Progress/Done) and by project (All/None/project name)
+4. **Overdue Highlighting:** Automatic detection via Task.is_overdue() method, red background styling
+5. **Error Handling:** All service exceptions caught and displayed in error dialogs
+6. **Status Bar:** Live statistics showing total tasks, overdue count, completed count
+
+**Service Integration:**
+- All business logic delegated to TodoService (add_task, list_tasks, start_task, complete_task, reopen_task, delete_task, set_due_date, list_projects, etc.)
+- No duplicate business logic in GUI
+- Proper exception handling: TaskNotFoundError, ProjectNotFoundError, ValueError → error dialogs
+- Filter parameters passed directly to service: list_tasks(status=..., project_id=..., overdue=...)
+
+**Entry Points:**
+- `python -m src --gui` — launches GUI window directly
+- `python -m src` → interactive menu → option 13 "Open GUI" — launches GUI from menu
+- GUI window runs until user closes it (tkinter mainloop)
+
+**Dependencies:**
+- tkinter (stdlib) — no new external dependencies required
+- Existing imports: Task, TaskStatus, Project, TodoService, exceptions
+
+### Execution Approach
+
+Followed supervisor-as-tools architecture:
+1. **Analyst agent** — Reviewed codebase structure, TodoService API, Task/Project models, launch mechanism
+2. **Architect agent** — Designed GUI structure, file organization, test specifications, error handling strategy
+3. **Programmer agent** — Implemented all 6 new files + 2 modified files following design specifications
+4. **Tester agent** — Ran full test suite (198 tests, all passing, no regressions)
+5. **UML Designer agent** — Updated class, component, use_case, and activity diagrams
+
+### Notes
+
+- GUI is purely for user interaction; all data operations handled by TodoService
+- Dialogs are modal and block interaction until confirmed or cancelled
+- Filter state is session-only (resets when GUI closes)
+- Overdue calculation uses Task.is_overdue() which checks against current CEST time
+- Date parsing/display uses consistent YYYY-MM-DD HH:MM format matching CLI
+- No database schema changes; all data persisted via existing JsonStorage
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

@@ -213,6 +213,84 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #FFD9E5 {
+    class TodoGUI {
+        -service : TodoService
+        -root : Tk
+        -treeview : Treeview
+        -filter_status : TaskStatus [0..1]
+        -filter_project : String [0..1]
+        --
+        +TodoGUI(storage_path: String [0..1])
+        +run() : void
+        +refresh_task_list(filter_status: TaskStatus [0..1], filter_project: String [0..1]) : void
+        +apply_filter(status: TaskStatus [0..1], project_id: String [0..1]) : void
+        +on_add_task() : void
+        +on_change_status() : void
+        +on_update_task() : void
+        +on_set_due_date() : void
+        +on_delete_task() : void
+        -_build_ui() : void
+        -_on_filter_changed() : void
+        -get_selected_task() : String
+    }
+
+    class TaskRow {
+        -task : Task
+        -project_name : String
+        --
+        +TaskRow(task: Task, project_name: String [0..1])
+        +format_for_treeview() : Tuple<String...>
+        +get_tag() : String
+    }
+
+    class AddTaskDialog {
+        -result : Tuple [0..1]
+        -dialog : Toplevel
+        -title_entry : Entry
+        -description_text : Text
+        -project_combo : Combobox
+        --
+        +AddTaskDialog(parent: Widget, projects_list: List<String>)
+    }
+
+    class ChangeStatusDialog {
+        -result : TaskStatus [0..1]
+        -dialog : Toplevel
+        --
+        +ChangeStatusDialog(parent: Widget, current_status: TaskStatus)
+    }
+
+    class ConfirmDeleteDialog {
+        -result : Boolean
+        --
+        +ConfirmDeleteDialog(parent: Widget, task_title: String)
+    }
+
+    class SetDueDateDialog {
+        -result : DateTime [0..1]
+        -dialog : Toplevel
+        -date_entry : Entry
+        --
+        +SetDueDateDialog(parent: Widget, current_due_date: DateTime [0..1])
+    }
+
+    class UpdateTaskDialog {
+        -result : Tuple [0..1]
+        -dialog : Toplevel
+        -title_entry : Entry
+        -description_text : Text
+        --
+        +UpdateTaskDialog(parent: Widget, task: Task)
+    }
+
+    class Styles {
+        +{static} COLORS : Dictionary<String, String>
+        +{static} FONTS : Dictionary<String, Tuple>
+        +{static} TREEVIEW_TAGS : Dictionary<String, Dictionary>
+    }
+}
+
 Task --> TaskStatus : status
 Task --> Project : project_id references [0..1]
 Project --> Project : grouping
@@ -237,5 +315,20 @@ TodoCLI --> TodoService : service
 TodoCLI --> TaskStatistics : uses
 InteractiveMenu --> TodoService : service
 InteractiveMenu --> TaskStatistics : uses
+TodoGUI --> TodoService : service
+TodoGUI --> TaskRow : uses for display
+TodoGUI --> AddTaskDialog : uses
+TodoGUI --> ChangeStatusDialog : uses
+TodoGUI --> ConfirmDeleteDialog : uses
+TodoGUI --> SetDueDateDialog : uses
+TodoGUI --> UpdateTaskDialog : uses
+TodoGUI --> Styles : uses for styling
+TaskRow --> Task : wraps
+TaskRow ..> TaskStatus : uses
+AddTaskDialog --> Task : creates
+AddTaskDialog --> Styles : uses
+ChangeStatusDialog --> TaskStatus : uses
+SetDueDateDialog --> Task : modifies
+UpdateTaskDialog --> Task : modifies
 
 @enduml

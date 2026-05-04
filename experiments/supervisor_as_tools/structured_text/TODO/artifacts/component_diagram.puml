@@ -12,6 +12,13 @@ package "TODO Application" {
     package "Presentation Layer" {
         component "Interactive Menu" as IM
         component "Command-line Interface\n(TodoCLI)" as CLI
+
+        package "GUI (tkinter)" {
+            component "Main Window\n(TodoGUI)" as MainWindow
+            component "Dialogs\n(Add, Update, etc.)" as Dialogs
+            component "Task Display\n(TaskRow)" as TaskDisplay
+            component "Styling\n(Colors, Fonts)" as Styling
+        }
     }
 
     package "Orchestration Layer" {
@@ -49,9 +56,18 @@ database "todo_data.json" as DB
 
 Main --> IM : interactive mode
 Main --> CLI : command mode
+Main --> MainWindow : GUI mode
 
 IM --> SVC
+IM --> MainWindow : launch GUI from menu
+
 CLI --> SVC
+
+MainWindow --> SVC
+MainWindow --> Dialogs : uses
+MainWindow --> TaskDisplay : uses
+MainWindow --> Styling : uses
+Dialogs --> Styling : uses
 
 SVC --> MGR
 SVC --> PMR
