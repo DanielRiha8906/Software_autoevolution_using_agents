@@ -243,6 +243,74 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #FFCCCC {
+    class MainWindow {
+        -root : Tk
+        -service : TodoService
+        -treeview : Treeview
+        -status_var : StringVar
+        -project_var : StringVar
+        --
+        +MainWindow(root: Tk)
+        +_build_widgets() : void
+        +_populate_project_filter() : void
+        +_populate_treeview() : void
+        +on_filter_changed() : void
+        +on_refresh_clicked() : void
+        +on_add_task_clicked() : void
+        +on_view_task_clicked() : void
+        +on_delete_task_clicked() : void
+        +on_mark_done_clicked() : void
+        +on_mark_progress_clicked() : void
+        +on_comments_clicked() : void
+    }
+
+    class AddTaskDialog {
+        -parent : Widget
+        -callback : Callable
+        -projects : List<Dict>
+        -result : Any
+        --
+        +AddTaskDialog(parent: Widget, callback: Callable, projects: List<Dict>)
+        +_build_widgets() : void
+        +on_ok() : void
+        +on_cancel() : void
+    }
+
+    class ViewTaskDialog {
+        -parent : Widget
+        -task : Task
+        -callback : Callable
+        --
+        +ViewTaskDialog(parent: Widget, task: Task, callback: Callable)
+        +_build_widgets() : void
+        +on_ok() : void
+        +on_cancel() : void
+    }
+
+    class ConfirmDialog {
+        -parent : Widget
+        -message : String
+        --
+        +ConfirmDialog(parent: Widget, message: String) : Boolean
+    }
+
+    class CommentsDialog {
+        -parent : Widget
+        -task_id : String
+        -task_title : String
+        -service : TodoService
+        -comments_listbox : Listbox
+        -comment_var : StringVar
+        --
+        +CommentsDialog(parent: Widget, task_id: String, task_title: String, service: TodoService)
+        +_build_widgets() : void
+        +_populate_comments() : void
+        +on_add_comment() : void
+        +on_delete_comment() : void
+    }
+}
+
 Project <-- Task : "project_id"
 Task --> TaskStatus : status
 TaskComment --> Task : references
@@ -267,5 +335,17 @@ TodoCLI --> TodoService : service
 TodoCLI --> TaskSummaryReport : uses
 InteractiveMenu --> TodoService : service
 InteractiveMenu --> TaskSummaryReport : uses
+MainWindow --> TodoService : service
+MainWindow --> Task : displays/manipulates
+MainWindow --> AddTaskDialog : creates
+MainWindow --> ViewTaskDialog : creates
+MainWindow --> CommentsDialog : creates
+MainWindow --> TaskStatus : filters by
+MainWindow --> Project : filters by
+AddTaskDialog --> Task : creates
+AddTaskDialog --> Project : displays options
+ViewTaskDialog --> Task : displays
+CommentsDialog --> TodoService : uses service
+CommentsDialog --> TaskComment : manages
 
 @enduml

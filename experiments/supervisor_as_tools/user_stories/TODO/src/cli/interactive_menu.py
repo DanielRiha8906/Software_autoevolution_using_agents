@@ -92,6 +92,8 @@ class InteractiveMenu:
                 self._do_summary_report()
             elif choice == "11":
                 self._do_import_export()
+            elif choice == "12":
+                self._do_launch_gui()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -123,6 +125,7 @@ class InteractiveMenu:
         print("  9. Manage projects")
         print("  10. View summary report")
         print("  11. Import / Export")
+        print("  12. Launch GUI")
         print("  0. Quit")
         print()
 
@@ -712,3 +715,15 @@ class InteractiveMenu:
             print(f"\n  Error: {e}")
         print()
         input("  Press Enter to continue...")
+
+    def _do_launch_gui(self) -> None:
+        """Launch the tkinter GUI."""
+        _clear()
+        print("  Launching GUI...\n")
+        try:
+            from ..gui import gui_main
+            gui_main.launch_gui()
+        except Exception as e:
+            _clear()
+            print(f"  Error: Failed to launch GUI: {e}")
+            input("  Press Enter to continue...")

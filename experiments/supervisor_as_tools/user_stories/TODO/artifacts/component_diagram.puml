@@ -14,6 +14,13 @@ package "TODO Application" {
         component "Command-line Interface\n(TodoCLI)" as CLI
     }
 
+    package "GUI Layer" {
+        component "GUI Main\n(launch_gui)" as GUIMain
+        component "Main Window\n(MainWindow)" as MainWin
+        component "Dialogs\n(AddTaskDialog, ViewTaskDialog, ConfirmDialog)" as Dialogs
+        component "Comments Dialog\n(CommentsDialog)" as CommentsDlg
+    }
+
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
@@ -50,9 +57,16 @@ database "todo_projects.json" as ProjectDB
 
 Main --> IM : interactive mode
 Main --> CLI : command mode
+Main --> GUIMain : GUI mode
 
 IM --> SVC
 CLI --> SVC
+GUIMain --> MainWin : launches
+MainWin --> SVC : uses service
+MainWin --> Dialogs : creates dialogs
+MainWin --> CommentsDlg : creates
+Dialogs --> SVC : uses service
+CommentsDlg --> SVC : uses service
 
 SVC --> MGR
 SVC --> PMGR
