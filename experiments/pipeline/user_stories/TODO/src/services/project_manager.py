@@ -2,10 +2,7 @@ from typing import Optional
 
 from ..models.project import Project
 from ..storage.json_storage import JsonStorage
-
-
-class ProjectNotFoundError(Exception):
-    pass
+from .exceptions import ProjectNotFoundError
 
 
 class ProjectManager:

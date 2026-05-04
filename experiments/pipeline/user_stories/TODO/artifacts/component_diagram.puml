@@ -2,6 +2,8 @@
 
 skinparam componentStyle uml2
 skinparam defaultFontSize 13
+skinparam noteBkgColor FFFFCC
+skinparam noteTextColor 333333
 
 left to right direction
 
@@ -9,66 +11,75 @@ package "TODO Application" {
 
     component "Entry Point\n(main)" as Main
 
-    package "CLI Layer" {
+    package "INTERFACE LAYER\n(Public: TodoService only)" <<boundary>> {
         component "Interactive Menu" as IM
         component "Command-line Interface\n(TodoCLI)" as CLI
     }
 
-    package "Service Layer" {
-        component "Todo Service" as SVC
-        component "Task Manager" as MGR
-        component "Project Manager" as PMGR
-        component "Comment Management\n(add, view, edit, delete)" as CMT
-        component "Date Filtering\n(week, month, year, range)" as DateFilter
-        component "Project Assignment\n(assign, list by project)" as ProjectAssign
-        component "Report Generation\n(summary statistics)" as Report
-        component "Import Validator\n(validate JSON files)" as ImportVal
-        component "Export / Import\n(JSON serialization)" as ExportImport
+    package "SERVICE LAYER\n(Public: TodoService | Internal: TaskManager, ProjectManager, exceptions)" <<boundary>> {
+        component "Todo Service\n[PUBLIC API]" as SVC
+
+        package "INTERNAL" {
+            component "Task Manager" as MGR
+            component "Project Manager" as PMGR
+            component "Date Filtering\n(week, month, year boundaries)" as DateFilter
+            component "Comment Management\n(add, view, edit, delete)" as CMT
+            component "Project Assignment\n(assign, list by project)" as ProjectAssign
+            component "Report Generation\n(summary statistics)" as Report
+            component "Import Validator\n(validate JSON files)" as ImportVal
+            component "Exception Hierarchy\n(ServiceError base,\nTaskNotFoundError,\nProjectNotFoundError)" as Exceptions
+        }
     }
 
-    package "Domain Model" {
+    package "DOMAIN MODELS\n(No internal dependencies)" <<boundary>> {
         component "Task Model\n(Task, TaskStatus)" as Model
         component "Project Model\n(Project)" as ProjectModel
         component "Task Comment Model\n(TaskComment)" as CommentModel
         component "Summary Report Model\n(TaskSummaryReport)" as ReportModel
     }
 
-    package "Persistence Layer" {
+    package "PERSISTENCE LAYER\n(No internal dependencies)" <<boundary>> {
         component "JSON Storage\n(JsonStorage)" as Storage
     }
 }
 
 database "todo_data.json" as DB
 
+note bottom of SVC
+    Phase 1: Layer Separation
+    - Only TodoService exported from services
+    - TaskManager, ProjectManager internal
+    - All exceptions in dedicated module
+    - Clear dependency boundaries
+end note
+
 Main --> IM : interactive mode
 Main --> CLI : command mode
 
-IM --> SVC
-CLI --> SVC
+IM --> SVC : public API
+CLI --> SVC : public API
 
-SVC --> MGR
-SVC --> PMGR
-SVC --> CMT
-SVC --> DateFilter
-SVC --> ProjectAssign
-SVC --> Report
-SVC --> ExportImport
-ExportImport --> ImportVal
-ExportImport --> MGR
-DateFilter --> MGR
-ProjectAssign --> MGR
-ProjectAssign --> PMGR
-Report --> MGR
-MGR --> Storage
-MGR ..> Model
-MGR ..> CommentModel
-PMGR --> Storage
-PMGR ..> ProjectModel
-CMT ..> CommentModel
-Report ..> ReportModel
-Storage ..> Model
-Storage ..> ProjectModel
-Storage ..> CommentModel
+SVC --> MGR : internal
+SVC --> PMGR : internal
+SVC --> Exceptions : internal
+
+MGR --> DateFilter : internal
+MGR --> CMT : internal
+MGR --> ProjectAssign : internal
+MGR --> Report : internal
+
+ProjectAssign --> PMGR : internal
+
+MGR --> Storage : imports
+PMGR --> Storage : imports
+
+MGR ..> Model : uses
+MGR ..> CommentModel : uses
+PMGR ..> ProjectModel : uses
+CMT ..> CommentModel : uses
+Report ..> ReportModel : uses
+Report ..> MGR : internal
+ImportVal ..> MGR : internal
 
 Storage --> DB : read/write
 

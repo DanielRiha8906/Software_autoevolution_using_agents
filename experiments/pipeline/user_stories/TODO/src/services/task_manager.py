@@ -6,10 +6,7 @@ from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..models.task_comment import TaskComment
 from ..storage.json_storage import JsonStorage
-
-
-class TaskNotFoundError(Exception):
-    pass
+from .exceptions import TaskNotFoundError
 
 
 class TaskManager:
@@ -113,7 +110,7 @@ class TaskManager:
             result.append(task)
         return result
 
-    def _get_week_boundaries(self, year: int, week: int) -> tuple[datetime, datetime]:
+    def get_week_boundaries(self, year: int, week: int) -> tuple[datetime, datetime]:
         """Calculate start and end datetime for an ISO 8601 week.
 
         Week 1 is the week with the first Thursday of the year (ISO 8601).
@@ -139,7 +136,7 @@ class TaskManager:
         week_end = datetime.combine(week_end_date, datetime.max.time()).replace(tzinfo=timezone.utc)
         return week_start, week_end
 
-    def _get_month_boundaries(self, year: int, month: int) -> tuple[datetime, datetime]:
+    def get_month_boundaries(self, year: int, month: int) -> tuple[datetime, datetime]:
         """Calculate start and end datetime for a calendar month.
 
         Args:
@@ -160,7 +157,7 @@ class TaskManager:
         month_end = datetime(year, month, last_day, 23, 59, 59, tzinfo=timezone.utc)
         return month_start, month_end
 
-    def _get_year_boundaries(self, year: int) -> tuple[datetime, datetime]:
+    def get_year_boundaries(self, year: int) -> tuple[datetime, datetime]:
         """Calculate start and end datetime for a calendar year.
 
         Args:
@@ -210,6 +207,16 @@ class TaskManager:
     def delete(self, task_id: str) -> None:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
+        self._persist()
+
+    def set_task(self, task_id: str, task: Task) -> None:
+        """Set a task directly in the tasks dictionary and persist.
+
+        Args:
+            task_id: The ID to store the task under.
+            task: The Task object to store.
+        """
+        self._tasks[task_id] = task
         self._persist()
 
     def set_project(self, task_id: str, project_id: Optional[str]) -> Task:

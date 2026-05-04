@@ -1,0 +1,138 @@
+@startuml layer_separation_diagram
+
+!define MODELS_COLOR DDEEFF
+!define STORAGE_COLOR FFF3CC
+!define INTERNAL_COLOR D4E8D4
+!define PUBLIC_COLOR DDFFD4
+!define INTERFACE_COLOR FFE5E5
+
+skinparam packageBkgColor ffffff
+skinparam packageBorderColor 333333
+skinparam packageFontSize 14
+skinparam noteBkgColor FFFFCC
+skinparam noteTextColor 333333
+
+title Phase 1: Layer Separation & Import Boundaries
+
+frame "LAYER STRUCTURE & IMPORTS" {
+
+    package "DOMAIN MODELS" #MODELS_COLOR {
+        card "Task" as Task
+        card "TaskStatus" as Status
+        card "TaskComment" as Comment
+        card "Project" as Project
+        card "TaskSummaryReport" as Report
+        note bottom
+            Imports: NOTHING
+            Exports: All classes
+        end note
+    }
+
+    package "PERSISTENCE LAYER" #STORAGE_COLOR {
+        card "JsonStorage" as Storage
+        note bottom
+            Imports: NOTHING
+            Exports: JsonStorage
+        end note
+    }
+
+    package "SERVICE LAYER - PUBLIC" #PUBLIC_COLOR {
+        card "TodoService" as TodoService
+        note right
+            Imports:
+            - models (Task, etc)
+            - storage (JsonStorage)
+            - internal managers
+            - exceptions
+            Exports: TodoService
+        end note
+    }
+
+    package "SERVICE LAYER - INTERNAL" #INTERNAL_COLOR {
+        card "TaskManager" as TM
+        card "ProjectManager" as PM
+        card "ImportValidator" as IV
+        note bottom
+            Imports:
+            - models (Task, etc)
+            - storage (JsonStorage)
+            - exceptions
+            Exports: NONE (internal)
+        end note
+    }
+
+    package "EXCEPTION MODULE" #INTERNAL_COLOR {
+        card "ServiceError" as SE
+        card "TaskNotFoundError" as TNF
+        card "ProjectNotFoundError" as PNF
+        note bottom
+            Imports: NOTHING
+            Exports: To services and CLI
+        end note
+    }
+
+    package "INTERFACE LAYER" #INTERFACE_COLOR {
+        card "TodoCLI" as CLI
+        card "InteractiveMenu" as Menu
+        note bottom
+            Imports:
+            - TodoService (public API)
+            - exceptions (from services)
+            - models (type hints only)
+            Exports: Entry points
+        end note
+    }
+}
+
+frame "DEPENDENCY ARROWS (→ means imports)" {
+
+    Task --> Status
+    Task --> Comment
+    Task --> Project
+
+    TM --> Task : reads/writes
+    TM --> Comment : manages
+    TM --> Storage : uses
+    TM --> TNF : raises
+    TM --> SE : (extends)
+
+    PM --> Project : manages
+    PM --> Storage : uses
+    PM --> PNF : raises
+    PM --> SE : (extends)
+
+    TodoService --> Task : returns
+    TodoService --> TM : uses (internal)
+    TodoService --> PM : uses (internal)
+    TodoService --> IV : uses (internal)
+    TodoService --> SE : may raise
+    TodoService --> TNF : may raise
+    TodoService --> PNF : may raise
+
+    CLI --> TodoService : calls
+    CLI --> SE : catches
+    CLI --> TNF : catches
+    CLI --> PNF : catches
+
+    Menu --> TodoService : calls
+    Menu --> SE : catches
+    Menu --> TNF : catches
+    Menu --> PNF : catches
+
+    SE <|-- TNF : extends
+    SE <|-- PNF : extends
+}
+
+note bottom
+    Phase 1 Changes:
+    • Exception hierarchy centralized in exceptions.py
+    • Only TodoService exported from services module
+    • TaskManager & ProjectManager internal, not exported
+    • Clear import boundaries with no circular dependencies
+    • Interface layer only imports TodoService (public API)
+    • New public methods on TaskManager:
+      - get_week_boundaries(), get_month_boundaries(), get_year_boundaries()
+      - set_task()
+end note
+
+@enduml

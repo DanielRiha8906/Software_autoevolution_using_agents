@@ -10,7 +10,8 @@ from ..models.task_summary_report import TaskSummaryReport
 from ..models.project import Project
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
-from .project_manager import ProjectManager, ProjectNotFoundError
+from .project_manager import ProjectManager
+from .exceptions import TaskNotFoundError, ProjectNotFoundError
 from .import_validator import ImportValidator
 
 
@@ -42,7 +43,7 @@ class TodoService:
         Raises:
             ValueError: If week is not in 1-53.
         """
-        week_start, week_end = self._manager._get_week_boundaries(year, week)
+        week_start, week_end = self._manager.get_week_boundaries(year, week)
         return self._manager.list_by_due_date_range(
             after=week_start, before=week_end, status=status
         )
@@ -63,7 +64,7 @@ class TodoService:
         Raises:
             ValueError: If month is not in 1-12.
         """
-        month_start, month_end = self._manager._get_month_boundaries(year, month)
+        month_start, month_end = self._manager.get_month_boundaries(year, month)
         return self._manager.list_by_due_date_range(
             after=month_start, before=month_end, status=status
         )
@@ -80,7 +81,7 @@ class TodoService:
         Returns:
             list[Task]: Tasks due in the specified year.
         """
-        year_start, year_end = self._manager._get_year_boundaries(year)
+        year_start, year_end = self._manager.get_year_boundaries(year)
         return self._manager.list_by_due_date_range(
             after=year_start, before=year_end, status=status
         )
@@ -406,7 +407,7 @@ class TodoService:
 
                 # Reconstruct task from dict and add/update
                 task = Task.from_dict(task_dict_copy)
-                self._manager._tasks[task_id] = task
+                self._manager.set_task(task_id, task)
 
                 if is_duplicate and duplicate_strategy == "replace":
                     # Counted as skipped when replacing
@@ -416,8 +417,5 @@ class TodoService:
                 existing_ids.add(task_id)
             except Exception as e:
                 result["errors"].append({"id": task_id, "error": f"Failed to import: {e}"})
-
-        # Persist all changes
-        self._manager._persist()
 
         return result
