@@ -8,17 +8,13 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from ..exceptions import ImportExportError
 from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.project import Project
-from .comment_manager import CommentManager
-from .task_manager import TaskManager
-from .project_manager import ProjectManager
-
-
-class ImportExportError(Exception):
-    """Raised when import/export validation fails."""
-    pass
+from ..repositories.comment_repository import CommentRepository
+from ..repositories.task_repository import TaskRepository
+from ..repositories.project_repository import ProjectRepository
 
 
 class ExportService:
@@ -32,17 +28,17 @@ class ExportService:
     }
     """
 
-    def __init__(self, task_manager: TaskManager, comment_manager: CommentManager, project_manager: ProjectManager) -> None:
-        """Initialize ExportService with managers.
+    def __init__(self, task_repository: TaskRepository, comment_repository: CommentRepository, project_repository: ProjectRepository) -> None:
+        """Initialize ExportService with repositories.
 
         Args:
-            task_manager: TaskManager instance for reading tasks
-            comment_manager: CommentManager instance for reading comments
-            project_manager: ProjectManager instance for reading projects
+            task_repository: TaskRepository instance for reading tasks
+            comment_repository: CommentRepository instance for reading comments
+            project_repository: ProjectRepository instance for reading projects
         """
-        self._task_manager = task_manager
-        self._comment_manager = comment_manager
-        self._project_manager = project_manager
+        self._task_repository = task_repository
+        self._comment_repository = comment_repository
+        self._project_repository = project_repository
 
     def export_to_file(self, filepath: str) -> tuple[int, int, int]:
         """Export all tasks, comments, and projects to a JSON file.
@@ -57,9 +53,9 @@ class ExportService:
             ImportExportError: If file cannot be written
         """
         try:
-            tasks = self._task_manager.list_all()
-            comments = self._comment_manager.list_all()
-            projects = self._project_manager.list_all()
+            tasks = self._task_repository.list_all()
+            comments = self._comment_repository.list_all()
+            projects = self._project_repository.list_all()
 
             export_data = {
                 "tasks": [t.to_dict() for t in tasks],
@@ -87,17 +83,17 @@ class ImportService:
     - 'replace': Overwrite existing records with imported data
     """
 
-    def __init__(self, task_manager: TaskManager, comment_manager: CommentManager, project_manager: ProjectManager) -> None:
-        """Initialize ImportService with managers.
+    def __init__(self, task_repository: TaskRepository, comment_repository: CommentRepository, project_repository: ProjectRepository) -> None:
+        """Initialize ImportService with repositories.
 
         Args:
-            task_manager: TaskManager instance for writing tasks
-            comment_manager: CommentManager instance for writing comments
-            project_manager: ProjectManager instance for writing projects
+            task_repository: TaskRepository instance for writing tasks
+            comment_repository: CommentRepository instance for writing comments
+            project_repository: ProjectRepository instance for writing projects
         """
-        self._task_manager = task_manager
-        self._comment_manager = comment_manager
-        self._project_manager = project_manager
+        self._task_repository = task_repository
+        self._comment_repository = comment_repository
+        self._project_repository = project_repository
 
     def import_from_file(self, filepath: str, mode: str = "fail") -> tuple[int, int, int, int]:
         """Import tasks, comments, and projects from a JSON file.
@@ -162,9 +158,9 @@ class ImportService:
             raise ImportExportError(f"Invalid project format in {filepath}: {e}")
 
         # Check for conflicts
-        existing_task_ids = set(t.id for t in self._task_manager.list_all())
-        existing_comment_ids = set(c.id for c in self._comment_manager.list_all())
-        existing_project_ids = set(p.id for p in self._project_manager.list_all())
+        existing_task_ids = set(t.id for t in self._task_repository.list_all())
+        existing_comment_ids = set(c.id for c in self._comment_repository.list_all())
+        existing_project_ids = set(p.id for p in self._project_repository.list_all())
 
         conflicts = 0
         task_conflicts = [t.id for t in tasks_to_import if t.id in existing_task_ids]
@@ -186,39 +182,19 @@ class ImportService:
 
         if mode == "skip":
             # Only import records that don't conflict
-            for task in tasks_to_import:
-                if task.id not in existing_task_ids:
-                    self._task_manager._tasks[task.id] = task
-                    tasks_imported += 1
+            tasks_to_add = [t for t in tasks_to_import if t.id not in existing_task_ids]
+            comments_to_add = [c for c in comments_to_import if c.id not in existing_comment_ids]
+            projects_to_add = [p for p in projects_to_import if p.id not in existing_project_ids]
 
-            for comment in comments_to_import:
-                if comment.id not in existing_comment_ids:
-                    self._comment_manager._comments[comment.id] = comment
-                    comments_imported += 1
-
-            for project in projects_to_import:
-                if project.id not in existing_project_ids:
-                    self._project_manager._projects[project.id] = project
-                    projects_imported += 1
+            tasks_imported = self._task_repository.add_many(tasks_to_add)
+            comments_imported = self._comment_repository.add_many(comments_to_add)
+            projects_imported = self._project_repository.add_many(projects_to_add)
 
         else:
             # For 'fail' mode (no conflicts) or 'replace' mode: import all
-            for task in tasks_to_import:
-                self._task_manager._tasks[task.id] = task
-                tasks_imported += 1
-
-            for comment in comments_to_import:
-                self._comment_manager._comments[comment.id] = comment
-                comments_imported += 1
-
-            for project in projects_to_import:
-                self._project_manager._projects[project.id] = project
-                projects_imported += 1
-
-        # Persist changes
-        self._task_manager._persist()
-        self._comment_manager._persist()
-        self._project_manager._persist()
+            tasks_imported = self._task_repository.add_many(tasks_to_import)
+            comments_imported = self._comment_repository.add_many(comments_to_import)
+            projects_imported = self._project_repository.add_many(projects_to_import)
 
         return tasks_imported, comments_imported, projects_imported, conflicts
 

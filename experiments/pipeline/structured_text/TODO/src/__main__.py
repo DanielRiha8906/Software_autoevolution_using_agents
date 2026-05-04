@@ -2,6 +2,7 @@ import sys
 
 from .cli.interactive_menu import InteractiveMenu
 from .cli.todo_cli import TodoCLI
+from .container import Container
 
 
 def main() -> None:

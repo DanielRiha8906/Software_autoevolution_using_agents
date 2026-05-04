@@ -1,6 +1,6 @@
 """
 Comprehensive tests for Task 05 features:
-- TaskManager.list_by_filter() with all filter combinations
+- TaskRepository.list_by_filter() with all filter combinations
 - TodoService.list_tasks() backward compatibility and new parameters
 - Timezone utility functions (now_in_cest, is_overdue_cest, utc_to_cest)
 - CLI argument parsing for new flags (--due-after, --due-before, --overdue, --not-overdue)
@@ -11,9 +11,11 @@ from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 
 from src.models.task_status import TaskStatus
-from src.services.task_manager import TaskManager, TaskNotFoundError
+from src.repositories.task_repository import TaskRepository
+from src.repositories.comment_repository import CommentRepository
+from src.repositories.project_repository import ProjectRepository
 from src.services.todo_service import TodoService
-from src.storage.json_storage import JsonStorage
+from src.exceptions import TaskNotFoundError
 from src.cli.todo_cli import TodoCLI
 from src.utils.timezone_utils import now_in_cest, is_overdue_cest, utc_to_cest
 
@@ -22,15 +24,18 @@ from src.utils.timezone_utils import now_in_cest, is_overdue_cest, utc_to_cest
 
 @pytest.fixture
 def manager(tmp_path):
-    """TaskManager with temporary storage."""
-    storage = JsonStorage(str(tmp_path / "tasks.json"))
-    return TaskManager(storage)
+    """TaskRepository with temporary storage."""
+    return TaskRepository(tmp_path / "tasks.json")
 
 
 @pytest.fixture
 def service(tmp_path):
     """TodoService with temporary storage."""
-    return TodoService(JsonStorage(str(tmp_path / "tasks.json")))
+    return TodoService(
+        TaskRepository(tmp_path / "tasks.json"),
+        CommentRepository(tmp_path / "comments.json"),
+        ProjectRepository(tmp_path / "projects.json"),
+    )
 
 
 @pytest.fixture

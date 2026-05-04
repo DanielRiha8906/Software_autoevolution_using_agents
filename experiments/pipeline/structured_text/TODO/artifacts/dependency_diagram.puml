@@ -1,0 +1,75 @@
+@startuml dependency_diagram
+
+title Dependency Layers - Clean Architecture
+
+skinparam componentStyle uml2
+skinparam defaultFontSize 11
+
+package "Layer 1: Domain & Exceptions" {
+    component "Task\nTaskComment\nProject\nTaskStatus" as Domain
+    component "DomainError\nTaskNotFoundError\nCommentNotFoundError\nProjectNotFoundError\nImportExportError" as Exceptions
+}
+
+package "Layer 2: Storage Abstraction" {
+    component "JsonStorage" as Storage
+    component "StoragePathProvider" as PathProvider
+}
+
+package "Layer 3: Repository" {
+    component "BaseRepository<T>" as BaseRepo
+    component "TaskRepository\nCommentRepository\nProjectRepository" as Repositories
+}
+
+package "Layer 4: Services" {
+    component "TodoService\nExportService\nImportService" as Services
+}
+
+package "Layer 5: Dependency Injection" {
+    component "Container" as Container
+}
+
+package "Layer 6: CLI User Interface" {
+    component "TodoCLI\nInteractiveMenu" as CLI
+}
+
+'' Layering arrows (dependencies point DOWN, never UP)
+Domain .up.> Exceptions : uses
+
+Storage .up.> PathProvider : uses
+
+BaseRepo .down.> Storage : uses
+Repositories .down.> BaseRepo : extends
+
+Services .down.> Repositories : depends on
+Services .down.> Exceptions : raises/handles
+
+Container .down.> Services : creates
+Container .down.> Repositories : creates
+Container .down.> Storage : creates
+
+CLI .down.> Container : uses
+CLI .down.> Exceptions : handles
+
+'' Cross-layer usage (exceptions cross all layers)
+Repositories .down.> Exceptions : raises
+Services .down.> Exceptions : raises
+CLI .down.> Exceptions : catches
+
+note bottom
+    CLEAN DEPENDENCY GRAPH:
+
+    Layer 6 (CLI) depends on Layer 5 (Container)
+    Layer 5 (Container) depends on Layer 4 (Services)
+    Layer 4 (Services) depends on Layer 3 (Repository)
+    Layer 3 (Repository) depends on Layer 2 (Storage)
+
+    ACYCLIC: No circular dependencies!
+
+    INVERSION OF CONTROL:
+    - CLI does not directly instantiate repositories
+    - Services do not know about storage paths
+    - Container manages all dependency wiring
+    - Each layer has single responsibility
+end note
+
+@enduml

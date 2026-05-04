@@ -1,52 +1,93 @@
-from datetime import datetime, timezone
-from typing import Optional
+"""Repository for Task persistence."""
 
+from datetime import datetime
+from pathlib import Path
+from typing import Optional, List
+
+from ..exceptions import TaskNotFoundError
 from ..models.task import Task
 from ..models.task_status import TaskStatus
-from ..storage.json_storage import JsonStorage
+from .base_repository import BaseRepository
 
 
-class TaskNotFoundError(Exception):
-    pass
+class TaskRepository(BaseRepository[Task]):
+    """Repository for task persistence and CRUD operations."""
 
+    def _deserialize(self, data: dict) -> Task:
+        """Deserialize a dict to a Task object.
 
-class TaskManager:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
-        self._storage = storage or JsonStorage()
-        self._tasks: dict[str, Task] = {}
-        self._load()
+        Args:
+            data: Dictionary representation of a task
 
-    def _load(self) -> None:
-        raw = self._storage.load()
-        self._tasks = {d["id"]: Task.from_dict(d) for d in raw}
+        Returns:
+            Task instance
+        """
+        return Task.from_dict(data)
 
-    def _persist(self) -> None:
-        self._storage.save([t.to_dict() for t in self._tasks.values()])
+    def _serialize(self, item: Task) -> dict:
+        """Serialize a Task to a dict.
+
+        Args:
+            item: Task instance
+
+        Returns:
+            Dictionary representation of the task
+        """
+        return item.to_dict()
+
+    def _item_not_found(self, message: str) -> Exception:
+        """Create a TaskNotFoundError.
+
+        Args:
+            message: Error message
+
+        Returns:
+            TaskNotFoundError instance
+        """
+        return TaskNotFoundError(message)
 
     def add(self, title: str, description: Optional[str] = None) -> Task:
+        """Create and persist a new task.
+
+        Args:
+            title: Task title (required)
+            description: Optional task description
+
+        Returns:
+            The created Task instance
+        """
+        from datetime import timezone
         task = Task(title=title, description=description)
-        self._tasks[task.id] = task
+        self._items[task.id] = task
         self._persist()
         return task
 
-    def get(self, task_id: str) -> Task:
-        if task_id in self._tasks:
-            return self._tasks[task_id]
-        # support short prefix lookup (e.g. first 8 chars shown by list)
-        matches = [t for tid, t in self._tasks.items() if tid.startswith(task_id)]
-        if len(matches) == 1:
-            return matches[0]
-        if len(matches) > 1:
-            raise TaskNotFoundError(f"Ambiguous prefix '{task_id}' matches {len(matches)} tasks")
-        raise TaskNotFoundError(f"Task '{task_id}' not found")
+    def list_by_status(self, status: TaskStatus) -> List[Task]:
+        """Get all tasks with a specific status.
 
-    def list_all(self) -> list[Task]:
-        return list(self._tasks.values())
+        Args:
+            status: The TaskStatus to filter by
 
-    def list_by_status(self, status: TaskStatus) -> list[Task]:
-        return [t for t in self._tasks.values() if t.status == status]
+        Returns:
+            List of tasks with the given status
+        """
+        return [t for t in self._items.values() if t.status == status]
 
     def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
+        """Update a task's title and/or description.
+
+        Args:
+            task_id: Task ID or unique prefix
+            title: New title (optional)
+            description: New description (optional)
+
+        Returns:
+            The updated Task instance
+
+        Raises:
+            TaskNotFoundError: If task not found or prefix is ambiguous
+        """
+        from datetime import timezone
         task = self.get(task_id)
         if title is not None:
             task.title = title
@@ -57,16 +98,24 @@ class TaskManager:
         return task
 
     def set_status(self, task_id: str, status: TaskStatus) -> Task:
+        """Update a task's status.
+
+        Args:
+            task_id: Task ID or unique prefix
+            status: New TaskStatus
+
+        Returns:
+            The updated Task instance
+
+        Raises:
+            TaskNotFoundError: If task not found or prefix is ambiguous
+        """
+        from datetime import timezone
         task = self.get(task_id)
         task.status = status
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task
-
-    def delete(self, task_id: str) -> None:
-        task = self.get(task_id)  # resolves prefix; raises if missing
-        del self._tasks[task.id]
-        self._persist()
 
     def list_by_filter(
         self,
@@ -74,7 +123,7 @@ class TaskManager:
         due_after: Optional[datetime] = None,
         due_before: Optional[datetime] = None,
         overdue: Optional[bool] = None,
-    ) -> list[Task]:
+    ) -> List[Task]:
         """Filter tasks by status, due date range, and overdue status.
 
         Args:
@@ -94,7 +143,7 @@ class TaskManager:
             if due_after > due_before:
                 raise ValueError("due_after cannot be after due_before")
 
-        tasks = list(self._tasks.values())
+        tasks = list(self._items.values())
 
         # Filter by status
         if status is not None:
@@ -122,7 +171,7 @@ class TaskManager:
 
         return tasks
 
-    def list_by_project(self, project_id: str) -> list[Task]:
+    def list_by_project(self, project_id: str) -> List[Task]:
         """Get all tasks assigned to a specific project.
 
         Args:
@@ -131,7 +180,7 @@ class TaskManager:
         Returns:
             List of Task instances assigned to that project
         """
-        return [t for t in self._tasks.values() if t.project_id == project_id]
+        return [t for t in self._items.values() if t.project_id == project_id]
 
     def assign_to_project(self, task_id: str, project_id: str) -> Task:
         """Assign a task to a project.
@@ -146,6 +195,7 @@ class TaskManager:
         Raises:
             TaskNotFoundError: If task not found or prefix is ambiguous
         """
+        from datetime import timezone
         task = self.get(task_id)
         task.project_id = project_id
         task.updated_at = datetime.now(timezone.utc)
@@ -164,8 +214,36 @@ class TaskManager:
         Raises:
             TaskNotFoundError: If task not found or prefix is ambiguous
         """
+        from datetime import timezone
         task = self.get(task_id)
         task.project_id = None
         task.updated_at = datetime.now(timezone.utc)
         self._persist()
         return task
+
+    def add_many(self, tasks: List[Task]) -> int:
+        """Add multiple tasks at once.
+
+        Args:
+            tasks: List of Task instances to add
+
+        Returns:
+            Number of tasks added
+        """
+        for task in tasks:
+            self._items[task.id] = task
+        if tasks:
+            self._persist()
+        return len(tasks)
+
+    def replace_all(self, tasks: List[Task]) -> int:
+        """Replace all tasks with a new set.
+
+        Args:
+            tasks: List of Task instances
+
+        Returns:
+            Number of tasks in the new set
+        """
+        self._items.clear()
+        return self.add_many(tasks)

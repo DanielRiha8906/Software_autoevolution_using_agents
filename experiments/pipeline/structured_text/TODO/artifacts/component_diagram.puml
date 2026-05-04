@@ -9,27 +9,42 @@ package "TODO Application" {
 
     component "Entry Point\n(main)" as Main
 
-    package "CLI Layer" {
-        component "Interactive Menu" as IM
-        component "Command-line Interface\n(TodoCLI)" as CLI
-    }
-
-    package "Service Layer" {
-        component "Todo Service" as SVC
-        component "Task Manager" as MGR
-        component "Comment Manager" as CMT
-        component "Project Manager" as PROJ
+    package "Exception Layer" {
+        component "Domain Exceptions\n(TaskNotFoundError,\nCommentNotFoundError,\nProjectNotFoundError,\nImportExportError)" as EXC
     }
 
     package "Domain Model" {
-        component "Task Model\n(Task, TaskStatus)" as Model
-        component "TaskComment Model" as CMTModel
-        component "Project Model" as ProjModel
-        component "TaskStatistics Model" as StatsModel
+        component "Task, TaskStatus\n(Task Model)" as Model
+        component "TaskComment\n(Comment Model)" as CMTModel
+        component "Project\n(Project Model)" as ProjModel
+        component "TaskStatistics" as StatsModel
     }
 
     package "Persistence Layer" {
+        component "Storage Path Provider\n(StoragePathProvider)" as PathProvider
         component "JSON Storage\n(JsonStorage)" as Storage
+    }
+
+    package "Repository Layer" {
+        component "Base Repository\n(generic[T])" as BaseRepo
+        component "Task Repository\n(TaskRepository)" as TaskRepo
+        component "Comment Repository\n(CommentRepository)" as CommentRepo
+        component "Project Repository\n(ProjectRepository)" as ProjectRepo
+    }
+
+    package "Service Layer" {
+        component "Todo Service\n(TodoService)" as SVC
+        component "Export Service\n(ExportService)" as ExpSVC
+        component "Import Service\n(ImportService)" as ImpSVC
+    }
+
+    package "Dependency Injection" {
+        component "Service Container\n(Container)" as Container
+    }
+
+    package "CLI Layer" {
+        component "Interactive Menu" as IM
+        component "Command-line Interface\n(TodoCLI)" as CLI
     }
 
     package "Utility Layer" {
@@ -38,30 +53,62 @@ package "TODO Application" {
 }
 
 database "todo_data.json" as DB
-database ".todo_projects.json" as PROJDB
+database ".todo_comments.json" as CMT_DB
+database ".todo_projects.json" as PROJ_DB
 
 Main --> IM : interactive mode
 Main --> CLI : command mode
 
-IM --> SVC
-CLI --> SVC
+IM --> Container : get_todo_service()
+CLI --> Container : get_todo_service()
 
-SVC --> MGR
-SVC --> CMT
-SVC --> PROJ
-MGR --> Storage
-CMT --> Storage
-PROJ --> Storage
-MGR --> TZ : uses (for filtering)
-MGR ..> Model
-CMT ..> CMTModel
-PROJ ..> ProjModel
-SVC ..> StatsModel : returns (get_statistics)
-Storage ..> Model
-Storage ..> CMTModel
-Storage ..> ProjModel
+Container --> PathProvider : creates
+Container --> TaskRepo : creates
+Container --> CommentRepo : creates
+Container --> ProjectRepo : creates
+Container --> SVC : creates with injected repositories
 
-Storage --> DB : read/write (tasks/comments)
-Storage --> PROJDB : read/write (projects)
+IM --> SVC : uses
+CLI --> SVC : uses
+
+SVC --> TaskRepo : task_repository
+SVC --> CommentRepo : comment_repository
+SVC --> ProjectRepo : project_repository
+SVC --> ExpSVC : export
+SVC --> ImpSVC : import
+SVC ..> StatsModel : returns
+
+ExpSVC --> TaskRepo : reads
+ExpSVC --> CommentRepo : reads
+ExpSVC --> ProjectRepo : reads
+ExpSVC ..> EXC : raises
+
+ImpSVC --> TaskRepo : writes
+ImpSVC --> CommentRepo : writes
+ImpSVC --> ProjectRepo : writes
+ImpSVC ..> EXC : raises
+
+TaskRepo --|> BaseRepo : extends
+CommentRepo --|> BaseRepo : extends
+ProjectRepo --|> BaseRepo : extends
+
+TaskRepo --> Storage : uses
+CommentRepo --> Storage : uses
+ProjectRepo --> Storage : uses
+
+PathProvider --> Storage : provides paths to
+
+TaskRepo ..> Model : manages
+CommentRepo ..> CMTModel : manages
+ProjectRepo ..> ProjModel : manages
+
+Storage --> DB : read/write
+Storage --> CMT_DB : read/write
+Storage --> PROJ_DB : read/write
+
+Model --> TZ : uses (for filtering)
+CMTModel ..> EXC : references
+Model ..> EXC : references
+ProjModel ..> EXC : references
 
 @enduml

@@ -1,4 +1,4 @@
-"""Tests for JSON import/export functionality (Task 07).
+"""Tests for JSON import/export functionality (refactored for repository layer).
 
 Tests cover:
 - ExportService: export to JSON with correct format and counts
@@ -21,11 +21,14 @@ from src.services.import_export_service import (
     ImportService,
     ImportExportError,
 )
-from src.services.task_manager import TaskManager
-from src.services.comment_manager import CommentManager
+from src.repositories.task_repository import TaskRepository
+from src.repositories.comment_repository import CommentRepository
+from src.repositories.project_repository import ProjectRepository
 from src.services.todo_service import TodoService
-from src.cli.todo_cli import TodoCLI
 from src.storage.json_storage import JsonStorage
+from src.container import Container
+from src.exceptions import ImportExportError
+from src.cli.todo_cli import TodoCLI
 
 
 # ============================================================================
@@ -34,32 +37,41 @@ from src.storage.json_storage import JsonStorage
 
 @pytest.fixture
 def tmp_storage(tmp_path):
-    """Create a temporary JsonStorage instance."""
-    return JsonStorage(str(tmp_path / "tasks.json"))
+    """Create temporary repository instances."""
+    class Storage:
+        def __init__(self):
+            self.task_repo = TaskRepository(tmp_path / "tasks.json")
+            self.comment_repo = CommentRepository(tmp_path / "comments.json")
+            self.project_repo = ProjectRepository(tmp_path / "projects.json")
+    return Storage()
 
 
 @pytest.fixture
 def service(tmp_storage):
     """Create a TodoService with temporary storage."""
-    return TodoService(tmp_storage)
+    return TodoService(
+        task_repository=tmp_storage.task_repo,
+        comment_repository=tmp_storage.comment_repo,
+        project_repository=tmp_storage.project_repo,
+    )
 
 
 @pytest.fixture
 def task_manager(service):
-    """Get the task manager from the service."""
-    return service._manager
+    """Get the task repository from the service."""
+    return service._task_repository
 
 
 @pytest.fixture
 def comment_manager(service):
-    """Get the comment manager from the service."""
-    return service._comment_manager
+    """Get the comment repository from the service."""
+    return service._comment_repository
 
 
 @pytest.fixture
 def project_manager(service):
-    """Get the project manager from the service."""
-    return service._project_manager
+    """Get the project repository from the service."""
+    return service._project_repository
 
 
 @pytest.fixture
@@ -312,8 +324,8 @@ class TestImportServiceHappyPath:
         assert conflicts == 0
 
         # Verify data was actually imported
-        assert task_id in task_manager._tasks
-        assert comment_id in comment_manager._comments
+        assert task_id in task_manager._items
+        assert comment_id in comment_manager._items
 
     def test_import_preserves_task_ids(self, tmp_path, import_service, task_manager):
         """Import preserves exact task IDs."""
@@ -620,7 +632,7 @@ class TestImportServiceHappyPath:
         assert conflicts == 1  # One conflict detected
 
         # New task was imported
-        assert "new-task-id" in service._manager._tasks
+        assert "new-task-id" in service._task_repository._items
 
     def test_import_mode_skip_skips_conflicting_comments(self, tmp_path, import_service, service):
         """Import with mode='skip' skips comments with duplicate IDs."""
@@ -660,7 +672,7 @@ class TestImportServiceHappyPath:
         assert conflicts == 2  # 1 task conflict + 1 comment conflict
 
         # Original comment unchanged
-        existing_comment = service._comment_manager.get(comment.id)
+        existing_comment = service._comment_repository.get(comment.id)
         assert existing_comment.content == "Original comment"
 
     def test_import_mode_replace_overwrites_tasks(self, tmp_path, import_service, service):
@@ -734,7 +746,7 @@ class TestImportServiceHappyPath:
         assert conflicts == 2  # 1 task conflict + 1 comment conflict
 
         # Comment was replaced
-        replaced_comment = service._comment_manager.get(comment.id)
+        replaced_comment = service._comment_repository.get(comment.id)
         assert replaced_comment.content == "Replaced comment"
         assert replaced_comment.author == "NewAuthor"
 
@@ -945,7 +957,7 @@ class TestImportServiceErrors:
 
         assert comments_imported == 1
         # Verify comment was imported despite orphaned reference
-        assert "c1" in comment_manager._comments
+        assert "c1" in comment_manager._items
 
 
 # ============================================================================
@@ -968,8 +980,8 @@ class TestRoundTrip:
 
         # Create fresh service with separate storage for both tasks and comments
         fresh_storage_path = str(tmp_path / "fresh" / "tasks.json")
-        fresh_storage = JsonStorage(fresh_storage_path)
-        fresh_service = TodoService(fresh_storage)
+        container = Container(fresh_storage_path)
+        fresh_service = container.get_todo_service()
 
         fresh_service.import_tasks_and_comments(str(export_file), mode="fail")
 
@@ -996,8 +1008,8 @@ class TestRoundTrip:
         service.export_tasks_and_comments(str(export_file))
 
         fresh_storage_path = str(tmp_path / "fresh2" / "tasks.json")
-        fresh_storage = JsonStorage(fresh_storage_path)
-        fresh_service = TodoService(fresh_storage)
+        container = Container(fresh_storage_path)
+        fresh_service = container.get_todo_service()
 
         fresh_service.import_tasks_and_comments(str(export_file), mode="fail")
 
@@ -1008,8 +1020,12 @@ class TestRoundTrip:
         assert comments[1].content == "Second comment"
         assert comments[1].author == "Bob"
 
-    def test_roundtrip_multiple_cycles_no_data_loss(self, service, tmp_path):
+    def test_roundtrip_multiple_cycles_no_data_loss(self, tmp_path):
         """Multiple export-import cycles preserve data."""
+        # Start with first service
+        container0 = Container(str(tmp_path / "storage0" / "tasks.json"))
+        service = container0.get_todo_service()
+
         t1 = service.add_task("Original")
         service.add_comment(t1.id, "Original comment")
 
@@ -1017,9 +1033,9 @@ class TestRoundTrip:
         service.export_tasks_and_comments(str(export_file1))
 
         # Import into fresh instance
-        fresh_storage1_path = str(tmp_path / "fresh3" / "tasks.json")
-        fresh_storage = JsonStorage(fresh_storage1_path)
-        fresh_service = TodoService(fresh_storage)
+        fresh_storage1_path = str(tmp_path / "storage1" / "tasks.json")
+        container1 = Container(fresh_storage1_path)
+        fresh_service = container1.get_todo_service()
         fresh_service.import_tasks_and_comments(str(export_file1), mode="fail")
 
         # Export from fresh instance
@@ -1027,9 +1043,9 @@ class TestRoundTrip:
         fresh_service.export_tasks_and_comments(str(export_file2))
 
         # Import again into another fresh instance
-        fresh_storage2_path = str(tmp_path / "fresh4" / "tasks.json")
-        fresh_storage2 = JsonStorage(fresh_storage2_path)
-        fresh_service2 = TodoService(fresh_storage2)
+        fresh_storage2_path = str(tmp_path / "storage2" / "tasks.json")
+        container2 = Container(fresh_storage2_path)
+        fresh_service2 = container2.get_todo_service()
         fresh_service2.import_tasks_and_comments(str(export_file2), mode="fail")
 
         # Verify data still intact
@@ -1054,8 +1070,8 @@ class TestRoundTrip:
         exported_tasks, exported_comments, exported_projects = service.export_tasks_and_comments(str(export_file))
 
         fresh_storage_path = str(tmp_path / "fresh5" / "tasks.json")
-        fresh_storage = JsonStorage(fresh_storage_path)
-        fresh_service = TodoService(fresh_storage)
+        container = Container(fresh_storage_path)
+        fresh_service = container.get_todo_service()
 
         imported_tasks, imported_comments, imported_projects, conflicts = fresh_service.import_tasks_and_comments(
             str(export_file), mode="fail"
@@ -1076,7 +1092,7 @@ class TestCLIExportImport:
     def test_cli_export_command(self, tmp_path):
         """CLI export command works with filepath argument."""
         storage_path = str(tmp_path / "tasks.json")
-        cli = TodoCLI(storage_path)
+        cli = TodoCLI(storage_path=storage_path)
 
         # Add a task via CLI
         cli.run(["add", "Test task"])
@@ -1098,7 +1114,7 @@ class TestCLIExportImport:
         storage_path2 = str(tmp_path / "dst" / "tasks.json")
 
         # Create source with task
-        cli1 = TodoCLI(storage_path1)
+        cli1 = TodoCLI(storage_path=storage_path1)
         cli1.run(["add", "To import"])
 
         # Export
@@ -1106,7 +1122,7 @@ class TestCLIExportImport:
         cli1.run(["export", export_file])
 
         # Import to destination
-        cli2 = TodoCLI(storage_path2)
+        cli2 = TodoCLI(storage_path=storage_path2)
         result = cli2.run(["import", export_file])
 
         assert result == 0
@@ -1119,14 +1135,14 @@ class TestCLIExportImport:
         storage_path1 = str(tmp_path / "src" / "tasks.json")
         storage_path2 = str(tmp_path / "dst" / "tasks.json")
 
-        cli1 = TodoCLI(storage_path1)
+        cli1 = TodoCLI(storage_path=storage_path1)
         cli1.run(["add", "To import"])
 
         export_file = str(tmp_path / "export.json")
         cli1.run(["export", export_file])
 
         # Pre-add a task to destination with same ID to cause conflict
-        cli2 = TodoCLI(storage_path2)
+        cli2 = TodoCLI(storage_path=storage_path2)
 
         result = cli2.run(["import", export_file, "--mode", "skip"])
 
@@ -1137,13 +1153,13 @@ class TestCLIExportImport:
         storage_path1 = str(tmp_path / "src" / "tasks.json")
         storage_path2 = str(tmp_path / "dst" / "tasks.json")
 
-        cli1 = TodoCLI(storage_path1)
+        cli1 = TodoCLI(storage_path=storage_path1)
         task = cli1.run(["add", "Original"])
 
         export_file = str(tmp_path / "export.json")
         cli1.run(["export", export_file])
 
-        cli2 = TodoCLI(storage_path2)
+        cli2 = TodoCLI(storage_path=storage_path2)
         result = cli2.run(["import", export_file, "--mode", "replace"])
 
         assert result == 0
@@ -1151,7 +1167,7 @@ class TestCLIExportImport:
     def test_cli_export_output_message(self, capsys, tmp_path):
         """CLI export prints correct output message."""
         storage_path = str(tmp_path / "tasks.json")
-        cli = TodoCLI(storage_path)
+        cli = TodoCLI(storage_path=storage_path)
 
         cli.run(["add", "Task 1"])
         cli.run(["add", "Task 2"])
@@ -1167,7 +1183,7 @@ class TestCLIExportImport:
         storage_path1 = str(tmp_path / "src" / "tasks.json")
         storage_path2 = str(tmp_path / "dst" / "tasks.json")
 
-        cli1 = TodoCLI(storage_path1)
+        cli1 = TodoCLI(storage_path=storage_path1)
         cli1.run(["add", "Task 1"])
 
         task = cli1._service.list_tasks()[0]
@@ -1176,7 +1192,7 @@ class TestCLIExportImport:
         export_file = str(tmp_path / "export.json")
         cli1.run(["export", export_file])
 
-        cli2 = TodoCLI(storage_path2)
+        cli2 = TodoCLI(storage_path=storage_path2)
         cli2.run(["import", export_file])
 
         captured = capsys.readouterr()
@@ -1187,7 +1203,7 @@ class TestCLIExportImport:
         # We need to export, then import into same location to get conflict
         storage_path1 = str(tmp_path / "src" / "tasks.json")
 
-        cli1 = TodoCLI(storage_path1)
+        cli1 = TodoCLI(storage_path=storage_path1)
         cli1.run(["add", "Task 1"])
 
         export_file = str(tmp_path / "export.json")
@@ -1206,7 +1222,7 @@ class TestCLIExportImport:
         """CLI import prints replacement message in replace mode."""
         storage_path1 = str(tmp_path / "src" / "tasks.json")
 
-        cli1 = TodoCLI(storage_path1)
+        cli1 = TodoCLI(storage_path=storage_path1)
         cli1.run(["add", "Original"])
 
         export_file = str(tmp_path / "export.json")
@@ -1221,7 +1237,7 @@ class TestCLIExportImport:
 
     def test_cli_help_shows_export_command(self, capsys, tmp_path):
         """CLI --help displays export command."""
-        cli = TodoCLI(str(tmp_path / "tasks.json"))
+        cli = TodoCLI(storage_path=str(tmp_path / "tasks.json"))
         try:
             cli.run(["--help"])
         except SystemExit:
@@ -1233,7 +1249,7 @@ class TestCLIExportImport:
 
     def test_cli_help_shows_import_command(self, capsys, tmp_path):
         """CLI --help displays import command."""
-        cli = TodoCLI(str(tmp_path / "tasks.json"))
+        cli = TodoCLI(storage_path=str(tmp_path / "tasks.json"))
         try:
             cli.run(["--help"])
         except SystemExit:
@@ -1245,7 +1261,7 @@ class TestCLIExportImport:
 
     def test_cli_export_nonexistent_parent_error(self, capsys, tmp_path):
         """CLI export to invalid path returns error."""
-        cli = TodoCLI(str(tmp_path / "tasks.json"))
+        cli = TodoCLI(storage_path=str(tmp_path / "tasks.json"))
         cli.run(["add", "Task"])
 
         # Try to export to proc (typically read-only)
@@ -1257,7 +1273,7 @@ class TestCLIExportImport:
 
     def test_cli_import_nonexistent_file_error(self, capsys, tmp_path):
         """CLI import from non-existent file shows error."""
-        cli = TodoCLI(str(tmp_path / "tasks.json"))
+        cli = TodoCLI(storage_path=str(tmp_path / "tasks.json"))
         result = cli.run(["import", "/nonexistent/file.json"])
 
         assert result == 1

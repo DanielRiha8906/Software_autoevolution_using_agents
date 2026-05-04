@@ -3,13 +3,15 @@ import sys
 from datetime import datetime
 from typing import Optional
 
+from ..container import Container
+from ..exceptions import (
+    TaskNotFoundError,
+    CommentNotFoundError,
+    ProjectNotFoundError,
+    ImportExportError,
+)
 from ..models.task_status import TaskStatus
-from ..services.comment_manager import CommentNotFoundError
-from ..services.import_export_service import ImportExportError
-from ..services.task_manager import TaskNotFoundError
-from ..services.project_manager import ProjectNotFoundError
 from ..services.todo_service import TodoService
-from ..storage.json_storage import JsonStorage
 
 _STATUS_SYMBOLS = {
     TaskStatus.PENDING: "[ ]",
@@ -19,9 +21,18 @@ _STATUS_SYMBOLS = {
 
 
 class TodoCLI:
-    def __init__(self, storage_path: Optional[str] = None) -> None:
-        storage = JsonStorage(storage_path) if storage_path else JsonStorage()
-        self._service = TodoService(storage)
+    def __init__(self, service: Optional[TodoService] = None, storage_path: Optional[str] = None) -> None:
+        """Initialize TodoCLI with optional service or storage path.
+
+        Args:
+            service: TodoService instance (if provided, storage_path is ignored)
+            storage_path: Path to task storage file (if service not provided)
+        """
+        if service is not None:
+            self._service = service
+        else:
+            container = Container(storage_path)
+            self._service = container.get_todo_service()
 
     def run(self, argv: Optional[list[str]] = None) -> int:
         parser = self._build_parser()
@@ -328,9 +339,12 @@ class TodoCLI:
         return 0
 
     def _cmd_delete_comment(self, args: argparse.Namespace) -> int:
-        comment = self._service._comment_manager.get(args.comment_id)
+        # Note: delete_comment validates the comment exists and raises CommentNotFoundError if not
+        # For simplicity, just show the ID that was provided
         self._service.delete_comment(args.comment_id)
-        print(f"Deleted comment {comment.id[:8]}")
+        # Get a display ID (handle both full ID and prefix)
+        display_id = args.comment_id[:8] if len(args.comment_id) >= 8 else args.comment_id
+        print(f"Deleted comment {display_id}")
         return 0
 
     def _cmd_stats(self, args: argparse.Namespace) -> int:

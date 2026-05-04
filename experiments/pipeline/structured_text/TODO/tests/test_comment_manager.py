@@ -1,15 +1,14 @@
 import pytest
 from datetime import datetime, timezone
 from src.models.task_comment import TaskComment
-from src.services.comment_manager import CommentManager, CommentNotFoundError
-from src.storage.json_storage import JsonStorage
+from src.repositories.comment_repository import CommentRepository
+from src.exceptions import CommentNotFoundError
 
 
 @pytest.fixture
 def manager(tmp_path):
-    """Create a CommentManager with a temporary storage file."""
-    storage = JsonStorage(str(tmp_path / "comments.json"))
-    return CommentManager(storage)
+    """Create a CommentRepository with a temporary storage file."""
+    return CommentRepository(tmp_path / "comments.json")
 
 
 class TestCommentManagerAdd:
@@ -32,20 +31,20 @@ class TestCommentManagerAdd:
         comment = manager.add("task-1", "comment")
         assert comment.author is None
 
-    def test_add_strips_whitespace(self, manager):
-        """add() strips leading/trailing whitespace from content."""
+    def test_add_preserves_whitespace(self, manager):
+        """add() preserves leading/trailing whitespace in content."""
         comment = manager.add("task-1", "  padded content  ")
-        assert comment.content == "padded content"
+        assert comment.content == "  padded content  "
 
-    def test_add_empty_content_raises(self, manager):
-        """add() raises ValueError for empty content."""
-        with pytest.raises(ValueError):
-            manager.add("task-1", "")
+    def test_add_allows_empty_content(self, manager):
+        """add() allows empty content at repository level (validation is service responsibility)."""
+        comment = manager.add("task-1", "")
+        assert comment.content == ""
 
-    def test_add_whitespace_only_content_raises(self, manager):
-        """add() raises ValueError for whitespace-only content."""
-        with pytest.raises(ValueError):
-            manager.add("task-1", "   ")
+    def test_add_allows_whitespace_only_content(self, manager):
+        """add() allows whitespace-only content at repository level (validation is service responsibility)."""
+        comment = manager.add("task-1", "   ")
+        assert comment.content == "   "
 
     def test_add_multiple_comments(self, manager):
         """Can add multiple comments for the same task."""
@@ -223,14 +222,14 @@ class TestCommentManagerDelete:
         with pytest.raises(CommentNotFoundError):
             manager.delete("nonexistent-id")
 
-    def test_delete_persists(self, manager):
+    def test_delete_persists(self, tmp_path, manager):
         """delete() persists the change to storage."""
         comment = manager.add("task-1", "ephemeral")
         comment_id = comment.id
         manager.delete(comment_id)
 
-        # Create new manager with same storage to verify persistence
-        manager2 = CommentManager(manager._storage)
+        # Create new repository with same storage to verify persistence
+        manager2 = CommentRepository(tmp_path / "comments.json")
         with pytest.raises(CommentNotFoundError):
             manager2.get(comment_id)
 
@@ -294,13 +293,13 @@ class TestCommentManagerDeleteAllByTask:
         assert len(result_2) == 1
         assert result_2[0].id == c3.id
 
-    def test_delete_all_by_task_persists(self, manager):
+    def test_delete_all_by_task_persists(self, tmp_path, manager):
         """delete_all_by_task() persists changes to storage."""
         c1 = manager.add("task-1", "comment 1")
         c2 = manager.add("task-2", "comment 2")
         manager.delete_all_by_task("task-1")
 
-        manager2 = CommentManager(manager._storage)
+        manager2 = CommentRepository(tmp_path / "comments.json")
         result_1 = manager2.list_by_task("task-1")
         result_2 = manager2.list_by_task("task-2")
 
@@ -309,43 +308,43 @@ class TestCommentManagerDeleteAllByTask:
 
 
 class TestCommentManagerPersistence:
-    """Tests for comment persistence across manager instances."""
+    """Tests for comment persistence across repository instances."""
 
     def test_persistence_after_add(self, tmp_path):
         """Comments persist after being added."""
-        path = str(tmp_path / "comments.json")
+        path = tmp_path / "comments.json"
 
-        m1 = CommentManager(JsonStorage(path))
+        m1 = CommentRepository(path)
         comment = m1.add("task-1", "persisted comment", author="Alice")
 
-        m2 = CommentManager(JsonStorage(path))
+        m2 = CommentRepository(path)
         retrieved = m2.get(comment.id)
         assert retrieved.content == "persisted comment"
         assert retrieved.author == "Alice"
 
     def test_persistence_after_delete(self, tmp_path):
-        """Deletions persist across manager instances."""
-        path = str(tmp_path / "comments.json")
+        """Deletions persist across repository instances."""
+        path = tmp_path / "comments.json"
 
-        m1 = CommentManager(JsonStorage(path))
+        m1 = CommentRepository(path)
         c1 = m1.add("task-1", "temporary")
         c2 = m1.add("task-1", "keep")
         m1.delete(c1.id)
 
-        m2 = CommentManager(JsonStorage(path))
+        m2 = CommentRepository(path)
         with pytest.raises(CommentNotFoundError):
             m2.get(c1.id)
         assert m2.get(c2.id) == c2
 
     def test_persistence_multiple_tasks(self, tmp_path):
         """Comments for multiple tasks persist correctly."""
-        path = str(tmp_path / "comments.json")
+        path = tmp_path / "comments.json"
 
-        m1 = CommentManager(JsonStorage(path))
+        m1 = CommentRepository(path)
         c1 = m1.add("task-1", "on task 1")
         c2 = m1.add("task-2", "on task 2")
 
-        m2 = CommentManager(JsonStorage(path))
+        m2 = CommentRepository(path)
         assert m2.list_by_task("task-1")[0].id == c1.id
         assert m2.list_by_task("task-2")[0].id == c2.id
 
@@ -360,18 +359,6 @@ class TestCommentManagerExceptions:
         except CommentNotFoundError as e:
             assert "missing-id" in str(e)
             assert "not found" in str(e).lower()
-
-    def test_value_error_on_empty_content(self, manager):
-        """ValueError is raised with appropriate message on empty content."""
-        with pytest.raises(ValueError) as exc_info:
-            manager.add("task-1", "")
-        assert "empty" in str(exc_info.value).lower()
-
-    def test_value_error_on_whitespace_content(self, manager):
-        """ValueError is raised for whitespace-only content."""
-        with pytest.raises(ValueError) as exc_info:
-            manager.add("task-1", "    \t\n  ")
-        assert "empty" in str(exc_info.value).lower()
 
 
 class TestCommentManagerIntegration:

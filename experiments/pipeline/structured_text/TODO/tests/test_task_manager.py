@@ -1,14 +1,14 @@
 import pytest
 from datetime import datetime, timezone
 from src.models.task_status import TaskStatus
-from src.services.task_manager import TaskManager, TaskNotFoundError
-from src.storage.json_storage import JsonStorage
+from src.repositories.task_repository import TaskRepository
+from src.exceptions import TaskNotFoundError
 
 
 @pytest.fixture
 def manager(tmp_path):
-    storage = JsonStorage(str(tmp_path / "tasks.json"))
-    return TaskManager(storage)
+    """Use TaskRepository instead of TaskManager (refactored architecture)."""
+    return TaskRepository(tmp_path / "tasks.json")
 
 
 def test_add_returns_task(manager):
@@ -75,10 +75,10 @@ def test_delete_missing_raises(manager):
 
 
 def test_persistence(tmp_path):
-    path = str(tmp_path / "tasks.json")
-    m1 = TaskManager(JsonStorage(path))
+    path = tmp_path / "tasks.json"
+    m1 = TaskRepository(path)
     task = m1.add("Persisted")
-    m2 = TaskManager(JsonStorage(path))
+    m2 = TaskRepository(path)
     assert m2.get(task.id).title == "Persisted"
 
 
@@ -86,10 +86,10 @@ def test_persistence(tmp_path):
 
 def test_persistence_with_due_date(tmp_path):
     """Add task with due_date, reload from file, verify persists."""
-    path = str(tmp_path / "tasks.json")
+    path = tmp_path / "tasks.json"
 
     # Create manager and add task with due_date
-    m1 = TaskManager(JsonStorage(path))
+    m1 = TaskRepository(path)
     due_date = datetime(2025, 12, 25, 10, 0, 0, tzinfo=timezone.utc)
     task = m1.add("Holiday gift")
 
@@ -99,7 +99,7 @@ def test_persistence_with_due_date(tmp_path):
     m1._persist()
 
     # Reload and verify
-    m2 = TaskManager(JsonStorage(path))
+    m2 = TaskRepository(path)
     loaded_task = m2.get(task.id)
     assert loaded_task.due_date == due_date
 
@@ -108,7 +108,7 @@ def test_load_mixed_old_and_new_tasks(tmp_path):
     """Mix old (no due_date) and new (with due_date) tasks, verify both load."""
     import json
 
-    path = str(tmp_path / "tasks.json")
+    path = tmp_path / "tasks.json"
 
     # Create a JSON file with mixed old and new tasks
     old_task = {
@@ -135,8 +135,8 @@ def test_load_mixed_old_and_new_tasks(tmp_path):
     with open(path, "w") as f:
         json.dump([old_task, new_task], f)
 
-    # Load with TaskManager
-    manager = TaskManager(JsonStorage(path))
+    # Load with TaskRepository
+    manager = TaskRepository(path)
     tasks = manager.list_all()
 
     # Verify both loaded correctly
@@ -240,12 +240,12 @@ class TestAssignToProject:
 
     def test_assign_to_project_persists(self, tmp_path):
         """assign_to_project() persists the change."""
-        path = str(tmp_path / "tasks.json")
-        m1 = TaskManager(JsonStorage(path))
+        path = tmp_path / "tasks.json"
+        m1 = TaskRepository(path)
         task = m1.add("Task")
         m1.assign_to_project(task.id, "proj-123")
 
-        m2 = TaskManager(JsonStorage(path))
+        m2 = TaskRepository(path)
         loaded = m2.get(task.id)
         assert loaded.project_id == "proj-123"
 
@@ -314,13 +314,13 @@ class TestUnassignFromProject:
 
     def test_unassign_from_project_persists(self, tmp_path):
         """unassign_from_project() persists the change."""
-        path = str(tmp_path / "tasks.json")
-        m1 = TaskManager(JsonStorage(path))
+        path = tmp_path / "tasks.json"
+        m1 = TaskRepository(path)
         task = m1.add("Task")
         m1.assign_to_project(task.id, "proj-123")
         m1.unassign_from_project(task.id)
 
-        m2 = TaskManager(JsonStorage(path))
+        m2 = TaskRepository(path)
         loaded = m2.get(task.id)
         assert loaded.project_id is None
 
