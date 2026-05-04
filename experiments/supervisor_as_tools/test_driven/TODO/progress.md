@@ -627,4 +627,4 @@ Successfully implemented a tkinter-based GUI (TodoGUI) that provides a graphical
 - Empty task list handled gracefully
 - No direct access to private service attributes (uses public API only)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 269.5s | Cost: $0.531108 USD | Turns: 29
