@@ -733,4 +733,4 @@ The refactoring demonstrates clear responsibility separation:
 
 The layered approach makes the codebase more maintainable and testable, with clear boundaries between concerns.
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 52.5s | Cost: $4.286070 USD | Turns: 10
