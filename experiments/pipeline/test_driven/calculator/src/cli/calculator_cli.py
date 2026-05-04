@@ -2,32 +2,40 @@ import sys
 
 from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
-from ..services.import_export_service import ImportExportService
-from ..services.memory_service import MemoryService
+from ..history.import_export_service import ImportExportService
+from ..history.memory_service import MemoryService
 
 
 class CalculatorCLI:
-    _MENU: list[tuple[Operation, str]] = [
-        (Operation.ADD,      "Add"),
-        (Operation.SUBTRACT, "Subtract"),
-        (Operation.MULTIPLY, "Multiply"),
-        (Operation.DIVIDE,   "Divide"),
-        (Operation.SQUARE,   "Square"),
-        (Operation.SQRT,     "Square Root"),
-        (Operation.POWER,    "Power"),
-        (Operation.MODULO,   "Modulo"),
-        (Operation.SIN,      "Sine"),
-        (Operation.COS,      "Cosine"),
-        (Operation.TAN,      "Tangent"),
-        (Operation.LOG,      "Logarithm (base 10)"),
-        (Operation.LN,       "Natural Logarithm"),
-        (Operation.EXP,      "Exponential"),
-    ]
 
     def __init__(self, service: CalculatorService, memory_service: MemoryService | None = None, import_export_service: ImportExportService | None = None) -> None:
         self.service = service
         self.memory_service = memory_service
         self.import_export_service = import_export_service
+
+    def _build_menu(self) -> list[tuple[Operation, str]]:
+        """Dynamically build menu from Operation enum.
+
+        Returns:
+            list[tuple[Operation, str]]: List of (operation, display_name) tuples
+        """
+        operation_labels = {
+            Operation.ADD: "Add",
+            Operation.SUBTRACT: "Subtract",
+            Operation.MULTIPLY: "Multiply",
+            Operation.DIVIDE: "Divide",
+            Operation.SQUARE: "Square",
+            Operation.SQRT: "Square Root",
+            Operation.POWER: "Power",
+            Operation.MODULO: "Modulo",
+            Operation.SIN: "Sine",
+            Operation.COS: "Cosine",
+            Operation.TAN: "Tangent",
+            Operation.LOG: "Logarithm (base 10)",
+            Operation.LN: "Natural Logarithm",
+            Operation.EXP: "Exponential",
+        }
+        return [(op, operation_labels[op]) for op in Operation]
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -35,14 +43,15 @@ class CalculatorCLI:
 
     def run_interactive(self) -> None:
         print("=== Calculator ===")
+        menu = self._build_menu()
         while True:
-            self._print_menu()
+            self._print_menu(menu)
             choice = input("Choose option: ").strip()
 
-            history_opt = len(self._MENU) + 1
-            export_opt  = len(self._MENU) + 2
-            import_opt  = len(self._MENU) + 3
-            exit_opt    = len(self._MENU) + 4
+            history_opt = len(menu) + 1
+            export_opt  = len(menu) + 2
+            import_opt  = len(menu) + 3
+            exit_opt    = len(menu) + 4
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -60,7 +69,7 @@ class CalculatorCLI:
                 self._prompt_and_import()
                 continue
 
-            operation = self._resolve_menu_choice(choice)
+            operation = self._resolve_menu_choice(choice, menu)
             if operation is None:
                 print("Invalid choice — try again.\n")
                 continue
@@ -121,20 +130,20 @@ class CalculatorCLI:
     # Private helpers
     # ------------------------------------------------------------------
 
-    def _print_menu(self) -> None:
+    def _print_menu(self, menu: list[tuple[Operation, str]]) -> None:
         print("\nOperations:")
-        for i, (_, label) in enumerate(self._MENU, 1):
+        for i, (_, label) in enumerate(menu, 1):
             print(f"  {i}. {label}")
-        print(f"  {len(self._MENU) + 1}. View history")
-        print(f"  {len(self._MENU) + 2}. Export memory")
-        print(f"  {len(self._MENU) + 3}. Import memory")
-        print(f"  {len(self._MENU) + 4}. Exit")
+        print(f"  {len(menu) + 1}. View history")
+        print(f"  {len(menu) + 2}. Export memory")
+        print(f"  {len(menu) + 3}. Import memory")
+        print(f"  {len(menu) + 4}. Exit")
 
-    def _resolve_menu_choice(self, choice: str) -> Operation | None:
+    def _resolve_menu_choice(self, choice: str, menu: list[tuple[Operation, str]]) -> Operation | None:
         try:
             idx = int(choice) - 1
-            if 0 <= idx < len(self._MENU):
-                return self._MENU[idx][0]
+            if 0 <= idx < len(menu):
+                return menu[idx][0]
         except ValueError:
             pass
         return None

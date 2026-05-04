@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from ..models.calculation_result import CalculationResult
+from .interfaces import StorageBackend
 
 
 class JsonStorage:

@@ -3,7 +3,9 @@ import time
 from ..models.operation import Operation
 from ..models.calculation_result import CalculationResult
 from ..storage.json_storage import JsonStorage
-from .calculator import Calculator
+from ..core.calculator import Calculator
+from ..core.interfaces import CalculationEngine
+from ..storage.interfaces import StorageBackend
 
 
 class CalculatorService:

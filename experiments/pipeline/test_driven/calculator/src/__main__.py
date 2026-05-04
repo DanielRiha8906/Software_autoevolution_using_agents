@@ -3,10 +3,10 @@ import sys
 from pathlib import Path
 
 from .models.operation import Operation
-from .services.scientific_calculator import ScientificCalculator
+from .core.scientific_calculator import ScientificCalculator
 from .services.calculator_service import CalculatorService
-from .services.memory_service import MemoryService
-from .services.import_export_service import ImportExportService
+from .history.memory_service import MemoryService
+from .history.import_export_service import ImportExportService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 

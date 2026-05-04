@@ -1,0 +1,66 @@
+@startuml sequence_calculation_flow
+
+title Calculation Flow Through Refactored Layers
+
+actor User as user
+participant "CalculatorCLI\n(Orchestration)" as cli
+participant "CalculatorService\n(Service)" as service
+participant "CalculationEngine\n(Protocol)" as engine
+participant "Calculator|ScientificCalculator\n(Core)" as calc
+participant "StorageBackend\n(Protocol)" as storage
+participant "JsonStorage\n(Implementation)" as json
+
+user -> cli: run_command(operation, a, b)
+activate cli
+
+cli -> service: perform(operation, a, b)
+activate service
+
+service -> engine: calculate(operation, a, b)
+activate engine
+note over engine
+  Protocol call - dispatched to
+  concrete implementation
+  (Calculator or ScientificCalculator)
+end note
+
+engine -> calc: calculate(operation, a, b)
+activate calc
+note over calc
+  Method dispatch based on operation enum
+  Perform actual computation
+  Handle domain validation (div by zero, etc.)
+end note
+
+calc -> calc: apply(operation, a, b)
+return result: float
+
+service -> service: wrap result in CalculationResult\nset execution_time_ms
+activate service
+deactivate service
+
+service -> storage: save(CalculationResult)
+activate storage
+note over storage
+  Protocol call - dispatched to
+  concrete implementation
+  (JsonStorage)
+end note
+
+storage -> json: save(CalculationResult)
+activate json
+json -> json: _read_raw()
+json -> json: append result dict
+json -> json: _write_raw(records)
+return
+deactivate json
+deactivate storage
+
+service -> service: return CalculationResult
+deactivate service
+
+cli -> cli: display result
+cli -> user: show(result)
+deactivate cli
+
+@enduml

@@ -1,0 +1,127 @@
+@startuml protocol_dependencies
+
+skinparam classAttributeIconSize 0
+skinparam classFontStyle bold
+title Protocol-Based Dependency Injection Architecture
+
+package "Protocols (Interfaces)" #E0F0FF {
+    interface "<<protocol>>\nCalculationEngine" as CalcProto {
+        {method} +calculate(operation: Operation, a: float, b: float) : float
+    }
+
+    interface "<<protocol>>\nStorageBackend" as StorProto {
+        {method} +save(result: CalculationResult) : void
+        {method} +load_all() : list[CalculationResult]
+    }
+
+    interface "<<protocol>>\nMemoryBackend" as MemProto {
+        {method} +store(entry: MemoryEntry) : void
+        {method} +retrieve() : list[MemoryEntry]
+    }
+}
+
+package "Concrete Implementations" {
+    package "core/" #DDFFD4 {
+        class Calculator {
+            +calculate(operation, a, b) : float
+            +add(a, b) : float
+            +subtract(a, b) : float
+            +multiply(a, b) : float
+            +divide(a, b) : float
+            +square(a, b=0) : float
+            +sqrt(a, b=0) : float
+            +power(a, b) : float
+            +modulo(a, b) : float
+        }
+
+        class ScientificCalculator {
+            +calculate(operation, a, b) : float
+            +sin(a, b=0) : float
+            +cos(a, b=0) : float
+            +tan(a, b=0) : float
+            +log(a, b=0) : float
+            +ln(a, b=0) : float
+            +exp(a, b=0) : float
+        }
+
+        ScientificCalculator --|> Calculator
+    }
+
+    package "storage/" #FFF3CC {
+        class JsonStorage {
+            -filepath: Path
+            --
+            +save(result: CalculationResult) : void
+            +load_all() : list[CalculationResult]
+            -_read_raw() : list
+            -_write_raw(records: list) : void
+        }
+    }
+
+    package "history/" #FFF8CC {
+        class MemoryService {
+            -_entries: list[MemoryEntry]
+            --
+            +store(entry: MemoryEntry) : void
+            +retrieve() : list[MemoryEntry]
+            +query(operation, success) : list[MemoryEntry]
+        }
+    }
+}
+
+package "Service Layer" #E5F3FF {
+    class CalculatorService {
+        -calculator: CalculationEngine
+        -storage: StorageBackend
+        --
+        +CalculatorService(calculator, storage)
+        +perform(operation, a, b) : CalculationResult
+        +get_history() : list[CalculationResult]
+    }
+
+    class StatisticsService {
+        -memory_service: MemoryBackend
+        --
+        +StatisticsService(memory_service)
+        +compute() : StatisticsResult
+    }
+
+    class ImportExportService {
+        +export(memory_service, filepath) : void
+        +import_from(memory_service, filepath) : void
+    }
+}
+
+CalculatorService --> CalcProto : depends on
+CalculatorService --> StorProto : depends on
+
+StatisticsService --> MemProto : depends on
+ImportExportService --> MemProto : depends on
+
+Calculator ..|> CalcProto : implements
+ScientificCalculator ..|> CalcProto : implements
+JsonStorage ..|> StorProto : implements
+MemoryService ..|> MemProto : implements
+
+note right of CalcProto
+  Decouples CalculatorService from
+  specific calculator implementation.
+  At runtime, inject Calculator or
+  ScientificCalculator.
+end note
+
+note right of StorProto
+  Decouples CalculatorService from
+  storage mechanism.
+  At runtime, inject JsonStorage.
+  Allows future swaps (DB, cloud, etc.)
+end note
+
+note right of MemProto
+  Decouples Statistics and ImportExport
+  from MemoryService internals.
+  Allows future swaps of in-memory
+  storage mechanism.
+end note
+
+@enduml

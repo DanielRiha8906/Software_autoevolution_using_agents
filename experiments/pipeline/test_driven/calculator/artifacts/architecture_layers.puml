@@ -1,0 +1,91 @@
+@startuml architecture_layers
+
+skinparam rectangleBackgroundColor White
+skinparam rectangleBorderColor Black
+skinparam defaultFontSize 12
+
+title Three-Layer Architecture: Calculator Application
+
+rectangle "ORCHESTRATION LAYER" #FFE5E5 {
+    rectangle CLI [
+        <b>Orchestration & Interface</b>
+        ----
+        CalculatorCLI
+        __main__.py
+        ----
+        <i>Coordinates user input with services
+        Manages interactive and CLI modes</i>
+    ]
+}
+
+rectangle "CALCULATION ENGINE LAYER" #DDFFD4 {
+    rectangle CalcEngine [
+        <b>Core Computation</b>
+        ----
+        CalculationEngine (Protocol)
+        Calculator (basic ops)
+        ScientificCalculator (extended ops)
+        ----
+        <i>Pluggable calculation implementations
+        No dependencies on storage or history</i>
+    ]
+
+    rectangle CalcService [
+        <b>Calculation Service</b>
+        ----
+        CalculatorService
+        ----
+        <i>Composes calculator + storage
+        Executes operations, tracks timing</i>
+    ]
+}
+
+rectangle "HISTORY & STORAGE LAYER" #FFF3CC {
+    rectangle StorageComp [
+        <b>Storage Backend</b>
+        ----
+        StorageBackend (Protocol)
+        JsonStorage
+        ----
+        <i>Persists CalculationResult
+        File I/O implementation</i>
+    ]
+
+    rectangle HistoryComp [
+        <b>History Services</b>
+        ----
+        MemoryBackend (Protocol)
+        MemoryService
+        StatisticsService
+        ImportExportService
+        ----
+        <i>In-memory history management
+        Analytics and import/export</i>
+    ]
+}
+
+CLI --> CalcService : uses
+CalcService --> CalcEngine : depends on\n(CalculationEngine)
+CalcService --> StorageComp : depends on\n(StorageBackend)
+HistoryComp --> StorageComp : may persist\nto
+CLI -.-> HistoryComp : optional\nuse
+
+note bottom of CalcEngine
+  Dependencies are protocol-based (interfaces)
+  Concrete implementations (Calculator, ScientificCalculator)
+  are swappable at runtime
+end note
+
+note bottom of StorageComp
+  StorageBackend protocol decouples
+  CalculatorService from storage details
+  JsonStorage is current implementation
+end note
+
+note bottom of HistoryComp
+  MemoryBackend protocol decouples
+  Statistics and ImportExport from
+  MemoryService internals
+end note
+
+@enduml
