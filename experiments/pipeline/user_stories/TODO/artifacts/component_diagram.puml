@@ -14,6 +14,19 @@ package "TODO Application" {
     package "INTERFACE LAYER\n(Public: TodoService only)" <<boundary>> {
         component "Interactive Menu" as IM
         component "Command-line Interface\n(TodoCLI)" as CLI
+
+        package "GUI Layer (tkinter)" {
+            component "Main Window\n(MainWindow)" as MainWin
+            component "Filter Frame\n(FilterFrame)" as FilterFrm
+            component "Task List Frame\n(TaskListFrame)" as TaskListFrm
+            component "Task Details Frame\n(TaskDetailsFrame)" as TaskDetailsFrm
+            component "Action Buttons\n(ActionButtonFrame)" as ActionBtn
+            component "Add Task Dialog\n(AddTaskDialog)" as AddDlg
+            component "Edit Task Dialog\n(EditTaskDialog)" as EditDlg
+            component "Comment Dialog\n(CommentDialog)" as CommentDlg
+        }
+
+        component "GUI Application\n(TodoGUI)" as GUI
     }
 
     package "SERVICE LAYER\n(Public: TodoService | Internal: TaskManager, ProjectManager, exceptions)" <<boundary>> {
@@ -51,13 +64,35 @@ note bottom of SVC
     - TaskManager, ProjectManager internal
     - All exceptions in dedicated module
     - Clear dependency boundaries
+
+    Task 10: GUI Layer Added
+    - New GUI component alongside CLI
+    - 9 classes: TodoGUI + MainWindow + 6 frames/dialogs
+    - All GUI components use TodoService
+    - Real-time filtering and state management
 end note
 
 Main --> IM : interactive mode
 Main --> CLI : command mode
+Main --> GUI : gui flag (--gui)
 
 IM --> SVC : public API
 CLI --> SVC : public API
+GUI --> SVC : public API
+
+GUI --> MainWin : creates
+MainWin --> FilterFrm : contains
+MainWin --> TaskListFrm : contains
+MainWin --> TaskDetailsFrm : contains
+MainWin --> ActionBtn : contains
+
+FilterFrm --> SVC : lists projects
+TaskListFrm --> SVC : lists tasks
+TaskDetailsFrm --> SVC : gets task, comments
+ActionBtn --> SVC : modifies tasks
+ActionBtn --> AddDlg : creates dialog
+ActionBtn --> EditDlg : creates dialog
+TaskDetailsFrm --> CommentDlg : creates dialog
 
 SVC --> MGR : internal
 SVC --> PMGR : internal
