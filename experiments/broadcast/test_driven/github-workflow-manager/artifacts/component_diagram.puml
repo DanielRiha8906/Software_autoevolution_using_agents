@@ -13,6 +13,7 @@ package "GitHub Workflow Manager" {
   package "Interface layer" {
     component "workflow_cli" as CLI
     component "interactive_menu" as IM
+    component "WorkflowGUI" as GUI
   }
 
   package "Service layer" {
@@ -38,12 +39,14 @@ package "GitHub Workflow Manager" {
 
 MAIN --> CLI
 MAIN --> IM
+MAIN --> GUI
 
 CLI --> TRACKER
 IM --> TRACKER
 
 CLI --> SVC
 IM --> SVC
+GUI --> SVC
 
 CLI --> STATS_SVC
 IM --> STATS_SVC
@@ -59,6 +62,7 @@ STOR --> JSON_FILE
 STATS_SVC --> SVC
 
 SVC ..> RUN
+GUI ..> RUN
 ATTEMPT_SVC ..> ATTEMPT
 ATTEMPT --> RUN
 RUN --> STATUS
