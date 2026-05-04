@@ -529,3 +529,196 @@ Successfully implemented GitHub Actions integration to fetch workflow runs direc
 - All 163 tests pass with no regressions (140 existing + 23 signature updates)
 
 Duration: 862.7s | Cost: $1.845942 USD | Turns: 27
+
+## Task 09: Refactor Architecture - Separate Service, Storage, and GitHub Adapter Layers
+
+**Status:** Completed
+
+### Summary
+Successfully refactored the architecture to cleanly separate concerns into distinct layers: service, storage, and GitHub adapter layers. Introduced abstract base classes (protocols) for adapters to enable dependency injection and decouple service logic from external systems. All 163 tests pass with no regressions. The refactoring eliminates concern mixing in GitHubFetchService and DataPortabilityService while preserving all public interfaces.
+
+### Files Changed
+
+**New Files Created (Adapter Layer):**
+- `src/adapters/__init__.py` — Adapter package initialization
+- `src/adapters/protocols.py` — Abstract base classes: GitHubAPIClient, GitHubDataMapper, FileHandler
+- `src/adapters/github_cli_adapter.py` — Concrete implementation of GitHubAPIClient using gh CLI subprocess calls
+- `src/adapters/github_data_mapper.py` — Concrete implementation of GitHubDataMapper for GitHub API response mapping
+- `src/adapters/json_file_adapter.py` — Concrete implementation of FileHandler for JSON export/import
+
+**Modified Files:**
+- `src/services/github_fetch_service.py` — Refactored to use injected GitHubAPIClient and GitHubDataMapper adapters; removed _make_request(), _parse_datetime(), _map_github_run_to_workflow_run() methods
+- `src/services/data_portability_service.py` — Refactored to use injected FileHandler adapter; removed inline file I/O logic from export_data() and import_data()
+- `src/__main__.py` — Updated to instantiate adapters and inject into services
+
+**Diagrams Updated:**
+- `artifacts/class_diagram.puml` — Added adapters package with protocols and implementations; updated service classes to show adapter dependencies
+- `artifacts/component_diagram.puml` — Added Adapter layer package; updated service dependencies to go through adapters instead of directly to external systems
+- `artifacts/sequence_diagram_github_fetch.puml` — Updated to show adapter layer interactions in GitHub fetch flow
+
+### Test Results
+- **Total Tests:** 163
+- **Passed:** 163
+- **Failed:** 0
+- **Status:** ✅ All tests pass with no regressions
+
+### Implementation Details
+
+**Must Have:** ✅
+- ✅ Separated Service layer — Business logic only, no external I/O or API calls
+- ✅ Separated Storage layer — JSON persistence (already existed, now abstracted via FileHandler protocol)
+- ✅ Separated GitHub Adapter layer — All GitHub API transport and data mapping logic
+- ✅ No circular dependencies — Clean unidirectional dependency flow from CLI → Services → Adapters → External systems
+
+**Should Have:** ✅
+- ✅ Preserved existing public interfaces — All class names, method signatures, return types unchanged
+- ✅ Introduced abstract base classes/protocols — GitHubAPIClient, GitHubDataMapper, FileHandler for decoupling
+
+**Could Have:**
+- ❌ Module-level `__all__` declarations (not implemented, not required for this refactor)
+
+**Won't Have:** ✅
+- ✅ Did not fully rewrite domain logic
+- ✅ `python -m src` behaves identically — All functionality preserved and accessible
+
+### Architecture Changes
+
+**Before Refactoring:**
+- GitHubFetchService mixed GitHub API transport (subprocess/gh CLI calls) with GitHub data mapping and service orchestration
+- DataPortabilityService mixed file I/O logic (pathlib.Path, json.dump/load) with service orchestration
+- Services tightly coupled to concrete implementations of external system calls
+
+**After Refactoring:**
+- GitHubFetchService depends on abstract GitHubAPIClient protocol (implemented by GhCliGitHubAdapter)
+- GitHubFetchService depends on abstract GitHubDataMapper protocol (implemented by GithubDataMapperImpl)
+- DataPortabilityService depends on abstract FileHandler protocol (implemented by JsonFileAdapter)
+- Services contain pure business logic and orchestration
+- Adapters contain all external system interaction details
+
+### Key Design Decisions
+
+1. **Optional Parameters with Lazy Defaults**
+   - Services accept optional adapter parameters in constructors
+   - If not provided, create default implementations at runtime (lazy initialization)
+   - Allows backward compatibility: both explicit and implicit instantiation patterns work
+
+2. **Adapter Pattern**
+   - Abstract base classes define service contracts
+   - Concrete adapters implement specific technologies (gh CLI, JSON files)
+   - Easy to mock adapters in tests and swap implementations if needed
+
+3. **No Changes to Public Interfaces**
+   - All public methods on services retain same signatures
+   - All exceptions remain unchanged
+   - All CLI commands unchanged
+   - All return types unchanged
+
+### Dependency Injection Flow
+
+```
+CLI/Interactive Menu
+  ↓
+Services (receive adapters as constructor params)
+  ├── WorkflowRunService (uses WorkflowJsonStorage)
+  ├── AttemptService (uses AttemptJsonStorage)
+  ├── StatisticsService (uses WorkflowRunService, AttemptService)
+  ├── GitHubFetchService (uses GitHubAPIClient, GitHubDataMapper adapters)
+  └── DataPortabilityService (uses FileHandler adapter)
+    ↓
+Adapters (abstract protocols)
+  ├── GitHubAPIClient (implemented by GhCliGitHubAdapter)
+  ├── GitHubDataMapper (implemented by GithubDataMapperImpl)
+  └── FileHandler (implemented by JsonFileAdapter)
+    ↓
+External Systems (GitHub API, File System)
+```
+
+### Separation of Concerns
+
+**Service Layer (Business Logic)**
+- WorkflowRunService: Workflow run CRUD and filtering
+- AttemptService: Attempt management
+- StatisticsService: Aggregated statistics computation
+- GitHubFetchService: GitHub fetch orchestration (validates params, calls adapters, returns results)
+- DataPortabilityService: Export/import orchestration (validates schema, calls adapters, returns results)
+
+**Adapter Layer (Technology-Specific)**
+- GhCliGitHubAdapter: GitHub API transport via gh CLI subprocess
+- GithubDataMapperImpl: GitHub API response → WorkflowRun model mapping
+- JsonFileAdapter: JSON file export/import operations
+
+**Storage Layer (Persistence)**
+- WorkflowJsonStorage: Workflow run JSON persistence
+- AttemptJsonStorage: Attempt JSON persistence
+
+**Models Layer (Domain Entities)**
+- WorkflowRun, WorkflowRunAttempt, WorkflowStatistics (unchanged)
+
+**CLI/UI Layer (User Interface)**
+- workflow_cli: CLI command entry points
+- interactive_menu: Interactive menu operations
+- (No changes needed; adapters injected transparently)
+
+### Circular Dependency Analysis
+
+**Result:** Zero circular dependencies detected
+
+Dependency graph is acyclic and unidirectional:
+- CLI depends on Services (correct direction)
+- Services depend on Adapters (correct direction)
+- Adapters depend on external systems (correct direction)
+- No backward dependencies
+- No cross-layer shortcuts
+
+### Test Coverage
+
+- All 163 existing tests pass unchanged (backward compatibility verified)
+- No new tests added (existing tests cover refactored code through interfaces)
+- Service mocking patterns work with injected adapters
+- CLI/interactive menu tests transparent to refactoring (adapters injected at initialization)
+
+### Design Notes
+
+- Adapters are stateless: can be created once and reused across application lifetime
+- Service constructor parameters are optional with lazy defaults for backward compatibility
+- All import statements within adapters are careful to avoid import-time circular issues
+- Protocol-based design allows testing with mock adapters
+- Clean separation preserves modularity and testability
+
+### Files Structure After Refactoring
+
+```
+src/
+├── adapters/
+│   ├── __init__.py
+│   ├── protocols.py (ABC definitions)
+│   ├── github_cli_adapter.py (concrete implementation)
+│   ├── github_data_mapper.py (concrete implementation)
+│   └── json_file_adapter.py (concrete implementation)
+├── models/
+│   ├── workflow_run.py
+│   ├── workflow_run_attempt.py
+│   ├── workflow_statistics.py
+│   └── __init__.py
+├── services/
+│   ├── workflow_run_service.py (uses WorkflowJsonStorage)
+│   ├── attempt_service.py (uses AttemptJsonStorage)
+│   ├── statistics_service.py (orchestrates services)
+│   ├── github_fetch_service.py (refactored: uses adapters)
+│   ├── data_portability_service.py (refactored: uses adapters)
+│   └── __init__.py
+├── storage/
+│   ├── workflow_json_storage.py
+│   ├── attempt_json_storage.py
+│   └── __init__.py
+├── exceptions/
+│   ├── __init__.py
+│   └── github_exceptions.py
+├── cli/
+│   ├── workflow_cli.py (unchanged)
+│   ├── interactive_menu.py (unchanged)
+│   └── __init__.py
+└── __main__.py (updated: creates and injects adapters)
+```
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

@@ -27,10 +27,19 @@ package "GitHub Workflow Manager" {
     component "AttemptService" as ATTEMPT_SVC
     component "StatisticsService" as STATS_SVC
     component "GitHubFetchService" as GH_SVC
+    component "DataPortabilityService" as PORTABILITY
+  }
+
+  package "Adapter layer" #FFCCCC {
+    component "GitHubAPIClient" as GH_API_CLIENT
+    component "GhCliGitHubAdapter" as GH_ADAPTER
+    component "GitHubDataMapper" as GH_MAPPER
+    component "GithubDataMapperImpl" as GH_MAPPER_IMPL
+    component "FileHandler" as FILE_HANDLER
+    component "JsonFileAdapter" as JSON_ADAPTER
   }
 
   package "Data Portability" {
-    component "DataPortabilityService" as PORTABILITY
     artifact "export.json" as EXPORT_FILE
   }
 
@@ -51,6 +60,7 @@ package "GitHub Workflow Manager" {
 
 component "GitHub API" as GH_API
 component "Exceptions" as EXC
+component "File System" as FILESYS
 
 MAIN --> CLI
 MAIN --> IM
@@ -76,9 +86,23 @@ IM --> PORTABILITY
 
 CLI --> GH_SVC
 IM --> GH_SVC
-GH_SVC --> GH_API
-GH_SVC --> EXC
+GH_SVC --> GH_API_CLIENT
+GH_SVC --> GH_MAPPER
 GH_SVC --> SVC
+GH_SVC --> EXC
+
+GH_API_CLIENT --> GH_ADAPTER
+GH_ADAPTER --> GH_API
+
+GH_MAPPER --> GH_MAPPER_IMPL
+
+PORTABILITY --> FILE_HANDLER
+PORTABILITY --> SVC
+PORTABILITY --> ATTEMPT_SVC
+PORTABILITY --> EXPORT_FILE
+
+FILE_HANDLER --> JSON_ADAPTER
+JSON_ADAPTER --> FILESYS
 
 TRACKER --> SVC
 SVC --> STOR
@@ -87,10 +111,6 @@ STOR --> JSON_FILE
 
 ATTEMPT_SVC --> ATTEMPT_STOR
 ATTEMPT_STOR --> ATTEMPT_FILE
-
-PORTABILITY --> SVC
-PORTABILITY --> ATTEMPT_SVC
-PORTABILITY --> EXPORT_FILE
 
 SVC ..> RUN
 RUN --> STATUS

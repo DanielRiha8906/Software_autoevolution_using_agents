@@ -1,11 +1,10 @@
-import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_run_attempt import WorkflowRunAttempt
+from ..adapters.protocols import FileHandler
 from .workflow_run_service import WorkflowRunService
 from .attempt_service import AttemptService
 
@@ -41,6 +40,19 @@ class ImportResult:
 
 class DataPortabilityService:
     """Service for exporting and importing workflow data."""
+
+    def __init__(self, file_handler: Optional[FileHandler] = None) -> None:
+        """Initialize DataPortabilityService.
+
+        Args:
+            file_handler: FileHandler instance for file I/O operations.
+                If None, defaults to JsonFileAdapter.
+        """
+        if file_handler is None:
+            from ..adapters.json_file_adapter import JsonFileAdapter
+            file_handler = JsonFileAdapter()
+
+        self.file_handler = file_handler
 
     def export_data(
         self,
@@ -86,18 +98,11 @@ class DataPortabilityService:
             },
         }
 
-        # Write to file, creating parent directories as needed
-        output_file = Path(output_path)
-        output_file.parent.mkdir(parents=True, exist_ok=True)
-
-        try:
-            with open(output_file, "w") as f:
-                json.dump(envelope, f, indent=2)
-        except IOError as e:
-            raise IOError(f"Failed to write export file '{output_path}': {e}")
+        # Write to file using injected file handler
+        output_file = self.file_handler.export_to_file(envelope, output_path)
 
         return ExportResult(
-            output_path=str(output_file),
+            output_path=output_file,
             timestamp=timestamp,
             runs_count=len(runs_data),
             attempts_count=len(attempts_data),
@@ -127,14 +132,8 @@ class DataPortabilityService:
             IOError: If file cannot be read.
             ValueError: If schema validation fails (when skip_invalid=False).
         """
-        # Load and parse JSON
-        try:
-            with open(input_path, "r") as f:
-                data = json.load(f)
-        except IOError as e:
-            raise IOError(f"Failed to read import file '{input_path}': {e}")
-        except json.JSONDecodeError as e:
-            raise ValueError(f"Invalid JSON in '{input_path}': {e}")
+        # Load and parse JSON using injected file handler
+        data = self.file_handler.import_from_file(input_path)
 
         # Validate schema
         if "metadata" not in data or "data" not in data:
