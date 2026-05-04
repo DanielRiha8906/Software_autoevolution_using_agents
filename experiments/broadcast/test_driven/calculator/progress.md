@@ -660,4 +660,4 @@ Layer 1: Calculation Engine (Pure Logic)
 ✓ New structure has clear responsibility boundaries
 ✓ python -m src behaves identically before and after
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 780.7s | Cost: $1.670244 USD | Turns: 42
