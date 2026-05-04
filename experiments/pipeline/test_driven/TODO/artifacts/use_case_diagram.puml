@@ -6,6 +6,16 @@ actor User
 
 rectangle "TODO Manager" {
 
+  package "GUI mode" {
+    usecase "Use Tkinter GUI" as TGUI
+    usecase "Add task" as G_ADD
+    usecase "List / filter tasks" as G_LIST
+    usecase "Show task details" as G_SHOW
+    usecase "Change task status" as G_STATUS
+    usecase "Delete task" as G_DELETE
+    usecase "Filter by status" as G_STATUS_FILTER
+  }
+
   package "Interactive mode" {
     usecase "Use interactive menu" as UI
     usecase "Add task" as I_ADD
@@ -47,8 +57,16 @@ rectangle "TODO Manager" {
   }
 }
 
+User --> TGUI
 User --> UI
 User --> CLI
+
+TGUI ..> G_ADD        : <<exclude>>
+TGUI ..> G_LIST       : <<exclude>>
+TGUI ..> G_SHOW       : <<exclude>>
+TGUI ..> G_STATUS     : <<exclude>>
+TGUI ..> G_DELETE     : <<exclude>>
+TGUI ..> G_STATUS_FILTER : <<exclude>>
 
 UI ..> I_ADD        : <<exclude>>
 UI ..> I_LIST       : <<exclude>>

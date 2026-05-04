@@ -195,6 +195,35 @@ package "formatters" #FFEBCD {
     }
 }
 
+package "gui" #FFD9B3 {
+    class TodoGUI {
+        -service : TodoService
+        -root : tk.Tk [0..1]
+        -task_widgets : Dictionary<String, tk.Widget>
+        -current_filter : Dictionary<String, Optional<String>>
+        -selected_task_id : Optional<String>
+        -task_input : ttk.Entry
+        -task_listbox : tk.Listbox
+        -details_text : tk.Text
+        --
+        +TodoGUI(service: TodoService)
+        +run() : void
+        -_create_widgets() : void
+        -_refresh_task_list() : void
+        -_display_task_line(task: Task) : String
+        -_on_task_select(task_id: String) : void
+        -_handle_add_task() : void
+        -_handle_start_task() : void
+        -_handle_complete_task() : void
+        -_handle_reopen_task() : void
+        -_handle_delete_task() : void
+        -_filter_all() : void
+        -_filter_pending() : void
+        -_filter_in_progress() : void
+        -_filter_done() : void
+    }
+}
+
 package "cli" #FFE5E5 {
     class TodoCLI {
         -_service : TodoService
@@ -253,6 +282,10 @@ TaskImportExportService --> TaskComment : works with
 TaskFormatter ..> Task : formats
 TaskFormatter ..> TaskStatus : uses
 TaskFormatter ..> TaskComment : formats
+
+TodoGUI --> TodoService : service
+TodoGUI --> TaskFormatter : uses
+TodoGUI ..> Task : displays/manages
 
 TodoCLI --> TodoService : service
 TodoCLI --> ProjectService : project_service

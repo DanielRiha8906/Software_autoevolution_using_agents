@@ -9,6 +9,10 @@ package "TODO Application" {
 
     component "Entry Point\n(__main__)" as Main
 
+    package "GUI Layer" #FFD9B3 {
+        component "Tkinter GUI\n(TodoGUI)" as GUI
+    }
+
     package "CLI Layer" #FFE5E5 {
         component "Interactive Menu\n(InteractiveMenu)" as IM
         component "Command-line Interface\n(TodoCLI)" as CLI
@@ -50,9 +54,12 @@ package "TODO Application" {
 
 database "todo_data.json" as DB
 
+Main --> GUI : gui
 Main --> IM : interactive
 Main --> CLI : command-line
 
+GUI --> SVC
+GUI --> TF
 IM --> SVC
 IM --> PSVC
 IM --> IESVC
