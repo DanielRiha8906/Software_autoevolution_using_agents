@@ -717,4 +717,4 @@ Candidate-C's architecture advantages:
 - `artifacts/activity_diagram_interactive.puml`: Added option 13 for "Launch GUI" with flow
 - `artifacts/use_case_diagram.puml`: Added GUI Mode package with use cases for viewing, filtering, and refresh
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 657.0s | Cost: $1.277097 USD | Turns: 24
