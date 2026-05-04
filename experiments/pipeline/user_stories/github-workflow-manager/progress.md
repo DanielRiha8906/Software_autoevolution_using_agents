@@ -300,3 +300,93 @@ Duration: 827.9s | Cost: $1.784042 USD | Turns: 22
 ✓ All new functionality is accessible via `python -m src` — both interactive menu and one-shot CLI flags
 
 Duration: 748.7s | Cost: $1.558351 USD | Turns: 23
+
+## Task 08: Fetch workflow runs directly from GitHub
+
+**Status:** ✅ COMPLETED
+
+### Summary
+Implemented GitHub fetch mode to retrieve workflow runs directly from GitHub repositories via REST API or gh CLI tool. Secure token management with multi-source resolution (env var → secrets file → user prompt), complete response conversion to domain model, and comprehensive error handling. All 165 new tests pass with 100% pass rate.
+
+### Files Changed
+- **src/exceptions/github_exceptions.py** — NEW — Custom exception hierarchy (GitHubAuthError, GitHubAPIError, GitHubNetworkError, GitHubRateLimitError)
+- **src/exceptions/__init__.py** — NEW — Package initialization
+- **src/auth/github_auth.py** — NEW — GitHubAuthManager for token resolution and validation
+- **src/auth/__init__.py** — NEW — Package initialization
+- **src/models/github_workflow_run_factory.py** — NEW — GitHubWorkflowRunFactory for API response conversion
+- **src/services/github_api_fetcher.py** — NEW — GitHubAPIFetcher for REST API integration
+- **src/services/github_cli_fetcher.py** — NEW — GitHubCLIFetcher for gh CLI integration
+- **src/cli/workflow_cli.py** — MODIFIED — Added fetch subcommand with owner, repo, mode, and optional filters
+- **src/cli/interactive_menu.py** — MODIFIED — Added "Fetch from GitHub" menu option with interactive prompts
+- **artifacts/class_diagram.puml** — MODIFIED — Added exception hierarchy and new classes
+- **artifacts/component_diagram.puml** — MODIFIED — Added GitHub fetch component layer
+- **artifacts/activity_diagram_main.puml** — MODIFIED — Added fetch command flow
+- **artifacts/activity_diagram_interactive.puml** — MODIFIED — Added fetch menu option
+- **artifacts/use_case_diagram.puml** — MODIFIED — Added GitHub fetch use case
+- **artifacts/github_fetch_component.puml** — NEW — Detailed GitHub fetch architecture diagram
+- **tests/test_github_auth.py** — NEW — 36 auth manager tests
+- **tests/test_github_api_fetcher.py** — NEW — 22 API fetcher tests
+- **tests/test_github_cli_fetcher.py** — NEW — 22 CLI fetcher tests
+- **tests/test_github_workflow_run_factory.py** — NEW — 41 factory tests
+- **tests/test_github_exceptions.py** — NEW — 27 exception tests
+- **tests/test_workflow_fetch_cli.py** — NEW — 17 CLI integration tests
+
+### Test Results
+- **New tests:** 165 total
+- **All new tests:** ✓ PASSED (100% pass rate)
+- **Coverage areas:**
+  - Token resolution (3-tier: env var → secrets/.env → user prompt)
+  - Token validation (format checking and test API call)
+  - GitHub REST API fetching with pagination and filtering
+  - GitHub CLI (gh) tool integration
+  - Response field mapping and enum conversion
+  - Error handling (auth, rate limit, network, parse errors)
+  - CLI and interactive menu integration
+  - Duplicate run detection and skipping
+
+### Implementation Summary
+
+**Authentication Management:**
+- Token resolved in priority order: GITHUB_TOKEN env var → secrets/.env file → secure user prompt
+- Format validation checks for GitHub token prefixes (ghp_, ghu_, ghs_, gho_)
+- User-prompted tokens NOT persisted to disk (security best practice)
+
+**GitHub Integration:**
+- **REST API Mode:** Fetches via GitHub API `/repos/{owner}/{repo}/actions/runs` with automatic pagination
+- **CLI Mode:** Fetches via `gh run list --json` with automated field extraction
+- Both modes convert responses to WorkflowRun domain model via factory pattern
+- Supports optional filtering by branch, status, and creation date
+
+**Error Handling:**
+- GitHubAuthError — Invalid/expired token (401)
+- GitHubRateLimitError — Rate limit exceeded (403)
+- GitHubNetworkError — Connection/timeout errors
+- All errors produce user-friendly messages
+
+**Data Flow:**
+- Fetched runs checked for duplicates (skipped if already tracked)
+- Valid runs added to service for persistence
+- Summary report shows: total fetched, added, skipped counts
+
+**Field Mapping:**
+- GitHub API `id` (int) → WorkflowRun `id` (str)
+- GitHub `name` → WorkflowRun `workflow_name`
+- GitHub `status` → WorkflowRun `status` (enum)
+- GitHub `conclusion` → WorkflowRun `conclusion` (enum or None)
+- GitHub `created_at`/`updated_at` → datetime objects with UTC timezone
+- Duration calculated from timestamps or defaults to 0.0
+
+### Acceptance Criteria Met
+✓ github_fetch_mode available for fetching workflow runs via GitHub REST API
+✓ Alternative gh CLI mode available for fetch operations
+✓ PAT resolution: GITHUB_TOKEN env var → secrets/.env file → user prompt
+✓ User-entered PAT not persisted unless explicitly configured
+✓ API errors handled gracefully (rate limits, invalid token, network issues)
+✓ Token validated before making requests
+✓ Fetched data converted to existing WorkflowRun domain model
+✓ Duplicate runs detected and skipped (not replaced)
+✓ Optional filtering by branch, status, and created-after date
+✓ All functionality accessible via `python -m src fetch [--options]` (one-shot CLI)
+✓ All functionality accessible via interactive menu option "Fetch from GitHub" (interactive)
+
+Duration: 1172.6s | Cost: $2.656254 USD | Turns: 47
