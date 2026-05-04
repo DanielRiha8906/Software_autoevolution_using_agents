@@ -18,6 +18,12 @@ class CalculatorCLI:
         (Operation.SQRT,     "Square Root"),
         (Operation.POWER,    "Power"),
         (Operation.MODULO,   "Modulo"),
+        (Operation.SIN,      "Sine"),
+        (Operation.COS,      "Cosine"),
+        (Operation.TAN,      "Tangent"),
+        (Operation.LOG,      "Log (base 10)"),
+        (Operation.LN,       "Natural Log"),
+        (Operation.EXP,      "Exponential"),
     ]
 
     def __init__(

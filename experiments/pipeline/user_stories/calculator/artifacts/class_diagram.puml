@@ -13,6 +13,12 @@ package "models" #DDEEFF {
         SQRT
         POWER
         MODULO
+        SIN
+        COS
+        TAN
+        LOG
+        LN
+        EXP
         --
         +from_string(value: str) : Operation
         +display_name() : str
@@ -74,6 +80,12 @@ package "services" #DDFFD4 {
         +sqrt(a: float, b: float) : float
         +power(a: float, b: float) : float
         +modulo(a: float, b: float) : float
+        +sin(a: float, b: float) : float
+        +cos(a: float, b: float) : float
+        +tan(a: float, b: float) : float
+        +log(a: float, b: float) : float
+        +ln(a: float, b: float) : float
+        +exp(a: float, b: float) : float
         +calculate(op: Operation, a: float, b: float) : float
     }
 

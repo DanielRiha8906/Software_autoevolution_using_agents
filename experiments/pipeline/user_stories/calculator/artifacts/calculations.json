@@ -9,5 +9,38 @@
     "execution_time_ms": 0.01,
     "timestamp": "2026-05-03T19:00:00.000000",
     "uuid": "99999999-9999-9999-9999-999999999999"
+  },
+  {
+    "operation": "sin",
+    "operand_a": 0.0,
+    "operand_b": 0.0,
+    "result": 0.0,
+    "error": null,
+    "error_type": null,
+    "execution_time_ms": 0.0,
+    "timestamp": "2026-05-03T21:59:23.430086",
+    "uuid": "21a8184f-697a-4baa-9b06-5a356c34fccc"
+  },
+  {
+    "operation": "log",
+    "operand_a": 10.0,
+    "operand_b": 0.0,
+    "result": 1.0,
+    "error": null,
+    "error_type": null,
+    "execution_time_ms": 0.0,
+    "timestamp": "2026-05-03T21:59:24.788810",
+    "uuid": "4d13519c-8971-44b7-8b73-9a2ba0fe5349"
+  },
+  {
+    "operation": "log",
+    "operand_a": -1.0,
+    "operand_b": 0.0,
+    "result": null,
+    "error": "Logarithm of non-positive number is not allowed",
+    "error_type": "ValueError",
+    "execution_time_ms": 0.0,
+    "timestamp": "2026-05-03T21:59:26.046565",
+    "uuid": "e835b5bc-1a0d-47e0-86b7-42ddd3f096f3"
   }
 ]
