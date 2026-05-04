@@ -4,11 +4,11 @@ from datetime import datetime
 from ..models.workflow_attempt import WorkflowRunAttempt
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
-from ..storage.workflow_attempt_json_storage import WorkflowAttemptJsonStorage
+from ..storage.base import WorkflowAttemptRepository
 
 
 class WorkflowAttemptService:
-    def __init__(self, storage: WorkflowAttemptJsonStorage):
+    def __init__(self, storage: WorkflowAttemptRepository):
         self._storage = storage
         self._attempts: List[WorkflowRunAttempt] = storage.load()
 

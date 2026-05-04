@@ -29,7 +29,16 @@ package "GitHub Workflow Manager" {
     component "GitHubIntegrationService" as GITHUB
   }
 
+  package "GitHub adapter layer" {
+    component "GitHubTokenResolver" as TOKEN_RESOLVER
+    component "GitHubApiClient" as API_CLIENT
+    component "GitHubCliAdapter" as CLI_ADAPTER
+    component "GitHubToWorkflowConverter" as CONVERTER
+  }
+
   package "Persistence layer" {
+    interface "WorkflowRunRepository" as RUN_REPO <<protocol>>
+    interface "WorkflowAttemptRepository" as ATT_REPO <<protocol>>
     component "WorkflowJsonStorage" as STOR
     component "WorkflowAttemptJsonStorage" as ASTOR
     artifact "workflow_runs.json" as JSON_FILE
@@ -52,7 +61,6 @@ MAIN --> IM
 
 CLI --> TZ
 IM --> TZ
-IM --> GITHUB
 
 CLI --> TRACKER
 IM --> TRACKER
@@ -68,11 +76,19 @@ IM --> STATS
 CLI --> PORTABILITY
 IM --> PORTABILITY
 
+IM --> GITHUB
+GITHUB --> TOKEN_RESOLVER
+GITHUB --> API_CLIENT
+GITHUB --> CLI_ADAPTER
+GITHUB --> CONVERTER
+
 TRACKER --> SVC
 TRACKER --> ASVC
 ATRACKER --> ASVC
-SVC --> STOR
-ASVC --> ASTOR
+SVC --> RUN_REPO
+ASVC --> ATT_REPO
+STOR ..|> RUN_REPO
+ASTOR ..|> ATT_REPO
 STOR --> JSON_FILE
 ASTOR --> AJSON_FILE
 
@@ -86,6 +102,8 @@ PORTABILITY --> EXP_ATTEMPTS_FILE
 
 GITHUB ..> RUN : returns
 GITHUB ..> ATTEMPT : returns
+CONVERTER ..> RUN
+CONVERTER ..> ATTEMPT
 
 SVC ..> RUN
 RUN --> STATUS

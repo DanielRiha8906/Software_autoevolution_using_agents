@@ -6,6 +6,9 @@ skinparam backgroundColor transparent
 participant "User" as USR
 participant "InteractiveMenu" as MENU
 participant "GitHubIntegrationService" as GIS
+participant "GitHubTokenResolver" as TR
+participant "GitHubApiClient\n/ GitHubCliAdapter" as CLIENT
+participant "GitHubToWorkflowConverter" as CONVERTER
 participant "GitHub API\n(REST or gh CLI)" as GITHUB
 participant "WorkflowRunService" as WRS
 participant "WorkflowAttemptService" as WAS
@@ -19,67 +22,75 @@ activate GIS
 alt token provided explicitly
     GIS --> GIS: Use provided token
 else token not provided
-    GIS -> GIS: _resolve_token()
-    activate GIS
-
-    GIS -> GIS: Check GITHUB_TOKEN\nenvironment variable
+    GIS -> TR: resolve()
+    activate TR
+    TR -> TR: Check GITHUB_TOKEN\nenvironment variable
     alt env var set
-        GIS --> GIS: Return env token
+        TR --> TR: Return env token
     else env var not set
-        GIS -> GIS: Check secrets/.env file
+        TR -> TR: Check secrets/.env file
         alt file exists and\nGITHUB_TOKEN= found
-            GIS --> GIS: Return file token
+            TR --> TR: Return file token
         else file missing or\nno GITHUB_TOKEN key
-            GIS -> USR: Prompt for token
-            USR --> GIS: token input
-            GIS --> GIS: Return input token
+            TR -> USR: Prompt for token
+            USR --> TR: token input
+            TR --> TR: Return input token
         end
     end
-    deactivate GIS
+    TR --> GIS: token
+    deactivate TR
 end
 
 == Token Validation ==
-GIS -> GIS: _validate_token(token)
-activate GIS
+GIS -> TR: validate(token, fetch_mode)
+activate TR
 alt fetch_mode == "cli"
-    GIS -> GITHUB: gh auth status
-    GITHUB --> GIS: status code
+    TR -> GITHUB: gh auth status
+    GITHUB --> TR: status code
     alt status code == 0
-        GIS --> GIS: token valid
+        TR --> TR: token valid
     else status code != 0
-        GIS --> GIS: token invalid\nRaise RuntimeError
+        TR --> TR: token invalid\nRaise RuntimeError
     end
 else fetch_mode == "api"
-    GIS -> GITHUB: GET /user\nAuthorization: token
-    GITHUB --> GIS: 200 | 401 | other
+    TR -> GITHUB: GET /user\nAuthorization: token
+    GITHUB --> TR: 200 | 401 | other
     alt status == 200
-        GIS --> GIS: token valid
+        TR --> TR: token valid
     else status == 401
-        GIS --> GIS: token invalid\nRaise RuntimeError
+        TR --> TR: token invalid\nRaise RuntimeError
     else other status
-        GIS --> GIS: token validation uncertain\nRaise RuntimeError
+        TR --> TR: token validation uncertain\nRaise RuntimeError
     end
 end
-deactivate GIS
+TR --> GIS: bool
+deactivate TR
 
 == Fetch Runs from GitHub ==
 alt fetch_mode == "api"
-    GIS -> GITHUB: GET /repos/{owner}/{repo}/actions/runs\n?per_page={limit}\nAuthorization: token
+    GIS -> CLIENT: get_runs(owner, repo, limit)
+    activate CLIENT
+    CLIENT -> GITHUB: GET /repos/{owner}/{repo}/actions/runs\n?per_page={limit}\nAuthorization: token
 else fetch_mode == "cli"
-    GIS -> GITHUB: gh run list -R {owner}/{repo}\n-L {limit} --json id,name,status,...
+    GIS -> CLIENT: get_runs(owner, repo, limit)
+    activate CLIENT
+    CLIENT -> GITHUB: gh run list -R {owner}/{repo}\n-L {limit} --json id,name,status,...
 end
 
-GITHUB --> GIS: JSON response
+GITHUB --> CLIENT: JSON response
+CLIENT --> GIS: List[Dict]
+deactivate CLIENT
 
 == Convert API Response ==
-GIS -> GIS: For each workflow_run in response:\n_convert_api_run(api_data, repo)
-activate GIS
-    GIS -> GIS: Parse timestamps\n_parse_github_timestamp()
-    GIS -> GIS: Extract status, conclusion\nValidate enum values
-    GIS -> GIS: Calculate duration\nfrom timestamps
-    GIS -> MODELS: Create WorkflowRun
-    MODELS --> GIS: WorkflowRun instance
-deactivate GIS
+GIS -> CONVERTER: For each run:\nconvert_run(api_data, repo)
+activate CONVERTER
+    CONVERTER -> CONVERTER: Parse timestamps\n_parse_github_timestamp()
+    CONVERTER -> CONVERTER: Extract status, conclusion\nValidate enum values
+    CONVERTER -> CONVERTER: Calculate duration\nfrom timestamps
+    CONVERTER -> MODELS: Create WorkflowRun
+    MODELS --> CONVERTER: WorkflowRun instance
+CONVERTER --> GIS: WorkflowRun
+deactivate CONVERTER
 
 GIS --> MENU: List[WorkflowRun]
 deactivate GIS
@@ -109,25 +120,35 @@ else
     GIS -> GIS: Use cached token\nor re-resolve
 end
 
-GIS -> GIS: _validate_token(token)
+GIS -> TR: validate(token, fetch_mode)
+activate TR
+TR --> GIS: bool
+deactivate TR
 
 alt fetch_mode == "api"
-    GIS -> GITHUB: GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts\nAuthorization: token
+    GIS -> CLIENT: get_run_attempts(owner, repo, run_id)
+    activate CLIENT
+    CLIENT -> GITHUB: GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts\nAuthorization: token
 else fetch_mode == "cli"
-    GIS -> GITHUB: gh run view {run_id} -R {owner}/{repo}\n--json attemptNumber,status,conclusion,...
+    GIS -> CLIENT: get_run_attempts(owner, repo, run_id)
+    activate CLIENT
+    CLIENT -> GITHUB: gh run view {run_id} -R {owner}/{repo}\n--json attemptNumber,status,conclusion,...
 end
 
-GITHUB --> GIS: JSON response
+GITHUB --> CLIENT: JSON response
+CLIENT --> GIS: List[Dict]
+deactivate CLIENT
 
 == Convert Attempt Response ==
-GIS -> GIS: For each workflow_run in response:\n_convert_api_attempt(api_data, run_id, repo)
-activate GIS
-    GIS -> GIS: Parse timestamps
-    GIS -> GIS: Extract status, conclusion\nValidate enum values
-    GIS -> GIS: Calculate duration
-    GIS -> MODELS: Create WorkflowRunAttempt
-    MODELS --> GIS: WorkflowRunAttempt instance
-deactivate GIS
+GIS -> CONVERTER: For each attempt:\nconvert_attempt(api_data, run_id, repo)
+activate CONVERTER
+    CONVERTER -> CONVERTER: Parse timestamps
+    CONVERTER -> CONVERTER: Extract status, conclusion\nValidate enum values
+    CONVERTER -> CONVERTER: Calculate duration
+    CONVERTER -> MODELS: Create WorkflowRunAttempt
+    MODELS --> CONVERTER: WorkflowRunAttempt instance
+CONVERTER --> GIS: WorkflowRunAttempt
+deactivate CONVERTER
 
 GIS --> MENU: List[WorkflowRunAttempt]
 deactivate GIS

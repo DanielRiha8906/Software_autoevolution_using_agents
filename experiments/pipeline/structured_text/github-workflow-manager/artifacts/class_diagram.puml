@@ -83,6 +83,16 @@ package "models" #DDEEFF {
 }
 
 package "storage" #FFF3CC {
+    interface WorkflowRunRepository <<protocol>> {
+        +save(runs: List[WorkflowRun]) : None
+        +load() : List[WorkflowRun]
+    }
+
+    interface WorkflowAttemptRepository <<protocol>> {
+        +save(attempts: List[WorkflowRunAttempt]) : None
+        +load() : List[WorkflowRunAttempt]
+    }
+
     class WorkflowJsonStorage {
         +filepath : str
         --
@@ -98,15 +108,58 @@ package "storage" #FFF3CC {
         +save(attempts: List[WorkflowRunAttempt]) : None
         +load() : List[WorkflowRunAttempt]
     }
+
+    WorkflowJsonStorage           ..|> WorkflowRunRepository
+    WorkflowAttemptJsonStorage   ..|> WorkflowAttemptRepository
+}
+
+package "adapters.github" #FFE5CC {
+    class GitHubTokenResolver {
+        --
+        +__init__()
+        +resolve() : str
+        +validate(token: str, fetch_mode: str) : bool
+        -_validate_with_cli(token: str) : bool
+        -_validate_with_api(token: str) : bool
+    }
+
+    class GitHubApiClient {
+        -{static} API_BASE_URL : str
+        -token : str
+        -headers : Dict[str, str]
+        --
+        +__init__(token: str)
+        +get_runs(owner: str, repo: str, limit: int) : List[Dict]
+        +get_run_attempts(owner: str, repo: str, run_id: str) : List[Dict]
+    }
+
+    class GitHubCliAdapter {
+        --
+        +__init__()
+        +get_runs(owner: str, repo: str, limit: int) : List[Dict]
+        +get_run_attempts(owner: str, repo: str, run_id: str) : List[Dict]
+        -_execute_command(args: List[str]) : str
+    }
+
+    class GitHubToWorkflowConverter {
+        --
+        +__init__()
+        +convert_run(api_data: Dict, repo: str) : WorkflowRun
+        +convert_attempt(api_data: Dict, run_id: str, repo: str) : WorkflowRunAttempt
+        -_parse_github_timestamp(timestamp_str: str) : datetime
+    }
 }
 
 package "services" #DDFFD4 {
     class GitHubIntegrationService {
+        -fetch_mode : str
+        -token_resolver : GitHubTokenResolver
+        -converter : GitHubToWorkflowConverter
+        -_api_client : Optional[GitHubApiClient]
+        -_cli_adapter : Optional[GitHubCliAdapter]
         -_token : Optional[str]
-        -{static} API_BASE_URL : str
-        -{static} TOKEN_PREFIX : str
         --
-        +__init__(fetch_mode: str = "api")
+        +__init__(fetch_mode: str = "api", token_resolver: Optional[GitHubTokenResolver])
         +fetch_runs(owner: str, repo: str, workflow_name: Optional[str],\n  limit: int = 30, token: Optional[str]) : List[WorkflowRun]
         +fetch_run_attempts(owner: str, repo: str, run_id: str,\n  token: Optional[str]) : List[WorkflowRunAttempt]
         -_resolve_token() : str
@@ -115,17 +168,13 @@ package "services" #DDFFD4 {
         -_fetch_runs_cli(owner: str, repo: str, workflow_name: Optional[str],\n  limit: int, token: str) : List[WorkflowRun]
         -_fetch_attempts_api(owner: str, repo: str, run_id: str,\n  token: str) : List[WorkflowRunAttempt]
         -_fetch_attempts_cli(owner: str, repo: str, run_id: str,\n  token: str) : List[WorkflowRunAttempt]
-        -_convert_api_run(api_data: Dict, repo: str) : WorkflowRun
-        -_convert_api_attempt(api_data: Dict, run_id: str,\n  repo: str) : WorkflowRunAttempt
-        -_call_gh_cli(args: List[str]) : str
-        -{static} _parse_github_timestamp(timestamp_str: str) : datetime
     }
 
     class WorkflowRunService {
-        -_storage : WorkflowJsonStorage
+        -_storage : WorkflowRunRepository
         -_runs    : List[WorkflowRun]
         --
-        +__init__(storage: WorkflowJsonStorage)
+        +__init__(storage: WorkflowRunRepository)
         +add_workflow_run(run: WorkflowRun) : WorkflowRun
         +list_runs() : List[WorkflowRun]
         +get_run_detail(run_id: str) : Optional[WorkflowRun]
@@ -141,10 +190,10 @@ package "services" #DDFFD4 {
     }
 
     class WorkflowAttemptService {
-        -_storage   : WorkflowAttemptJsonStorage
+        -_storage   : WorkflowAttemptRepository
         -_attempts  : List[WorkflowRunAttempt]
         --
-        +__init__(storage: WorkflowAttemptJsonStorage)
+        +__init__(storage: WorkflowAttemptRepository)
         +add_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
         +list_attempts() : List[WorkflowRunAttempt]
         +get_attempt_detail(attempt_id: str) : Optional[WorkflowRunAttempt]
@@ -292,9 +341,9 @@ WorkflowRunAttempt         ..>  WorkflowStatus        : status
 WorkflowRunAttempt         ..>  WorkflowConclusion    : conclusion
 WorkflowRun          "1" --o "0..*" WorkflowRunAttempt : attempts
 
-' Storage relationships
-WorkflowRunService         "1" --> "1" WorkflowJsonStorage : -_storage
-WorkflowAttemptService     "1" --> "1" WorkflowAttemptJsonStorage : -_storage
+' Storage relationships (services depend on abstract protocols)
+WorkflowRunService         "1" --> "1" WorkflowRunRepository : -_storage
+WorkflowAttemptService     "1" --> "1" WorkflowAttemptRepository : -_storage
 
 ' Service relationships
 WorkflowRunService         ..>  WorkflowRun
@@ -339,5 +388,13 @@ WorkflowDataPortabilityService "1" --> "1" WorkflowRunService : -_run_service
 WorkflowDataPortabilityService "1" --> "1" WorkflowAttemptService : -_attempt_service
 WorkflowDataPortabilityService ..>  WorkflowRun : exports/imports
 WorkflowDataPortabilityService ..>  WorkflowRunAttempt : exports/imports
+
+' GitHub adapter relationships
+GitHubIntegrationService   "1" --> "1" GitHubTokenResolver : -token_resolver
+GitHubIntegrationService   "1" --> "1" GitHubToWorkflowConverter : -converter
+GitHubIntegrationService   "1" o--> "0..1" GitHubApiClient : -_api_client
+GitHubIntegrationService   "1" o--> "0..1" GitHubCliAdapter : -_cli_adapter
+GitHubIntegrationService   ..>  WorkflowRun : returns
+GitHubIntegrationService   ..>  WorkflowRunAttempt : returns
 
 @enduml

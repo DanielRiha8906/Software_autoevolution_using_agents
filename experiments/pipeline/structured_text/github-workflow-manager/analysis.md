@@ -1,533 +1,566 @@
-# Task 08 - GitHub Integration: Analysis Report
+# Task 09 Analysis: Service Layer, Storage Layer, and GitHub Adapter Separation
 
-## Task Summary
+## Current State Assessment
 
-Add optional GitHub integration to fetch workflow runs via GitHub API or CLI and convert fetched data to the application's domain model.
+The codebase currently has **three partially-formed layers** with **no abstract interfaces** and **multiple tight couplings**:
 
-**Must Have:**
-- Add mode: `github_fetch_mode` (new fetch strategy to complement manual entry)
-- Fetch workflow runs via GitHub REST API (using `requests`) or `gh` CLI
-- Convert fetched data into WorkflowRun and WorkflowRunAttempt domain models
-- Resolve PAT (Personal Access Token) priority: GITHUB_TOKEN env var → secrets/.env → prompt user
-- Do not persist user-entered PAT unless configured
-- Accessible via `python -m src` (both interactive menu and CLI flag)
+### 1. Models Layer (Clean)
+- `/src/models/`: Domain models are well-separated
+  - `WorkflowRun`, `WorkflowRunAttempt` (dataclasses)
+  - `WorkflowStatus`, `WorkflowConclusion` (enums)
+  - `WorkflowStatisticsReport` (dataclass)
+- **Status**: Clean. No dependencies on services or storage.
 
-**Should Have:**
-- Handle API errors gracefully (network failures, auth errors, rate limits)
-- Validate token before requests (test connectivity)
+### 2. Storage Layer (Minimal, Coupled)
+Located: `/src/storage/`
+
+**Current Classes:**
+- `WorkflowJsonStorage` (workflow_json_storage.py)
+  - Loads/saves `List[WorkflowRun]` from/to JSON
+  - Direct dependency: imports `WorkflowRun` model only
+  - Uses `Path`, `json` stdlib
+
+- `WorkflowAttemptJsonStorage` (workflow_attempt_json_storage.py)
+  - Loads/saves `List[WorkflowRunAttempt]` from/to JSON
+  - Direct dependency: imports `WorkflowRunAttempt` model only
+  - Uses `Path`, `json` stdlib
+
+**Coupling Issues:**
+- No abstract interface → services assume concrete implementations
+- Services hardcode calls to `.save()` and `.load()` with specific signatures
+- No way to swap storage backends (e.g., database, S3) without modifying services
+- Storage classes are simple but cannot be polymorphic
+
+**Status**: Minimal separation achieved; lacks abstraction.
 
 ---
 
-## Current Architecture Overview
+### 3. Service Layer (Mixed Concerns, No Clear Boundaries)
+Located: `/src/services/`
 
-### Layered Application Structure
+**Core Business Logic Services:**
 
+1. **WorkflowRunService** (workflow_run_service.py)
+   - Manages `WorkflowRun` in-memory list
+   - Depends on: `WorkflowJsonStorage`, `WorkflowRun`, enums
+   - Public methods: `add_workflow_run()`, `list_runs()`, `get_run_detail()`, `filter_*()`, `filter_runs()`
+   - Private: `_persist()` (calls storage)
+   - **Status**: Pure service, good boundaries, but storage is hardcoded concrete type
+
+2. **WorkflowAttemptService** (workflow_attempt_service.py)
+   - Manages `WorkflowRunAttempt` in-memory list
+   - Depends on: `WorkflowAttemptJsonStorage`, `WorkflowRunAttempt`, enums
+   - Public methods: `add_attempt()`, `list_attempts()`, `get_attempt_detail()`, `filter_*()`, `filter_attempts()`
+   - Private: `_persist()` (calls storage)
+   - **Status**: Pure service, good boundaries, but storage is hardcoded concrete type
+
+3. **WorkflowStatisticsService** (workflow_statistics_service.py)
+   - Reads-only aggregation over runs and attempts
+   - Depends on: `WorkflowRunService`, `WorkflowAttemptService`, models
+   - Public methods: `compute_report()`, `compute_report_for_runs()`
+   - Private: Various `_compute_*()` methods for statistics
+   - **Status**: Pure service, good separation; depends on other services (acceptable)
+
+4. **WorkflowDataPortabilityService** (workflow_data_portability_service.py)
+   - Exports/imports runs and attempts to/from files
+   - Depends on: `WorkflowRunService`, `WorkflowAttemptService`, models
+   - **Problem**: Uses `json` and `Path` directly for file I/O (storage concerns bleeding into service)
+   - Public methods: `export_runs()`, `import_runs()`, `export_attempts()`, `import_attempts()`
+   - Private: `_validate_run_schema()`, `_validate_attempt_schema()`
+   - **Status**: Service with storage logic mixed in; should delegate JSON I/O to storage layer
+
+5. **WorkflowRunTracker** (workflow_run_tracker.py)
+   - High-level facade for creating/tracking runs
+   - Depends on: `WorkflowRunService`, `WorkflowAttemptService`, models
+   - Public methods: `track()`, `create_attempt()`
+   - **Status**: Pure service, acceptable dependencies
+
+6. **WorkflowAttemptTracker** (workflow_attempt_tracker.py)
+   - High-level facade for tracking attempts (currently minimal)
+   - Depends on: `WorkflowAttemptService`, models
+   - **Status**: Simple; likely superseded by `WorkflowRunTracker.create_attempt()`
+
+---
+
+### 4. GitHub Adapter Layer (Not Separated)
+Located: `/src/services/github_integration_service.py`
+
+**Current Class:**
+- **GitHubIntegrationService**
+  - Handles token resolution, validation, and GitHub API/CLI calls
+  - **Core Concerns (Mixed):**
+    1. **Token Management**: `_resolve_token()`, `_validate_token()` (env var, secrets file, interactive)
+    2. **GitHub API Client**: Direct `requests` calls, `subprocess` for `gh` CLI
+    3. **Data Transformation**: `_convert_api_run()`, `_convert_api_attempt()` (GitHub → domain models)
+    4. **Timestamp Parsing**: `_parse_github_timestamp()` (ISO 8601 → datetime)
+    5. **Fetch Modes**: Supports both REST API and `gh` CLI as backends
+  - **Public Methods**:
+    - `fetch_runs(owner, repo, workflow_name, limit, token)` → `List[WorkflowRun]`
+    - `fetch_run_attempts(owner, repo, run_id, token)` → `List[WorkflowRunAttempt]`
+  - **Private Methods**: 8+ internal methods handling token, API calls, data conversion
+  - **Dependencies**:
+    - Direct: `requests`, `subprocess`, `os`, `logging`
+    - Domain: `WorkflowRun`, `WorkflowRunAttempt`, `WorkflowStatus`, `WorkflowConclusion`
+  - **Issues**:
+    - Too many responsibilities in one class (token mgmt + API client + transformation)
+    - No separation between GitHub client and domain conversion
+    - No abstraction interface → CLI and menu directly import and instantiate
+    - Interacts with services/storage only indirectly (through CLI layer)
+
+**Status**: Exists but is NOT separated; blends external API concerns with domain logic.
+
+---
+
+## Separation Requirements
+
+### Layer 1: Storage Layer (Abstract)
+
+**Current:**
+- `WorkflowJsonStorage` (concrete JSON implementation)
+- `WorkflowAttemptJsonStorage` (concrete JSON implementation)
+
+**Required Abstract Interface:**
+- `WorkflowRunRepository` (protocol/ABC)
+  ```python
+  class WorkflowRunRepository(Protocol):
+      def save(self, runs: List[WorkflowRun]) -> None: ...
+      def load(self) -> List[WorkflowRun]: ...
+  ```
+- `WorkflowAttemptRepository` (protocol/ABC)
+  ```python
+  class WorkflowAttemptRepository(Protocol):
+      def save(self, attempts: List[WorkflowRunAttempt]) -> None: ...
+      def load(self) -> List[WorkflowRunAttempt]: ...
+  ```
+
+**Concrete Implementations to Keep:**
+- `WorkflowJsonStorage` (implements `WorkflowRunRepository`)
+- `WorkflowAttemptJsonStorage` (implements `WorkflowAttemptRepository`)
+
+**Future Extensibility:**
+- New implementations: `WorkflowDatabaseStorage`, `WorkflowS3Storage`, etc.
+
+---
+
+### Layer 2: Service Layer (Core Business Logic)
+
+**Classes That Stay as Services:**
+
+1. **WorkflowRunService**
+   - Constructor change: `__init__(storage: WorkflowRunRepository)` (abstract)
+   - No other changes needed
+   - Already a pure service
+
+2. **WorkflowAttemptService**
+   - Constructor change: `__init__(storage: WorkflowAttemptRepository)` (abstract)
+   - No other changes needed
+   - Already a pure service
+
+3. **WorkflowStatisticsService**
+   - No changes required
+   - Pure aggregation service
+
+4. **WorkflowDataPortabilityService**
+   - **REFACTOR REQUIRED**: Move file I/O logic out
+   - Create new storage classes: `WorkflowRunExportStorage`, `WorkflowAttemptExportStorage`
+   - Service should delegate JSON file export/import to these storage classes
+   - Keep only validation and orchestration in service
+
+5. **WorkflowRunTracker**
+   - No changes required
+   - Service facade
+
+6. **WorkflowAttemptTracker**
+   - No changes required (or possibly deprecate if unused)
+
+---
+
+### Layer 3: GitHub Adapter Layer (Separate External Concerns)
+
+**Current Problem:**
+- `GitHubIntegrationService` mixes token management, API calls, and domain transformation
+
+**Required Separation:**
+
+**A. GitHub API Client (New)**
+- Class: `GitHubApiClient` (or `GitHubRestApiClient`)
+  - Private HTTP client (requests-based)
+  - Methods: `get_runs()`, `get_run_attempts()` → return raw dicts
+  - Handles: Authorization header, endpoint construction, HTTP methods, error handling
+  - **Does NOT touch domain models**
+
+**B. GitHub CLI Adapter (New)**
+- Class: `GitHubCliAdapter`
+  - Wraps `subprocess` calls to `gh`
+  - Methods: `run_gh_command()` → returns raw JSON output
+  - Handles: Command construction, subprocess lifecycle, output parsing to dict
+  - **Does NOT touch domain models**
+
+**C. Token Resolution (New or Moved)**
+- Class: `GitHubTokenResolver` or move to config layer
+  - Methods: `resolve()` → str
+  - Handles: Env vars, secrets files, interactive prompts
+  - **Separate from API client**
+
+**D. GitHub Data Converter (New)**
+- Class: `GitHubToWorkflowConverter`
+  - Methods: `convert_run(api_data: dict) -> WorkflowRun`
+  - Methods: `convert_attempt(api_data: dict) -> WorkflowRunAttempt`
+  - Handles: Enum validation, timestamp parsing
+  - **Pure transformation, no I/O**
+
+**E. GitHub Integration Service (Refactored)**
+- Becomes a thin facade: `GitHubIntegrationService`
+  - Composes: `GitHubApiClient`, `GitHubCliAdapter`, `GitHubTokenResolver`, `GitHubToWorkflowConverter`
+  - Public methods: `fetch_runs()`, `fetch_run_attempts()` (unchanged signature)
+  - Orchestrates the layers, returns domain models
+  - **Clear separation of concerns**
+
+---
+
+## Circular Dependency Analysis
+
+### Current Circular Dependencies: NONE DETECTED
+
+**Dependency Graph (Acyclic):**
 ```
-Application Entrypoint (__main__.py)
+CLI/Menu
     ↓
-Interface Layer (workflow_cli.py, interactive_menu.py)
-    ├── CLI: argparse-driven one-shot commands
-    └── Interactive: multi-step menu-driven interface
+Services (WorkflowRunService, WorkflowAttemptService, etc.)
     ↓
-Service Layer (WorkflowRunService, WorkflowAttemptService, Trackers, Statistics, Portability)
-    ├── WorkflowRunService — CRUD + filtering for runs
-    ├── WorkflowAttemptService — CRUD + filtering for attempts
-    ├── WorkflowRunTracker — run creation facade (generates UUIDs, timestamps)
-    ├── WorkflowAttemptTracker — attempt creation facade
-    ├── WorkflowStatisticsService — report generation
-    └── WorkflowDataPortabilityService — export/import JSON
+Storage (WorkflowJsonStorage, WorkflowAttemptJsonStorage)
     ↓
-Storage Layer (WorkflowJsonStorage, WorkflowAttemptJsonStorage)
-    ├── JSON file persistence
-    └── Load/save operations
-    ↓
-Domain Models (WorkflowRun, WorkflowRunAttempt, enums)
-    ├── Dataclasses with serialization (to_dict/from_dict)
-    ├── State query methods
-    └── Type-safe enums
+Models (WorkflowRun, WorkflowAttempt, Enums)
 ```
 
-### Entry Point Pattern
-
-File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/__main__.py`
-
-Currently:
-- Initializes storage layers (WorkflowJsonStorage, WorkflowAttemptJsonStorage)
-- Instantiates services (WorkflowRunService, WorkflowAttemptService, WorkflowStatisticsService, WorkflowDataPortabilityService)
-- Routes to CLI or interactive menu based on sys.argv presence
-- All services are injected into both CLI and menu functions
-
-New GitHub integration must follow same pattern: create service → initialize in __main__.py → pass to CLI/menu.
-
-### CLI Routing Pattern
-
-File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/cli/workflow_cli.py`
-
-Current subcommands:
-- `add` — manually add workflow run
-- `list` — list runs with optional filters
-- `detail` — show single run
-- `query-state` — query run state
-- `attempt add/list/detail/query-state` — attempt management
-- `report` — generate statistics
-- `export runs/attempts` — export data
-- `import runs/attempts` — import data
-
-New `fetch` subcommand needed for GitHub integration:
-- `fetch --owner <owner> --repo <repo> [--workflow <name>] [--limit <n>] [--mode api|cli]`
-
-### Interactive Menu Pattern
-
-File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/cli/interactive_menu.py`
-
-Current menu structure:
+**GitHub Integration:**
 ```
-Main menu options:
-  1. Workflow Runs → run_menu (add, list, detail, filter, query state)
-  2. Workflow Attempts → attempt_menu (add, list, detail, filter, query state)
-  3. Statistics → view_statistics
-  4. Export/Import Data → portability_menu
-  5. Exit
+CLI/Menu → GitHubIntegrationService → (requests, subprocess) → Models
 ```
 
-New menu option needed:
-- Option "Fetch from GitHub" in main menu (before exit) → github_fetch_menu with prompts for owner, repo, workflow name, token source
+**No circular edges detected**. However, services are tightly coupled to concrete storage implementations, which limits flexibility.
 
 ---
 
-## Existing Domain Model Structure
+## Public Interfaces to Preserve
 
-### WorkflowRun
-File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/models/workflow_run.py`
+### Function Signatures and Return Types (MUST NOT CHANGE)
 
-Fields:
-- `id: str` — unique identifier (currently UUID generated locally)
-- `workflow_name: str` — name of the workflow
-- `branch: str` — git branch
-- `status: WorkflowStatus` — enum (queued, in_progress, completed, waiting, requested, pending)
-- `conclusion: Optional[WorkflowConclusion]` — enum (success, failure, cancelled, skipped, timed_out, action_required, neutral, stale) or None
-- `created_at: datetime` — UTC timestamp
-- `updated_at: Optional[datetime]` — UTC timestamp or None
-- `run_number: Optional[int]` — GitHub run number (optional, can be fetched from API)
-- `commit_sha: Optional[str]` — commit SHA (optional, can be fetched from API)
-- `duration_seconds: float` — execution time in seconds
-
-Methods:
-- `to_dict() / from_dict()` — serialization
-- `is_terminal(), is_running(), is_successful(), is_failed(), is_cancelled()` — state queries
-
-### WorkflowRunAttempt
-File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/models/workflow_attempt.py`
-
-Fields:
-- `id: str` — unique identifier
-- `run_id: str` — foreign key to WorkflowRun
-- `attempt_number: int` — sequence number (1, 2, 3...)
-- `status: WorkflowStatus` — same as WorkflowRun
-- `conclusion: Optional[WorkflowConclusion]` — same as WorkflowRun
-- `started_at: datetime` — UTC timestamp
-- `completed_at: Optional[datetime]` — UTC timestamp or None
-- `duration_seconds: float` — execution time in seconds
-- `logs_url: Optional[str]` — URL to logs (can be fetched from API)
-
-Methods:
-- `to_dict() / from_dict()` — serialization
-- `is_terminal(), is_running(), is_successful(), is_failed(), is_cancelled()` — state queries
-
-### Enums
-
-**WorkflowStatus:** queued, in_progress, completed, waiting, requested, pending
-
-**WorkflowConclusion:** success, failure, cancelled, skipped, timed_out, action_required, neutral, stale
-
----
-
-## Service Layer: Existing Patterns
-
-### WorkflowRunService
-File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/services/workflow_run_service.py`
-
-Pattern:
-- Constructor takes `WorkflowJsonStorage` → loads data into `self._runs: List[WorkflowRun]`
-- Public methods: `add_workflow_run(run)`, `list_runs()`, `get_run_detail(run_id)`, various `filter_*` methods
-- Private method: `_persist()` calls storage.save(self._runs)
-- All mutations immediately persist to JSON
-
-### WorkflowRunTracker
-File: `/home/runner/work/Software_autoevolution_using_agents/Software_autoevolution_using_agents/experiments/pipeline/structured_text/github-workflow-manager/src/services/workflow_run_tracker.py`
-
-Pattern:
-- High-level facade for creating WorkflowRun instances
-- Constructor: `__init__(service, attempt_service)`
-- Public method: `track(workflow_name, branch, status, ...)` → creates WorkflowRun, calls service.add_workflow_run()
-- Generates UUIDs and timestamps automatically (not from external data)
-
-### WorkflowAttemptService & Tracker
-
-Similar pattern to runs: service handles CRUD, tracker is creation facade.
-
----
-
-## GitHub API / Data Mapping
-
-### GitHub REST API Response Structure (Workflow Runs)
-
-From GitHub Actions API: GET /repos/{owner}/{repo}/actions/runs
-
-Response contains array of runs with fields:
-- `id` — numeric run ID (convert to string for domain model id field)
-- `name` — workflow name (maps to workflow_name)
-- `status` — GitHub status: "queued", "in_progress", "completed", "waiting", "requested", "pending" (maps directly to WorkflowStatus)
-- `conclusion` — GitHub conclusion: "success", "failure", "cancelled", "skipped", "timed_out", "action_required", "neutral", "stale" or null (maps directly to WorkflowConclusion)
-- `head_branch` — branch name (maps to branch)
-- `run_number` — numeric run number (maps to run_number)
-- `head_sha` — commit SHA (maps to commit_sha)
-- `created_at` — ISO timestamp string (parse to datetime, maps to created_at)
-- `updated_at` — ISO timestamp string (parse to datetime, maps to updated_at)
-
-Derived:
-- `duration_seconds` — Not directly in API response. Calculate from created_at and updated_at if status is completed, otherwise 0.0
-
-### GitHub REST API Response Structure (Workflow Run Attempts)
-
-From GitHub Actions API: GET /repos/{owner}/{repo}/actions/runs/{run_id}/attempts
-
-Response contains array of attempts with fields:
-- `id` — numeric attempt ID (convert to string)
-- `attempt_number` — sequence number
-- `status` — same enum as runs
-- `conclusion` — same enum as runs
-- `created_at` — ISO timestamp (maps to started_at)
-- `completed_at` — ISO timestamp or null (maps to completed_at)
-- `name` — workflow name (for reference, not stored in WorkflowRunAttempt)
-
-Derived:
-- `run_id` — passed as parameter from the run fetch loop
-- `duration_seconds` — calculate from created_at and completed_at if available
-
----
-
-## Required Changes: File-by-File Scope
-
-### NEW FILES
-
-#### 1. src/services/github_integration_service.py
-Purpose: Fetch data from GitHub API or CLI and convert to domain models.
-
-Responsibilities:
-- Token resolution (env var → secrets/.env → prompt user)
-- API client initialization (requests library for REST API, or subprocess for gh CLI)
-- Fetch workflow runs for a given owner/repo
-- Fetch workflow attempts for a given run
-- Convert GitHub API response → WorkflowRun / WorkflowRunAttempt instances
-- Error handling (network, auth, rate limits, API errors)
-- Token validation before fetching
-
-Key methods:
-- `__init__(fetch_mode: str = "api")` — mode: "api" (requests) or "cli" (gh)
-- `_resolve_token() -> str` — check GITHUB_TOKEN env, then secrets/.env, then prompt
-- `_validate_token(token: str) -> bool` — test token validity (shallow API call)
-- `fetch_runs(owner: str, repo: str, workflow_name: Optional[str] = None, limit: int = 30) -> List[WorkflowRun]`
-- `fetch_run_attempts(owner: str, repo: str, run_id: str) -> List[WorkflowRunAttempt]`
-- `_convert_api_run(api_data: dict, repo: str) -> WorkflowRun` — private helper
-- `_convert_api_attempt(api_data: dict, run_id: str, repo: str) -> WorkflowRunAttempt` — private helper
-- `_call_gh_cli(args: List[str]) -> str` — private helper for subprocess execution
-- `_call_api(url: str, method: str = "GET", data: Optional[dict] = None) -> dict` — private helper for requests
-
-#### 2. tests/test_github_integration_service.py
-Unit and integration tests for:
-- Token resolution logic (mocking env vars, file reads)
-- API response parsing (mock GitHub responses)
-- Conversion logic (API data → domain models)
-- Error handling (network errors, auth failures, invalid responses)
-- CLI mode testing (mocking subprocess calls)
-- API mode testing (mocking requests library)
-
-### MODIFIED FILES
-
-#### 1. src/__main__.py
-Add initialization of GitHubIntegrationService:
-- Create instance with fetch_mode parameter (default "api")
-- Pass to CLI and interactive menu
-
-#### 2. src/cli/workflow_cli.py
-Add new subcommand `fetch`:
-- `fetch` subparser with subcommands:
-  - `fetch runs` — fetch workflow runs
-    - `--owner <owner>` (required)
-    - `--repo <repo>` (required)
-    - `--workflow <name>` (optional, filter to specific workflow)
-    - `--limit <n>` (optional, default 30)
-    - `--mode api|cli` (optional, default api)
-    - `--token <token>` (optional, for testing or explicit override)
-  - `fetch attempts` — fetch attempts for a specific run
-    - `--owner <owner>` (required)
-    - `--repo <repo>` (required)
-    - `--run-id <id>` (required)
-    - `--mode api|cli` (optional)
-    - `--token <token>` (optional)
-
-Integration with existing services:
-- After fetching, call `WorkflowRunService.add_workflow_run()` for each run
-- After fetching attempts, call `WorkflowAttemptService.add_attempt()` for each attempt
-- Display summary (count added, count skipped due to duplicate ID)
-
-#### 3. src/cli/interactive_menu.py
-Add new menu option:
-- "Fetch from GitHub" → `_github_fetch_menu()`
-
-Menu flow:
-1. Prompt user for owner (required)
-2. Prompt user for repo (required)
-3. Prompt user for workflow name (optional)
-4. Prompt user for mode (api or cli, default api)
-5. Prompt user for token source (env, secrets file, prompt, or skip)
-6. Call GitHubIntegrationService.fetch_runs() and display results
-7. Option to fetch attempts for first result (or show menu to select run)
-
-#### 4. src/services/__init__.py
-Export GitHubIntegrationService in __all__
-
----
-
-## Implementation Scope: Token Management
-
-### Token Resolution Priority (Must Have)
-1. Check `GITHUB_TOKEN` environment variable (os.getenv("GITHUB_TOKEN"))
-2. If not found, check `secrets/.env` file in working directory
-   - Format: `GITHUB_TOKEN=ghp_...` (or similar)
-   - Use dotenv or manual file parsing
-3. If not found, prompt user interactively
-4. Do NOT persist user-entered token unless explicitly configured
-
-### Token Validation (Should Have)
-Before using token for actual API calls:
-- Make a simple GET request: https://api.github.com/user (or gh auth status for CLI mode)
-- If valid, continue with run/attempt fetches
-- If invalid (401), retry prompt or fail gracefully with error message
-
-### Sensitive Data Handling
-- Never log full token value (show only first 4 chars: "ghp_****")
-- Do not write prompted token to any file
-- Keep token in memory only for duration of session
-- Close file handles after reading secrets/.env
-
----
-
-## Integration Points: Exact Files and Functions
-
-### Entry Point
-**File:** `src/__main__.py`
-**Function:** `main()`
-
-Before line 27 (if len(sys.argv) == 1), after portability_service init:
+**WorkflowRunService:**
 ```python
-# Create GitHub integration service
-github_service = GitHubIntegrationService(fetch_mode="api")
+def add_workflow_run(self, run: WorkflowRun) -> WorkflowRun
+def list_runs(self) -> List[WorkflowRun]
+def get_run_detail(self, run_id: str) -> Optional[WorkflowRun]
+def filter_by_branch(self, branch: str) -> List[WorkflowRun]
+def filter_by_status(self, status: WorkflowStatus) -> List[WorkflowRun]
+def filter_by_conclusion(self, conclusion: WorkflowConclusion) -> List[WorkflowRun]
+def filter_by_duration_range(self, min_s: Optional[float], max_s: Optional[float]) -> List[WorkflowRun]
+def filter_by_created_at(self, before: Optional[datetime], after: Optional[datetime]) -> List[WorkflowRun]
+def filter_by_updated_at(self, before: Optional[datetime], after: Optional[datetime]) -> List[WorkflowRun]
+def filter_by_has_attempts(self, has_attempts: bool, attempt_service: WorkflowAttemptService) -> List[WorkflowRun]
+def filter_runs(...) -> List[WorkflowRun]  # all parameters
 ```
 
-Update function signatures:
+**WorkflowAttemptService:**
 ```python
-run_interactive(service, attempt_service, stats_service, portability_service, github_service)
-run_cli(service, attempt_service, stats_service, portability_service, github_service, args)
+def add_attempt(self, attempt: WorkflowRunAttempt) -> WorkflowRunAttempt
+def list_attempts(self) -> List[WorkflowRunAttempt]
+def get_attempt_detail(self, attempt_id: str) -> Optional[WorkflowRunAttempt]
+def filter_by_run_id(self, run_id: str) -> List[WorkflowRunAttempt]
+def filter_by_status(self, status: WorkflowStatus) -> List[WorkflowRunAttempt]
+def filter_by_conclusion(self, conclusion: WorkflowConclusion) -> List[WorkflowRunAttempt]
+def filter_by_duration_range(self, min_s: Optional[float], max_s: Optional[float]) -> List[WorkflowRunAttempt]
+def filter_by_started_at(self, before: Optional[datetime], after: Optional[datetime]) -> List[WorkflowRunAttempt]
+def filter_by_completed_at(self, before: Optional[datetime], after: Optional[datetime]) -> List[WorkflowRunAttempt]
+def filter_attempts(...) -> List[WorkflowRunAttempt]
 ```
 
-### CLI
-**File:** `src/cli/workflow_cli.py`
-**Function:** `build_parser()`
-
-Add after line 276 (after import section):
+**WorkflowStatisticsService:**
 ```python
-# fetch subcommand with runs/attempts subcommands
-fetch_p = sub.add_parser("fetch", help="Fetch workflow runs from GitHub")
-fetch_sub = fetch_p.add_subparsers(dest="fetch_command", required=True)
-
-fetch_runs_p = fetch_sub.add_parser("runs", help="Fetch workflow runs from GitHub")
-fetch_runs_p.add_argument("--owner", required=True, help="GitHub repository owner")
-fetch_runs_p.add_argument("--repo", required=True, help="GitHub repository name")
-fetch_runs_p.add_argument("--workflow", default=None, help="Filter by workflow name (optional)")
-fetch_runs_p.add_argument("--limit", type=int, default=30, help="Maximum runs to fetch (default 30)")
-fetch_runs_p.add_argument("--mode", choices=["api", "cli"], default="api", help="Fetch mode (default api)")
-fetch_runs_p.add_argument("--token", default=None, help="GitHub token (optional, uses env/file if omitted)")
-
-fetch_attempts_p = fetch_sub.add_parser("attempts", help="Fetch workflow attempts from GitHub")
-fetch_attempts_p.add_argument("--owner", required=True, help="GitHub repository owner")
-fetch_attempts_p.add_argument("--repo", required=True, help="GitHub repository name")
-fetch_attempts_p.add_argument("--run-id", required=True, help="Workflow run ID")
-fetch_attempts_p.add_argument("--mode", choices=["api", "cli"], default="api", help="Fetch mode")
-fetch_attempts_p.add_argument("--token", default=None, help="GitHub token (optional)")
+def compute_report(self) -> WorkflowStatisticsReport
+def compute_report_for_runs(self, runs: List[WorkflowRun]) -> WorkflowStatisticsReport
 ```
 
-**Function:** `run_cli()` command handler
-
-Add before line 279 (after command routing):
+**WorkflowDataPortabilityService:**
 ```python
-elif ns.command == "fetch":
-    if github_service is None:
-        print("GitHub service not initialized.", file=sys.stderr)
-        sys.exit(1)
+def export_runs(self, filepath: str, runs: Optional[List[WorkflowRun]]) -> int
+def import_runs(self, filepath: str, skip_duplicates: bool) -> Dict[str, Any]
+def export_attempts(self, filepath: str, attempts: Optional[List[WorkflowRunAttempt]]) -> int
+def import_attempts(self, filepath: str, skip_duplicates: bool) -> Dict[str, Any]
+```
+
+**WorkflowRunTracker:**
+```python
+def track(self, workflow_name: str, branch: str, status: WorkflowStatus,
+          conclusion: Optional[WorkflowConclusion], run_number: Optional[int],
+          commit_sha: Optional[str], run_id: Optional[str], duration_seconds: float) -> WorkflowRun
+def create_attempt(self, run_id: str, attempt_number: int, status: WorkflowStatus,
+                   conclusion: Optional[WorkflowConclusion], completed_at: Optional[datetime],
+                   duration_seconds: float, logs_url: Optional[str], attempt_id: Optional[str]) -> WorkflowRunAttempt
+```
+
+**GitHubIntegrationService:**
+```python
+def fetch_runs(self, owner: str, repo: str, workflow_name: Optional[str] = None,
+               limit: int = 30, token: Optional[str] = None) -> List[WorkflowRun]
+def fetch_run_attempts(self, owner: str, repo: str, run_id: str, token: Optional[str] = None) -> List[WorkflowRunAttempt]
+```
+
+### Class Names (MUST REMAIN)
+- `WorkflowRunService`
+- `WorkflowAttemptService`
+- `WorkflowStatisticsService`
+- `WorkflowDataPortabilityService`
+- `WorkflowRunTracker`
+- `GitHubIntegrationService` (existing name)
+
+### Import Paths (MUST REMAIN)
+- Expect imports from `src.services.*` for all service classes
+- Expect imports from `src.storage.*` for storage implementations
+- Expect `GitHubIntegrationService` from `src.services.github_integration_service`
+
+---
+
+## Proposed Abstract Layer Interfaces
+
+### 1. Storage Repository Protocols
+
+**File:** `/src/storage/base.py` (or `__init__.py`)
+
+```python
+from typing import Protocol, List
+from ..models.workflow_run import WorkflowRun
+from ..models.workflow_attempt import WorkflowRunAttempt
+
+class WorkflowRunRepository(Protocol):
+    """Abstract interface for WorkflowRun persistence."""
+    def save(self, runs: List[WorkflowRun]) -> None:
+        """Save runs to storage."""
+        ...
     
-    if ns.fetch_command == "runs":
-        # Call github_service.fetch_runs(...)
-        # Add results via tracker.track(...)
-        # Report count added/skipped
-        pass
-    elif ns.fetch_command == "attempts":
-        # Call github_service.fetch_run_attempts(...)
-        # Add results via tracker.create_attempt(...)
-        # Report count added/skipped
-        pass
+    def load(self) -> List[WorkflowRun]:
+        """Load all runs from storage."""
+        ...
+
+class WorkflowAttemptRepository(Protocol):
+    """Abstract interface for WorkflowRunAttempt persistence."""
+    def save(self, attempts: List[WorkflowRunAttempt]) -> None:
+        """Save attempts to storage."""
+        ...
+    
+    def load(self) -> List[WorkflowRunAttempt]:
+        """Load all attempts from storage."""
+        ...
 ```
 
-### Interactive Menu
-**File:** `src/cli/interactive_menu.py`
+---
 
-Add to MENU list (before "Exit" entry):
+### 2. GitHub Adapter Interfaces
+
+**File:** `/src/adapters/github/base.py` (new module)
+
 ```python
-("Fetch from GitHub", "github_fetch"),
+from typing import Protocol, Dict, List, Optional
+
+class GitHubClient(Protocol):
+    """Abstract interface for GitHub API calls."""
+    def get_runs(self, owner: str, repo: str, limit: int) -> List[Dict]:
+        """Fetch raw run data from GitHub."""
+        ...
+    
+    def get_run_attempts(self, owner: str, repo: str, run_id: str) -> List[Dict]:
+        """Fetch raw attempt data for a run from GitHub."""
+        ...
+
+class GitHubDataConverter(Protocol):
+    """Abstract interface for GitHub API → domain model conversion."""
+    def convert_run(self, api_data: Dict) -> "WorkflowRun":
+        """Convert GitHub run data to WorkflowRun."""
+        ...
+    
+    def convert_attempt(self, api_data: Dict, run_id: str) -> "WorkflowRunAttempt":
+        """Convert GitHub attempt data to WorkflowRunAttempt."""
+        ...
+
+class TokenProvider(Protocol):
+    """Abstract interface for GitHub token resolution."""
+    def resolve(self) -> str:
+        """Resolve and return a GitHub token."""
+        ...
 ```
 
-Add handler in `run_interactive()` after portability check:
-```python
-elif submenu == "github_fetch":
-    if github_service is None:
-        print("GitHub service not initialized.")
-        continue
-    _github_fetch_menu(service, attempt_service, github_service, tracker)
-```
+---
 
-Add new function `_github_fetch_menu()`:
-- Prompt for owner, repo, workflow name, mode, token source
-- Call github_service.fetch_runs()
-- Call service.add_workflow_run() or tracker.track() for each result
-- Display results
-- Offer to fetch attempts for selected runs
+## Blockers and Ambiguities
+
+### 1. **Module Organization Ambiguity**
+
+**Question:** Should GitHub adapter be a new top-level package?
+
+**Current:** `src/services/github_integration_service.py`
+
+**Options:**
+1. Keep in `services/` (simpler, service-like responsibility)
+2. Move to `src/adapters/github/` (clearer separation, implies external integration)
+3. Move to `src/integrations/github/` (alternative naming)
+
+**Assumption for this analysis:** Moving to `src/adapters/github/` for clarity, but existing public name `GitHubIntegrationService` is preserved for backward compatibility.
 
 ---
 
-## Error Handling Strategy
+### 2. **Abstract Class vs Protocol**
 
-### Network Errors
-- requests.ConnectionError → "Network error: check internet connection"
-- Subprocess failure for gh CLI → "gh CLI not available or authentication failed"
+**Question:** Use `typing.Protocol` (structural subtyping) or `ABC` (nominal)?
 
-### Authentication Errors (401, 403)
-- github_service._validate_token() fails → "Token validation failed. Check GITHUB_TOKEN or delete secrets/.env and try again."
+**Current codebase:** No abstract bases in use.
 
-### Rate Limiting (403 rate limit)
-- Detect from response header → "GitHub API rate limit exceeded. Try again later."
+**Options:**
+1. `Protocol` from `typing` (more flexible, duck-typing)
+2. `ABC` from `abc` (explicit contracts, checked at runtime)
+3. Both (protocols for clearer intent, ABC as fallback)
 
-### Invalid Data Responses
-- Missing expected fields → "Invalid GitHub API response: missing field '<name>'"
-- Invalid enum values → Skip that record and continue (log warning)
-
-### File I/O Errors
-- secrets/.env not readable → Fall back to prompt
-- Token prompt cancelled (Ctrl+C) → Exit with "Cancelled"
+**Assumption:** Use `Protocol` for interfaces (more Pythonic, aligns with modern typing). Add `ABC` if explicit base class is needed for `isinstance()` checks.
 
 ---
 
-## Ambiguities and Working Assumptions
+### 3. **WorkflowDataPortabilityService Scope**
 
-### 1. Token File Location
-Assumption: `secrets/.env` in working directory (the root of the experiment folder).
-Alternative: Could be `.env` in working directory. Decision: Use `secrets/.env` first for explicit separation of secrets directory.
+**Question:** Should export/import logic stay in a service or move to storage?
 
-### 2. Fetch Mode Default
-Assumption: Default to REST API (`requests` library) because it's more portable and doesn't require `gh` CLI installation.
-Alternative: Default to `gh` CLI if available, fall back to requests. Decision: Stick with requests as default, CLI as opt-in.
+**Current:** Service does JSON file I/O directly.
 
-### 3. Duplicate Run Handling
-Assumption: If a run with the same ID already exists (from manual entry or prior fetch), skip it and report count.
-Alternative: Allow option to overwrite. Decision: Skip with message (consistent with import behavior in Task 7).
+**Options:**
+1. Create new storage classes for export/import (`ExportRunStorage`, etc.)
+2. Add export/import methods to existing `WorkflowJsonStorage`
+3. Keep in service but abstract the file operations
 
-### 4. Attempt Fetching
-Assumption: Attempts can be fetched separately per run (not automatically when fetching runs).
-Rationale: API quota and user control—not all workflows have multiple attempts.
-
-### 5. Token Persistence
-Assumption: User-entered token is NOT persisted anywhere (kept in memory only for this session).
-Rationale: Security best practice and explicit "don't persist" requirement in must-have.
-
-### 6. Datetime Handling
-Assumption: GitHub API returns ISO 8601 timestamps. Parse with `datetime.fromisoformat()`.
-Consideration: GitHub may use 'Z' suffix (UTC). Handle with timezone_converter utility or Python's fromisoformat().
-
-### 7. Duration Calculation
-Assumption: For runs, duration = (updated_at - created_at).total_seconds() if both exist, else 0.0
-Assumption: For attempts, duration = (completed_at - started_at).total_seconds() if both exist, else 0.0
-Rationale: Matches existing model convention.
+**Assumption:** Create dedicated storage classes. Allows export/import to coexist with standard load/save, and keeps `WorkflowDataPortabilityService` as pure orchestration.
 
 ---
 
-## Testing Strategy
+### 4. **GitHubIntegrationService Constructor Change**
 
-### Unit Tests (Mock All External Calls)
-- Token resolution: mock os.getenv, file reads
-- API parsing: mock requests.get responses
-- Enum conversions: GitHub API data → domain models
-- Error cases: 401, 403, 404, network error, invalid JSON
+**Question:** Should token resolution be injected or resolved internally?
 
-### Integration Tests
-- End-to-end with github_service → add to service → verify persistence
+**Current:** `__init__(fetch_mode: str = "api")`; token resolved on demand.
 
-### Test Fixtures
-- Sample GitHub API response JSON (use real examples from GitHub docs)
-- Valid and invalid tokens
-- Various workflow statuses/conclusions
+**Options:**
+1. Add `token_provider: TokenProvider` parameter (dependency injection)
+2. Keep current lazy resolution (simpler for CLI)
+3. Both (constructor optional, falls back to lazy)
+
+**Assumption:** Support both. Constructor can optionally accept a `token_provider`. If omitted, fall back to current `_resolve_token()` logic.
 
 ---
 
-## Scope Boundaries
+### 5. **Trackers: Needed or Deprecated?**
 
-### In Scope
-- Fetch workflow runs from GitHub (owner/repo/workflow filter)
-- Fetch workflow attempts for a given run
-- Convert API response to WorkflowRun and WorkflowRunAttempt models
-- Token resolution (env → file → prompt)
-- Error handling (network, auth, rate limits)
-- Token validation (shallow check)
-- Interactive menu and CLI flag entry points
-- Persist fetched data to existing JSON storage
+**Question:** Are `WorkflowRunTracker` and `WorkflowAttemptTracker` facade classes or legacy?
 
-### Out of Scope
-- Webhook-based automatic fetching (pull-based only)
-- Graphql API (REST API only, plus gh CLI as alternative)
-- Advanced filtering (status, conclusion, date range) — that's for existing filter commands
-- Caching (fetch fresh each time)
-- Data transformation beyond domain model conversion
-- Visualization of fetched runs
+**Current:** `WorkflowRunTracker` is actively used. `WorkflowAttemptTracker` is minimal.
+
+**Assumption:** Keep both. They serve as convenient facades for CLI/menu code. Refactoring does not require changes to public signatures.
 
 ---
 
-## Summary: Required Implementation Files and Functions
+## Scope: In, Out, Borderline
 
-**New Service Class:**
-- `src/services/github_integration_service.py` — GitHubIntegrationService
+### IN (Must Fix)
+1. Abstract storage interfaces (Repository pattern)
+2. Separate GitHub adapter into distinct concerns (client, converter, token provider)
+3. Remove tight coupling between services and concrete storage
+4. Preserve all public method signatures and class names
+5. Move file I/O from `WorkflowDataPortabilityService` to storage layer
 
-**Modified Entry Point:**
-- `src/__main__.py` — Initialize github_service, pass to CLI/menu
+### OUT (Out of Scope)
+1. Rewrite CLI or interactive menu
+2. Add database support (only design for it)
+3. Refactor model classes or enums
+4. Change existing tests beyond what refactoring requires
+5. Add new features (e.g., webhooks, caching)
 
-**Modified CLI:**
-- `src/cli/workflow_cli.py` — Add `fetch` subcommand with runs/attempts subcommands
-
-**Modified Interactive Menu:**
-- `src/cli/interactive_menu.py` — Add "Fetch from GitHub" menu option with _github_fetch_menu()
-
-**Modified Exports:**
-- `src/services/__init__.py` — Export GitHubIntegrationService
-
-**New Tests:**
-- `tests/test_github_integration_service.py` — Unit tests for service
+### BORDERLINE (May Need Clarification)
+1. **Module reorganization**: Move GitHub service to `adapters/` package?
+   - **Pragmatic decision:** Keep in `src/services/` for now, document intent
+2. **Backward compatibility of imports**: Do we need compatibility shims?
+   - **Pragmatic decision:** No; breaking imports are acceptable if documented
+3. **Test updates**: How many test updates are acceptable?
+   - **Pragmatic decision:** Update tests to match refactored code; don't modify baseline test suite unless necessary
 
 ---
 
-## Design Principles Applied
+## Priorities
 
-1. **Layered Architecture:** GitHub service sits at service layer, independent of CLI/menu
-2. **Dependency Injection:** Service passed to CLI/menu at initialization
-3. **Converter Pattern:** github_service handles GitHub API data → domain models conversion
-4. **Facade Pattern:** WorkflowRunTracker used to create WorkflowRun instances with automatic UUID/timestamp generation
-5. **Error Handling:** Graceful degradation (skip invalid records, retry token prompt)
-6. **Security:** Token not persisted unless explicitly configured
-7. **Testability:** Service methods are pure functions (except I/O), easy to mock
+### High Priority (Blocks Adoption)
+1. **Create abstract storage interfaces** (Repository pattern)
+   - Services cannot be properly tested without this
+   - Enables multiple storage backends
+   - ~2-3 hours of work
+
+2. **Separate GitHub adapter from integration service**
+   - Current service is >500 lines with 8+ private methods
+   - Token handling, API client, and domain conversion need clear boundaries
+   - ~3-4 hours of work
+
+3. **Move file I/O out of WorkflowDataPortabilityService**
+   - Service is currently violating single responsibility
+   - Should orchestrate storage, not perform I/O
+   - ~1-2 hours of work
+
+### Medium Priority (Nice to Have)
+1. **Add `__all__` exports to module `__init__.py` files**
+   - Clarifies public API
+   - Documents what is exported at each layer
+   - ~1 hour of work
+
+2. **Create explicit base classes or protocols for extension points**
+   - Currently implicit (only docs and naming)
+   - Future maintainers need clear guidance
+   - ~1 hour of work
+
+### Low Priority (Can Defer)
+1. **Rename GitHubIntegrationService to reflect refactoring**
+   - Current name is acceptable; internal structure is what matters
+   - Defer unless a major re-release happens
+
+2. **Consolidate WorkflowAttemptTracker logic**
+   - Currently minimal; not blocking anything
+   - Can be left as-is
+
+---
+
+## Summary of Classes and Their Layers
+
+| Class Name | File | Current Layer | Target Layer | Action |
+|---|---|---|---|---|
+| `WorkflowRun` | `models/workflow_run.py` | Models | Models | No change |
+| `WorkflowRunAttempt` | `models/workflow_attempt.py` | Models | Models | No change |
+| `WorkflowStatus` | `models/workflow_status.py` | Models | Models | No change |
+| `WorkflowConclusion` | `models/workflow_conclusion.py` | Models | Models | No change |
+| `WorkflowStatisticsReport` | `models/workflow_statistics_report.py` | Models | Models | No change |
+| `WorkflowJsonStorage` | `storage/workflow_json_storage.py` | Storage (Concrete) | Storage (Concrete) | Update to use abstract interface |
+| `WorkflowAttemptJsonStorage` | `storage/workflow_attempt_json_storage.py` | Storage (Concrete) | Storage (Concrete) | Update to use abstract interface |
+| **(NEW)** `WorkflowRunRepository` | `storage/base.py` | — | Storage (Abstract) | Create Protocol |
+| **(NEW)** `WorkflowAttemptRepository` | `storage/base.py` | — | Storage (Abstract) | Create Protocol |
+| `WorkflowRunService` | `services/workflow_run_service.py` | Services | Services | Update constructor to accept abstract repo |
+| `WorkflowAttemptService` | `services/workflow_attempt_service.py` | Services | Services | Update constructor to accept abstract repo |
+| `WorkflowStatisticsService` | `services/workflow_statistics_service.py` | Services | Services | No change |
+| `WorkflowDataPortabilityService` | `services/workflow_data_portability_service.py` | Services | Services | Refactor to delegate I/O to storage |
+| `WorkflowRunTracker` | `services/workflow_run_tracker.py` | Services | Services | No change |
+| `WorkflowAttemptTracker` | `services/workflow_attempt_tracker.py` | Services | Services | No change |
+| `GitHubIntegrationService` | `services/github_integration_service.py` | Services (Mixed) | Adapters (GitHub) | Refactor; split concerns; keep public API |
+| **(NEW)** `GitHubApiClient` | `adapters/github/api_client.py` | — | Adapters (GitHub) | Create; extract HTTP client logic |
+| **(NEW)** `GitHubCliAdapter` | `adapters/github/cli_adapter.py` | — | Adapters (GitHub) | Create; extract CLI wrapper logic |
+| **(NEW)** `GitHubTokenResolver` | `adapters/github/token_resolver.py` | — | Adapters (GitHub) | Create; extract token resolution logic |
+| **(NEW)** `GitHubToWorkflowConverter` | `adapters/github/converter.py` | — | Adapters (GitHub) | Create; extract domain conversion logic |
+
+---
+
+## Next Steps for System Architect
+
+1. **Design file layout** for `/src/adapters/github/` module
+2. **Define constructors** for refactored `GitHubIntegrationService` (token provider injection, etc.)
+3. **Plan test coverage** for new abstract interfaces and concrete implementations
+4. **Write migration guide** for CLI layer to use refactored GitHub service
+5. **Identify any hidden dependencies** in interactive menu or CLI that assume concrete storage types
+
