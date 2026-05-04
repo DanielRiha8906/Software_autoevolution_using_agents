@@ -42,9 +42,20 @@ package "TODO Application" {
         component "Service Container\n(Container)" as Container
     }
 
-    package "CLI Layer" {
-        component "Interactive Menu" as IM
-        component "Command-line Interface\n(TodoCLI)" as CLI
+    package "UI Layer" {
+        package "CLI" {
+            component "Interactive Menu" as IM
+            component "Command-line Interface\n(TodoCLI)" as CLI
+        }
+
+        package "GUI" {
+            component "GUI Application\n(GUIApp)" as GUI
+            component "Task List Widget\n(TaskListWidget)" as TaskWidget
+            component "Filter Bar\n(FilterBar)" as FilterWidget
+            component "Action Bar\n(ActionBar)" as ActionWidget
+            component "Dialogs\n(AddTaskDialog, EditTaskDialog, DeleteConfirmDialog)" as DialogWidgets
+            component "Formatting Utilities\n(format_date, format_datetime)" as GuiUtils
+        }
     }
 
     package "Utility Layer" {
@@ -58,9 +69,17 @@ database ".todo_projects.json" as PROJ_DB
 
 Main --> IM : interactive mode
 Main --> CLI : command mode
+Main --> GUI : gui mode
 
 IM --> Container : get_todo_service()
 CLI --> Container : get_todo_service()
+GUI --> Container : get_todo_service()
+
+GUI --> TaskWidget : uses
+GUI --> FilterWidget : uses
+GUI --> ActionWidget : uses
+GUI --> DialogWidgets : uses
+TaskWidget --> GuiUtils : uses
 
 Container --> PathProvider : creates
 Container --> TaskRepo : creates
@@ -70,6 +89,7 @@ Container --> SVC : creates with injected repositories
 
 IM --> SVC : uses
 CLI --> SVC : uses
+GUI --> SVC : uses
 
 SVC --> TaskRepo : task_repository
 SVC --> CommentRepo : comment_repository

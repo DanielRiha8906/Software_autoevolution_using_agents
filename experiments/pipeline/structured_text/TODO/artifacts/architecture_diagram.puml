@@ -1,13 +1,26 @@
 @startuml architecture_diagram
 
-title TODO Application - Clean Layered Architecture (Task 09 Refactor)
+title TODO Application - Clean Layered Architecture (GUI Added)
 
 skinparam componentStyle uml2
 skinparam defaultFontSize 12
 
-package "CLI Layer" #FFE5E5 {
-    component "TodoCLI" as CLI
-    component "InteractiveMenu" as Menu
+package "UI Layer" #FFE5E5 {
+    package "CLI" {
+        component "TodoCLI" as CLI
+        component "InteractiveMenu" as Menu
+    }
+    package "GUI" {
+        component "GUIApp" as GUI
+        component "TaskListWidget" as TaskList
+        component "FilterBar" as Filter
+        component "ActionBar" as Actions
+        component "Dialogs" as Dialogs
+        note bottom of GUI
+            Tkinter-based graphical interface
+            with task management UI
+        end note
+    }
 }
 
 package "Dependency Injection" #F0F0F0 {
@@ -56,9 +69,14 @@ package "Utilities" #F0E5FF {
     component "TimezoneUtils" as TZ
 }
 
-'' CLI -> Dependency Injection
+'' UI Layer -> Dependency Injection
 CLI --> Container : creates service
 Menu --> Container : creates service
+GUI --> Container : creates service
+GUI --> TaskList : uses
+GUI --> Filter : uses
+GUI --> Actions : uses
+GUI --> Dialogs : uses
 
 '' DI -> Services
 Container --> Service : provides
@@ -123,7 +141,9 @@ note bottom
     4. Repository - generic CRUD with type safety
     5. Service - business logic using repositories
     6. DI Container - wires dependencies
-    7. CLI - user interface, uses Container
+    7. UI Layer - CLI and GUI, both use Container
+       - CLI: command-line (TodoCLI, InteractiveMenu)
+       - GUI: graphical (GUIApp, widgets, dialogs)
 end note
 
 @enduml

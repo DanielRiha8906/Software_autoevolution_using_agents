@@ -280,4 +280,125 @@ package "cli" #FFE5E5 {
     InteractiveMenu --> TodoService : uses
 }
 
+package "gui" #F0E5D4 {
+    class GUIApp <<main>> {
+        -container : Container
+        -service : TodoService
+        -task_list : TaskListWidget
+        -filter_bar : FilterBar
+        -action_bar : ActionBar
+        -status_label : Label
+        -_selected_task_id : String [0..1]
+        --
+        +GUIApp(storage_path: String [0..1])
+        -_create_widgets() : void
+        -_refresh_tasks() : void
+        -_on_filter_change() : void
+        -_on_task_select(task_id: String) : void
+        -_on_task_double_click(task_id: String) : void
+        -_on_add_task() : void
+        -_on_edit_task() : void
+        -_on_delete_task() : void
+    }
+
+    package "widgets" {
+        class TaskListWidget {
+            -on_select : Callable [0..1]
+            -on_double_click : Callable [0..1]
+            -_task_id_map : Dictionary<String, String>
+            --
+            +TaskListWidget(parent: Widget, on_select: Callable [0..1], on_double_click: Callable [0..1])
+            +clear() : void
+            +add_task(task: Dictionary, is_overdue: Boolean) : void
+            +get_selected_task_id() : String [0..1]
+            -_get_status_symbol(status: String) : String
+        }
+
+        class FilterBar {
+            -on_filter_change : Callable [0..1]
+            -status_var : StringVar
+            -project_var : StringVar
+            --
+            +FilterBar(parent: Widget, on_filter_change: Callable [0..1])
+            +get_status_filter() : String [0..1]
+            +get_project_filter() : String [0..1]
+            +set_projects(projects: List<Tuple<String, String>>) : void
+            +reset_filters() : void
+        }
+
+        class ActionBar {
+            -on_add : Callable [0..1]
+            -on_edit : Callable [0..1]
+            -on_delete : Callable [0..1]
+            -on_refresh : Callable [0..1]
+            --
+            +ActionBar(parent: Widget, on_add: Callable [0..1], on_edit: Callable [0..1], on_delete: Callable [0..1], on_refresh: Callable [0..1])
+        }
+    }
+
+    package "dialogs" {
+        abstract class BaseDialog <<abstract>> {
+            #result : Object [0..1]
+            --
+            +BaseDialog(parent: Widget, title: String)
+            #{abstract}_create_widgets() : void
+            #_on_ok() : void
+            #_on_cancel() : void
+        }
+
+        class AddTaskDialog {
+            -title_entry : Entry
+            -desc_text : Text
+            -due_date_entry : Entry
+            -project_combo : Combobox
+            -_project_id_map : Dictionary<String, String>
+            --
+            +AddTaskDialog(parent: Widget)
+            +get_task_data() : Dictionary
+            +set_projects(projects: List<Tuple<String, String>>) : void
+        }
+
+        class EditTaskDialog {
+            -title_entry : Entry
+            -desc_text : Text
+            -due_date_entry : Entry
+            -project_combo : Combobox
+            -_project_id_map : Dictionary<String, String>
+            --
+            +EditTaskDialog(parent: Widget, task: Dictionary)
+            +get_task_data() : Dictionary
+            +set_projects(projects: List<Tuple<String, String>>) : void
+        }
+
+        class DeleteConfirmDialog {
+            --
+            +DeleteConfirmDialog(parent: Widget, task_title: String)
+        }
+
+        BaseDialog <|-- AddTaskDialog
+        BaseDialog <|-- EditTaskDialog
+        BaseDialog <|-- DeleteConfirmDialog
+    }
+
+    package "utils" {
+        class FormattingUtils <<utility>> {
+            --
+            +{static}format_date(dt: DateTime) : String
+            +{static}format_datetime(dt: DateTime) : String
+            +{static}format_relative_time(dt: DateTime) : String
+        }
+    }
+
+    GUIApp --> Container : creates
+    GUIApp --> TodoService : uses
+    GUIApp --> TaskListWidget : uses
+    GUIApp --> FilterBar : uses
+    GUIApp --> ActionBar : uses
+    GUIApp --> AddTaskDialog : uses
+    GUIApp --> EditTaskDialog : uses
+    GUIApp --> DeleteConfirmDialog : uses
+    GUIApp ..> Task : manages
+    TaskListWidget --> FormattingUtils : uses
+}
+
 @enduml
