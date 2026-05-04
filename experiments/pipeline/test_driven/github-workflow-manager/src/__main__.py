@@ -12,8 +12,14 @@ def main() -> None:
     service = WorkflowRunService(storage)
     attempt_service = AttemptService()
 
+    # Check for --gui flag
+    if "--gui" in sys.argv:
+        # Lazy import to avoid import errors if tkinter is not available
+        from .gui.workflow_gui import WorkflowGUI
+        gui = WorkflowGUI(service, attempt_service)
+        gui.run()
     # No sub-command args → launch interactive menu
-    if len(sys.argv) == 1:
+    elif len(sys.argv) == 1:
         run_interactive(service, attempt_service)
     else:
         run_cli(service, attempt_service)

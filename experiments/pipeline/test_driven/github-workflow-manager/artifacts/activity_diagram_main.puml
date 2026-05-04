@@ -8,7 +8,12 @@ start
 
 :Load WorkflowJsonStorage\n& WorkflowRunService;
 
-if (CLI arguments provided?) then (yes)
+if (--gui flag?) then (yes)
+  :Initialize WorkflowGUI\nwith services;
+  :Launch GUI window;
+  stop
+
+elseif (CLI arguments provided?) then (yes)
   :Parse args with argparse;
   switch (subcommand)
 

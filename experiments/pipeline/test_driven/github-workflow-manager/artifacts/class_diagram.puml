@@ -161,6 +161,26 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #FFE5CC {
+    class WorkflowGUI {
+        -service : WorkflowRunService
+        -attempt_service : Optional[AttemptService]
+        -root : Optional[Tk]
+        -tree : Optional[Treeview]
+        -branch_var : Optional[StringVar]
+        -status_var : Optional[StringVar]
+        -conclusion_var : Optional[StringVar]
+        --
+        +__init__(service: WorkflowRunService,\n  attempt_service: Optional[AttemptService]) : None
+        +run() : None
+        -_setup_widgets() : None
+        -_load_runs() : List[WorkflowRun]
+        -_refresh_tree() : None
+        -_on_tree_select(event: tk.Event) : None
+        -_update_filter_options(runs: List[WorkflowRun]) : None
+    }
+}
+
 WorkflowRun             "1" --> "*" WorkflowRunAttempt : has
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
@@ -187,5 +207,10 @@ WorkflowStatisticsService      ..>  WorkflowStatisticsReport : returns
 "workflow_cli"             ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  WorkflowRunTracker
+WorkflowGUI        "1" --> "1" WorkflowRunService : -service
+WorkflowGUI        "1" --> "0..1" AttemptService : -attempt_service
+WorkflowGUI            ..>  WorkflowRun : displays
+WorkflowGUI            ..>  WorkflowStatus : filters
+WorkflowGUI            ..>  WorkflowConclusion : filters
 
 @enduml

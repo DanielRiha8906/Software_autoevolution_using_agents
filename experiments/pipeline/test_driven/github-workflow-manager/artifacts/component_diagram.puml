@@ -15,6 +15,10 @@ package "GitHub Workflow Manager" {
     component "interactive_menu" as IM
   }
 
+  package "GUI layer" {
+    component "workflow_gui" as GUI
+  }
+
   package "Service layer" {
     component "GitHubFetchService" as FETCH_SVC
     component "WorkflowRunTracker" as TRACKER
@@ -40,12 +44,15 @@ package "GitHub Workflow Manager" {
 
 MAIN --> CLI
 MAIN --> IM
+MAIN --> GUI
 
 CLI --> TRACKER
 IM --> TRACKER
 
 CLI --> SVC
 IM --> SVC
+GUI --> SVC
+GUI --> ATTEMPT_SVC
 
 TRACKER --> SVC
 SVC --> STOR
