@@ -7,8 +7,15 @@ skinparam fontName Courier
 
 package "Presentation (CalculatorUI Protocol)" as UI {
   component [CalculatorCLI] as CLI
+  component [CalculatorGUI] as GUI
   note right of CLI
     CLI Implementation
+    - run_interactive()
+    - run_command()
+  end note
+  note right of GUI
+    GUI Implementation
+    - Tkinter interface
     - run_interactive()
     - run_command()
   end note
@@ -62,6 +69,9 @@ package "Persistence" as Persist {
 CLI --> CalcService: orchestrates
 CLI --> QuerySvc: queries
 CLI --> HistMgr: export/import
+
+GUI --> CalcService: orchestrates
+GUI --> MemSvc: retrieves history
 
 CalcService --> CalcImpl: uses CalculationEngine
 CalcService --> MemSvc: uses HistoryStorage
