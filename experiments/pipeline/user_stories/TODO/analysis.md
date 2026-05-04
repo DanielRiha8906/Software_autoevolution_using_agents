@@ -1,631 +1,405 @@
-# Task 09 Analysis: Refactor Architecture for Layer Separation and Eliminate Circular Dependencies
+# Task 10 Analysis: GUI Implementation using Tkinter
 
-**Analysis Date:** 2026-05-04  
-**Working Directory:** `experiments/pipeline/user_stories/TODO/`  
-**Task 09 Goal:** Create clear boundaries between task, comment, project, storage, and interface layers with no circular dependencies while preserving all public interfaces.
-
----
-
-## 1. What Task 09 Is Asking For
-
-Refactor the TODO application to establish clean architectural layers with strict boundaries and eliminate any circular dependencies. The refactoring must:
-
-- Create clear separation between task, comment, project, storage, and interface layers
-- Eliminate all circular dependencies (if present)
-- Preserve all existing public interfaces (function signatures, class names, return types)
-- Use abstract base classes or protocols to decouple layers where appropriate
-- Keep domain logic and algorithms unchanged
-- Ensure `python -m src` behaves identically before and after refactoring
+## Task Summary
+Implement a GUI using tkinter (Python stdlib) for the TODO application. The GUI must:
+- Display: title, status, due date, project
+- Support operations: view, add, change status, delete
+- Highlight overdue tasks visually
+- Call existing service layer logic (no business logic duplication)
+- Support filtering by status or project
+- Bonus: comments support and comment count
+- Be launchable via `python -m src --gui`
 
 ---
 
-## 2. Current Architecture and Layer Structure
+## Current Architecture Summary
 
-The TODO application currently has **5 logical layers**:
+### Layer Structure (from Phase 1 refactoring)
+```
+Entry Point (__main__.py)
+    ├── Interactive Menu (cli/interactive_menu.py) → calls TodoService
+    ├── Command-line CLI (cli/todo_cli.py) → calls TodoService
+    └── [NEW] GUI (TBD) → calls TodoService
 
-### Layer 1: Domain Models (`src/models/`)
-**Files:** task.py, task_status.py, task_comment.py, project.py, task_summary_report.py
+TodoService (services/todo_service.py) [PUBLIC API]
+    ├── Internal: TaskManager
+    ├── Internal: ProjectManager
+    └── Internal: ImportValidator
 
-**Responsibility:** Define domain entities as immutable/semi-mutable dataclasses with:
-- Fields representing domain concepts (id, title, status, etc.)
-- Serialization methods: `to_dict()` and `from_dict()` for JSON persistence
-- Domain logic: validation (`__post_init__`), state queries (`is_pending()`, `is_overdue()`), state mutations (`mark_done()`, `reopen()`)
+Models (no dependencies)
+    ├── Task (id, title, description, status, created_at, updated_at, due_date, comments, project_id)
+    ├── TaskStatus (enum: PENDING, IN_PROGRESS, DONE)
+    ├── TaskComment (id, task_id, content, created_at, author, updated_at)
+    ├── Project (id, name)
+    └── TaskSummaryReport
 
-**Current Dependencies:**
-- `Task` imports: `task_status`, `task_comment` (models-to-models)
-- `TaskComment` imports: none
-- `Project` imports: none
-- `TaskStatus` imports: none
-- `TaskSummaryReport` imports: none
+Storage Layer
+    └── JsonStorage (path-based JSON persistence)
+```
 
-**Characterization:** Pure domain layer. No external dependencies. Sealed layer—nothing above should bypass it.
-
----
-
-### Layer 2: Persistence (`src/storage/`)
-**Files:** json_storage.py
-
-**Responsibility:** Abstract the details of persisting domain data to JSON files. Provides:
-- `load()` → returns dict with "tasks" and "projects" keys
-- `save(data: dict)` → writes dict to ~/.todo_data.json
-
-**Current Dependencies:**
-- `JsonStorage` imports: none (stdlib only: json, Path)
-
-**Characterization:** Infrastructure layer. Should not import from services or models. Models call `to_dict()` to serialize; storage is format-agnostic.
-
-**Current Issue:** Storage has knowledge of the data structure ("tasks" and "projects" keys). No true abstraction—just a wrapper around json.dump/load.
+### Key Design Constraints
+- Only TodoService is exported from services module
+- Exception hierarchy in services/exceptions.py: ServiceError, TaskNotFoundError, ProjectNotFoundError
+- All models are simple dataclasses with to_dict()/from_dict() serialization
+- Models have query methods like is_overdue(), is_pending(), is_in_progress(), is_completed()
+- No circular dependencies; models import nothing
 
 ---
 
-### Layer 3: Service/Business Logic (`src/services/`)
-**Files:** task_manager.py, project_manager.py, todo_service.py, import_validator.py
+## Existing Service Layer API (Public Methods)
 
-**Responsibility:** Implement CRUD operations, filtering, validation, and orchestration of domain models. Subdivided into:
+### Task Operations
+- `add_task(title, description=None, due_date=None) → Task`
+- `get_task(task_id) → Task`
+- `list_tasks(status=None, before=None, after=None, overdue_only=False) → List[Task]`
+- `list_tasks_by_project(project_id) → List[Task]`
+- `update_task(task_id, title=None, description=None, due_date=None) → Task`
+- `start_task(task_id) → Task`  [mark IN_PROGRESS]
+- `complete_task(task_id) → Task`  [mark DONE]
+- `reopen_task(task_id) → Task`  [mark IN_PROGRESS]
+- `set_due_date(task_id, due_date) → Task`
+- `delete_task(task_id) → None`
 
-#### 3a. Manager Classes (Task and Project)
-**TaskManager:**
-- In-memory cache: `_tasks: dict[str, Task]`
-- Direct storage access: `self._storage.load()`, `self._storage.save()`
-- Internal helper methods: `_get_week_boundaries()`, `_get_month_boundaries()`, `_get_year_boundaries()`
-- Public methods: `add()`, `get()`, `list_*()`, `update()`, `set_status()`, `set_project()`, `delete()`, `add_comment()`, `get_comments()`, `delete_comment()`, `edit_comment()`, `orphan_project_tasks()`
+### Project Operations
+- `create_project(name) → Project`
+- `list_projects() → List[Project]`
+- `get_project(project_id) → Project`
+- `delete_project(project_id) → None`
+- `move_task_to_project(task_id, project_id) → Task`
 
-**ProjectManager:**
-- In-memory cache: `_projects: dict[str, Project]`
-- Direct storage access: `self._storage.load()`, `self._storage.save()`
-- Public methods: `add()`, `get()`, `list_all()`, `delete()`
+### Comment Operations
+- `add_comment(task_id, content, author=None) → TaskComment`
+- `get_comments(task_id) → List[TaskComment]`
+- `delete_comment(task_id, comment_id) → None`
+- `edit_comment(task_id, comment_id, content) → TaskComment`
 
-**TodoService:**
-- Composition of managers: `self._manager` (TaskManager), `self._project_manager` (ProjectManager)
-- Higher-level orchestration and validation
-- Public methods: `add_task()`, `list_tasks()`, `list_tasks_by_*()`, `get_task()`, `create_project()`, `list_projects()`, `get_project()`, `delete_project()`, `move_task_to_project()`, `start_task()`, `complete_task()`, `reopen_task()`, `update_task()`, `set_due_date()`, `delete_task()`, `add_comment()`, `get_comments()`, `delete_comment()`, `edit_comment()`, `generate_report()`, `export_tasks()`, `import_tasks()`
-
-**ImportValidator:**
-- Static validation logic: `validate_file()`, `validate_task_dict()`
-- No state; utility class
-
-**Current Dependencies:**
-- `TaskManager` → `JsonStorage`, `Task`, `TaskStatus`, `TaskComment`
-- `ProjectManager` → `JsonStorage`, `Project`
-- `TodoService` → `TaskManager`, `ProjectManager`, `ImportValidator`, all models, `JsonStorage`
-- `ImportValidator` → `TaskStatus`
-
-**Characterization:** High-level business logic layer. Orchestrates models and storage.
-
-**Current Issues:**
-1. **Manager classes directly access storage:** TaskManager and ProjectManager each hold their own storage reference and call `_load()` and `_persist()` independently. This creates **shared state management across two independent caches**.
-2. **TodoService bypasses public interfaces:** In `import_tasks()`, TodoService directly mutates `self._manager._tasks[task_id] = task` and calls `self._manager._persist()`. This violates encapsulation of TaskManager.
-3. **TodoService accesses private methods of TaskManager:** Calls `self._manager._get_week_boundaries()`, `self._manager._get_month_boundaries()`, `self._manager._get_year_boundaries()` directly.
-4. **Dual persistence responsibility:** Both managers independently load and save from the same storage, creating coordination issues:
-   - When TaskManager calls `_persist()`, it reads fresh storage, modifies tasks, and writes back, potentially losing concurrent changes to projects.
-   - When ProjectManager calls `_persist()`, same issue in reverse.
-   - No atomic transactions or locking mechanism.
+### Query Methods (on Task model)
+- `task.is_overdue() → bool`
+- `task.is_pending() → bool`
+- `task.is_in_progress() → bool`
+- `task.is_completed() → bool`
+- `task.status` (enum: PENDING, IN_PROGRESS, DONE)
+- `task.due_date` (Optional[datetime])
 
 ---
 
-### Layer 4: Interface/CLI (`src/cli/`)
-**Files:** todo_cli.py, interactive_menu.py
+## GUI Components to Create
 
-**Responsibility:** Present a user-facing interface (command-line and interactive menu) to the TodoService.
+### 1. New GUI Module
+**Location:** `src/gui/` (new directory)
 
-**TodoCLI:**
-- Parses command-line arguments via argparse
-- Delegates to TodoService methods
-- Returns exit codes (0 success, 1 error)
-- Catches and prints errors to stderr
+**Files to create:**
+- `src/gui/__init__.py` — package marker
+- `src/gui/todo_gui.py` — main GUI application class
+- `src/gui/widgets.py` (optional, for reusable components)
 
-**InteractiveMenu:**
-- Infinite loop menu with screen clearing and user input prompts
-- Delegates to TodoService methods
-- Prints formatted output to stdout
+### 2. TodoGUI Main Class
+Responsibilities:
+- Initialize Tkinter root window
+- Create frames for task list, filters, details
+- Instantiate TodoService with default or custom storage
+- Handle window layout and geometry
+- Entry point: `TodoGUI.run()` or `TodoGUI.mainloop()`
 
-**Current Dependencies:**
-- Both import: `TodoService`, `JsonStorage`, `Task`, `TaskStatus`, `Project`, exception classes from managers
-- Both instantiate: `JsonStorage()` then `TodoService(storage)`
+### 3. Core GUI Widgets/Frames
 
-**Characterization:** User-facing layer. Should only depend on TodoService (the public service contract).
+#### Task List Frame
+- Treeview (table) with columns: [Status checkbox], Title, Due Date, Project, Comment Count
+- Sortable by column
+- Row selection to view/edit details
+- Visual highlight for overdue tasks (red background or icon)
 
-**Current Issues:**
-1. **Unnecessary imports of low-level classes:** Both CLI classes import exception classes (`TaskNotFoundError`, `ProjectNotFoundError`) directly from managers. These should either be exported from a higher-level module or use a unified exception hierarchy.
-2. **Both CLI classes instantiate storage and service:** Creates coupling to instantiation details. Dependency injection is manual.
+#### Task Details Panel
+- Display: title, description, status (dropdown), due date (calendar or text), project (dropdown)
+- Edit buttons for each field
+- Comments section: list + add/edit/delete UI
+
+#### Filter Controls
+- Buttons/dropdowns: Show All, Pending, In Progress, Done
+- Project filter dropdown
+- Clear/Reset filters button
+- Overdue-only toggle
+
+#### Action Buttons
+- Add Task (opens dialog)
+- Edit Selected Task
+- Delete Selected Task
+- Refresh
+
+#### Add/Edit Task Dialog
+- Modal form for task creation/update
+- Fields: title (required), description (optional), due date (optional), project (optional)
+- Buttons: Save, Cancel
 
 ---
 
-## 3. Identified Problems: Circular Dependencies and Layer Violations
+## Files That Need Modification
 
-### 3.1 Circular Dependency Analysis
-
-**Finding:** NO pure circular dependencies in the import graph.
-
-**Evidence:** The dependency graph is acyclic:
-- Models layer: No imports from other internal modules
-- Storage layer: No imports from models, managers, or services
-- Manager classes: Import models and storage (no circular path back)
-- TodoService: Imports managers, models, storage (no circular path back)
-- CLI: Imports TodoService and models (no circular path back)
-
-**However:** While no strict circular import exists, there are **architectural violations and layer crossings** that create tight coupling:
-
-### 3.2 Layer Violations (Not Circular, but Problematic)
-
-#### Violation 1: TodoService Accesses Private Manager State
-**Location:** `src/services/todo_service.py`, lines 409, 421
+### 1. src/__main__.py
+**Current:** Routes to CLI or InteractiveMenu based on sys.argv presence
+**Required changes:**
+- Add `--gui` flag parsing
+- Instantiate TodoGUI and call run() if `--gui` present
+- Maintain backward compatibility: no args → interactive menu, args with CLI → CLI mode
 
 ```python
-# Line 409: Direct mutation of private cache
-self._manager._tasks[task_id] = task
-
-# Line 421: Direct call to private persistence method
-self._manager._persist()
+# Pseudo-logic:
+if '--gui' in sys.argv:
+    from .gui.todo_gui import TodoGUI
+    TodoGUI().run()
+elif len(sys.argv) > 1:
+    TodoCLI().run()  # existing
+else:
+    InteractiveMenu().run()  # existing
 ```
 
-**Problem:** 
-- TodoService reaches past TaskManager's public interface to modify internal state directly
-- Breaks encapsulation; changes to TaskManager internals would break TodoService
-- Other code might assume TaskManager is the only writer to `_tasks`
-
-**Impact:** High coupling, fragility
+### 2. src/gui/__init__.py
+**New file**
+- Export TodoGUI
 
 ---
 
-#### Violation 2: TodoService Accesses Private Manager Helper Methods
-**Location:** `src/services/todo_service.py`, lines 45, 66, 83
+## Dependencies Analysis
 
-```python
-# Lines 45, 66, 83: Access to private date boundary helper methods
-week_start, week_end = self._manager._get_week_boundaries(year, week)
-month_start, month_end = self._manager._get_month_boundaries(year, month)
-year_start, year_end = self._manager._get_year_boundaries(year)
-```
+### Current Dependencies
+- **stdlib only**: dataclasses, datetime, uuid, json, pathlib, argparse, enum
+- **No external packages currently required**
 
-**Problem:**
-- These are private utility methods (prefixed `_`) in TaskManager
-- TodoService relies on these internals; they're not part of the public contract
-- If TaskManager refactors these helpers, TodoService breaks
+### New Dependencies for GUI
+- **tkinter** — Python stdlib (no pip install needed)
+  - Available in Python 3.7+
+  - May need separate install on Linux: `apt-get install python3-tk`
+  - But this is NOT a blocker for the code implementation
 
-**Impact:** Medium coupling, fragility
+### No new pip dependencies required
 
 ---
 
-#### Violation 3: Dual Independent Persistence with Shared Storage
-**Location:** TaskManager and ProjectManager both:
-- Hold their own `_storage` reference
-- Call `_load()` independently to populate their in-memory caches
-- Call `_persist()` independently, which re-reads storage, modifies it, and writes back
+## Key Implementation Details to Note
 
-**Problem:**
-- TaskManager's `_persist()` reads the entire file, modifies tasks, saves—potentially overwriting concurrent project changes
-- ProjectManager's `_persist()` does the same with projects
-- Example race condition:
-  1. TaskManager reads: `{"tasks": [T1], "projects": [P1]}`
-  2. ProjectManager reads: `{"tasks": [T1], "projects": [P1]}`
-  3. TaskManager modifies T1 and writes: `{"tasks": [T1'], "projects": [P1]}`
-  4. ProjectManager modifies P1 and writes: `{"tasks": [T1], "projects": [P1']}` (overwriting T1' with old T1)
+### 1. Overdue Visual Highlighting
+- Use Task.is_overdue() → returns bool if due_date < now and status != DONE
+- Tkinter: use Treeview tag configuration for background color (red/orange)
+- Apply tag to row during data population:
+  ```python
+  tree.insert(parent, 'end', values=(...), tags=('overdue',) if task.is_overdue() else ())
+  tree.tag_configure('overdue', background='#ffcccc')
+  ```
 
-- No single authority for storage; two caches that must stay in sync
-- No transaction semantics or atomic multi-step persistence
+### 2. Status Representation
+- TaskStatus enum has three values: PENDING, IN_PROGRESS, DONE
+- Display as: "Pending", "In Progress", "Done" (humanized)
+- Status dropdown for editing should use enum values or humanized names
 
-**Impact:** High risk of data loss in concurrent scenarios (though current single-threaded CLI usage masks this)
+### 3. Comment Count Display
+- Task.comments is a List[TaskComment]
+- Display len(task.comments) in table column
+- Bonus: comment count badge/indicator
+
+### 4. Filtering Architecture
+- Service layer already supports:
+  - `list_tasks(status=None, before=None, after=None, overdue_only=False)`
+  - `list_tasks_by_project(project_id)`
+- GUI filters should map to these calls
+- Combine filters: e.g., status=PENDING + project_id=P123
+
+### 5. Data Refresh Pattern
+- Populate Treeview/UI elements from service calls
+- After add/edit/delete, refresh the task list
+- Consider caching or on-demand refresh
+
+### 6. Error Handling
+- TodoService raises TaskNotFoundError, ProjectNotFoundError, ValueError
+- Catch and display in GUI (messagebox or status bar)
+- Do NOT let exceptions crash the GUI
+
+### 7. Date Handling
+- Task.due_date is Optional[datetime] with timezone awareness (UTC)
+- Tkinter has no native date picker; options:
+  - Use a simple ISO 8601 text entry with validation
+  - Use tkcalendar (external dep) if desired
+  - Parse/format with datetime.fromisoformat()
+  - **Recommendation:** Text entry + validation or simple picker widget
+
+### 8. GUI Launch Entry Point
+- `python -m src --gui` must work
+- Modify __main__.py to detect --gui flag
+- Create TodoGUI() and call .run() or .mainloop()
 
 ---
 
-#### Violation 4: CLI Imports from Multiple Manager Classes
-**Location:** `src/cli/todo_cli.py` and `src/cli/interactive_menu.py`
+## Scope Signals
 
-```python
-from ..services.task_manager import TaskNotFoundError
-from ..services.project_manager import ProjectNotFoundError
-```
+### In Scope
+- Core CRUD for tasks via GUI
+- Status change (Pending → In Progress → Done)
+- Due date display and filtering
+- Project assignment and filtering
+- Comments view/add/edit/delete (bonus)
+- Overdue highlighting
+- Service layer integration (no business logic duplication)
+- Launchable via `python -m src --gui`
 
-**Problem:**
-- CLI couples to specific manager exception classes
-- If exception hierarchy refactors, CLI breaks
-- CLI should depend only on TodoService's exception contract, not manager implementations
+### Explicitly Out of Scope
+- Export/Import through GUI (CLI-only feature for now)
+- Advanced date pickers (use text input or stdlib only)
+- Task search/full-text (not in requirements)
+- Multiple window/MDI interface (single window)
+- Drag-and-drop task reordering
+- Dark theme/theme switching
 
-**Impact:** Medium coupling
+### Borderline / Not Explicitly Mentioned
+- Persistence auto-save (service already handles via JsonStorage)
+- Undo/Redo (not required)
+- Keyboard shortcuts (optional, nice-to-have)
+- Task categories beyond Project (not mentioned, so skip)
 
 ---
 
-## 4. Public Interfaces That Must Be Preserved
+## Suggested Priorities
 
-To ensure `python -m src` behaves identically, the following public signatures must NOT change:
+### Priority 1: Foundation (Critical for Core Functionality)
+1. Create `src/gui/todo_gui.py` with TodoGUI class
+2. Implement basic window layout with frames
+3. Create TaskListFrame with Treeview showing tasks
+4. Implement task list population from TodoService.list_tasks()
+5. Modify `src/__main__.py` to support `--gui` flag
+6. Test: `python -m src --gui` launches window
 
-### Models Layer (Fully Public)
-```python
-# task_status.py
-class TaskStatus(Enum):
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    DONE = "done"
+### Priority 2: Core Operations (Required)
+1. Task filtering UI (status, project, overdue buttons)
+2. Add Task dialog (modal, collect title/description/due_date/project)
+3. Delete Task operation (selection → delete → refresh)
+4. Edit Task: change status (Pending → In Progress → Done buttons)
+5. Update due date and project for selected task
 
-# task.py
-class Task:
-    id: str
-    title: str
-    description: Optional[str]
-    status: TaskStatus
-    created_at: datetime
-    updated_at: datetime
-    due_date: Optional[datetime]
-    comments: list[TaskComment]
-    project_id: Optional[str]
-    
-    def __post_init__(self) -> None: ...
-    def is_pending(self) -> bool: ...
-    def is_in_progress(self) -> bool: ...
-    def is_completed(self) -> bool: ...
-    def is_overdue(self) -> bool: ...
-    def mark_in_progress(self) -> Task: ...
-    def mark_done(self) -> Task: ...
-    def reopen(self) -> Task: ...
-    def to_dict(self) -> dict: ...
-    @classmethod
-    def from_dict(cls, data: dict) -> Task: ...
+### Priority 3: Task Details & Comments (Core with Bonus)
+1. Task details panel (show selected task metadata)
+2. Comments list display (comment count in table)
+3. Add comment dialog
+4. Delete comment from UI
+5. Edit comment dialog
 
-# task_comment.py
-class TaskComment:
-    id: str
-    task_id: str
-    content: str
-    author: Optional[str]
-    created_at: datetime
-    updated_at: Optional[datetime]
-    
-    def __post_init__(self) -> None: ...
-    def to_dict(self) -> dict: ...
-    @classmethod
-    def from_dict(cls, data: dict) -> TaskComment: ...
+### Priority 4: Polish & Validation
+1. Overdue task visual highlighting (red background/tag)
+2. Error handling and messagebox notifications
+3. UI responsiveness and layout refinement
+4. Timezone handling for due dates (validate ISO 8601 or use calendar widget)
+5. Date formatting (display human-readable, store ISO)
 
-# project.py
-class Project:
-    id: str
-    name: str
-    
-    def __post_init__(self) -> None: ...
-    def to_dict(self) -> dict: ...
-    @classmethod
-    def from_dict(cls, data: dict) -> Project: ...
+### Priority 5: Optional Enhancements
+1. Keyboard shortcuts (e.g., Ctrl+N for new task)
+2. Task description preview in details pane
+3. Refresh button / auto-refresh
+4. Status bar with summary stats
+5. Window geometry persistence
 
-# task_summary_report.py
-class TaskSummaryReport:
-    total_count: int
-    pending_count: int
-    in_progress_count: int
-    done_count: int
-    overdue_count: int
-    due_date_set_count: int
-    completion_rate: float
-    avg_days_to_completion: Optional[float]
+---
+
+## Testing Strategy
+
+### Unit Tests (existing test patterns)
+- Test TodoGUI initialization with custom storage
+- Mock TodoService to test GUI behavior without persistence
+- Test filter logic: status, project, overdue
+
+### Integration Tests
+- Launch GUI with real TodoService
+- Add task, verify it appears in list
+- Edit task, verify changes reflected
+- Delete task, verify removal from UI
+- Filter by status/project, verify correct tasks shown
+
+### Manual Verification
+- `python -m src --gui` launches window
+- All operations work without raising unhandled exceptions
+- Overdue tasks are highlighted
+- Comment count displays correctly
+- No CLI mode breakage (test `python -m src list`, interactive menu)
+
+---
+
+## File Structure After Implementation
+
 ```
-
-### Storage Layer (Minimal Public Interface)
-```python
-# json_storage.py
-class JsonStorage:
-    def __init__(self, path: Optional[str] = None) -> None: ...
-    @property
-    def path(self) -> Path: ...
-    def load(self) -> Union[dict, list[dict]]: ...
-    def save(self, data: Union[dict, list[dict]]) -> None: ...
-```
-
-### Service Layer (CRITICAL—TodoService is the public contract)
-```python
-# todo_service.py
-class TodoService:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None: ...
-    
-    # Task operations
-    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task: ...
-    def get_task(self, task_id: str) -> Task: ...
-    def list_tasks(self, status: Optional[TaskStatus] = None, before: Optional[datetime] = None, after: Optional[datetime] = None, overdue_only: bool = False) -> list[Task]: ...
-    def list_tasks_by_week(self, year: int, week: int, status: Optional[TaskStatus] = None) -> list[Task]: ...
-    def list_tasks_by_month(self, year: int, month: int, status: Optional[TaskStatus] = None) -> list[Task]: ...
-    def list_tasks_by_year(self, year: int, status: Optional[TaskStatus] = None) -> list[Task]: ...
-    def list_tasks_by_project(self, project_id: str) -> list[Task]: ...
-    def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task: ...
-    def start_task(self, task_id: str) -> Task: ...
-    def complete_task(self, task_id: str) -> Task: ...
-    def reopen_task(self, task_id: str) -> Task: ...
-    def set_due_date(self, task_id: str, due_date: Optional[datetime]) -> Task: ...
-    def delete_task(self, task_id: str) -> None: ...
-    
-    # Project operations
-    def create_project(self, name: str) -> Project: ...
-    def list_projects(self) -> list[Project]: ...
-    def get_project(self, project_id: str) -> Project: ...
-    def delete_project(self, project_id: str) -> None: ...
-    def move_task_to_project(self, task_id: str, project_id: Optional[str]) -> Task: ...
-    
-    # Comment operations
-    def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment: ...
-    def get_comments(self, task_id: str) -> list[TaskComment]: ...
-    def delete_comment(self, task_id: str, comment_id: str) -> None: ...
-    def edit_comment(self, task_id: str, comment_id: str, content: str) -> TaskComment: ...
-    
-    # Report and export/import
-    def generate_report(self) -> TaskSummaryReport: ...
-    def export_tasks(self, file_path: Optional[str] = None) -> int: ...
-    def import_tasks(self, file_path: str, duplicate_strategy: str = "skip") -> dict: ...
-
-# Exception classes (part of public contract)
-class TaskNotFoundError(Exception): ...
-class ProjectNotFoundError(Exception): ...
-```
-
-### CLI Layer (Entry Point)
-```python
-# todo_cli.py
-class TodoCLI:
-    def __init__(self, storage_path: Optional[str] = None) -> None: ...
-    def run(self, argv: Optional[list[str]] = None) -> int: ...
-
-# interactive_menu.py
-class InteractiveMenu:
-    def __init__(self, storage_path: Optional[str] = None) -> None: ...
-    def run(self) -> None: ...
-
-# __main__.py
-# Must accept both CLI args and interactive mode
-# python -m src → InteractiveMenu.run()
-# python -m src add "title" → TodoCLI.run(["add", "title"])
+experiments/pipeline/user_stories/TODO/
+├── src/
+│   ├── __init__.py
+│   ├── __main__.py               [MODIFIED: add --gui flag handling]
+│   ├── cli/
+│   │   ├── __init__.py
+│   │   ├── todo_cli.py
+│   │   └── interactive_menu.py
+│   ├── gui/                      [NEW DIRECTORY]
+│   │   ├── __init__.py           [NEW: export TodoGUI]
+│   │   └── todo_gui.py           [NEW: main GUI implementation]
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── task.py
+│   │   ├── task_status.py
+│   │   ├── task_comment.py
+│   │   ├── project.py
+│   │   └── task_summary_report.py
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── exceptions.py
+│   │   ├── todo_service.py
+│   │   ├── task_manager.py
+│   │   ├── project_manager.py
+│   │   └── import_validator.py
+│   └── storage/
+│       ├── __init__.py
+│       └── json_storage.py
+├── tests/
+│   ├── __init__.py
+│   ├── test_*.py (existing)
+│   └── test_gui.py               [NEW: GUI unit/integration tests]
+└── artifacts/
+    └── *.puml (diagrams)
 ```
 
 ---
 
-## 5. Recommended Layer Separation Strategy
+## Ambiguities & Assumptions
 
-### 5.1 Define Layer Boundaries
+### 1. Date Picker Approach
+**Ambiguity:** Task 10 says "due date" but doesn't specify UI widget.
+**Assumption:** Use text entry field with ISO 8601 validation. If more sophisticated picker needed, tkcalendar can be added in future without breaking core.
 
-**Layer 0: Domain Models** (read-only from higher layers)
-- Pure data objects with no dependencies on other layers
-- Methods: validation, serialization, simple domain queries
-- Public interface: fully stable
+### 2. Comment Display Context
+**Ambiguity:** Task says "comments support and comment count" as bonus, but doesn't detail comment UI.
+**Assumption:** Display comment count in table; separate comments section in details pane. Full CRUD for comments is included as part of bonus.
 
-**Layer 1: Storage Abstraction** (read-only from higher layers)
-- Abstract interface for persistence (could be JSON, SQLite, etc.)
-- Must NOT know about manager logic; only formats
-- Public interface: `load()` and `save()` only
+### 3. Filtering Combination
+**Ambiguity:** Can filters be combined (e.g., status=PENDING AND project=ProjectA)?
+**Assumption:** Yes. Service supports this via list_tasks(status=X) then filter by project, or use list_tasks_by_project() with post-filter by status.
 
-**Layer 2: Service/Business Logic** (uses Layers 0 and 1)
-- Implements CRUD, filtering, validation, orchestration
-- Must NOT depend on CLI layer
-- Must NOT reach into private members of other components
-- **Key refactor:** Consolidate storage coordination; single authority for persistence
-- Public interface: TodoService only; managers become internal
+### 4. Auto-Save vs. Manual Save
+**Ambiguity:** Should edits auto-save or require explicit save?
+**Assumption:** Edits should call service immediately (immediate persistence via JsonStorage). No unsaved changes buffer.
 
-**Layer 3: Interface/CLI** (uses Layer 2 only)
-- Depends ONLY on TodoService and models
-- Does NOT import exception classes from managers
-- Public interface: TodoCLI, InteractiveMenu, entry point
+### 5. Window Geometry & State
+**Ambiguity:** Should window size/position persist across sessions?
+**Assumption:** Not required. Each launch starts fresh. Can be added in future if needed.
 
-### 5.2 Decouple Manager Classes from Each Other
-
-**Current:** TaskManager and ProjectManager are independent; both manage storage directly.
-
-**Refactored:** 
-- Create an internal `StorageCoordinator` (or similar) that acts as single authority for reading/writing the entire storage file
-- TaskManager and ProjectManager become pure in-memory caches; they notify the coordinator when changes occur
-- TodoService orchestrates: it uses TaskManager, ProjectManager, and coordinates persistence through the coordinator
-
-**Benefit:** Eliminates the race condition and ensures atomicity
-
-### 5.3 Extract Date Boundary Logic into Utility Module
-
-**Current:** `_get_week_boundaries()`, `_get_month_boundaries()`, `_get_year_boundaries()` are private methods of TaskManager.
-
-**Refactored:** 
-- Move these to a private utility module `src/services/_date_utils.py` (or keep in TaskManager but expose as public if TodoService legitimately needs them)
-- TodoService calls the utility, not TaskManager's private methods
-- OR: Add public methods to TaskManager: `get_week_boundaries()`, `get_month_boundaries()`, `get_year_boundaries()`
-
-**Benefit:** Eliminates the private method dependency; makes boundaries explicit
-
-### 5.4 Unify Exception Hierarchy
-
-**Current:** `TaskNotFoundError` and `ProjectNotFoundError` defined in their respective manager modules; CLI imports them directly.
-
-**Refactored:**
-- Move both to `src/services/__init__.py` or a new `src/services/exceptions.py`
-- Optionally create a base exception class: `TodoError(Exception)` or `ManagerError(Exception)`
-- CLI imports from `src.services` (the public layer interface)
-
-**Benefit:** CLI depends on service layer contract, not implementation details
-
-### 5.5 Fix TodoService Encapsulation Violations
-
-**Current:** In `import_tasks()`, TodoService directly mutates `self._manager._tasks[task_id] = task` and calls `self._manager._persist()`.
-
-**Refactored:**
-- Add public method to TaskManager: `set_task(task_id: str, task: Task) -> Task`
-- TodoService calls `self._manager.set_task(task_id, task)` instead of mutating `_tasks` directly
-- Internal persistence remains within TaskManager; TodoService doesn't call `_persist()`
-
-**Benefit:** Restores encapsulation; TaskManager remains the single authority over its state
+### 6. Task Selection State
+**Ambiguity:** Should selecting a task auto-scroll to details pane?
+**Assumption:** Yes. Double-click or single-select should populate details panel on the right/below.
 
 ---
 
-## 6. Scope Signals: What's In, Out, and Borderline
+## Conclusion
 
-### Explicitly In (Required by Task 09)
-- Refactor to create clear layer separation (task, comment, project, storage, interface)
-- Eliminate all circular dependencies (finding: none currently exist, but layer violations must be fixed)
-- Preserve all public interfaces (signatures, class names, return types)
-- Use abstract base classes or protocols to decouple layers where appropriate
-- Keep domain logic and algorithms unchanged
-- Ensure `python -m src` behaves identically before and after
+This analysis identifies:
+- **What exists:** Solid service layer (TodoService), models, and storage. No GUI layer yet.
+- **What's needed:** TodoGUI class with Tkinter windows, frames, and widgets. Entry point modification for --gui flag.
+- **What's reusable:** All TodoService methods; no business logic needs duplication.
+- **No new dependencies:** tkinter is stdlib; no pip packages required.
+- **Key technical notes:** 
+  - Overdue highlighting via Treeview tags
+  - Error handling via messagebox
+  - Date validation with ISO 8601 strings
+  - Filter combinations via multiple service calls
+  - Timezone-aware datetime handling already in place
 
-### Explicitly Out
-- GUI or graphical refactoring
-- Persistence to different backends (SQLite, database, cloud)
-- Authorization or access control
-- Performance optimizations beyond what's necessary for correctness
-
-### Borderline (Assumptions)
-- **Should TaskManager and ProjectManager be visible internally?** Yes. They remain internal to the service layer, not exported from the public API. Only TodoService is the public contract.
-- **Should date boundary methods be public on TaskManager?** Making them public is safer (explicit public contract) than TodoService calling private methods. Recommend making them public.
-- **Should we create a StorageCoordinator abstraction?** Yes, to eliminate the dual-persistence race condition and make the architecture cleaner.
-
----
-
-## 7. Ambiguities and Working Assumptions
-
-### Ambiguity 1: How much abstraction is "clean"?
-**Question:** Should we create abstract base classes (ABC) for managers and storage, or just move private details and keep structure similar?
-
-**Working assumption:** Create ABCs or Protocols minimally:
-- `StorageInterface` (abstract): `load()`, `save()` - helps with testing and future backends
-- `EntityManager` (protocol): Common interface for TaskManager and ProjectManager - optional; may be overkill
-- Keep it pragmatic: only abstract what changes or is tested independently
-
-### Ambiguity 2: Should TaskManager and ProjectManager be exposed from services module?
-**Question:** Are they part of the public API or strictly internal?
-
-**Working assumption:** Strictly internal. Only TodoService is exported from `src/services/__init__.py`. Tests and CLI never import TaskManager or ProjectManager directly.
-
-### Ambiguity 3: Should date boundary helpers be public on TaskManager?
-**Question:** Are `_get_week_boundaries()`, etc., temporary internals or legitimate public utilities?
-
-**Working assumption:** Make them public and part of TaskManager's contract. They're useful helper functions that TodoService legitimately needs. Prefixing with `_` suggests they're temporary; they're not.
-
----
-
-## 8. Summary: Current Problems and Refactoring Goals
-
-| Problem | Impact | Solution |
-|---------|--------|----------|
-| TodoService directly mutates `_manager._tasks` | Breaks encapsulation; TaskManager not the sole authority | Add public `set_task()` method to TaskManager |
-| TodoService calls private `_manager._get_*_boundaries()` | High coupling to internals | Make these methods public on TaskManager |
-| TaskManager and ProjectManager both manage storage independently | Race condition risk; no atomic multi-step persistence | Create StorageCoordinator as single authority |
-| CLI imports exception classes from managers | Depends on implementation details not public contract | Move exceptions to `src/services/__init__.py` |
-| No clear layer boundaries | Difficult to reason about data flow and responsibilities | Document and enforce via architecture |
-
----
-
-## 9. Recommended Refactoring Steps (Implementation Order)
-
-### Phase 1: Extract and Unify Exception Handling
-1. Create `src/services/exceptions.py` or add to `src/services/__init__.py`
-2. Move `TaskNotFoundError` from task_manager.py
-3. Move `ProjectNotFoundError` from project_manager.py
-4. Update imports in all files
-5. Update CLI to import from `src.services`
-
-### Phase 2: Expose Private Date Utilities
-1. In `task_manager.py`: Remove `_` prefix from `_get_week_boundaries`, `_get_month_boundaries`, `_get_year_boundaries`
-2. Update TodoService to call public methods (no change needed; just removes the "private" designation)
-
-### Phase 3: Create Storage Coordinator
-1. Create `src/services/_storage_coordinator.py` (or inline in todo_service.py as private)
-2. Implement: `load()` → dict with "tasks" and "projects", `save(tasks, projects)` → atomic write
-3. Refactor TaskManager to use coordinator instead of direct storage
-4. Refactor ProjectManager to use coordinator instead of direct storage
-5. Remove `_storage`, `_load()`, `_persist()` from both managers
-
-### Phase 4: Add Public Methods to TaskManager
-1. Add `set_task(task_id: str, task: Task) -> Task` to persist a task
-2. Remove direct `_tasks` mutation from TodoService
-
-### Phase 5: Clean Up Encapsulation in TodoService
-1. Replace `self._manager._tasks[task_id] = task` with `self._manager.set_task(task_id, task)`
-2. Replace `self._manager._persist()` calls with explicit persist via coordinator or remove (should be implicit)
-
-### Phase 6: Documentation
-1. Update this analysis.md with final architecture
-2. Add layer diagram to artifacts/
-
----
-
-## 10. Files Involved in Refactoring
-
-### Files to Create
-- `src/services/exceptions.py` (or update `src/services/__init__.py`)
-- `src/services/_storage_coordinator.py` (optional; could be inline in todo_service.py)
-
-### Files to Modify
-- `src/services/task_manager.py` — expose date methods, add set_task(), remove storage direct access
-- `src/services/project_manager.py` — remove storage direct access
-- `src/services/todo_service.py` — use public methods, remove private member access
-- `src/cli/todo_cli.py` — import exceptions from src.services
-- `src/cli/interactive_menu.py` — import exceptions from src.services
-- `src/services/__init__.py` — export exception classes
-- Tests may need minor updates for exception imports (if they import directly from managers)
-
-### Files NOT Modified (Immutable)
-- `src/models/` — fully stable; no changes
-- `src/storage/json_storage.py` — interface stable; internal only refactoring if any
-
----
-
-## 11. Public Interface Checklist (For Verification After Refactoring)
-
-- [ ] `TodoService.__init__(storage: Optional[JsonStorage])` → unchanged
-- [ ] All `TodoService` public methods exist with same signatures
-- [ ] `TodoCLI.__init__(storage_path)` and `run(argv)` → unchanged
-- [ ] `InteractiveMenu.__init__(storage_path)` and `run()` → unchanged
-- [ ] All models and enums exist with same fields and methods
-- [ ] `python -m src --help` outputs all commands
-- [ ] `python -m src` starts interactive menu
-- [ ] All tests pass (519 tests currently)
-
----
-
-## 12. Architecture Diagram (Proposed)
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                         Entry Point                                  │
-│                      src/__main__.py                                 │
-└──────────────────────────┬──────────────────────────────────────────┘
-                           │
-                ┌──────────┴──────────┐
-                ▼                     ▼
-        ┌────────────────┐    ┌──────────────────┐
-        │  TodoCLI       │    │  InteractiveMenu │
-        │ (Interface)    │    │  (Interface)     │
-        └────────┬───────┘    └────────┬─────────┘
-                 │                     │
-                 └──────────────┬──────┘
-                                ▼
-                    ┌─────────────────────────┐
-                    │   TodoService (Public)  │
-                    │  (Service Layer)        │
-                    └─────┬────────────┬──────┘
-                          │            │
-             ┌────────────┘            └─────────────┐
-             ▼                                       ▼
-    ┌──────────────────────┐            ┌──────────────────────┐
-    │   TaskManager        │            │  ProjectManager      │
-    │  (Internal Service)  │            │ (Internal Service)   │
-    └──────────┬───────────┘            └────────┬─────────────┘
-               │                                 │
-               └──────────────┬──────────────────┘
-                              ▼
-                    ┌──────────────────────────────┐
-                    │  StorageCoordinator          │
-                    │  (Private Coordination)      │
-                    └──────────┬───────────────────┘
-                               ▼
-                    ┌──────────────────────┐
-                    │   JsonStorage        │
-                    │  (Infrastructure)    │
-                    └──────────┬───────────┘
-                               ▼
-                        ~/.todo_data.json
-```
-
-**Data Model Dependencies (must not be imported from above):**
-- Task, Project, TaskComment, TaskStatus, TaskSummaryReport (all in models/)
-- Exceptions: TaskNotFoundError, ProjectNotFoundError (service layer)
-
----
-
-## 13. Final Checklist Before Implementation
-
-- [ ] All public method signatures documented
-- [ ] Exception hierarchy defined
-- [ ] Storage coordinator design approved
-- [ ] Test coverage understood (519 tests currently passing)
-- [ ] Backward compatibility verified (old storage format still loads)
-- [ ] No circular imports will be created
-- [ ] All changes confined to src/ (tests/ updated but not expanded with new test files)
+Proceed to system-architect phase for detailed implementation design.

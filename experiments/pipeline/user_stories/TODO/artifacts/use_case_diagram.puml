@@ -54,6 +54,23 @@ rectangle "TODO Manager" {
     usecase "Export tasks" as C_EXPORT
     usecase "Import tasks" as C_IMPORT
   }
+
+  package "GUI mode" {
+    usecase "Use graphical interface" as GUI
+    usecase "View tasks in table" as G_VIEW
+    usecase "Filter by status" as G_FILTER_STATUS
+    usecase "Filter by project" as G_FILTER_PROJECT
+    usecase "Filter by overdue" as G_FILTER_OVERDUE
+    usecase "Add task" as G_ADD
+    usecase "Edit task" as G_EDIT
+    usecase "Delete task" as G_DELETE
+    usecase "Start task" as G_START
+    usecase "Complete task" as G_COMPLETE
+    usecase "View task details" as G_DETAILS
+    usecase "Add comment" as G_COMMENT_ADD
+    usecase "View comments" as G_COMMENT_VIEW
+    usecase "Keyboard shortcuts" as G_SHORTCUTS
+  }
 }
 
 User --> UI
@@ -101,5 +118,21 @@ CLI ..> C_COMMENT_DELETE : <<exclude>>
 CLI ..> C_REPORT  : <<exclude>>
 CLI ..> C_EXPORT  : <<exclude>>
 CLI ..> C_IMPORT  : <<exclude>>
+
+User --> GUI
+
+GUI ..> G_VIEW    : <<exclude>>
+GUI ..> G_FILTER_STATUS : <<exclude>>
+GUI ..> G_FILTER_PROJECT : <<exclude>>
+GUI ..> G_FILTER_OVERDUE : <<exclude>>
+GUI ..> G_ADD     : <<exclude>>
+GUI ..> G_EDIT    : <<exclude>>
+GUI ..> G_DELETE  : <<exclude>>
+GUI ..> G_START   : <<exclude>>
+GUI ..> G_COMPLETE : <<exclude>>
+GUI ..> G_DETAILS : <<exclude>>
+GUI ..> G_COMMENT_ADD : <<exclude>>
+GUI ..> G_COMMENT_VIEW : <<exclude>>
+GUI ..> G_SHORTCUTS : <<exclude>>
 
 @enduml

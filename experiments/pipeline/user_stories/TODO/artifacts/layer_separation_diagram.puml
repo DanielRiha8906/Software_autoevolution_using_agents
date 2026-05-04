@@ -74,12 +74,23 @@ frame "LAYER STRUCTURE & IMPORTS" {
     package "INTERFACE LAYER" #INTERFACE_COLOR {
         card "TodoCLI" as CLI
         card "InteractiveMenu" as Menu
+
+        package "GUI Layer (tkinter)" #INTERFACE_COLOR {
+            card "TodoGUI\n(MainWindow, Frames, Dialogs)" as GUI
+        }
+
         note bottom
             Imports:
             - TodoService (public API)
             - exceptions (from services)
             - models (type hints only)
-            Exports: Entry points
+
+            GUI Components (Task 10):
+            - TodoGUI, MainWindow
+            - FilterFrame, TaskListFrame
+            - TaskDetailsFrame, ActionButtonFrame
+            - AddTaskDialog, EditTaskDialog
+            - CommentDialog
         end note
     }
 }
@@ -119,6 +130,11 @@ frame "DEPENDENCY ARROWS (→ means imports)" {
     Menu --> TNF : catches
     Menu --> PNF : catches
 
+    GUI --> TodoService : calls
+    GUI --> SE : catches
+    GUI --> TNF : catches
+    GUI --> PNF : catches
+
     SE <|-- TNF : extends
     SE <|-- PNF : extends
 }
@@ -133,6 +149,14 @@ note bottom
     • New public methods on TaskManager:
       - get_week_boundaries(), get_month_boundaries(), get_year_boundaries()
       - set_task()
+
+    Task 10 Changes:
+    • GUI layer added: TodoGUI application
+    • 9 new classes for GUI: MainWindow, FilterFrame, TaskListFrame,
+      TaskDetailsFrame, ActionButtonFrame, AddTaskDialog, EditTaskDialog,
+      CommentDialog
+    • Entry point: --gui flag in __main__.py
+    • All GUI components use TodoService (public API)
 end note
 
 @enduml

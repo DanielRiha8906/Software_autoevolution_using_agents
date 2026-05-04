@@ -668,3 +668,139 @@ Duration: 862.0s | Cost: $1.886830 USD | Turns: 21
 - Marked with TODO comments in TaskManager and ProjectManager
 
 Duration: 673.7s | Cost: $1.260354 USD | Turns: 15
+
+---
+
+## Task 10: GUI Implementation with Tkinter
+
+**Status:** COMPLETE ✓
+
+### Changes Made
+
+- **GUI Package:** Created new `src/gui/` package with `__init__.py` exporting TodoGUI
+- **Main GUI Module:** Implemented `src/gui/todo_gui.py` with 9 classes (~850 lines):
+  - **TodoGUI** — Application launcher and main window container
+  - **MainWindow** — Root tkinter window with frame orchestration, event handling, and filter state management
+  - **FilterFrame** — Status, project, and overdue filter controls with filter state tracking
+  - **TaskListFrame** — Treeview table displaying tasks with overdue highlighting (red background)
+  - **TaskDetailsFrame** — Selected task metadata panel with comments section and full CRUD support
+  - **ActionButtonFrame** — Control buttons for primary operations (Add, Edit, Delete, Refresh)
+  - **AddTaskDialog** — Modal dialog for task creation with validation
+  - **EditTaskDialog** — Modal dialog for task editing with validation
+  - **CommentDialog** — Modal dialog for adding/editing comments
+- **Entry Point Integration:** Modified `src/__main__.py` to detect `--gui` flag and launch TodoGUI
+- **Features Implemented:**
+  - Task list display with title, status, due date, project, and comment count
+  - Real-time filtering by status (All, Pending, In Progress, Done)
+  - Real-time filtering by project (dropdown with all projects)
+  - Real-time filtering by overdue status (checkbox toggle)
+  - Combined filter support (status + project + overdue simultaneously)
+  - Overdue tasks visually highlighted with red background
+  - Task details panel with comments section (bonus feature)
+  - Add/Edit/Delete operations via modal dialogs
+  - Status transitions (Pending → In Progress → Done)
+  - Due date assignment and modification (ISO 8601 format: YYYY-MM-DD)
+  - Project assignment and modification
+  - Comments full CRUD (add, view, delete) with author field
+  - Keyboard shortcuts: Ctrl+N (add), Ctrl+R (refresh), Delete (delete)
+  - Error handling with user-friendly messageboxes
+  - Input validation for required fields and date formats
+  - Status bar with operation feedback
+  - Menu bar with File and Help menus
+
+### Files Changed
+
+**New Files:**
+- src/gui/__init__.py
+- src/gui/todo_gui.py
+- tests/test_todo_gui.py
+
+**Modified Files:**
+- src/__main__.py
+
+### Test Results
+
+**612 tests total: ALL PASSED**
+- 50 new tests for GUI functionality across 12 test classes:
+  - 5 tests for TodoGUI initialization and lifecycle
+  - 3 tests for task selection and state management
+  - 4 tests for refresh logic and keyboard shortcuts
+  - 4 tests for status filtering
+  - 6 tests for project and overdue filtering
+  - 3 tests for task list display and filtering
+  - 2 tests for overdue highlighting
+  - 2 tests for task selection
+  - 4 tests for task details display
+  - 1 test for comments display
+  - 5 tests for action button operations
+  - 8 tests for dialog validation
+  - 1 test for main window layout
+  - 1 test for filter combinations
+  - 2 tests for error handling
+- 562 existing tests all still passing (no regressions)
+
+### Acceptance Criteria Verification
+
+✓ GUI provided using tkinter (stdlib, no new dependencies required)
+✓ Task list displays title, status, due date, and project (with comment count as bonus)
+✓ Basic task operations available: view (select + details panel), add, change status, delete
+✓ Overdue tasks visually highlighted with red background
+✓ GUI calls existing TodoService layer logic — no business logic duplicated
+✓ Tasks can be filtered by status dropdown (All, Pending, In Progress, Done)
+✓ Tasks can be filtered by project dropdown (All, or specific project)
+✓ Filter combinations supported (status + project + overdue simultaneously)
+✓ Adding comments through GUI supported (bonus feature) — full CRUD
+✓ Comment count per task displayed in task list (bonus feature)
+✓ No new application functionality introduced beyond service layer
+✓ GUI launchable via `python -m src --gui`
+✓ Keyboard shortcuts implemented (Ctrl+N add, Ctrl+R refresh, Delete delete)
+✓ Modal dialogs with validation for add/edit operations
+✓ Status transitions via dropdown in task details panel
+✓ Due date management via text input with format validation
+✓ Project assignment via dropdown with (None) option
+✓ Error handling with messagebox display for exceptions
+✓ Timezone-aware datetime with UTC and ISO 8601 format
+
+### Implementation Highlights
+
+**Architecture:**
+- GUI layer sits alongside CLI layer, both using TodoService public API
+- Frame-based component design with clear separation of concerns
+- Event-driven architecture using tkinter callbacks
+- Modal dialogs for user input with validation before service calls
+- Real-time refresh pattern maintains UI consistency with service state
+
+**Data Flow:**
+1. User interacts with GUI component (click, type, select)
+2. Component calls callback → MainWindow event handler
+3. MainWindow updates filter state and calls appropriate service method
+4. Service performs validation and database operations
+5. GUI refreshes from service data
+6. Status bar updates to show operation result
+
+**Filtering:**
+- Status filter: calls TodoService.list_tasks(status=X)
+- Project filter: calls TodoService.list_tasks_by_project(project_id)
+- Overdue filter: combined with status via overdue_only parameter
+- Combined filters: applied in sequence (project → status → overdue)
+
+**Comments Support (Bonus):**
+- TaskDetailsFrame displays all comments for selected task
+- Comments section includes add/delete buttons
+- CommentDialog provides modal UI for comment input
+- Full CRUD via existing TodoService comment methods
+- Comment count displayed in task list Treeview
+
+**Testing Strategy:**
+- All tkinter widgets and dialogs mocked using unittest.mock
+- Service integration verified with mock assertions
+- Validation logic tested independently
+- Filter state changes tested
+- Error handling paths covered
+- No GUI rendering required (pure unit tests)
+
+### Dependencies
+
+No new dependencies added. tkinter is part of Python stdlib.
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
