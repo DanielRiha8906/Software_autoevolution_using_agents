@@ -6,7 +6,9 @@ from typing import Optional
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
+from ..models.project import Project
 from ..services.task_manager import TaskNotFoundError
+from ..services.project_manager import ProjectNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
 
@@ -92,6 +94,8 @@ class InteractiveMenu:
                 self._do_export()
             elif choice == "11":
                 self._do_import()
+            elif choice == "12":
+                self._do_manage_projects()
             else:
                 input("  Unknown option. Press Enter to continue...")
 
@@ -123,6 +127,7 @@ class InteractiveMenu:
         print("  9. View summary report")
         print("  10. Export tasks")
         print("  11. Import tasks")
+        print("  12. Manage projects")
         print("  0. Quit")
         print()
 
@@ -683,4 +688,174 @@ class InteractiveMenu:
         except (ValueError, OSError) as e:
             _clear()
             print(f"  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_manage_projects(self) -> None:
+        """Main menu for project management."""
+        while True:
+            _clear()
+            print("  Manage Projects\n")
+            projects = self._service.list_projects()
+            if projects:
+                for project in projects:
+                    tasks = self._service.list_tasks_by_project(project.id)
+                    task_count = len(tasks)
+                    print(f"  {project.id[:8]}  {project.name}  ({task_count} task{'s' if task_count != 1 else ''})")
+            else:
+                print("  (no projects yet)")
+            print()
+            print("  1. Create project")
+            print("  2. List projects with task counts")
+            print("  3. Manage project tasks")
+            print("  4. Delete project")
+            print("  0. Back")
+            print()
+            choice = input("  > ").strip().lower()
+
+            if choice in ("0", "q", "quit"):
+                return
+            elif choice == "1":
+                self._do_create_project()
+            elif choice == "2":
+                self._do_list_projects()
+            elif choice == "3":
+                self._do_manage_project_tasks()
+            elif choice == "4":
+                self._do_delete_project()
+            else:
+                input("  Unknown option. Press Enter to continue...")
+
+    def _do_create_project(self) -> None:
+        """Create a new project."""
+        _clear()
+        print("  Create Project\n")
+        name = _prompt("Project name")
+        if not name:
+            input("  Project name cannot be empty. Press Enter...")
+            return
+        try:
+            project = self._service.create_project(name)
+            print(f"\n  Created project: {project.id[:8]}  {project.name}")
+        except ValueError as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_list_projects(self) -> None:
+        """List all projects with task counts."""
+        _clear()
+        print("  Projects\n")
+        projects = self._service.list_projects()
+        if not projects:
+            print("  (no projects yet)")
+        else:
+            for project in projects:
+                tasks = self._service.list_tasks_by_project(project.id)
+                task_count = len(tasks)
+                print(f"  {project.id[:8]}  {project.name}  ({task_count} task{'s' if task_count != 1 else ''})")
+        print()
+        input("  Press Enter to continue...")
+
+    def _do_delete_project(self) -> None:
+        """Delete a project (tasks are orphaned)."""
+        _clear()
+        projects = self._service.list_projects()
+        if not projects:
+            input("  No projects to delete. Press Enter...")
+            return
+        print("  Delete project — pick a project:\n")
+        project_options = [f"{p.id[:8]}  {p.name}" for p in projects]
+        idx = _pick("Select", project_options)
+        if idx is None:
+            return
+        project = projects[idx]
+
+        _clear()
+        tasks = self._service.list_tasks_by_project(project.id)
+        print(f"  Delete project: {project.name}")
+        print(f"  ({len(tasks)} task{'s' if len(tasks) != 1 else ''} will be orphaned)")
+        confirm = input("  Are you sure? (y/N): ").strip().lower()
+        if confirm != "y":
+            print("  Cancelled.")
+            input("  Press Enter to continue...")
+            return
+
+        try:
+            self._service.delete_project(project.id)
+            print(f"  Deleted project: {project.id[:8]}  {project.name}")
+        except ProjectNotFoundError as e:
+            print(f"  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_manage_project_tasks(self) -> None:
+        """Manage tasks within a project."""
+        _clear()
+        projects = self._service.list_projects()
+        if not projects:
+            input("  No projects. Press Enter...")
+            return
+        print("  Select project — pick a project:\n")
+        project_options = [f"{p.id[:8]}  {p.name}" for p in projects]
+        idx = _pick("Select", project_options)
+        if idx is None:
+            return
+        project = projects[idx]
+
+        tasks = self._service.list_tasks_by_project(project.id)
+        _clear()
+        print(f"  Project: {project.name}\n")
+        if not tasks:
+            print("  (no tasks in this project)")
+        else:
+            for task in tasks:
+                print(f"  {_task_line(task)}")
+        print()
+        print("  1. Move task to this project")
+        print("  2. Remove task from project")
+        print("  0. Back")
+        print()
+        choice = input("  > ").strip().lower()
+
+        if choice == "1":
+            self._do_assign_task_to_project(project)
+        elif choice == "2":
+            self._do_unassign_task_from_project(project)
+
+    def _do_assign_task_to_project(self, project: Project) -> None:
+        """Assign a task to a project."""
+        _clear()
+        all_tasks = self._service.list_tasks()
+        if not all_tasks:
+            input("  No tasks available. Press Enter...")
+            return
+        print(f"  Assign task to project: {project.name}\n")
+        idx = _pick("Select task", [_task_line(t) for t in all_tasks])
+        if idx is None:
+            return
+        task = all_tasks[idx]
+
+        try:
+            updated = self._service.move_task_to_project(task.id, project.id)
+            print(f"\n  Assigned: {_task_line(updated)}")
+        except (TaskNotFoundError, ProjectNotFoundError) as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_unassign_task_from_project(self, project: Project) -> None:
+        """Remove a task from a project."""
+        _clear()
+        tasks = self._service.list_tasks_by_project(project.id)
+        if not tasks:
+            input("  No tasks in this project. Press Enter...")
+            return
+        print(f"  Remove task from project: {project.name}\n")
+        idx = _pick("Select task", [_task_line(t) for t in tasks])
+        if idx is None:
+            return
+        task = tasks[idx]
+
+        try:
+            updated = self._service.move_task_to_project(task.id, None)
+            print(f"\n  Removed: {_task_line(updated)}")
+        except TaskNotFoundError as e:
+            print(f"\n  Error: {e}")
         input("  Press Enter to continue...")

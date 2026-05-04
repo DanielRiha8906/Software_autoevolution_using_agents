@@ -1,308 +1,411 @@
-# Task 06 Analysis: Summary Report of Task Counts and Completion Rates
+# Task 08 Analysis: Project Domain Model and Organization
 
-## Task Understanding
+**Analysis Date:** 2026-05-03  
+**Working Directory:** `experiments/pipeline/user_stories/TODO/`
 
-**Objective:** Implement a TODO application feature that generates a structured summary report of task statistics, including:
-- Total task count
-- Count breakdown by status (pending, in_progress, done)
-- Count of overdue tasks
-- Count of tasks with due date set
-- Completion rate as a percentage (done / total)
-- Bonus: Average days from creation to completion for done tasks
-- Output as a dataclass (not plain dict)
-- Output format deterministic regardless of task ordering
-- Accessible via both interactive menu and CLI flag (`python -m src report` or similar)
+## 1. What Task 08 Is Asking For
 
-## Current Architecture Overview
+Implement a project management feature that allows tasks to be grouped and organized by projects. The feature must:
 
-### Codebase Structure
+- Create a new `Project` domain class with `id` (UUID) and `name` fields
+- Add an optional `project_id` field to the existing `Task` model
+- Support full CRUD operations on projects (create, list, delete)
+- Support filtering tasks by project
+- Support moving tasks between projects
+- Maintain backward compatibility with existing tasks (tasks without project_id continue to work)
+- Support projects being deleted without cascading to tasks (tasks become unassigned)
+- Enforce project name non-emptiness
+- Be accessible via both interactive menu AND CLI flags
 
-**Models** (`src/models/`):
-- `Task` (dataclass): Contains `id`, `title`, `description`, `status` (TaskStatus enum), `created_at` (datetime), `updated_at` (datetime), `due_date` (Optional[datetime]), `comments` (list of TaskComment)
-- `TaskStatus` (enum): PENDING, IN_PROGRESS, DONE (with values "pending", "in_progress", "done")
-- `TaskComment` (dataclass): For comment management (not directly relevant to report)
+---
 
-**Services** (`src/services/`):
-- `TaskManager`: Core CRUD operations, persistence via JsonStorage
-  - `list_all()` returns all tasks
-  - `list_by_status(status)` filters by status
-  - Methods available: `add()`, `get()`, `list_all()`, `list_by_status()`, `list_by_due_date_range()`, `update()`, `set_status()`, `set_due_date()`, `delete()`
-- `TodoService`: High-level service layer wrapping TaskManager
-  - Delegates to TaskManager for most operations
-  - Also supports: `add_task()`, `list_tasks()`, `get_task()`, `complete_task()`, `start_task()`, `reopen_task()`, `update_task()`, etc.
+## 2. Current Codebase Structure
 
-**Storage** (`src/storage/`):
-- `JsonStorage`: Reads/writes to JSON file (default: ~/.todo_data.json)
-- Provides `load()` and `save(tasks)` methods
+### Models Layer (`src/models/`)
+- **task.py** - Task dataclass with fields: id, title, description, status, created_at, updated_at, due_date, comments
+- **task_status.py** - Enum (PENDING, IN_PROGRESS, DONE)
+- **task_comment.py** - TaskComment dataclass (id, content, task_id, author, created_at, updated_at)
+- **task_summary_report.py** - Report model (total, pending, in_progress, done, overdue, due_date_set, completion_rate, avg_days)
 
-**CLI** (`src/cli/`):
-- `TodoCLI`: Argument parser with subcommands (add, list, show, start, done, reopen, update, delete, due-date, add-comment, list-comments, delete-comment, edit-comment)
-- `InteractiveMenu`: Full-screen terminal menu with options 1-8 (and 0 for quit)
-  - Current menu options: List/filter (1), Add (2), Show (3), Change status (4), Update (5), Set due date (6), Delete (7), Manage comments (8)
+**KEY OBSERVATION:** Tasks use UUID strings for `id` generated with `uuid.uuid4()`. All models have `to_dict()` and `from_dict()` methods for JSON serialization.
 
-**Entry Point** (`src/__main__.py`):
-- If `sys.argv` has length > 1: dispatches to `TodoCLI().run()`
-- Otherwise: launches `InteractiveMenu().run()`
+### Services Layer (`src/services/`)
+- **task_manager.py** - Low-level CRUD for tasks with persistence
+  - Methods: add(), get(), list_all(), list_by_status(), list_by_due_date_range(), update(), set_status(), delete(), add_comment(), get_comments(), delete_comment(), edit_comment()
+  - Uses dictionary `_tasks: dict[str, Task]` as in-memory cache, persists via JsonStorage._persist()
+  - Supports prefix lookup for task IDs (first 8 chars)
+  - Raises TaskNotFoundError when task not found
 
-### Data Model Available Fields
+- **todo_service.py** - High-level business logic wrapping TaskManager
+  - Methods: add_task(), list_tasks(), list_tasks_by_week/month/year(), get_task(), start_task(), complete_task(), reopen_task(), update_task(), set_due_date(), delete_task(), add_comment(), get_comments(), delete_comment(), edit_comment(), generate_report(), export_tasks(), import_tasks()
+  - Validates inputs (empty titles, timezone-aware datetimes)
 
-On **Task** object:
-- `id: str` (UUID)
-- `title: str`
-- `description: Optional[str]`
-- `status: TaskStatus` (with `.is_completed()`, `.is_pending()`, `.is_in_progress()`, `.is_overdue()` methods)
-- `created_at: datetime` (UTC timezone-aware)
-- `updated_at: datetime` (UTC timezone-aware)
-- `due_date: Optional[datetime]` (UTC timezone-aware or None)
-- `comments: list[TaskComment]`
-- Methods: `is_pending()`, `is_in_progress()`, `is_completed()`, `is_overdue()`
+- **import_validator.py** - Validates JSON files for import, handles task dict validation
 
-## Key Findings
+### Storage Layer (`src/storage/`)
+- **json_storage.py** - Simple JSON persistence
+  - Stores at `~/.todo_data.json` by default
+  - Methods: load() returns list[dict], save(tasks: list[dict])
+  - Creates parent directories as needed
 
-### 1. Data Availability for Report
+### CLI Layer (`src/cli/`)
+- **todo_cli.py** - Command-line interface using argparse
+  - Subcommands: add, list, show, start, done, reopen, update, delete, due-date, add-comment, list-comments, delete-comment, edit-comment, report, export, import
+  - Supports filtering: --status, --due-before, --due-after, --week, --month, --year, --overdue
+  - Returns exit code 0 on success, 1 on error
+  - Catches TaskNotFoundError and ValueError, prints to stderr
 
-All required fields for the report are already available:
-- **Total count**: `len(service.list_tasks())`
-- **Status counts**: Available via `service.list_tasks(status=TaskStatus.PENDING)` etc.
-- **Overdue count**: Can use `task.is_overdue()` on all tasks
-- **Due date set**: Can count tasks where `task.due_date is not None`
-- **Completion rate**: Done count / Total count (trivial math)
-- **Bonus metric (avg days creation to completion)**: 
-  - Available from tasks with `status == DONE` 
-  - Calculate: `(task.updated_at - task.created_at).days` (Note: `updated_at` is set when status changes to DONE)
-  - Assumption: `updated_at` is updated when task is marked done (confirmed in code via `task.mark_done()` sets `updated_at`)
+- **interactive_menu.py** - Terminal UI menu system
+  - Clears screen, prints header, lists tasks, offers menu options
+  - Menu options: 1=List, 2=Add, 3=Show, 4=Change status, 5=Update, 6=Set due date, 7=Delete, 8=Manage comments, 9=Report, 10=Export, 11=Import
 
-### 2. Output Format Requirement
+### Entry Point (`src/__main__.py`)
+- Routes to TodoCLI if arguments present, otherwise starts InteractiveMenu
 
-**Must be a dataclass, not a plain dict.** This means:
-- Create a new dataclass `TaskSummaryReport` (or similar name) in `src/models/`
-- Fields: `total_count`, `pending_count`, `in_progress_count`, `done_count`, `overdue_count`, `due_date_set_count`, `completion_rate` (as float or percentage), and optionally `avg_days_to_completion` (float)
-- Must be deterministic: Order doesn't matter for counts (all are aggregations), so output is inherently deterministic
+---
 
-### 3. Deterministic Output
+## 3. What Currently Exists vs What Needs to Be Added
 
-The requirement states "Output format is deterministic regardless of task ordering":
-- All counts are aggregations, so the order of tasks doesn't affect the result
-- Completion rate is a ratio, also deterministic
-- Average calculation is also deterministic (sum/count)
-- Dataclass with frozen=True could help ensure immutability, but not required
+### Currently Exists
+- Task model with all persistence plumbing (to_dict/from_dict, serialization to JSON)
+- TaskComment model with same pattern
+- Complete task CRUD in TaskManager + TodoService
+- Import/export functionality with validation
+- Full CLI with subcommands and interactive menu
+- Test suite covering tasks, comments, import/export, date filtering
 
-### 4. CLI and Menu Integration
+### Needs to Be Added
 
-**Current CLI pattern** (`src/cli/todo_cli.py`):
-- Uses `argparse` with subcommands
-- New subcommand needed: `report` with no arguments (or optional filters?)
-- Should return formatted output (JSON-compatible or human-readable)
+#### 3.1 New Domain Class
+- **`Project` dataclass** (new file: `src/models/project.py`)
+  - Fields: id (UUID string), name (string)
+  - Methods: to_dict(), from_dict() for JSON serialization
+  - Validation: name cannot be empty (check in __post_init__)
 
-**Current Menu pattern** (`src/cli/interactive_menu.py`):
-- Main menu has options 1-8 (and 0 for quit)
-- New menu option needed: e.g., option "9" for "View summary report"
-- Should display report in human-readable format
+#### 3.2 Task Model Changes
+- Add optional `project_id: Optional[str] = None` field to Task
+- Update Task.to_dict() to include project_id
+- Update Task.from_dict() to handle project_id (must handle missing field for backward compatibility)
+- Update existing test for task serialization/deserialization to verify project_id field
 
-**Entry point** (`src/__main__.py`):
-- Already dispatches correctly: if args present, go to CLI; otherwise go to menu
-- No changes needed here
+#### 3.3 Service Layer
+- **`ProjectManager` class** (new file: `src/services/project_manager.py`)
+  - Similar to TaskManager pattern
+  - Methods: add(), get(), list_all(), delete()
+  - In-memory dict `_projects: dict[str, Project]`
+  - Persistence via JsonStorage (may need separate file or merged storage)
+  - Raises ProjectNotFoundError when project not found
 
-## What New Functionality Is Needed
+- **Update `TodoService`**
+  - Add methods: create_project(), list_projects(), delete_project(), list_tasks_by_project(), move_task_to_project()
+  - Validation: project name non-empty
 
-### 1. New Dataclass: TaskSummaryReport
+- **Update `TaskManager`**
+  - Add method: list_by_project(project_id) to filter tasks by project_id
+  - Ensure delete() and other mutation methods preserve project_id field
 
-**Location:** `src/models/task_summary_report.py` (new file)
+#### 3.4 Storage Changes
+- **Storage architecture decision needed:**
+  - **Option A (preferred based on existing patterns):** Extend JsonStorage to handle both tasks and projects in one file (JSON array at root, or dict with "tasks" and "projects" keys)
+  - **Option B:** Use separate JSON files (~/.todo_projects.json alongside ~/.todo_data.json)
+  - Currently JsonStorage stores a simple list of task dicts at root
 
-**Fields:**
-```python
-@dataclass
-class TaskSummaryReport:
-    total_count: int
-    pending_count: int
-    in_progress_count: int
-    done_count: int
-    overdue_count: int
-    due_date_set_count: int
-    completion_rate: float  # 0.0 to 1.0 (or percentage 0-100)
-    avg_days_to_completion: Optional[float] = None  # bonus
-```
+#### 3.5 CLI Layer
+- **Update `TodoCLI`** with new subcommands:
+  - `create-project <name>` - Create a project, print project ID
+  - `list-projects` - List all projects with task counts
+  - `delete-project <project_id>` - Delete project (tasks become unassigned)
+  - `add-task` enhancement: optional `--project` flag to assign task to project on creation
+  - `update` enhancement: optional `--project` flag to move task to project
+  - `list` enhancement: optional `--project` flag to filter by project
 
-**Exports:** Add to `src/models/__init__.py`
+- **Update `InteractiveMenu`**
+  - Add menu option for project management (new menu level: Projects / Tasks)
+  - Menu items: Create project, List projects, Manage project tasks, Delete project
+  - When listing tasks, show which project they belong to (or "Unassigned")
+  - When updating/creating task, allow assigning to project
 
-### 2. Report Generation Method
+#### 3.6 Models __init__.py
+- Export new Project class: `from .project import Project`
 
-**Location:** `src/services/todo_service.py` (or new file `src/services/report_service.py`)
+#### 3.7 Services __init__.py
+- May need to export ProjectManager if used externally
 
-**Method:** `generate_report()` that:
-1. Gets all tasks via `self.list_tasks()`
-2. Counts by status using existing `list_by_status()` or manual iteration
-3. Counts overdue using `task.is_overdue()`
-4. Counts due_date set using `task.due_date is not None`
-5. Calculates completion_rate: done_count / total_count (handle division by zero)
-6. Calculates avg_days_to_completion for bonus (only for DONE tasks)
-7. Returns `TaskSummaryReport` instance
+---
 
-### 3. CLI Integration
+## 4. Files That Will Need Modifications
 
-**Location:** `src/cli/todo_cli.py`
+### New Files to Create
+1. `src/models/project.py` - New Project dataclass
+2. `src/services/project_manager.py` - New ProjectManager CRUD class
+3. `tests/test_project.py` - Unit tests for Project model
+4. `tests/test_project_manager.py` - Unit tests for ProjectManager
+5. `tests/test_task_project_integration.py` - Integration tests for task-project interaction
 
-**New subcommand:** `report` (no arguments required)
-- Add parser section:
-  ```python
-  p_report = sub.add_parser("report", help="Generate task summary report")
-  p_report.set_defaults(func=self._cmd_report)
+### Files to Modify
+
+**Critical Changes:**
+- `src/models/task.py`
+  - Add `project_id: Optional[str] = None` field
+  - Update `to_dict()` method to include project_id
+  - Update `from_dict()` classmethod to extract project_id with `.get("project_id")` (supports old format)
+
+- `src/models/__init__.py`
+  - Add `from .project import Project` export
+
+- `src/services/todo_service.py`
+  - Add create_project(), list_projects(), delete_project() methods
+  - Add list_tasks_by_project() method
+  - Add move_task_to_project() method
+  - Add validation for project_id when passed to task operations
+
+- `src/services/task_manager.py`
+  - Add list_by_project(project_id) method
+  - Ensure _tasks dict still handles tasks with and without project_id
+
+- `src/storage/json_storage.py` (or create new)
+  - **Decision required:** How to store both tasks and projects?
+    - If merging: Change save/load to handle dict with {"tasks": [...], "projects": [...]}
+    - If separate files: Create JsonProjectStorage or extend JsonStorage with mode parameter
+
+- `src/cli/todo_cli.py`
+  - Add 5-6 new subparsers for project commands
+  - Implement command handlers (_cmd_create_project, _cmd_list_projects, _cmd_delete_project, etc.)
+  - Update _cmd_add to accept optional --project flag
+  - Update _cmd_update to accept optional --project flag for moving tasks
+
+- `src/cli/interactive_menu.py`
+  - Add new top-level menu option (or submenu structure) for project management
+  - Implement _do_manage_projects() and related project interaction methods
+  - Update _do_add() to allow selecting project
+  - Update task listing to show project information
+
+**Tests (updates):**
+- `tests/test_task.py`
+  - Add tests for project_id field in Task
+  - Test task serialization/deserialization with project_id present and absent
+
+- All other test files that create Task objects should verify backward compatibility with project_id
+
+---
+
+## 5. Key Implementation Challenges and Decisions
+
+### 5.1 Storage Architecture
+**Challenge:** Current JsonStorage stores only task dicts in a simple array. Projects need persistent storage too.
+
+**Options:**
+- **Option A (Simplest):** Store everything in one JSON file with structure:
+  ```json
+  {
+    "tasks": [{...}, {...}],
+    "projects": [{...}, {...}]
+  }
   ```
-- Add handler method:
-  ```python
-  def _cmd_report(self, args: argparse.Namespace) -> int:
-      report = self._service.generate_report()
-      print(f"Total tasks: {report.total_count}")
-      print(f"  Pending: {report.pending_count}")
-      print(f"  In progress: {report.in_progress_count}")
-      print(f"  Done: {report.done_count}")
-      # ... etc
-      return 0
-  ```
+  Requires modest refactor of JsonStorage.load() (returns dict not list) and TaskManager._load()
 
-### 4. Interactive Menu Integration
+- **Option B:** Use separate files (~/.todo_projects.json and ~/.todo_data.json)
+  - Simpler storage changes (new JsonProjectStorage class)
+  - More file I/O overhead
+  - Import/export complexity increases
 
-**Location:** `src/cli/interactive_menu.py`
+**Recommendation:** Option A is cleaner architecturally and aligns with test patterns (single storage object).
 
-**New menu option:** Add option 9 (after Manage comments, before Quit)
-- Update `_print_main_menu()` to include new option
-- Add new handler method `_do_report()` that:
-  1. Gets report via `self._service.generate_report()`
-  2. Displays in formatted human-readable way
-  3. Prompts to continue (or auto-returns)
+### 5.2 Task Deletion Cascade (or Not)
+**Requirement:** "Deleting a project leaves tasks unassigned."
 
-## What Existing Code Needs Modification
+**Implementation:** When delete_project(project_id) is called:
+- Delete the project from _projects
+- Iterate through _tasks, set project_id = None for all tasks with that project_id
+- Persist both
 
-### 1. `src/models/__init__.py`
-- Add import and export of `TaskSummaryReport`
+Do NOT delete tasks; this is an orphaning operation, not cascade delete.
 
-### 2. `src/services/todo_service.py`
-- Add new method `generate_report()` that creates and returns `TaskSummaryReport`
+### 5.3 Backward Compatibility on Load
+**Challenge:** Existing .todo_data.json files have no project_id field; loading them must not fail.
 
-### 3. `src/cli/todo_cli.py`
-- Add `report` subcommand to argparse parser
-- Add `_cmd_report()` handler method
-- Format and print report output
+**Solution:** 
+- Task.from_dict() uses `.get("project_id")` with default None
+- Storage layer handles old format gracefully:
+  - Old format: `[{task}, {task}]` → new format: `{"tasks": [{task}, {task}], "projects": []}`
+  - OR gracefully detect old format and migrate on first load
 
-### 4. `src/cli/interactive_menu.py`
-- Update `_print_main_menu()` to show new option (9)
-- Update main loop to handle choice "9"
-- Add `_do_report()` method to generate and display report
+**Test coverage needed:**
+- Load old task file without project_id → tasks load with project_id=None
+- Load new task file with project_id → tasks load with project_id preserved
+- Export and re-import preserves project_id
 
-### 5. `src/__main__.py` (no changes needed)
-- Already routes correctly
+### 5.4 Prefix Lookup for Projects
+**Question:** Should projects support prefix lookup like tasks?
 
-## Data Model Summary
+**Assumption:** Yes. Implement similar logic in ProjectManager.get() (not required by spec but consistent with existing pattern).
 
-### Task Fields Relevant to Report
-| Field | Type | Used For | Notes |
-|-------|------|----------|-------|
-| `status` | TaskStatus | Counting by status | PENDING, IN_PROGRESS, DONE |
-| `due_date` | Optional[datetime] | Overdue check, due_date_set count | None if not set |
-| `created_at` | datetime | Bonus: avg days to completion | UTC timezone-aware |
-| `updated_at` | datetime | Bonus: avg days to completion | Updated when status changes |
+### 5.5 Project Name Uniqueness
+**Requirement mentions:** "Project names cannot be empty"
 
-### Task Methods Relevant to Report
-| Method | Returns | Use |
-|--------|---------|-----|
-| `is_overdue()` | bool | Determine if task is overdue |
-| `is_completed()` | bool | Filter done tasks (alternative to status check) |
+**Assumption:** Project names are NOT required to be unique (user can have two projects named "Work" if they want). Only non-empty is enforced.
+- If uniqueness is required, it would be mentioned explicitly
+- Empty name validation via __post_init__ in Project class
 
-## Integration Points
+### 5.6 CLI Naming Conventions
+**Existing patterns:**
+- Subcommand names use hyphens: add, list, add-comment, delete-comment
+- Long names: list-comments, delete-comment, edit-comment
+- Flags use hyphens: --status, --due-before, --project
 
-### Service Layer Access
-- `TodoService.list_tasks()` — Get all tasks
-- `TodoService._manager.list_by_status(status)` — Get tasks by status (or iterate manually)
-- Individual task methods: `task.is_overdue()`, `task.is_completed()`
+**New commands should follow:**
+- `create-project <name>` (not add-project)
+- `list-projects` (not list-project, matches pattern of list-comments)
+- `delete-project <project_id>`
+- `move-task <task_id> --project <project_id>` (or integrate into update?)
 
-### CLI Integration
-- `src/cli/todo_cli.py`: Add `report` subcommand
-- `argparse` parser already setup with subcommands pattern
-- Error handling via existing `TaskNotFoundError`, `ValueError` patterns
+### 5.7 Interactive Menu Structure
+**Current structure:** Single main menu (1-11)
+**Challenge:** Adding projects increases menu options; need to avoid overwhelming menu
 
-### Menu Integration
-- `src/cli/interactive_menu.py`: Add menu option 9
-- Menu already has pattern for task listing and formatting
-- Existing helper functions: `_clear()`, `_prompt()`, `_pick()`, etc.
+**Options:**
+- Add "Projects" as menu option 12 that opens sub-menu
+- OR replace "List" menu with top-level chooser (Tasks vs Projects view)
 
-## Ambiguities and Assumptions
+**Assumption:** Add "12. Manage Projects" menu option that opens ProjectManager sub-menu (Create/List/Delete/Assign).
 
-### 1. Completion Rate Format
-**Assumption:** Return as float 0.0-1.0 (not percentage 0-100). This is more programmatic and can be formatted as needed by CLI/menu.
+---
 
-### 2. Division by Zero
-**Assumption:** If no tasks exist, completion_rate = 0.0 (or could be NaN, but 0.0 is safer for dataclass)
+## 6. Scope Signals: What's In, Out, Borderline
 
-### 3. Average Days Calculation
-**Assumption:** Use `(task.updated_at - task.created_at).days` for done tasks.
-- This assumes `updated_at` is set correctly when task is marked done (confirmed in code).
-- If no done tasks, average = None (optional field)
+### Explicitly In (per requirements)
+- Project domain class with id and name
+- Add project_id to Task (optional)
+- Create/list/delete projects
+- Filter tasks by project
+- Move tasks between projects
+- Delete project → tasks become unassigned (not deleted)
+- Project names cannot be empty
+- CLI flags AND interactive menu
 
-### 4. Overdue Definition
-**Assumption:** Use `task.is_overdue()` which returns False if:
-- `due_date` is None
-- Status is DONE
-Otherwise checks if `due_date < now(UTC)`
+### Explicitly Out
+- Project permissions / access control
+- Project templates or hierarchy
+- Project archive/soft-delete
+- Recurring tasks or task templates
+- Gantt charts or visualizations
 
-### 5. Menu Option Number
-**Assumption:** New option is "9" (adds before "0. Quit"). Could be other number, but 9 is next logical.
+### Borderline (Assumptions Made)
+- **Project name uniqueness:** Not enforced (names can repeat)
+- **Prefix lookup for projects:** Implemented (consistent with Task pattern)
+- **Menu structure for projects:** Separate sub-menu, not inline with tasks
+- **Export/import of projects:** Not mentioned in requirements; assume projects are NOT exported/imported in task export files. Or they are? **[Clarification needed]**
 
-### 6. Report Accessibility
-**Assumption:** 
-- CLI: `python -m src report` (no additional flags)
-- Menu: Option 9 on main menu
-- Both required per task statement
+---
 
-## Scope Signals
+## 7. Key Questions / Ambiguities
 
-### In Scope
-- Generate aggregate counts (total, by status, overdue, with due_date)
-- Calculate completion rate (done / total)
-- Return as dataclass
-- Bonus: average days from creation to completion
-- Accessible via CLI flag and menu option
-- Deterministic output
+1. **Export/Import behavior for projects:**
+   - Should `export` include both tasks AND projects, or only tasks?
+   - If a task refers to a project_id that doesn't exist locally, what happens on import?
+   - **Working assumption:** Task export includes project_id field. Projects are managed separately. Import validates that project_id exists or sets to None.
 
-### Explicitly Out of Scope
-- Charts or visualization (stated: "No charts/visualization")
-- Filters by date range or other criteria (report is global)
-- Custom report templates
-- Export to CSV, PDF, etc.
+2. **Storage format for backward compatibility:**
+   - Should load() auto-migrate old .todo_data.json to new format on first load, or keep old format supported indefinitely?
+   - **Working assumption:** Auto-migrate on first load, write new format to disk.
 
-### Borderline/Clarification Needed
-- Is `completion_rate` a float (0.0-1.0) or percentage (0-100)? → Assuming float
-- Is it possible to customize which fields are included? → No, all required fields are fixed
-- Can report be exported? → Not required, output only
+3. **UI/Menu entry point for projects:**
+   - Should the default menu show projects or tasks first?
+   - **Working assumption:** Current default (tasks list) is unchanged. Add "12. Manage Projects" option to main menu.
 
-## Suggested Implementation Priority
+4. **Task creation with project:**
+   - Should `add` command require project or allow optional --project?
+   - **Working assumption:** Optional --project flag. Tasks can be created unassigned, assigned later.
 
-1. **Create `TaskSummaryReport` dataclass** (src/models/task_summary_report.py)
-   - Define all required fields
-   - Simple dataclass, no methods needed
-   - Add to models/__init__.py
+5. **Moving tasks between projects:**
+   - New command `move-task` or extend `update` with --project flag?
+   - **Working assumption:** Extend `update` command with --project flag to move task to project (simpler than new command).
 
-2. **Implement report generation** (src/services/todo_service.py)
-   - Add `generate_report()` method
-   - Implement all count logic
-   - Test with various task scenarios (empty, all pending, mixed, overdue)
+---
 
-3. **Add CLI integration** (src/cli/todo_cli.py)
-   - Add `report` subcommand to argparse
-   - Add `_cmd_report()` handler
-   - Format output for readability
+## 8. Suggested Implementation Priority
 
-4. **Add menu integration** (src/cli/interactive_menu.py)
-   - Update main menu to include option 9
-   - Implement `_do_report()` method
-   - Format output for terminal display
+### Phase 1: Core Domain Model (Foundation)
+1. **`src/models/project.py`** - Create Project dataclass
+   - id (UUID), name (string with validation)
+   - to_dict(), from_dict()
+2. **Task.project_id field** - Add optional field, update serialization
+3. **`src/models/__init__.py`** - Export Project
 
-5. **Write comprehensive tests**
-   - Test report generation with various task scenarios
-   - Test CLI command
-   - Test menu option
-   - Edge cases: no tasks, all done, no due dates, etc.
+### Phase 2: Storage & Service Layer
+4. **Storage architecture decision & refactor**
+   - Extend JsonStorage or create separate file handling
+   - Update TaskManager._load()/_persist() to handle storage format
+5. **`src/services/project_manager.py`** - ProjectManager CRUD class
+6. **`src/services/todo_service.py`** - Add project-related methods to TodoService
+7. **TaskManager.list_by_project()** - Add project filtering to TaskManager
 
-6. **Update diagrams** (artifacts/*.puml)
-   - class_diagram.puml: Add TaskSummaryReport class
-   - component_diagram.puml: Add Report component
-   - use_case_diagram.puml: Add "Generate report" use case
+### Phase 3: CLI (Critical for "accessible via CLI")
+8. **`src/cli/todo_cli.py`** - Add project subcommands
+   - create-project, list-projects, delete-project
+   - Enhance add/update with --project flag
+9. **Fix __help__ output** - Ensure all project commands visible in --help
+
+### Phase 4: Interactive Menu
+10. **`src/cli/interactive_menu.py`** - Add project management menu
+    - Sub-menu for projects
+    - Integrate with task creation/updating
+
+### Phase 5: Testing
+11. **Unit tests** - Project model, ProjectManager, integration
+12. **Backward compatibility tests** - Old format loading, migration
+13. **CLI tests** - Project commands, flags, error handling
+
+### Phase 6: Documentation & Cleanup
+14. **Verify __help__ is complete**
+15. **Verify all commands reachable via both CLI and menu**
+
+---
+
+## 9. Critical Implementation Patterns to Follow
+
+Based on code review, any new feature must:
+
+1. **Use dataclass with uuid.uuid4() for ID generation**
+   ```python
+   id: str = field(default_factory=lambda: str(uuid.uuid4()))
+   ```
+
+2. **Implement to_dict() and from_dict() for serialization**
+   - to_dict(): Convert all datetime to isoformat(), enums to .value
+   - from_dict(): Reverse; use .get() for optional fields
+
+3. **Use Optional[T] for nullable fields, default to None in dataclass**
+
+4. **In Manager classes, use dict cache pattern:**
+   ```python
+   self._dict[id] = model
+   self._persist()  # after mutations
+   ```
+
+5. **In Service layer, validate inputs before passing to Manager**
+
+6. **In CLI, use argparse subparsers, set_defaults(func=handler), catch exceptions**
+
+7. **Prefix lookup pattern for ID resolution:**
+   ```python
+   matches = [t for tid, t in self._dict.items() if tid.startswith(task_id)]
+   ```
+
+8. **Always use timezone-aware datetimes (timezone.utc) in domain models**
+
+---
+
+## 10. Summary of Changes by Layer
+
+| Layer | Changes |
+|-------|---------|
+| **Models** | New Project; Task adds project_id field |
+| **Storage** | Refactor to handle tasks + projects (single or dual JSON files) |
+| **Services** | New ProjectManager; TodoService gains project methods; TaskManager gains project filtering |
+| **CLI** | 5+ new subcommands; enhanced add/update with --project flag |
+| **Menu** | New "Manage Projects" menu option with sub-items |
+| **Tests** | New test files for Project/ProjectManager; updates to existing tests for backward compat |
+
+**Estimated scope:** ~400-600 lines of new code, ~200-300 lines of refactoring in existing files.
+

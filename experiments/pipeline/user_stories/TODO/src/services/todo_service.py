@@ -7,14 +7,17 @@ from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..models.task_comment import TaskComment
 from ..models.task_summary_report import TaskSummaryReport
+from ..models.project import Project
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
+from .project_manager import ProjectManager, ProjectNotFoundError
 from .import_validator import ImportValidator
 
 
 class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
+        self._project_manager = ProjectManager(storage)
 
     def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
         if not title or not title.strip():
@@ -110,6 +113,86 @@ class TodoService:
         if status is not None:
             return self._manager.list_by_status(status)
         return self._manager.list_all()
+
+    def list_tasks_by_project(self, project_id: str) -> list[Task]:
+        """List all tasks in a project.
+
+        Args:
+            project_id: The project ID.
+
+        Returns:
+            list[Task]: All tasks in the project.
+        """
+        return self._manager.list_by_project(project_id)
+
+    def create_project(self, name: str) -> Project:
+        """Create a new project.
+
+        Args:
+            name: Project name (non-empty string).
+
+        Returns:
+            Project: The created project.
+
+        Raises:
+            ValueError: If name is empty.
+        """
+        if not name or not name.strip():
+            raise ValueError("Project name cannot be empty")
+        return self._project_manager.add(name.strip())
+
+    def list_projects(self) -> list[Project]:
+        """Get all projects.
+
+        Returns:
+            list[Project]: All projects.
+        """
+        return self._project_manager.list_all()
+
+    def get_project(self, project_id: str) -> Project:
+        """Get a project by ID or prefix.
+
+        Args:
+            project_id: The project ID or partial ID.
+
+        Returns:
+            Project: The project.
+
+        Raises:
+            ProjectNotFoundError: If project not found.
+        """
+        return self._project_manager.get(project_id)
+
+    def delete_project(self, project_id: str) -> None:
+        """Delete a project (tasks are orphaned, not deleted).
+
+        Args:
+            project_id: The project ID.
+
+        Raises:
+            ProjectNotFoundError: If project not found.
+        """
+        project = self._project_manager.get(project_id)  # Validates existence
+        self._manager.orphan_project_tasks(project.id)  # Orphan tasks first
+        self._project_manager.delete(project_id)
+
+    def move_task_to_project(self, task_id: str, project_id: Optional[str]) -> Task:
+        """Assign or reassign a task to a project.
+
+        Args:
+            task_id: The task ID.
+            project_id: The project ID, or None to unassign.
+
+        Returns:
+            Task: The updated task.
+
+        Raises:
+            TaskNotFoundError: If task is not found.
+            ProjectNotFoundError: If project_id is provided but project not found.
+        """
+        if project_id is not None:
+            self._project_manager.get(project_id)  # Validates project exists
+        return self._manager.set_project(task_id, project_id)
 
     def start_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.IN_PROGRESS)

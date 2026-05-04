@@ -556,3 +556,81 @@ def test_method_chaining_multiple_transitions():
     result = task.mark_in_progress().mark_done()
     assert result is task
     assert task.is_completed()
+
+
+# ─── Group M: Task project_id field tests ──────────────────────────────────
+
+def test_task_project_id_field():
+    """M1: Test that Task has project_id field defaulting to None."""
+    task = Task(title="Test Task")
+    assert hasattr(task, "project_id")
+    assert task.project_id is None
+
+
+def test_task_project_id_can_be_set():
+    """M2: Test that project_id can be set during creation."""
+    task = Task(title="Test Task", project_id="proj-123")
+    assert task.project_id == "proj-123"
+
+
+def test_task_to_dict_includes_project_id():
+    """M3: Test that to_dict includes project_id field."""
+    task = Task(title="Test Task", project_id="proj-456")
+    data = task.to_dict()
+
+    assert "project_id" in data
+    assert data["project_id"] == "proj-456"
+
+
+def test_task_to_dict_includes_project_id_none():
+    """M4: Test that to_dict includes project_id as None when not set."""
+    task = Task(title="Test Task")
+    data = task.to_dict()
+
+    assert "project_id" in data
+    assert data["project_id"] is None
+
+
+def test_task_from_dict_includes_project_id():
+    """M5: Test that from_dict restores project_id."""
+    data = {
+        "id": "task-123",
+        "title": "Test Task",
+        "description": None,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+        "due_date": None,
+        "comments": [],
+        "project_id": "proj-789",
+    }
+    task = Task.from_dict(data)
+
+    assert task.project_id == "proj-789"
+
+
+def test_task_from_dict_backward_compat_missing_project_id():
+    """M6: Test backward compatibility: old format without project_id loads correctly."""
+    data = {
+        "id": "task-123",
+        "title": "Legacy Task",
+        "description": None,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    # Note: no project_id key and no comments key
+
+    task = Task.from_dict(data)
+
+    assert task.project_id is None
+
+
+def test_task_roundtrip_with_project_id():
+    """M7: Test serialization/deserialization roundtrip preserves project_id."""
+    original = Task(title="Task in Project", project_id="proj-999")
+    data = original.to_dict()
+    restored = Task.from_dict(data)
+
+    assert restored.project_id == original.project_id
+    assert restored.project_id == "proj-999"

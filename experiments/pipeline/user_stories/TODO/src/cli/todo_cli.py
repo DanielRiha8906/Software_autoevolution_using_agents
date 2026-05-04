@@ -5,7 +5,9 @@ from datetime import datetime
 from typing import Optional
 
 from ..models.task_status import TaskStatus
+from ..models.project import Project
 from ..services.task_manager import TaskNotFoundError
+from ..services.project_manager import ProjectNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
 
@@ -32,6 +34,9 @@ class TodoCLI:
         except TaskNotFoundError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+        except ProjectNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
@@ -53,6 +58,7 @@ class TodoCLI:
         p_add.add_argument("title", help="Task title")
         p_add.add_argument("-d", "--description", help="Optional description")
         p_add.add_argument("--due-date", help="Due date (ISO 8601 format, e.g., 2026-05-02T15:30:00+02:00)")
+        p_add.add_argument("--project", help="Project ID to assign task to")
         p_add.set_defaults(func=self._cmd_add)
 
         # list
@@ -87,6 +93,10 @@ class TodoCLI:
             action="store_true",
             help="Show only overdue tasks",
         )
+        p_list.add_argument(
+            "--project",
+            help="Filter by project ID",
+        )
         p_list.set_defaults(func=self._cmd_list)
 
         # show
@@ -115,6 +125,7 @@ class TodoCLI:
         p_update.add_argument("-t", "--title", help="New title")
         p_update.add_argument("-d", "--description", help="New description")
         p_update.add_argument("--due-date", help="Due date (ISO 8601 format, e.g., 2026-05-02T15:30:00+02:00)")
+        p_update.add_argument("--project", help="Project ID to move task to (or none to unassign)")
         p_update.set_defaults(func=self._cmd_update)
 
         # delete
@@ -172,6 +183,20 @@ class TodoCLI:
             help="Duplicate handling strategy (default: skip)",
         )
         p_import.set_defaults(func=self._cmd_import)
+
+        # create-project
+        p_create_project = sub.add_parser("create-project", help="Create a new project")
+        p_create_project.add_argument("name", help="Project name")
+        p_create_project.set_defaults(func=self._cmd_create_project)
+
+        # list-projects
+        p_list_projects = sub.add_parser("list-projects", help="List all projects")
+        p_list_projects.set_defaults(func=self._cmd_list_projects)
+
+        # delete-project
+        p_delete_project = sub.add_parser("delete-project", help="Delete a project")
+        p_delete_project.add_argument("id", help="Project ID")
+        p_delete_project.set_defaults(func=self._cmd_delete_project)
 
         return parser
 
@@ -254,7 +279,14 @@ class TodoCLI:
             except ValueError:
                 raise ValueError(f"Invalid date format: {args.due_date}. Use ISO 8601 format (e.g., 2026-05-02T15:30:00+02:00)")
         task = self._service.add_task(args.title, args.description, due_date)
-        print(f"Added task {task.id[:8]}  {task.title}")
+
+        # Assign to project if specified
+        if getattr(args, "project", None):
+            project = self._service.get_project(args.project)  # Resolve prefix to full ID
+            task = self._service.move_task_to_project(task.id, project.id)
+            print(f"Added task {task.id[:8]}  {task.title} to project {project.id[:8]}")
+        else:
+            print(f"Added task {task.id[:8]}  {task.title}")
         return 0
 
     def _cmd_list(self, args: argparse.Namespace) -> int:
@@ -286,8 +318,13 @@ class TodoCLI:
         week = getattr(args, "week", None)
         month = getattr(args, "month", None)
         year_arg = getattr(args, "year", None)
+        project_id_arg = getattr(args, "project", None)
 
-        if week:
+        # Handle project filter
+        if project_id_arg:
+            project = self._service.get_project(project_id_arg)  # Resolve prefix to full ID
+            tasks = self._service.list_tasks_by_project(project.id)
+        elif week:
             tasks = self._parse_and_list_by_week(week, status)
         elif month:
             tasks = self._parse_and_list_by_month(month, status)
@@ -305,7 +342,8 @@ class TodoCLI:
             due_str = ""
             if task.due_date:
                 due_str = f"  (due: {task.due_date.isoformat()})"
-            print(f"{sym} {task.id[:8]}  {task.title}{desc}{due_str}")
+            proj_str = f"  [project: {task.project_id[:8]}]" if task.project_id else ""
+            print(f"{sym} {task.id[:8]}  {task.title}{desc}{due_str}{proj_str}")
         return 0
 
     def _cmd_show(self, args: argparse.Namespace) -> int:
@@ -342,7 +380,19 @@ class TodoCLI:
             except ValueError:
                 raise ValueError(f"Invalid date format: {args.due_date}. Use ISO 8601 format (e.g., 2026-05-02T15:30:00+02:00)")
         task = self._service.update_task(args.id, title=args.title, description=args.description, due_date=due_date)
-        print(f"Updated {task.id[:8]}  {task.title}")
+
+        # Handle project assignment if specified
+        if getattr(args, "project", None) is not None:
+            project_id_arg = args.project if args.project else None
+            if project_id_arg:
+                project = self._service.get_project(project_id_arg)  # Resolve prefix to full ID
+                task = self._service.move_task_to_project(task.id, project.id)
+                print(f"Updated {task.id[:8]}  {task.title} assigned to project {project.id[:8]}")
+            else:
+                task = self._service.move_task_to_project(task.id, None)
+                print(f"Updated {task.id[:8]}  {task.title} (unassigned from project)")
+        else:
+            print(f"Updated {task.id[:8]}  {task.title}")
         return 0
 
     def _cmd_delete(self, args: argparse.Namespace) -> int:
@@ -410,6 +460,28 @@ class TodoCLI:
             raise ValueError(f"Comment '{args.comment_id}' not found")
         updated = self._service.edit_comment(args.task_id, comment.id, args.content)
         print(f"Edited comment {updated.id[:8]}: {updated.content}")
+        return 0
+
+    def _cmd_create_project(self, args: argparse.Namespace) -> int:
+        project = self._service.create_project(args.name)
+        print(f"Created project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_list_projects(self, args: argparse.Namespace) -> int:
+        projects = self._service.list_projects()
+        if not projects:
+            print("No projects found.")
+            return 0
+        for project in projects:
+            tasks = self._service.list_tasks_by_project(project.id)
+            task_count = len(tasks)
+            print(f"{project.id[:8]}  {project.name}  ({task_count} task{'s' if task_count != 1 else ''})")
+        return 0
+
+    def _cmd_delete_project(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        self._service.delete_project(args.id)
+        print(f"Deleted project {project.id[:8]}  {project.name}")
         return 0
 
     def _cmd_report(self, args: argparse.Namespace) -> int:
