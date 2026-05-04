@@ -506,4 +506,4 @@ At runtime, TodoService sets `task_manager._comments_service = comments_service`
 - All CLI commands work identically
 - All test scenarios pass without modification
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 699.8s | Cost: $1.128198 USD | Turns: 23
