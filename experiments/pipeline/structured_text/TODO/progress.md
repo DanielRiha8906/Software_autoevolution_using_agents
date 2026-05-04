@@ -922,4 +922,4 @@ Successfully refactored TODO manager into clean layered architecture with no cir
 - ✅ File format and storage paths unchanged
 - ✅ CLI behavior identical
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 1203.5s | Cost: $3.081655 USD | Turns: 20
