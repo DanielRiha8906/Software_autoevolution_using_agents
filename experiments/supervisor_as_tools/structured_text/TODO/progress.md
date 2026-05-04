@@ -333,3 +333,66 @@ Duration: 394.1s | Cost: $0.784273 USD | Turns: 20
 - **Data integrity:** All task IDs, statuses, due dates, and comment IDs preserved exactly on round-trip import/export
 
 Duration: 465.9s | Cost: $0.993832 USD | Turns: 18
+
+---
+
+## Task 08: Add project mode for grouping tasks
+
+### Status: COMPLETED ✓
+
+### Files Changed
+- `src/models/project.py` — New Project dataclass with id (UUID) and name attributes, validation, serialization
+- `src/models/task.py` — Added optional project_id field to Task
+- `src/models/__init__.py` — Exported Project class
+- `src/storage/json_storage.py` — Added load_projects() and save_projects() methods for project persistence
+- `src/services/project_manager.py` — New ProjectManager service with add(), get(), list_all(), delete() methods
+- `src/services/task_manager.py` — Extended add() to accept optional project_id, added list_by_project() and unassign_from_project() methods
+- `src/services/todo_service.py` — Added project management methods (add_project, get_project, list_projects, delete_project), updated task methods to support project filtering
+- `src/cli/todo_cli.py` — Added project-add, project-list, project-delete subcommands; extended add and list commands with --project flag
+- `src/cli/interactive_menu.py` — Added project management menu option (7) with add, list, delete, and filter by project functionality
+- `tests/test_project.py` — 8 tests for Project model
+- `tests/test_project_manager.py` — 8 tests for ProjectManager CRUD
+- `tests/test_task_project.py` — 8 tests for Task/TaskManager project support
+- `tests/test_json_storage_projects.py` — 6 tests for storage persistence
+- `tests/test_todo_service_projects.py` — 10 tests for service layer
+- `tests/test_cli_projects.py` — 8 tests for CLI commands
+- `artifacts/class_diagram.puml` — Added Project class, extended TaskManager and TodoService with project methods
+- `artifacts/component_diagram.puml` — Added Project Manager component
+- `artifacts/use_case_diagram.puml` — Added project management use cases
+- `artifacts/activity_diagram.puml` — Updated menu flow to include project management
+
+### Test Results
+- **Total tests: 198**
+- **Passed: 198**
+- **Failed: 0**
+- **Success rate: 100%**
+
+### Requirements Met
+✓ MUST: Introduce a `Project` domain class with attributes: `id: str` (UUID), `name: str`
+✓ MUST: Add optional `project_id: Optional[str]` to `Task` to assign it to a project
+✓ MUST: Support creating and listing projects
+✓ MUST: Support listing tasks filtered by project
+✓ MUST: Preserve existing behavior for tasks without a project assignment
+✓ MUST: All new functionality must be accessible via `python -m src` — both as an interactive menu option and as a one-shot CLI flag
+✓ SHOULD: Validate that project names are not empty
+✓ SHOULD: Naming and structure must follow existing conventions in the codebase
+✓ SHOULD: Preserve backward compatibility with stored tasks (tasks without `project_id` must load without error)
+
+### Implementation Summary
+- **Project Model:** Dataclass with auto-generated UUID id and required non-empty name field. Full serialization support (to_dict/from_dict).
+- **Task Updates:** Added optional project_id field (defaults to None). Backward compatible: old task files without project_id load successfully.
+- **ProjectManager Service:** Standalone CRUD service managing projects. Supports prefix-based ID lookup for CLI convenience. Raises ProjectNotFoundError when project not found.
+- **Storage:** Extended JsonStorage with load_projects()/save_projects() methods. Storage format: {"tasks": [...], "comments": [...], "projects": [...]}. Handles files without projects key gracefully.
+- **TaskManager Extensions:** add() accepts optional project_id. New list_by_project(project_id) method filters tasks by project. unassign_from_project() unassigns all tasks when project deleted.
+- **TodoService:** Coordinates TaskManager and ProjectManager. Exposes: add_project(), get_project(), list_projects(), delete_project(). Project deletion unassigns tasks (project_id → None) rather than deleting them.
+- **CLI Commands:**
+  - `python -m src project-add "Project Name"` — creates project
+  - `python -m src project-list` — lists all projects
+  - `python -m src project-delete <id>` — deletes project (unassigns tasks)
+  - `python -m src add "Task" --project <id>` — creates task in project
+  - `python -m src list --project <id>` — lists tasks filtered by project
+- **Interactive Menu:** New menu option (7) for project management with submenu: Add project, List projects, List tasks by project, Delete project.
+- **Error Handling:** New ProjectNotFoundError exception. Proper validation of project names (non-empty). Graceful handling of missing project references.
+- **Cascade Behavior:** Deleting a project unassigns all tasks (sets project_id to None), preserving task data while removing project association.
+
+Duration: 525.7s | Cost: $1.225336 USD | Turns: 19

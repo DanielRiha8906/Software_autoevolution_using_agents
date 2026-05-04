@@ -3,10 +3,12 @@ from datetime import datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from ..models.project import Project
 from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..services.comments_service import CommentNotFoundError
+from ..services.project_manager import ProjectNotFoundError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -84,14 +86,16 @@ class InteractiveMenu:
             elif choice == "6":
                 self._do_set_due_date(tasks)
             elif choice == "7":
-                self._do_stats()
+                self._do_manage_projects()
             elif choice == "8":
-                self._do_manage_comments()
+                self._do_stats()
             elif choice == "9":
-                self._do_delete(tasks)
+                self._do_manage_comments()
             elif choice == "10":
-                self._do_export()
+                self._do_delete(tasks)
             elif choice == "11":
+                self._do_export()
+            elif choice == "12":
                 self._do_import()
             else:
                 input("  Unknown option. Press Enter to continue...")
@@ -119,11 +123,12 @@ class InteractiveMenu:
         print("  4. Change status  (start / done / reopen)")
         print("  5. Update task    (title / description)")
         print("  6. Set due date")
-        print("  7. View statistics")
-        print("  8. Manage comments")
-        print("  9. Delete task")
-        print(" 10. Export tasks and comments")
-        print(" 11. Import tasks and comments")
+        print("  7. Manage projects")
+        print("  8. View statistics")
+        print("  9. Manage comments")
+        print(" 10. Delete task")
+        print(" 11. Export tasks and comments")
+        print(" 12. Import tasks and comments")
         print("  0. Quit")
         print()
 
@@ -407,6 +412,117 @@ class InteractiveMenu:
                 print(f"\n  Error: Invalid date format or date is in the past. {e}")
             except TaskNotFoundError as e:
                 print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_manage_projects(self) -> None:
+        """Main menu for project management."""
+        while True:
+            _clear()
+            print("  Manage Projects\n")
+            print("  1. Add project")
+            print("  2. List projects")
+            print("  3. List tasks in a project")
+            print("  4. Delete a project")
+            print("  0. Back")
+            print()
+            choice = input("  > ").strip().lower()
+
+            if choice in ("0", "q", "quit", "back"):
+                return
+            elif choice == "1":
+                self._do_add_project()
+            elif choice == "2":
+                self._do_list_projects()
+            elif choice == "3":
+                self._do_list_by_project()
+            elif choice == "4":
+                self._do_delete_project()
+            else:
+                input("  Unknown option. Press Enter to continue...")
+
+    def _do_add_project(self) -> None:
+        """Add a new project."""
+        _clear()
+        print("  Add new project\n")
+        name = _prompt("Project name")
+        if not name:
+            input("  Project name cannot be empty. Press Enter...")
+            return
+
+        try:
+            project = self._service.add_project(name)
+            print(f"\n  Added: {project.id[:8]}  {project.name}")
+        except ValueError as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_list_projects(self) -> None:
+        """List all projects."""
+        _clear()
+        projects = self._service.list_projects()
+        print("  Projects\n")
+        if not projects:
+            print("  (no projects yet)")
+        else:
+            for project in projects:
+                print(f"  {project.id[:8]}  {project.name}")
+        print()
+        input("  Press Enter to continue...")
+
+    def _do_list_by_project(self) -> None:
+        """List tasks in a specific project."""
+        _clear()
+        projects = self._service.list_projects()
+        if not projects:
+            input("  No projects. Press Enter...")
+            return
+        print("  List tasks by project — pick a project:\n")
+        idx = _pick("Select", [f"{p.id[:8]}  {p.name}" for p in projects])
+        if idx is None:
+            return
+        project = projects[idx]
+
+        _clear()
+        print(f"  Tasks in project: {project.name}\n")
+        try:
+            tasks = self._service.list_tasks(project_id=project.id)
+            if not tasks:
+                print("  (no tasks in this project)")
+            else:
+                for task in tasks:
+                    desc = f"  — {task.description}" if task.description else ""
+                    print(f"  {_task_line(task)}{desc}")
+        except Exception as e:
+            print(f"  Error: {e}")
+        print()
+        input("  Press Enter to continue...")
+
+    def _do_delete_project(self) -> None:
+        """Delete a project."""
+        _clear()
+        projects = self._service.list_projects()
+        if not projects:
+            input("  No projects. Press Enter...")
+            return
+        print("  Delete project — pick a project:\n")
+        idx = _pick("Select", [f"{p.id[:8]}  {p.name}" for p in projects])
+        if idx is None:
+            return
+        project = projects[idx]
+
+        _clear()
+        print(f"  Delete project: {project.name}")
+        confirm = input("  Are you sure? (y/N): ").strip().lower()
+        if confirm != "y":
+            print("  Cancelled.")
+            input("  Press Enter to continue...")
+            return
+
+        try:
+            self._service.delete_project(project.id)
+            print(f"  Deleted project: {project.id[:8]}  {project.name}")
+        except ProjectNotFoundError as e:
+            print(f"\n  Error: {e}")
         input("  Press Enter to continue...")
 
     def _do_manage_comments(self) -> None:

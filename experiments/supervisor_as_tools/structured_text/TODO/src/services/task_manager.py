@@ -40,8 +40,8 @@ class TaskManager:
     def _persist(self) -> None:
         self._storage.save([t.to_dict() for t in self._tasks.values()])
 
-    def add(self, title: str, description: Optional[str] = None) -> Task:
-        task = Task(title=title, description=description)
+    def add(self, title: str, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
+        task = Task(title=title, description=description, project_id=project_id)
         self._tasks[task.id] = task
         self._persist()
         return task
@@ -62,6 +62,9 @@ class TaskManager:
 
     def list_by_status(self, status: TaskStatus) -> list[Task]:
         return [t for t in self._tasks.values() if t.status == status]
+
+    def list_by_project(self, project_id: str) -> list[Task]:
+        return [t for t in self._tasks.values() if t.project_id == project_id]
 
     def update(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
         task = self.get(task_id)
@@ -160,3 +163,15 @@ class TaskManager:
             result.append(task)
 
         return result
+
+    def unassign_from_project(self, project_id: str) -> None:
+        """Unassign all tasks from a project (set project_id to None).
+
+        Args:
+            project_id: The project ID to unassign from.
+        """
+        for task in self._tasks.values():
+            if task.project_id == project_id:
+                task.project_id = None
+                task.updated_at = datetime.now(timezone.utc)
+        self._persist()

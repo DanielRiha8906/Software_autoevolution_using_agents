@@ -18,12 +18,14 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Project Manager" as PMR
         component "Comments Service" as COM
         component "Validation\n(import)" as VAL
     }
 
     package "Domain Model" {
         component "Task Model\n(Task, TaskStatus)" as Model
+        component "Project Model\n(Project)" as ProjectModel
         component "Comment Model\n(TaskComment)" as CommentModel
         component "Statistics Model\n(TaskStatistics)" as StatsModel
     }
@@ -47,14 +49,18 @@ CLI --> SVC
 IEH --> SVC
 
 SVC --> MGR
+SVC --> PMR
 SVC --> COM
 SVC --> VAL : validates on import
 SVC ..> StatsModel : returns
 MGR --> Storage
 MGR ..> Model
+PMR --> Storage
+PMR ..> ProjectModel
 COM --> Storage
 COM ..> CommentModel
 Storage ..> Model
+Storage ..> ProjectModel
 Storage ..> CommentModel
 
 Storage --> DB : read/write
