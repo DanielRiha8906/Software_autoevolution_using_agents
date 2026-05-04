@@ -3,6 +3,9 @@
 skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
 
+' ============================================================================
+' MODELS LAYER
+' ============================================================================
 package "models" #DDEEFF {
     enum Operation {
         ADD
@@ -70,6 +73,78 @@ package "models" #DDEEFF {
     }
 }
 
+' ============================================================================
+' STORAGE LAYER (abstraction + implementations)
+' ============================================================================
+package "storage" #FFF3CC {
+    interface StorageBackend {
+        {abstract} +save(entry: MemoryEntry) : void
+        {abstract} +load_all() : list[MemoryEntry]
+        {abstract} +save_all(entries: list[MemoryEntry]) : void
+        ..
+        note on right : Abstract interface for persistent\\nstorage of MemoryEntry objects
+    }
+
+    class JsonStorage {
+        -filepath : Path | str
+        --
+        +JsonStorage(filepath: Path | str)
+        +save(entry: MemoryEntry) : void
+        +load_all() : list[MemoryEntry]
+        +save_all(entries: list[MemoryEntry]) : void
+        -_read_raw() : list
+        -_write_raw(records: list) : void
+    }
+
+    JsonStorage ..|> StorageBackend : implements
+}
+
+' ============================================================================
+' MEMORY/HISTORY LAYER (filters + filtering service)
+' ============================================================================
+package "services.memory" #E5F5E5 {
+    interface HistoryFilter {
+        {abstract} +apply(entries: list[MemoryEntry]) : list[MemoryEntry]
+        ..
+        note on right : Abstract interface for\\nhistory filtering strategies
+    }
+
+    class OperationFilter {
+        -operations : list[str]
+        --
+        +OperationFilter(operations: list[str])
+        +apply(entries: list[MemoryEntry]) : list[MemoryEntry]
+        ..
+        note on right : Filter by operation name(s)
+    }
+
+    class StateFilter {
+        -state : str
+        --
+        +StateFilter(state: str)
+        +apply(entries: list[MemoryEntry]) : list[MemoryEntry]
+        ..
+        note on right : Filter by success/error state
+    }
+
+    class CompositeFilter {
+        -filters : list[HistoryFilter]
+        --
+        +CompositeFilter(filters: list[HistoryFilter])
+        +apply(entries: list[MemoryEntry]) : list[MemoryEntry]
+        ..
+        note on right : Compose multiple filters\\napplied sequentially
+    }
+
+    OperationFilter ..|> HistoryFilter : implements
+    StateFilter ..|> HistoryFilter : implements
+    CompositeFilter ..|> HistoryFilter : implements
+    CompositeFilter --> HistoryFilter : filters
+}
+
+' ============================================================================
+' SERVICES LAYER (core business logic)
+' ============================================================================
 package "services" #DDFFD4 {
     class Calculator {
         +add(a: float, b: float) : float
@@ -87,20 +162,23 @@ package "services" #DDFFD4 {
         +ln(a: float, b: float) : float
         +exp(a: float, b: float) : float
         +calculate(op: Operation, a: float, b: float) : float
+        ..
+        note on right : Pure arithmetic engine;\\nno side effects
     }
 
     class MemoryService {
-        -storage : JsonStorage
+        -storage : StorageBackend
         --
-        +MemoryService(storage: JsonStorage)
+        +MemoryService(storage: StorageBackend)
         +store(entry: MemoryEntry) : void
         +retrieve() : list[MemoryEntry]
+        +filter(filters: list[HistoryFilter] | None,\\noperations: list[str] | None, state: str | None) : list[MemoryEntry]
+        +clear() : void
         +filter_by_operation(operation_name: str) : list[MemoryEntry]
         +filter_by_operations(operation_names: list[str]) : list[MemoryEntry]
         +filter_by_state(state: str) : list[MemoryEntry]
-        +filter(operations: list[str] | None, state: str | None) : list[MemoryEntry]
         ..
-        note on right : Encapsulates storage access;\\nabstraction over JsonStorage;\\nfiltering by operation/state
+        note on right : Depends on StorageBackend abstraction;\\ndelegate filtering to HistoryFilter;\\nlegacy methods for compatibility
     }
 
     class CalculatorService {
@@ -112,7 +190,7 @@ package "services" #DDFFD4 {
         +get_history() : list[MemoryEntry]
         +filter_history(operations: list[str] | None, state: str | None) : list[MemoryEntry]
         ..
-        note on right : Wraps results with error handling;\\nsaves via MemoryService;\\ndelegate filtering
+        note on right : Orchestrates calculations;\\nwraps with error handling;\\nsaves via MemoryService
     }
 
     class StatisticsService {
@@ -121,7 +199,7 @@ package "services" #DDFFD4 {
         +StatisticsService(memory_service: MemoryService)
         +calculate_statistics() : CalculationStatistics
         ..
-        note on right : Computes aggregated metrics\\nfrom stored calculation history
+        note on right : Computes aggregated metrics\\nfrom MemoryService history
     }
 
     class ImportExportService {
@@ -133,20 +211,137 @@ package "services" #DDFFD4 {
         -_validate_entry(data: dict) : tuple[bool, str|None]
         -_detect_duplicate(entry: MemoryEntry, existing: list) : bool
         ..
-        note on right : Handles JSON export/import\\nwith validation and duplicate detection
+        note on right : Handles JSON export/import;\\nuses memory_service.clear()\\nfor replace mode
     }
+
+    ' Dependencies within services layer
+    MemoryService --> "services.memory" : imports filters
+    MemoryService --> StorageBackend : depends on
+    CalculatorService --> Calculator : uses
+    CalculatorService --> MemoryService : uses
+    StatisticsService --> MemoryService : uses
+    ImportExportService --> MemoryService : uses
 }
 
-package "storage" #FFF3CC {
-    class JsonStorage {
-        -filepath : Path | str
-        --
-        +JsonStorage(filepath: Path | str)
-        +save(result: MemoryEntry) : void
-        +load_all() : list[MemoryEntry]
-        -_read_raw() : list
-        -_write_raw(records: list) : void
+' ============================================================================
+' INTERFACE LAYER (formatters + commands)
+' ============================================================================
+package "cli.formatters" #FFE5E5 {
+    interface OutputFormatter {
+        {abstract} +format(data: Any) : str
+        ..
+        note on right : Abstract interface for\\noutput formatting strategies
     }
+
+    class MemoryEntryFormatter {
+        +format(entry: MemoryEntry) : str
+    }
+
+    class MemoryEntryListFormatter {
+        -entry_formatter : MemoryEntryFormatter | None
+        --
+        +MemoryEntryListFormatter(entry_formatter: MemoryEntryFormatter | None)
+        +format(entries: list[MemoryEntry]) : str
+    }
+
+    class StatisticsFormatter {
+        +format(stats: CalculationStatistics) : str
+    }
+
+    class ImportResultFormatter {
+        +format(result: dict) : str
+    }
+
+    MemoryEntryFormatter ..|> OutputFormatter : implements
+    MemoryEntryListFormatter ..|> OutputFormatter : implements
+    StatisticsFormatter ..|> OutputFormatter : implements
+    ImportResultFormatter ..|> OutputFormatter : implements
+    MemoryEntryListFormatter --> MemoryEntryFormatter : uses
+}
+
+package "cli.commands" #FFE5CC {
+    interface Command {
+        {abstract} +execute() : void
+        ..
+        note on right : Abstract interface for\\nCLI command execution
+    }
+
+    class CalculateCommand {
+        -calculator_service : CalculatorService
+        -operation_str : str
+        -a : float
+        -b : float
+        --
+        +CalculateCommand(calculator_service, operation_str, a, b)
+        +execute() : void
+    }
+
+    class HistoryCommand {
+        -memory_service : MemoryService
+        -formatter : OutputFormatter | None
+        -filters : list[HistoryFilter] | None
+        --
+        +HistoryCommand(memory_service, formatter, filters)
+        +execute() : void
+    }
+
+    class StatisticsCommand {
+        -statistics_service : StatisticsService
+        -formatter : OutputFormatter | None
+        --
+        +StatisticsCommand(statistics_service, formatter)
+        +execute() : void
+    }
+
+    class ExportCommand {
+        -import_export_service : ImportExportService
+        -filepath : str
+        -exit_on_error : bool
+        --
+        +ExportCommand(import_export_service, filepath, exit_on_error)
+        +execute() : void
+    }
+
+    class ImportCommand {
+        -import_export_service : ImportExportService
+        -filepath : str
+        -mode : str
+        -formatter : OutputFormatter | None
+        -exit_on_error : bool
+        --
+        +ImportCommand(import_export_service, filepath, mode, formatter, exit_on_error)
+        +execute() : void
+    }
+
+    class FilterCommand {
+        -memory_service : MemoryService
+        -filters : list[HistoryFilter]
+        -formatter : OutputFormatter | None
+        --
+        +FilterCommand(memory_service, filters, formatter)
+        +execute() : void
+    }
+
+    CalculateCommand ..|> Command : implements
+    HistoryCommand ..|> Command : implements
+    StatisticsCommand ..|> Command : implements
+    ExportCommand ..|> Command : implements
+    ImportCommand ..|> Command : implements
+    FilterCommand ..|> Command : implements
+
+    ' Command dependencies
+    CalculateCommand --> CalculatorService : uses
+    HistoryCommand --> MemoryService : uses
+    HistoryCommand --> OutputFormatter : uses
+    HistoryCommand --> HistoryFilter : uses
+    StatisticsCommand --> StatisticsService : uses
+    StatisticsCommand --> OutputFormatter : uses
+    ExportCommand --> ImportExportService : uses
+    ImportCommand --> ImportExportService : uses
+    ImportCommand --> OutputFormatter : uses
+    FilterCommand --> MemoryService : uses
+    FilterCommand --> HistoryFilter : uses
+    FilterCommand --> OutputFormatter : uses
 }
 
 package "cli" #FFE5E5 {
@@ -155,42 +350,49 @@ package "cli" #FFE5E5 {
         -service : CalculatorService
         -statistics_service : StatisticsService
         -import_export_service : ImportExportService | None
+        -memory_service : MemoryService | None
+        -memory_formatter : MemoryEntryListFormatter
+        -statistics_formatter : StatisticsFormatter
+        -import_formatter : ImportResultFormatter
         --
-        +CalculatorCLI(service: CalculatorService, statistics_service: StatisticsService, import_export_service: ImportExportService | None)
+        +CalculatorCLI(service, statistics_service, import_export_service, memory_service)
         +run_interactive() : void
-        +run_command(operation: str, a: float, b: float) : void
-        -_print_menu() : void
-        -_resolve_menu_choice(choice: str) : Operation [0..1]
-        -_prompt_number(prompt: str) : float [0..1]
+        +run_command(operation_str: str, a: float, b: float) : void
         -_show_history() : void
         -_run_filter_menu() : void
-        -_prompt_operation_selection() : list[str] | None
-        -_prompt_state_selection() : str | None
-        -_show_filtered_history(operations: list[str] | None, state: str | None) : void
+        -_show_filtered_history(operations, state) : void
         -_show_statistics() : void
         -_export_history() : void
-        -_import_history(filepath: str | None, mode: str) : void
-        -_show_import_result(result: dict) : void
+        -_import_history(filepath, mode) : void
+        ..
+        note on right : Orchestrates commands and formatters;\\nroutes user input to appropriate handlers
     }
+
+    CalculatorCLI --> CalculatorService : uses
+    CalculatorCLI --> StatisticsService : uses
+    CalculatorCLI --> ImportExportService : uses
+    CalculatorCLI --> MemoryService : uses
+    CalculatorCLI --> MemoryEntryListFormatter : uses
+    CalculatorCLI --> StatisticsFormatter : uses
+    CalculatorCLI --> ImportResultFormatter : uses
+    CalculatorCLI --> HistoryCommand : creates/executes
+    CalculatorCLI --> FilterCommand : creates/executes
+    CalculatorCLI --> StatisticsCommand : creates/executes
+    CalculatorCLI --> ExportCommand : creates/executes
+    CalculatorCLI --> ImportCommand : creates/executes
 }
 
-CalculatorCLI --> CalculatorService : service
-CalculatorCLI --> StatisticsService : statistics_service
-CalculatorCLI --> ImportExportService : import_export_service
-CalculatorService --> Calculator : calculator
-CalculatorService --> MemoryService : memory_service
-StatisticsService --> MemoryService : memory_service
-ImportExportService --> MemoryService : memory_service
-MemoryService --> JsonStorage : storage
+' ============================================================================
+' DEPENDENCY DIAGRAM (model interactions)
+' ============================================================================
 
-CalculatorService ..> MemoryEntry : create, return
-StatisticsService ..> CalculationStatistics : create, return
-CalculatorService ..> Operation
-CalculatorCLI ..> Operation
-CalculatorCLI ..> MemoryEntry : receive, display
-CalculatorCLI ..> CalculationStatistics : display
-Calculator ..> Operation
-MemoryService ..> MemoryEntry : store, retrieve
-JsonStorage ..> MemoryEntry : save, load
+' Model usage
+CalculatorService ..> Operation : uses
+CalculatorService ..> MemoryEntry : creates, returns
+StatisticsService ..> CalculationStatistics : creates, returns
+ImportExportService ..> MemoryEntry : processes
+Calculator ..> Operation : uses
+MemoryService ..> MemoryEntry : stores, retrieves
+JsonStorage ..> MemoryEntry : persists, loads
 
 @enduml

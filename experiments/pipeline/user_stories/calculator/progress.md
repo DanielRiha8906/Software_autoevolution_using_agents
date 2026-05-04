@@ -275,3 +275,63 @@ Duration: 665.1s | Cost: $1.396620 USD | Turns: 16
 - ✅ All new functionality accessible via `python -m src`: interactive menu items 9-14 for scientific operations, one-shot CLI flags --operation sin/cos/tan/log/ln/exp, --help lists all 14 operations
 
 Duration: 540.7s | Cost: $1.121241 USD | Turns: 16
+
+## Task 09: Layer Separation Refactoring
+
+**Status**: ✅ Complete
+
+**Description**: Refactor the calculator codebase to separate three distinct layers (calculation engine, memory/history management, and interface) with clear boundaries and minimal cross-layer coupling. Use abstract base classes and protocols to decouple layers from each other.
+
+**Files Changed**:
+
+**Storage Layer (new abstraction):**
+- `src/storage/storage.py` — NEW: StorageBackend protocol defining save(entry: MemoryEntry), load_all() → list[MemoryEntry], save_all(entries: list[MemoryEntry]) contract
+
+**Memory/History Layer (refactored with new abstractions):**
+- `src/storage/json_storage.py` — Updated to implement StorageBackend protocol; added save_all() method for bulk operations
+- `src/services/memory/__init__.py` — NEW: Package exports for HistoryFilter and filter implementations
+- `src/services/memory/history_filter.py` — NEW: HistoryFilter protocol with apply(entries: list[MemoryEntry]) → list[MemoryEntry]; implementations: OperationFilter (filters by operation names), StateFilter (filters by success/error state), CompositeFilter (chains multiple filters)
+- `src/services/memory_service.py` — Refactored to depend on StorageBackend protocol (not concrete JsonStorage); new filter() API accepting HistoryFilter objects; added clear() method for clearing all history; maintained backward-compatible legacy filter methods for operations/state parameters
+- `src/services/calculator_service.py` — Updated filter_history() to create OperationFilter and StateFilter objects and use new filter API internally
+- `src/services/import_export_service.py` — Replaced direct access to memory_service.storage._write_raw() with memory_service.clear() method
+
+**Interface Layer (refactored with new abstractions):**
+- `src/cli/formatters/__init__.py` — NEW: Package exports for OutputFormatter and formatter implementations
+- `src/cli/formatters/output_formatter.py` — NEW: OutputFormatter protocol with format(data) → str contract
+- `src/cli/formatters/memory_entry_formatter.py` — NEW: MemoryEntryFormatter (formats single MemoryEntry), MemoryEntryListFormatter (formats list of entries with numbering)
+- `src/cli/formatters/statistics_formatter.py` — NEW: StatisticsFormatter (formats CalculationStatistics)
+- `src/cli/formatters/import_result_formatter.py` — NEW: ImportResultFormatter (formats import operation results)
+- `src/cli/commands/__init__.py` — NEW: Package exports for Command and command implementations
+- `src/cli/commands/command.py` — NEW: Command protocol with execute() → None contract
+- `src/cli/commands/calculate_command.py` — NEW: CalculateCommand executes a single calculation
+- `src/cli/commands/history_command.py` — NEW: HistoryCommand displays all calculation history
+- `src/cli/commands/filter_command.py` — NEW: FilterCommand displays filtered calculation history
+- `src/cli/commands/statistics_command.py` — NEW: StatisticsCommand displays statistics
+- `src/cli/commands/export_command.py` — NEW: ExportCommand exports history to file
+- `src/cli/commands/import_command.py` — NEW: ImportCommand imports history from file
+- `src/cli/calculator_cli.py` — Refactored to use formatters and commands; added memory_service parameter; removed embedded formatting logic; methods _show_history(), _show_filtered_history(), _show_statistics() now delegate to Command objects; interactive menu and input prompts preserved
+- `src/__main__.py` — Refactored to route command-line flags to Command handlers directly instead of calling CLI methods; --operation uses CalculateCommand; --show-history uses HistoryCommand or FilterCommand; --statistics uses StatisticsCommand; --export uses ExportCommand; --import uses ImportCommand
+
+**Diagram Updates:**
+- `artifacts/class_diagram.puml` — Updated to show all new protocols (StorageBackend, HistoryFilter, OutputFormatter, Command) and 13 new implementations; updated MemoryService dependencies to show StorageBackend abstraction; updated CalculatorCLI to show composition with formatters and commands
+- `artifacts/component_diagram.puml` — Refactored to show layered structure: Interface Layer (Commands + Formatters), Service Layer (Memory Service + Filters), Storage Layer (StorageBackend + JsonStorage), Domain Models
+- `artifacts/calculator_architecture.puml` — NEW: High-level layered architecture overview showing clear separation and data flow between layers
+
+**Test Results**:
+- Total tests: 627
+- Previously failing: 11 (test_main_show_history.py tests asserting on implementation details)
+- Fixed via test updates: All tests updated to verify behavior instead of internal method calls
+- Passed: 627 ✅
+- Failed: 0
+- Coverage: All new protocols, filters, formatters, commands tested; backward compatibility verified; integration tests confirm `python -m src` behavior unchanged
+
+**Acceptance Criteria Met**:
+- ✅ Calculation engine, memory/history management, and interface layers separated into distinct components
+- ✅ Each component has clearly defined boundary; cross-component coupling explicit and minimal (via protocols)
+- ✅ Abstract base classes/protocols decouple layers from each other (StorageBackend, HistoryFilter, OutputFormatter, Command)
+- ✅ All existing external behavior preserved: public interfaces, return types, side effects unchanged
+- ✅ Domain logic and calculation algorithms reorganized, not rewritten
+- ✅ `python -m src` behaves identically before and after refactoring
+- ✅ All existing functionality remains accessible (interactive menu + CLI flags)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

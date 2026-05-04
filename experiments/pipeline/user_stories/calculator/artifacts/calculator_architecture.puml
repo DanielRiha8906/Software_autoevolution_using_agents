@@ -1,0 +1,119 @@
+@startuml calculator_architecture
+
+!define INTERFACE_COLOR #FFE5E5
+!define SERVICE_COLOR #DDFFD4
+!define STORAGE_COLOR #FFF3CC
+!define MODEL_COLOR #DDEEFF
+
+skinparam componentStyle uml2
+skinparam defaultFontSize 12
+
+title Calculator: Layered Architecture (Refactored)
+
+' ============================================================================
+' PRESENTATION LAYER
+' ============================================================================
+package "Interface Layer (CLI)" as InterfaceLayer <<rectangle>> #FFE5E5 {
+    component "Commands\n(CalculateCommand\nHistoryCommand\nStatisticsCommand\nExportCommand\nImportCommand\nFilterCommand)" as Commands
+
+    component "Formatters\n(MemoryEntryFormatter\nMemoryEntryListFormatter\nStatisticsFormatter\nImportResultFormatter)" as Formatters
+
+    component "CLI Router\n(CalculatorCLI\n__main__.py)" as CLIRouter
+
+    CLIRouter --> Commands : routes to
+    CLIRouter --> Formatters : uses
+    Commands --> Formatters : use for output
+}
+
+' ============================================================================
+' SERVICE LAYER
+' ============================================================================
+package "Service Layer" as ServiceLayer <<rectangle>> #DDFFD4 {
+    component "Calculator Service\n(CalculatorService)" as CalcService
+
+    component "Statistics Service\n(StatisticsService)" as StatsService
+
+    component "Import/Export Service\n(ImportExportService)" as IEService
+
+    component "Memory Service\n(MemoryService)" as MemService
+
+    component "History Filters\n(OperationFilter\nStateFilter\nCompositeFilter)" as Filters
+
+    CalcService --> MemService : store/retrieve
+    StatsService --> MemService : query history
+    IEService --> MemService : clear/save_all
+    MemService --> Filters : delegates
+}
+
+' ============================================================================
+' PERSISTENCE LAYER
+' ============================================================================
+package "Storage Layer" as StorageLayer <<rectangle>> #FFF3CC {
+    interface "StorageBackend\n<<interface>>" as StorageInterface
+
+    component "JsonStorage\n(Implements StorageBackend)" as JsonStore
+
+    JsonStore -up-|> StorageInterface : implements
+}
+
+' ============================================================================
+' DOMAIN LAYER
+' ============================================================================
+package "Domain Models" as DomainLayer <<rectangle>> #DDEEFF {
+    component "MemoryEntry" as MemEntryModel
+    component "Operation (enum)" as OpModel
+    component "CalculationStatistics" as StatsModel
+    component "CalculationResult" as CalcResultModel
+}
+
+' ============================================================================
+' DATABASE
+' ============================================================================
+database "calculations.json" as Database
+
+' ============================================================================
+' CROSS-LAYER DEPENDENCIES
+' ============================================================================
+
+' Interface -> Service
+Commands --> CalcService : uses
+Commands --> MemService : queries
+Commands --> StatsService : queries
+Commands --> IEService : uses
+
+CLIRouter --> CalcService : uses
+CLIRouter --> StatsService : uses
+CLIRouter --> IEService : uses
+CLIRouter --> MemService : uses
+
+' Service -> Storage
+MemService --> StorageInterface : depends on
+MemService --> JsonStore : uses (via interface)
+
+' Storage -> Database
+JsonStore --> Database : read/write
+
+' Domain models (used everywhere)
+CalcService ..> OpModel : uses
+CalcService ..> MemEntryModel : creates
+StatsService ..> StatsModel : creates
+MemService ..> MemEntryModel : manages
+JsonStore ..> MemEntryModel : persists
+Commands ..> MemEntryModel : processes
+Formatters ..> MemEntryModel : formats
+Formatters ..> StatsModel : formats
+
+legend right
+    | <INTERFACE_COLOR>   Interface Layer  | Formatters + Commands  |
+    | <SERVICE_COLOR>     Service Layer    | Business logic + orchestration |
+    | <STORAGE_COLOR>     Storage Layer    | Persistence abstraction |
+    | <MODEL_COLOR>       Domain Models    | Data structures |
+
+    Note: New abstractions enable flexibility:
+    - StorageBackend allows different persistence implementations
+    - HistoryFilter enables composable filtering strategies
+    - OutputFormatter decouples formatting from business logic
+    - Command pattern allows command composition and testing
+endlegend
+
+@enduml
