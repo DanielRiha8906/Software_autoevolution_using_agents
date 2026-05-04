@@ -4,12 +4,12 @@ from datetime import datetime
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
-from ..storage.workflow_json_storage import WorkflowJsonStorage
+from ..storage.base import WorkflowRunStorage
 from .workflow_run_attempt_service import WorkflowRunAttemptService
 
 
 class WorkflowRunService:
-    def __init__(self, storage: WorkflowJsonStorage):
+    def __init__(self, storage: WorkflowRunStorage):
         self._storage = storage
         self._runs: List[WorkflowRun] = storage.load()
 
@@ -22,6 +22,21 @@ class WorkflowRunService:
         self._runs.append(run)
         self._persist()
         return run
+
+    def replace_run(self, run: WorkflowRun) -> None:
+        """Replace existing run or add if not exists. For import operations."""
+        self._runs = [r for r in self._runs if r.id != run.id]
+        self._runs.append(run)
+        self._persist()
+
+    def delete_run(self, run_id: str) -> bool:
+        """Delete run by id. Returns True if deleted, False if not found."""
+        original_count = len(self._runs)
+        self._runs = [r for r in self._runs if r.id != run_id]
+        if len(self._runs) < original_count:
+            self._persist()
+            return True
+        return False
 
     def list_runs(self) -> List[WorkflowRun]:
         return list(self._runs)

@@ -1,3 +1,3 @@
-from .github_auth import GitHubAuthManager
+from ..adapters.github.auth import GitHubAuthManager
 
 __all__ = ["GitHubAuthManager"]

@@ -112,14 +112,11 @@ class WorkflowRunExportImportService:
                     continue
                 else:
                     if not dry_run:
-                        service._runs = [r for r in service._runs if r.id != run.id]
-                        service._runs.append(run)
-                        service._persist()
+                        service.replace_run(run)
                     imported_runs += 1
             else:
                 if not dry_run:
-                    service._runs.append(run)
-                    service._persist()
+                    service.add_workflow_run(run)
                 imported_runs += 1
 
         imported_attempts = 0
@@ -151,14 +148,11 @@ class WorkflowRunExportImportService:
                         continue
                     else:
                         if not dry_run:
-                            attempt_service._attempts = [a for a in attempt_service._attempts if a.id != attempt.id]
-                            attempt_service._attempts.append(attempt)
-                            attempt_service._persist()
+                            attempt_service.replace_attempt(attempt)
                         imported_attempts += 1
                 else:
                     if not dry_run:
-                        attempt_service._attempts.append(attempt)
-                        attempt_service._persist()
+                        attempt_service.add_attempt(attempt)
                     imported_attempts += 1
 
         return ImportResult(

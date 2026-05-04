@@ -3,7 +3,6 @@ import sys
 from .storage.workflow_json_storage import WorkflowJsonStorage
 from .services.workflow_run_service import WorkflowRunService
 from .services.workflow_run_attempt_service import WorkflowRunAttemptService
-from .services.statistics_service import StatisticsService
 from .cli.workflow_cli import run_cli
 from .cli.interactive_menu import run_interactive
 

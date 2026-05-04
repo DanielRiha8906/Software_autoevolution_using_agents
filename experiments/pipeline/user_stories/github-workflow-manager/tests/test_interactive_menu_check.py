@@ -75,6 +75,7 @@ class TestMenuStructure:
             "Filter runs",
             "Advanced filter runs",
             "Get statistics",
+            "Fetch from GitHub",
             "Export runs to JSON",
             "Import runs from JSON",
             "Add workflow run attempt",

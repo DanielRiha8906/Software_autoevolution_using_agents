@@ -1,0 +1,148 @@
+@startuml module_structure_diagram
+
+title File Organization - Module Structure
+
+skinparam packageStyle rectangle
+
+package "src/" {
+
+    ' ========================================
+    ' ENTRY POINT
+    ' ========================================
+    file "__main__.py" as MAIN_FILE
+
+    ' ========================================
+    ' CLI LAYER
+    ' ========================================
+    package "cli/" {
+        file "__init__.py" as CLI_INIT
+        file "workflow_cli.py" as CLI_MAIN
+        file "interactive_menu.py" as CLI_MENU
+    }
+
+    ' ========================================
+    ' SERVICE LAYER
+    ' ========================================
+    package "services/" {
+        file "__init__.py" as SVC_INIT
+        file "workflow_run_service.py" as SVC_RUN
+        file "workflow_run_attempt_service.py" as SVC_ATTEMPT
+        file "workflow_run_tracker.py" as SVC_TRACKER
+        file "statistics_service.py" as SVC_STATS
+        file "workflow_export_import_service.py" as SVC_EXPORT
+    }
+
+    ' ========================================
+    ' ADAPTERS LAYER - GitHub Integration
+    ' ========================================
+    package "adapters/" {
+        file "__init__.py" as ADAPT_ROOT_INIT
+
+        package "github/" {
+            file "__init__.py" as GITHUB_INIT
+            file "base.py" as GITHUB_BASE
+            file "api_fetcher.py" as GITHUB_API
+            file "cli_fetcher.py" as GITHUB_CLI
+            file "factory.py" as GITHUB_FACTORY
+            file "auth.py" as GITHUB_AUTH
+            file "exceptions.py" as GITHUB_EXC
+        }
+    }
+
+    ' ========================================
+    ' STORAGE LAYER
+    ' ========================================
+    package "storage/" {
+        file "__init__.py" as STOR_INIT
+        file "base.py" as STOR_BASE
+        file "workflow_json_storage.py" as STOR_IMPL
+    }
+
+    ' ========================================
+    ' MODELS LAYER
+    ' ========================================
+    package "models/" {
+        file "__init__.py" as MODEL_INIT
+        file "workflow_run.py" as MODEL_RUN
+        file "workflow_run_attempt.py" as MODEL_ATTEMPT
+        file "workflow_status.py" as MODEL_STATUS
+        file "workflow_conclusion.py" as MODEL_CONCLUSION
+        file "statistics_report.py" as MODEL_REPORT
+        file "import_result.py" as MODEL_IMPORT
+        file "github_workflow_run_factory.py" as MODEL_FACTORY
+    }
+
+    ' ========================================
+    ' LEGACY AUTH LOCATION (kept for ref)
+    ' ========================================
+    package "auth/" {
+        file "__init__.py" as AUTH_INIT
+        file "github_auth.py" as AUTH_LEGACY
+    }
+
+    ' ========================================
+    ' LEGACY EXCEPTIONS (kept for ref)
+    ' ========================================
+    package "exceptions/" {
+        file "__init__.py" as EXC_INIT
+        file "github_exceptions.py" as EXC_LEGACY
+    }
+
+    ' ========================================
+    ' LEGACY SERVICES (kept for ref)
+    ' ========================================
+    package "services/" {
+        file "github_api_fetcher.py" as SVC_API_LEGACY
+        file "github_cli_fetcher.py" as SVC_CLI_LEGACY
+    }
+}
+
+MAIN_FILE --> CLI_MAIN
+MAIN_FILE --> CLI_MENU
+
+CLI_MAIN --> SVC_RUN
+CLI_MAIN --> GITHUB_API
+CLI_MENU --> SVC_RUN
+CLI_MENU --> GITHUB_API
+
+SVC_RUN --> STOR_BASE
+SVC_ATTEMPT --> STOR_BASE
+SVC_RUN --> MODEL_RUN
+SVC_ATTEMPT --> MODEL_ATTEMPT
+
+GITHUB_API --> GITHUB_FACTORY
+GITHUB_API --> GITHUB_AUTH
+GITHUB_API --> GITHUB_EXC
+
+STOR_IMPL --> STOR_BASE
+STOR_IMPL --> MODEL_RUN
+STOR_IMPL --> MODEL_ATTEMPT
+
+GITHUB_FACTORY --> MODEL_RUN
+GITHUB_FACTORY --> MODEL_STATUS
+GITHUB_FACTORY --> MODEL_CONCLUSION
+
+note right of STOR_BASE
+  **Layer Separation Achieved**
+
+  Layer 4: Storage abstraction
+  via protocols (base.py)
+
+  Layer 5: Storage implementation
+  (workflow_json_storage.py)
+end note
+
+note bottom of GITHUB_API
+  **Consolidation Complete**
+
+  All GitHub integration moved
+  to adapters/github/ module:
+  - api_fetcher.py
+  - cli_fetcher.py
+  - factory.py
+  - auth.py
+  - exceptions.py
+  - base.py (protocol)
+end note
+
+@enduml

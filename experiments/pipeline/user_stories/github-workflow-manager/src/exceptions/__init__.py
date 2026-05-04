@@ -1,4 +1,4 @@
-from .github_exceptions import (
+from ..adapters.github.exceptions import (
     GitHubAuthError,
     GitHubAPIError,
     GitHubNetworkError,

@@ -3,13 +3,97 @@
 skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
 
-package "exceptions" #FFE5E5 {
+' ============================================================================
+' STORAGE LAYER (Protocol Definitions)
+' ============================================================================
+package "storage" #FFF3CC {
+    interface WorkflowRunStorage <<protocol>> {
+        +save(runs: List[WorkflowRun]) : None
+        +load() : List[WorkflowRun]
+    }
+
+    interface WorkflowRunAttemptStorage <<protocol>> {
+        +save_attempts(attempts: List[WorkflowRunAttempt]) : None
+        +load_attempts() : List[WorkflowRunAttempt]
+    }
+
+    class WorkflowJsonStorage {
+        +filepath          : str
+        +attempts_filepath : str
+        --
+        +__init__(filepath: str, attempts_filepath: str)
+        +save(runs: List[WorkflowRun]) : None
+        +load() : List[WorkflowRun]
+        +save_attempts(attempts: List[WorkflowRunAttempt]) : None
+        +load_attempts() : List[WorkflowRunAttempt]
+    }
+
+    WorkflowJsonStorage ..|> WorkflowRunStorage : implements
+    WorkflowJsonStorage ..|> WorkflowRunAttemptStorage : implements
+}
+
+' ============================================================================
+' ADAPTERS LAYER - GitHub Integration
+' ============================================================================
+package "adapters.github" #FFE8CC {
+    interface WorkflowFetcher <<protocol>> {
+        +fetch_runs(owner: str, repo: str, \n  status: Optional[str],\n  branch: Optional[str],\n  created_after: Optional[datetime]) : List[WorkflowRun]
+    }
+
+    class GitHubAPIFetcher {
+        -_token : str
+        -_headers : dict
+        --
+        +__init__(token: str)
+        +fetch_runs(owner, repo, status, branch,\n  created_after, per_page) : List[WorkflowRun]
+        -_fetch_page(owner, repo, status, branch,\n  created_after, page, per_page) : requests.Response
+    }
+
+    class GitHubCLIFetcher {
+        +is_available() : bool
+        +fetch_runs(owner, repo, status, branch,\n  created_after) : List[WorkflowRun]
+    }
+
+    class GitHubWorkflowRunFactory {
+        +{static} from_github_api_response(data: dict) : WorkflowRun
+        -{static} _parse_status(status_str: str) : WorkflowStatus
+        -{static} _parse_conclusion(conclusion_str: Optional[str]) : Optional[WorkflowConclusion]
+        -{static} _parse_datetime(datetime_str: str) : datetime
+        -{static} _calculate_duration(created_at, updated_at) : float
+    }
+
+    class GitHubAuthManager {
+        -SECRETS_FILE_PATH : str
+        -TOKEN_ENV_VAR : str
+        -TOKEN_PREFIX_PATTERN : str
+        --
+        +get_token(explicit_token: Optional[str]) : str
+        +validate_token(token: str) : bool
+        -_load_token_from_file() : Optional[str]
+        -_prompt_for_token() : Optional[str]
+    }
+
     class GitHubAuthError <<Exception>>
     class GitHubAPIError <<Exception>>
     class GitHubNetworkError <<Exception>>
     class GitHubRateLimitError <<Exception>>
+
+    GitHubAPIFetcher ..|> WorkflowFetcher : implements
+    GitHubCLIFetcher ..|> WorkflowFetcher : implements
+    GitHubAPIFetcher --> GitHubWorkflowRunFactory : uses
+    GitHubCLIFetcher --> GitHubWorkflowRunFactory : uses
+    GitHubAPIFetcher ..> GitHubAuthError : throws
+    GitHubAPIFetcher ..> GitHubAPIError : throws
+    GitHubAPIFetcher ..> GitHubNetworkError : throws
+    GitHubAPIFetcher ..> GitHubRateLimitError : throws
+    GitHubCLIFetcher ..> GitHubAPIError : throws
+    GitHubCLIFetcher ..> GitHubNetworkError : throws
+    GitHubAuthManager ..> GitHubAuthError : throws
 }
 
+' ============================================================================
+' MODELS LAYER
+' ============================================================================
 package "models" #DDEEFF {
     enum WorkflowStatus {
         QUEUED = "queued"
@@ -87,62 +171,23 @@ package "models" #DDEEFF {
         +had_overwrite         : bool
     }
 
-    class GitHubWorkflowRunFactory {
-        +{static} from_github_api_response(data: dict) : WorkflowRun
-        -{static} _parse_status(status_str: str) : WorkflowStatus
-        -{static} _parse_conclusion(conclusion_str: Optional[str]) : Optional[WorkflowConclusion]
-        -{static} _parse_datetime(datetime_str: str) : datetime
-        -{static} _calculate_duration(created_at, updated_at) : float
-    }
+    WorkflowRun --> WorkflowStatus : uses
+    WorkflowRun --> WorkflowConclusion : uses
+    WorkflowRun "1" <-- "N" WorkflowRunAttempt : related to
 }
 
-package "storage" #FFF3CC {
-    class WorkflowJsonStorage {
-        +filepath          : str
-        +attempts_filepath : str
-        --
-        +__init__(filepath: str, attempts_filepath: str)
-        +save(runs: List[WorkflowRun]) : None
-        +load() : List[WorkflowRun]
-        +save_attempts(attempts: List[WorkflowRunAttempt]) : None
-        +load_attempts() : List[WorkflowRunAttempt]
-    }
-}
-
-package "auth" #E5F5FF {
-    class GitHubAuthManager {
-        -SECRETS_FILE_PATH : str
-        -TOKEN_ENV_VAR : str
-        -TOKEN_PREFIX_PATTERN : str
-        --
-        +get_token(explicit_token: Optional[str]) : str
-        +validate_token(token: str) : bool
-        -_load_token_from_file() : Optional[str]
-        -_prompt_for_token() : Optional[str]
-    }
-}
-
+' ============================================================================
+' SERVICES LAYER (Business Logic) - Uses Protocols
+' ============================================================================
 package "services" #DDFFD4 {
-    class GitHubAPIFetcher {
-        -_token : str
-        -_headers : dict
-        --
-        +__init__(token: str)
-        +fetch_runs(owner, repo, status, branch,\ncreated_after, per_page) : List[WorkflowRun]
-        -_fetch_page(owner, repo, status, branch,\ncreated_after, page, per_page) : requests.Response
-    }
-
-    class GitHubCLIFetcher {
-        +is_available() : bool
-        +fetch_runs(owner, repo, status, branch,\ncreated_after) : List[WorkflowRun]
-    }
-
     class WorkflowRunService {
-        -_storage : WorkflowJsonStorage
+        -_storage : WorkflowRunStorage
         -_runs    : List[WorkflowRun]
         --
-        +__init__(storage: WorkflowJsonStorage)
+        +__init__(storage: WorkflowRunStorage)
         +add_workflow_run(run: WorkflowRun) : WorkflowRun
+        +replace_run(run: WorkflowRun) : None
+        +delete_run(run_id: str) : bool
         +list_runs() : List[WorkflowRun]
         +get_run_detail(run_id: str) : Optional[WorkflowRun]
         +filter_by_branch(branch: str) : List[WorkflowRun]
@@ -153,16 +198,18 @@ package "services" #DDFFD4 {
         +filter_by_duration_min(min_seconds: float) : List[WorkflowRun]
         +filter_by_duration_max(max_seconds: float) : List[WorkflowRun]
         +filter_by_attempt_presence(attempt_service, has_attempts: bool) : List[WorkflowRun]
-        +query(created_after, created_before, duration_min,\nduration_max, attempt_service, has_attempts,\nbranch, status, conclusion) : List[WorkflowRun]
+        +query(...) : List[WorkflowRun]
         -_persist() : None
     }
 
     class WorkflowRunAttemptService {
-        -_storage  : WorkflowJsonStorage
+        -_storage  : WorkflowRunAttemptStorage
         -_attempts : List[WorkflowRunAttempt]
         --
-        +__init__(storage: WorkflowJsonStorage)
+        +__init__(storage: WorkflowRunAttemptStorage)
         +add_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
+        +replace_attempt(attempt: WorkflowRunAttempt) : None
+        +delete_attempt(attempt_id: int) : bool
         +list_attempts(sorted: bool = True) : List[WorkflowRunAttempt]
         +get_attempt(attempt_id: int) : Optional[WorkflowRunAttempt]
         +get_attempts_for_run(run_id: int, sorted: bool = True) : List[WorkflowRunAttempt]
@@ -181,14 +228,25 @@ package "services" #DDFFD4 {
     }
 
     class WorkflowRunExportImportService {
-        --
-        +export_to_file(filepath: str, service: WorkflowRunService,\n  attempt_service: Optional[WorkflowRunAttemptService],\n  include_attempts: bool) : None
-        +import_from_file(filepath: str, service: WorkflowRunService,\n  attempt_service: Optional[WorkflowRunAttemptService],\n  overwrite: bool, dry_run: bool) : ImportResult
-        -_validate_and_build_run(data: dict, record_index: int) : WorkflowRun
-        -_validate_and_build_attempt(data: dict, record_index: int) : WorkflowRunAttempt
+        +{static} export_to_file(filepath: str, service: WorkflowRunService,\n  attempt_service: Optional[WorkflowRunAttemptService],\n  include_attempts: bool) : None
+        +{static} import_from_file(filepath: str, service: WorkflowRunService,\n  attempt_service: Optional[WorkflowRunAttemptService],\n  overwrite: bool, dry_run: bool) : ImportResult
+        -{static} _validate_and_build_run(data: dict, record_index: int) : WorkflowRun
+        -{static} _validate_and_build_attempt(data: dict, record_index: int) : WorkflowRunAttempt
     }
+
+    WorkflowRunService --> WorkflowRunStorage : depends on (protocol)
+    WorkflowRunAttemptService --> WorkflowRunAttemptStorage : depends on (protocol)
+    WorkflowRunTracker --> WorkflowRunService : uses
+    StatisticsService ..> WorkflowRun : analyzes
+    StatisticsService ..> StatisticsReport : returns
+    WorkflowRunExportImportService ..> WorkflowRunService : uses
+    WorkflowRunExportImportService ..> WorkflowRunAttemptService : uses
+    WorkflowRunExportImportService ..> ImportResult : returns
 }
 
+' ============================================================================
+' CLI LAYER
+' ============================================================================
 package "cli" #FFE5E5 {
     class "workflow_cli" <<module>> {
         +build_parser() : ArgumentParser
@@ -207,77 +265,25 @@ package "cli" #FFE5E5 {
         -_check_run_state(service: WorkflowRunService) : None
         -_add_attempt(attempt_service: WorkflowRunAttemptService) : None
         -_list_attempts(attempt_service: WorkflowRunAttemptService) : None
-        -_detail_attempt(attempt_service: WorkflowRunAttemptService) : None
-        -_list_attempts_for_run(attempt_service: WorkflowRunAttemptService) : None
     }
+
+    "workflow_cli" ..> WorkflowRunService : uses
+    "workflow_cli" ..> WorkflowRunAttemptService : uses
+    "workflow_cli" ..> WorkflowRunTracker : uses
+    "workflow_cli" ..> StatisticsService : uses
+    "workflow_cli" ..> WorkflowRunExportImportService : uses
+    "workflow_cli" ..> GitHubAPIFetcher : uses
+    "workflow_cli" ..> GitHubCLIFetcher : uses
+    "workflow_cli" ..> GitHubAuthManager : uses
+
+    "interactive_menu" ..> WorkflowRunService : uses
+    "interactive_menu" ..> WorkflowRunAttemptService : uses
+    "interactive_menu" ..> WorkflowRunTracker : uses
+    "interactive_menu" ..> StatisticsService : uses
+    "interactive_menu" ..> WorkflowRunExportImportService : uses
+    "interactive_menu" ..> GitHubAPIFetcher : uses
+    "interactive_menu" ..> GitHubCLIFetcher : uses
+    "interactive_menu" ..> GitHubAuthManager : uses
 }
-
-GitHubAuthError              --|> Exception
-GitHubAPIError               --|> Exception
-GitHubNetworkError           --|> Exception
-GitHubRateLimitError         --|> Exception
-
-GitHubWorkflowRunFactory     ..>  WorkflowRun
-GitHubWorkflowRunFactory     ..>  WorkflowStatus
-GitHubWorkflowRunFactory     ..>  WorkflowConclusion
-
-GitHubAPIFetcher             ..>  WorkflowRun
-GitHubAPIFetcher             ..>  GitHubWorkflowRunFactory
-GitHubAPIFetcher             ..>  GitHubAuthError
-GitHubAPIFetcher             ..>  GitHubAPIError
-GitHubAPIFetcher             ..>  GitHubNetworkError
-GitHubAPIFetcher             ..>  GitHubRateLimitError
-
-GitHubCLIFetcher             ..>  WorkflowRun
-GitHubCLIFetcher             ..>  GitHubWorkflowRunFactory
-GitHubCLIFetcher             ..>  GitHubAPIError
-GitHubCLIFetcher             ..>  GitHubNetworkError
-
-GitHubAuthManager            ..>  GitHubAuthError
-
-WorkflowRun                   ..>  WorkflowStatus        : status
-WorkflowRun                   ..>  WorkflowConclusion    : conclusion
-WorkflowRun         "1" <--> "N" WorkflowRunAttempt     : run_id
-WorkflowRunService      "1" --> "1" WorkflowJsonStorage : -_storage
-WorkflowRunService           ..>  WorkflowRun
-WorkflowRunService           ..>  WorkflowStatus
-WorkflowRunService           ..>  WorkflowConclusion
-WorkflowRunAttemptService    "1" --> "1" WorkflowJsonStorage : -_storage
-WorkflowRunAttemptService         ..>  WorkflowRunAttempt
-WorkflowRunTracker      "1" --> "1" WorkflowRunService  : -_service
-WorkflowRunTracker           ..>  WorkflowRun
-StatisticsService            ..>  WorkflowRun
-StatisticsService            ..>  StatisticsReport
-StatisticsService            ..>  WorkflowRunAttemptService
-WorkflowRunExportImportService   ..>  WorkflowRunService
-WorkflowRunExportImportService   ..>  WorkflowRunAttemptService
-WorkflowRunExportImportService   ..>  WorkflowRun
-WorkflowRunExportImportService   ..>  WorkflowRunAttempt
-WorkflowRunExportImportService   ..>  ImportResult
-"workflow_cli"               ..>  WorkflowRunService
-"workflow_cli"               ..>  WorkflowRunAttemptService
-"workflow_cli"               ..>  WorkflowRunTracker
-"workflow_cli"               ..>  StatisticsService
-"workflow_cli"               ..>  WorkflowRunExportImportService
-"workflow_cli"               ..>  ImportResult
-"workflow_cli"               ..>  GitHubAPIFetcher
-"workflow_cli"               ..>  GitHubCLIFetcher
-"workflow_cli"               ..>  GitHubAuthManager
-"workflow_cli"               ..>  GitHubAuthError
-"workflow_cli"               ..>  GitHubAPIError
-"workflow_cli"               ..>  GitHubNetworkError
-"workflow_cli"               ..>  GitHubRateLimitError
-"interactive_menu"           ..>  WorkflowRunService
-"interactive_menu"           ..>  WorkflowRunAttemptService
-"interactive_menu"           ..>  WorkflowRunTracker
-"interactive_menu"           ..>  StatisticsService
-"interactive_menu"           ..>  WorkflowRunExportImportService
-"interactive_menu"           ..>  GitHubAPIFetcher
-"interactive_menu"           ..>  GitHubCLIFetcher
-"interactive_menu"           ..>  GitHubAuthManager
-"interactive_menu"           ..>  GitHubAuthError
-"interactive_menu"           ..>  GitHubAPIError
-"interactive_menu"           ..>  GitHubNetworkError
-"interactive_menu"           ..>  GitHubRateLimitError
 
 @enduml

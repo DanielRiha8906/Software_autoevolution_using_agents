@@ -1,25 +1,15 @@
-"""GitHub-related exceptions for fetch operations."""
+"""GitHub-related exceptions - backward compatibility re-export."""
 
+from ..adapters.github.exceptions import (
+    GitHubAuthError,
+    GitHubAPIError,
+    GitHubNetworkError,
+    GitHubRateLimitError,
+)
 
-class GitHubAuthError(Exception):
-    """Raised when authentication fails (invalid/expired token)."""
-
-    pass
-
-
-class GitHubAPIError(Exception):
-    """Raised when GitHub API request fails."""
-
-    pass
-
-
-class GitHubNetworkError(Exception):
-    """Raised when network connection fails."""
-
-    pass
-
-
-class GitHubRateLimitError(Exception):
-    """Raised when GitHub API rate limit is exceeded."""
-
-    pass
+__all__ = [
+    "GitHubAuthError",
+    "GitHubAPIError",
+    "GitHubNetworkError",
+    "GitHubRateLimitError",
+]

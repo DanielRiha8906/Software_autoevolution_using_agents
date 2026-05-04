@@ -1,0 +1,128 @@
+@startuml dependency_diagram
+
+title Dependency Flow - No Circular Dependencies
+
+skinparam linetype ortho
+left to right direction
+
+' ============================================================================
+' CLEAN DEPENDENCY FLOW
+' ============================================================================
+
+' Presentation Layer
+package "PRESENTATION" #FFE5E5 {
+    file [workflow_cli.py] as CLI
+    file [interactive_menu.py] as MENU
+    file [__main__.py] as MAIN
+}
+
+' Service Layer
+package "SERVICES" #DDFFD4 {
+    file [workflow_run_service.py] as SVC_RUN
+    file [workflow_run_attempt_service.py] as SVC_ATTEMPT
+    file [workflow_run_tracker.py] as SVC_TRACKER
+    file [statistics_service.py] as SVC_STATS
+    file [workflow_export_import_service.py] as SVC_EXPORT
+}
+
+' Adapters Layer
+package "ADAPTERS" #FFE8CC {
+    file [api_fetcher.py] as ADAPT_API
+    file [cli_fetcher.py] as ADAPT_CLI
+    file [factory.py] as ADAPT_FACTORY
+    file [auth.py] as ADAPT_AUTH
+    file [exceptions.py] as ADAPT_EXC
+}
+
+' Storage Layer (Protocols + Implementation)
+package "STORAGE" #FFF3CC {
+    file [base.py\n(protocols)] as STORAGE_PROTO
+    file [workflow_json_storage.py] as STORAGE_IMPL
+}
+
+' Models Layer
+package "MODELS" #DDEEFF {
+    file [workflow_run.py] as MODEL_RUN
+    file [workflow_run_attempt.py] as MODEL_ATTEMPT
+    file [workflow_status.py] as MODEL_STATUS
+    file [workflow_conclusion.py] as MODEL_CONCLUSION
+    file [statistics_report.py] as MODEL_REPORT
+    file [import_result.py] as MODEL_IMPORT_RESULT
+}
+
+' Persistence
+package "PERSISTENCE" #E8F8E8 {
+    file [workflow_runs.json] as JSON_RUNS
+    file [workflow_run_attempts.json] as JSON_ATTEMPTS
+}
+
+' Dependencies
+MAIN --> CLI
+MAIN --> MENU
+
+CLI --> SVC_RUN
+CLI --> SVC_ATTEMPT
+CLI --> SVC_TRACKER
+CLI --> SVC_STATS
+CLI --> SVC_EXPORT
+CLI --> ADAPT_API
+CLI --> ADAPT_CLI
+CLI --> ADAPT_AUTH
+
+MENU --> SVC_RUN
+MENU --> SVC_ATTEMPT
+MENU --> SVC_TRACKER
+MENU --> SVC_STATS
+MENU --> SVC_EXPORT
+MENU --> ADAPT_API
+MENU --> ADAPT_CLI
+MENU --> ADAPT_AUTH
+
+SVC_RUN --> STORAGE_PROTO
+SVC_ATTEMPT --> STORAGE_PROTO
+SVC_TRACKER --> SVC_RUN
+SVC_STATS --> MODEL_RUN
+SVC_STATS --> MODEL_REPORT
+SVC_EXPORT --> SVC_RUN
+SVC_EXPORT --> SVC_ATTEMPT
+SVC_EXPORT --> MODEL_RUN
+SVC_EXPORT --> MODEL_ATTEMPT
+
+ADAPT_API --> ADAPT_FACTORY
+ADAPT_API --> MODEL_RUN
+ADAPT_API --> ADAPT_AUTH
+ADAPT_API --> ADAPT_EXC
+
+ADAPT_CLI --> ADAPT_FACTORY
+ADAPT_CLI --> MODEL_RUN
+ADAPT_CLI --> ADAPT_EXC
+
+ADAPT_FACTORY --> MODEL_RUN
+ADAPT_FACTORY --> MODEL_STATUS
+ADAPT_FACTORY --> MODEL_CONCLUSION
+
+STORAGE_IMPL --> STORAGE_PROTO
+STORAGE_IMPL --> MODEL_RUN
+STORAGE_IMPL --> MODEL_ATTEMPT
+STORAGE_IMPL --> JSON_RUNS
+STORAGE_IMPL --> JSON_ATTEMPTS
+
+MODEL_RUN --> MODEL_STATUS
+MODEL_RUN --> MODEL_CONCLUSION
+MODEL_RUN --|> MODEL_ATTEMPT : relationship
+
+' Highlight: No upward dependencies
+note right of STORAGE_IMPL
+  **Dependency Principles:**
+
+  ✓ Direction: Always downward
+  ✓ No circular dependencies
+  ✓ Services depend on protocols,
+    not implementations
+  ✓ Adapters are independent
+    of services
+  ✓ Models are completely
+    independent
+end note
+
+@enduml
