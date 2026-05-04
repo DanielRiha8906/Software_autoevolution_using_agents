@@ -813,4 +813,4 @@ result = self.service.perform(operation, a, b)  # All logic delegated
 ✓ Clean separation between interface and service layers
 ✓ UML diagrams updated to reflect GUI addition
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 506.8s | Cost: $0.894839 USD | Turns: 28
