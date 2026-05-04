@@ -1,3 +1,9 @@
+"""Memory service - in-memory history management.
+
+This module provides in-memory storage for memory entries, implementing
+the MemoryManager protocol and decoupled from file I/O concerns.
+"""
+
 from typing import Optional
 
 from ..models.memory_entry import MemoryEntry
@@ -8,9 +14,13 @@ class MemoryService:
 
     Manages the lifecycle of memory entries without any file I/O or serialization.
     File I/O and serialization belong in a separate storage layer.
+
+    This service implements the history/memory management component,
+    keeping memory operations separate from persistence concerns.
     """
 
     def __init__(self) -> None:
+        """Initialize with an empty list of entries."""
         self._entries: list[MemoryEntry] = []
 
     def store(self, entry: MemoryEntry) -> None:

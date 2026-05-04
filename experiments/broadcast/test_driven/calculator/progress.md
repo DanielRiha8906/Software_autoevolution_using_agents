@@ -493,3 +493,171 @@ Duration: 544.5s | Cost: $1.126526 USD | Turns: 64
 ✓ Interactive menu integration with submenu for scientific operations
 
 Duration: 298.6s | Cost: $0.690346 USD | Turns: 66
+
+---
+
+# Task 09: Component Refactoring (Broadcast Architecture)
+
+## Objective
+Refactor the calculator into three clearly separated components:
+- **Calculation Engine** - Pure calculation logic
+- **Memory/History Management** - Storage and history tracking
+- **Interface Layer** - User interaction (CLI)
+
+## Broadcast Evaluation Summary
+
+### Candidates Evaluated
+
+**Implementer-A**: Documentation and component identification approach
+- Added comprehensive architecture documentation
+- Enhanced module docstrings and layer comments
+- Minimal code changes (mostly documentation)
+- Result: **105/105 tests passing**
+- Approach: Non-intrusive, easy to understand for readers
+
+**Implementer-B**: Protocol-based interfaces with module organization
+- Created `src/core/` - CalculationEngine protocol wrapping pure logic
+- Created `src/history/` - MemoryManager protocol coordinating memory services
+- Created `src/interface/` - UserInterface protocol for CLI layer
+- Refactored services with clear layer documentation
+- Result: **105/105 tests passing**
+- Approach: Code-level separation with clean abstractions
+
+**Implementer-C**: Abstract base classes with dependency injection factory pattern
+- Created `src/components/` - Abstract interfaces and composite implementations
+- Implemented factory pattern for dependency injection
+- Added orchestrator pattern coordinating components
+- Created comprehensive usage documentation
+- Result: **105/105 tests passing**
+- Approach: More complex pattern-based architecture
+
+### Winner Selection
+**Implementer-B** (implementation merged)
+
+**Rationale**: 
+- Provides clear code-level component separation through protocols
+- Creates explicit module boundaries (core/, history/, interface/)
+- Balances thoroughness with maintainability
+- Uses appropriate design patterns (protocol-based composition)
+- Not overly complex compared to Candidate C
+- More substantial than Candidate A's documentation focus
+- Cleanest layering: Layer 3 (Interface) → Layer 2 (Memory/History) → Layer 1 (Engine)
+
+## Architecture Details
+
+### Three Component Layers
+
+**1. CALCULATION ENGINE** (`src/core/calculation_engine.py`)
+- `CalculationEngine` protocol: Defines pure calculation contract
+- `BasicCalculationEngine`: Stateless implementation of arithmetic operations
+- No dependencies on storage or UI
+- Used by: CalculatorService, ScientificCalculator
+
+**2. MEMORY/HISTORY MANAGEMENT** (`src/history/memory_manager.py`)
+- `MemoryManager` protocol: Defines memory operations contract
+- Coordinates: MemoryService, StatisticsService, ImportExportService, JsonStorage
+- Manages history tracking, statistics, and serialization
+- Used by: CalculatorService, CalculatorCLI
+
+**3. INTERFACE LAYER** (`src/interface/user_interface.py`)
+- `UserInterface` protocol: Defines CLI interaction contract
+- `CLIBase`: Provides common CLI utilities
+- `CalculatorCLI`: Implements interactive and command-line modes
+- Depends on: CalculatorService, MemoryService
+
+### Key Architecture Properties
+✓ No circular dependencies (clean upward flow)
+✓ Clear responsibility boundaries
+✓ Protocol-based abstractions
+✓ Minimal and traceable changes
+✓ All existing behavior preserved
+
+## Files Changed
+
+### New Files (6)
+- `src/core/__init__.py`
+- `src/core/calculation_engine.py` - CalculationEngine protocol and implementation
+- `src/history/__init__.py`
+- `src/history/memory_manager.py` - MemoryManager protocol
+- `src/interface/__init__.py`
+- `src/interface/user_interface.py` - UserInterface protocol and CLIBase
+
+### Modified Files (8)
+- `src/services/calculator.py` - Enhanced layer documentation
+- `src/services/calculator_service.py` - Enhanced layer documentation
+- `src/services/scientific_calculator.py` - Inherits from BasicCalculationEngine
+- `src/services/memory_service.py` - Added layer documentation (memory component)
+- `src/services/statistics_service.py` - Added layer documentation (memory component)
+- `src/services/import_export_service.py` - Added layer documentation (memory component)
+- `src/cli/calculator_cli.py` - Now extends CLIBase for code reuse
+- `src/storage/json_storage.py` - Enhanced layer documentation
+
+### Diagrams Updated (3)
+- `artifacts/class_diagram.puml` - Shows three component layers and protocols
+- `artifacts/component_diagram.puml` - Shows layered architecture and dependencies
+- `artifacts/sequence_diagram_perform.puml` - Shows operation flow across components
+
+## Implementation Details
+
+### Protocol-Based Separation
+1. **CalculationEngine**: Pure stateless math operations
+   ```python
+   class CalculationEngine(Protocol):
+       def calculate(operation: str, a: float, b: float) -> float: ...
+   ```
+
+2. **MemoryManager**: Unified history and memory interface
+   ```python
+   class MemoryManager(Protocol):
+       def add_entry(entry: MemoryEntry) -> None: ...
+       def get_history() -> list: ...
+   ```
+
+3. **UserInterface**: CLI interaction contract
+   ```python
+   class UserInterface(Protocol):
+       def run_interactive() -> None: ...
+       def handle_command(args) -> None: ...
+   ```
+
+### Dependency Flow
+```
+Layer 3: Interface (CLI)
+   ↓
+Layer 2: Memory/History (Services + Storage)
+   ↓
+Layer 1: Calculation Engine (Pure Logic)
+```
+
+## Test Results
+- **Original tests passing**: 105/105
+- **Post-refactoring tests**: 105/105 ✓
+- **CLI behavior**: Identical to pre-refactoring ✓
+- **python -m src**: All functionality accessible ✓
+
+### Test Coverage
+- Calculator service: 14 tests
+- Memory service: 15 tests
+- Statistics service: 13 tests
+- Import/export service: 5 tests
+- Scientific calculator: 9 tests
+- CLI integration: 6 tests
+- Core functionality: 43 tests
+
+## Requirements Met
+
+✓ Preserved all existing public behavior
+✓ Preserved existing public method signatures
+✓ Did not rewrite calculation algorithms
+✓ Did not introduce unrelated features
+✓ Avoided circular dependencies
+✓ Kept file/module changes minimal and traceable
+✓ Used protocols (abstractions) for component interfaces
+✓ All 105 existing tests pass
+✓ Code compiles without syntax or import errors
+✓ Existing calculator operations behave the same
+✓ Existing memory/history functionality behaves the same
+✓ New structure has clear responsibility boundaries
+✓ python -m src behaves identically before and after
+
+Duration: 780.7s | Cost: $1.670244 USD | Turns: 42

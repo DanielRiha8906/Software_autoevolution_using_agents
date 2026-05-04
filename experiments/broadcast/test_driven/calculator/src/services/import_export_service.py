@@ -1,13 +1,22 @@
+"""Import/Export service - data serialization for memory entries.
+
+This module provides import/export functionality for memory entries,
+part of the history/memory management component.
+"""
+
 import json
 from pathlib import Path
-from typing import Any
 
 from ..models.memory_entry import MemoryEntry
 from .memory_service import MemoryService
 
 
 class ImportExportService:
-    """Service for importing and exporting memory entries to/from JSON files."""
+    """Service for importing and exporting memory entries to/from JSON files.
+
+    Part of the history/memory management component, providing data
+    persistence and interchange capabilities.
+    """
 
     def __init__(self, memory_service: MemoryService) -> None:
         """Initialize the ImportExportService.

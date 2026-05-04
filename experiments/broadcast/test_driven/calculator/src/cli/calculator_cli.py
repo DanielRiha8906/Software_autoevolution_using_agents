@@ -1,11 +1,29 @@
+"""Calculator CLI - command-line interface.
+
+This module provides the CLI interface and is decoupled from the
+calculation engine and storage layers.
+"""
+
 import sys
 
+from ..interface.user_interface import CLIBase
 from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
 from ..services.scientific_calculator import ScientificCalculator
 
 
-class CalculatorCLI:
+class CalculatorCLI(CLIBase):
+    """Command-line interface for the calculator.
+
+    Implements the UserInterface protocol and provides both interactive
+    and command-mode access to calculator functionality.
+
+    Layer responsibilities:
+    - Interface: User interactions, menus, prompts
+    - Service: Calculation orchestration (CalculatorService)
+    - Core: Pure calculation logic (accessed via CalculatorService)
+    """
+
     _MENU: list[tuple[Operation, str]] = [
         (Operation.ADD,      "Add"),
         (Operation.SUBTRACT, "Subtract"),
@@ -18,6 +36,11 @@ class CalculatorCLI:
     ]
 
     def __init__(self, service: CalculatorService) -> None:
+        """Initialize the CLI with a CalculatorService.
+
+        Args:
+            service: The CalculatorService that performs calculations
+        """
         self.service = service
 
     # ------------------------------------------------------------------
@@ -25,6 +48,7 @@ class CalculatorCLI:
     # ------------------------------------------------------------------
 
     def run_interactive(self) -> None:
+        """Run the calculator in interactive mode with menus and prompts."""
         print("=== Calculator ===")
         while True:
             self._print_menu()
@@ -46,7 +70,7 @@ class CalculatorCLI:
                 self._run_scientific_menu()
                 continue
 
-            operation = self._resolve_menu_choice(choice)
+            operation = self._resolve_menu_choice_as_operation(choice)
             if operation is None:
                 print("Invalid choice — try again.\n")
                 continue
@@ -65,6 +89,13 @@ class CalculatorCLI:
                 print(f"\n  Error: {str(exc)}\n")
 
     def run_command(self, operation_str: str, a: float, b: float) -> None:
+        """Run the calculator in command mode (one-shot operation).
+
+        Args:
+            operation_str: The operation name (e.g., "add")
+            a: First operand
+            b: Second operand
+        """
         try:
             operation = Operation.from_string(operation_str)
             result = self.service.perform(operation, a, b)
@@ -78,6 +109,7 @@ class CalculatorCLI:
     # ------------------------------------------------------------------
 
     def _run_scientific_menu(self) -> None:
+        """Handle the scientific operations submenu."""
         scientific_ops = ["Sin", "Cos", "Tan", "Log (base 10)", "Ln (natural log)", "Exp"]
         print("\nScientific Operations:")
         for i, op in enumerate(scientific_ops, 1):
@@ -113,6 +145,7 @@ class CalculatorCLI:
             print(f"\n  Error: {str(exc)}\n")
 
     def _print_menu(self) -> None:
+        """Display the main menu."""
         print("\nOperations:")
         for i, (_, label) in enumerate(self._MENU, 1):
             print(f"  {i}. {label}")
@@ -120,24 +153,22 @@ class CalculatorCLI:
         print(f"  {len(self._MENU) + 2}. Scientific operations")
         print(f"  {len(self._MENU) + 3}. Exit")
 
-    def _resolve_menu_choice(self, choice: str) -> Operation | None:
-        try:
-            idx = int(choice) - 1
-            if 0 <= idx < len(self._MENU):
-                return self._MENU[idx][0]
-        except ValueError:
-            pass
+    def _resolve_menu_choice_as_operation(self, choice: str) -> Operation | None:
+        """Resolve a menu choice (1-based index) to an Operation.
+
+        Args:
+            choice: The user's menu choice
+
+        Returns:
+            The Operation if valid, None otherwise
+        """
+        idx = self._resolve_menu_choice(choice, len(self._MENU))
+        if idx is not None:
+            return self._MENU[idx][0]
         return None
 
-    def _prompt_number(self, prompt: str) -> float | None:
-        raw = input(prompt).strip()
-        try:
-            return float(raw)
-        except ValueError:
-            print(f"  Invalid number: '{raw}' — please enter a numeric value.")
-            return None
-
     def _show_history(self) -> None:
+        """Display the calculation history."""
         history = self.service.get_history()
         if not history:
             print("\n  No calculations recorded yet.\n")
