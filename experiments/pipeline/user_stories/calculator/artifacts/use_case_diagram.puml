@@ -6,23 +6,38 @@ left to right direction
 
 actor User
 
-rectangle "Calculator Application" {
-    usecase "Perform calculation" as UC_Calc
-    usecase "View calculation history" as UC_History
-    usecase "Filter calculation history" as UC_Filter
-    usecase "View statistics" as UC_Stats
-    usecase "Export calculation history" as UC_Export
-    usecase "Import calculation history" as UC_Import
+rectangle "Calculator Application (CLI + GUI)" {
+
+    rectangle "CLI Interface" {
+        usecase "Calculate (CLI)" as UC_Calc_CLI
+        usecase "View history (CLI)" as UC_History_CLI
+        usecase "Filter history (CLI)" as UC_Filter_CLI
+        usecase "View statistics (CLI)" as UC_Stats_CLI
+        usecase "Export history (CLI)" as UC_Export_CLI
+        usecase "Import history (CLI)" as UC_Import_CLI
+    }
+
+    rectangle "GUI Interface" {
+        usecase "Calculate (GUI)" as UC_Calc_GUI
+        usecase "View history (GUI)" as UC_History_GUI
+        usecase "Switch operation mode" as UC_Mode_Switch
+    }
+
     usecase "Exit application" as UC_Exit
 
 }
 
-User --> UC_Calc
-User --> UC_History
-User --> UC_Filter
-User --> UC_Stats
-User --> UC_Export
-User --> UC_Import
+User --> UC_Calc_CLI
+User --> UC_History_CLI
+User --> UC_Filter_CLI
+User --> UC_Stats_CLI
+User --> UC_Export_CLI
+User --> UC_Import_CLI
+
+User --> UC_Calc_GUI
+User --> UC_History_GUI
+User --> UC_Mode_Switch
+
 User --> UC_Exit
 
 @enduml

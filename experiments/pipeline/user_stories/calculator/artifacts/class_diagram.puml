@@ -4,6 +4,99 @@ skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
 
 ' ============================================================================
+' GUI LAYER (tkinter components)
+' ============================================================================
+package "gui" #FFE5CC {
+    class MainWindow {
+        -gui_controller : GUIController
+        --
+        +__init__(gui_controller: GUIController) : void
+        +_setup_ui() : void
+        +_setup_callbacks() : void
+        +_on_calculate(operation_str: str, a: float, b: float) : void
+        +_on_mode_changed(mode: str) : void
+        +_refresh_history() : void
+        +run() : void
+        ..
+        note on right : Root Tkinter window;\\nmanages all GUI panels;\\nroutes events to GUIController
+    }
+
+    class InputPanel {
+        -current_mode : str
+        -operation_var : StringVar
+        -operand_a_var : StringVar
+        -operand_b_var : StringVar
+        -calculate_callback : callable | None
+        --
+        +set_calculate_callback(callback) : void
+        +_on_calculate() : void
+        +_on_clear() : void
+        +set_mode(mode: str) : void
+        +get_operands() : tuple[float, float]
+        +get_operation() : str
+        +set_error_message(message: str) : void
+        +_on_operation_changed() : void
+        ..
+        note on right : Handles operation selection\\nand operand entry;\\nno business logic
+    }
+
+    class ResultPanel {
+        -result_label : Label
+        --
+        +display_result(entry: MemoryEntry) : void
+        +clear() : void
+        ..
+        note on right : Displays result or error\\nfrom last calculation
+    }
+
+    class HistoryPanel {
+        -history_listbox : Listbox
+        -entries : list[MemoryEntry]
+        --
+        +refresh(entries: list[MemoryEntry]) : void
+        +clear() : void
+        +get_entries() : list[MemoryEntry]
+        ..
+        note on right : Scrollable list of\\ncalculation history
+    }
+
+    class ModeSelector {
+        -mode_var : StringVar
+        -current_mode : str
+        -mode_changed_callback : callable | None
+        --
+        +set_mode_changed_callback(callback) : void
+        +_on_mode_changed() : void
+        +get_mode() : str
+        ..
+        note on right : Toggle between standard\\nand scientific modes
+    }
+
+    class GUIController {
+        -calculator_service : CalculatorService
+        -memory_service : MemoryService
+        -statistics_service : StatisticsService
+        --
+        +perform_calculation(operation_str: str, a: float, b: float) : MemoryEntry
+        +get_history() : list[MemoryEntry]
+        +filter_history(operations: list[str] | None, state: str | None) : list[MemoryEntry]
+        +get_statistics() : CalculationStatistics
+        ..
+        note on right : Bridge to services;\\nno business logic;\\npure delegation
+    }
+
+    MainWindow --> InputPanel : creates, manages
+    MainWindow --> ResultPanel : creates, manages
+    MainWindow --> HistoryPanel : creates, manages
+    MainWindow --> ModeSelector : creates, manages
+    MainWindow --> GUIController : delegates to
+    InputPanel --> GUIController : calls
+    ResultPanel --> GUIController : receives from
+    HistoryPanel --> GUIController : queries
+    ModeSelector --> InputPanel : notifies
+}
+
+' ============================================================================
 ' MODELS LAYER
 ' ============================================================================
 package "models" #DDEEFF {
@@ -394,5 +487,12 @@ ImportExportService ..> MemoryEntry : processes
 Calculator ..> Operation : uses
 MemoryService ..> MemoryEntry : stores, retrieves
 JsonStorage ..> MemoryEntry : persists, loads
+
+' GUI model usage
+GUIController ..> MemoryEntry : returns
+GUIController ..> CalculationStatistics : returns
+InputPanel ..> MemoryEntry : receives
+ResultPanel ..> MemoryEntry : displays
+HistoryPanel ..> MemoryEntry : displays
 
 @enduml

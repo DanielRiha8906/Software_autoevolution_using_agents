@@ -1,6 +1,7 @@
 @startuml calculator_architecture
 
-!define INTERFACE_COLOR #FFE5E5
+!define GUI_COLOR #FFE5CC
+!define CLI_COLOR #FFE5E5
 !define SERVICE_COLOR #DDFFD4
 !define STORAGE_COLOR #FFF3CC
 !define MODEL_COLOR #DDEEFF
@@ -8,12 +9,27 @@
 skinparam componentStyle uml2
 skinparam defaultFontSize 12
 
-title Calculator: Layered Architecture (Refactored)
+title Calculator: Layered Architecture (CLI + GUI)
 
 ' ============================================================================
-' PRESENTATION LAYER
+' PRESENTATION LAYER - GUI
 ' ============================================================================
-package "Interface Layer (CLI)" as InterfaceLayer <<rectangle>> #FFE5E5 {
+package "Interface Layer (GUI)" as GUILayer <<rectangle>> #FFE5CC {
+    component "GUI Components\n(InputPanel\nResultPanel\nHistoryPanel\nModeSelector)" as GUIComponents
+
+    component "Main Window\n(MainWindow)" as MainWindow
+
+    component "GUI Controller\n(GUIController)" as GUIController
+
+    MainWindow --> GUIComponents : manages
+    MainWindow --> GUIController : uses
+    GUIComponents --> GUIController : calls back
+}
+
+' ============================================================================
+' PRESENTATION LAYER - CLI
+' ============================================================================
+package "Interface Layer (CLI)" as CLILayer <<rectangle>> #FFE5E5 {
     component "Commands\n(CalculateCommand\nHistoryCommand\nStatisticsCommand\nExportCommand\nImportCommand\nFilterCommand)" as Commands
 
     component "Formatters\n(MemoryEntryFormatter\nMemoryEntryListFormatter\nStatisticsFormatter\nImportResultFormatter)" as Formatters
@@ -75,7 +91,12 @@ database "calculations.json" as Database
 ' CROSS-LAYER DEPENDENCIES
 ' ============================================================================
 
-' Interface -> Service
+' GUI -> Service (via GUIController)
+GUIController --> CalcService : uses
+GUIController --> MemService : queries
+GUIController --> StatsService : queries
+
+' CLI -> Service
 Commands --> CalcService : uses
 Commands --> MemService : queries
 Commands --> StatsService : queries
@@ -104,16 +125,17 @@ Formatters ..> MemEntryModel : formats
 Formatters ..> StatsModel : formats
 
 legend right
-    | <INTERFACE_COLOR>   Interface Layer  | Formatters + Commands  |
+    | <GUI_COLOR>         GUI Layer        | Tkinter components |
+    | <CLI_COLOR>         CLI Layer        | Commands + Formatters  |
     | <SERVICE_COLOR>     Service Layer    | Business logic + orchestration |
     | <STORAGE_COLOR>     Storage Layer    | Persistence abstraction |
     | <MODEL_COLOR>       Domain Models    | Data structures |
 
-    Note: New abstractions enable flexibility:
-    - StorageBackend allows different persistence implementations
-    - HistoryFilter enables composable filtering strategies
-    - OutputFormatter decouples formatting from business logic
-    - Command pattern allows command composition and testing
+    Note: Architecture supports dual interfaces:
+    - GUIController bridges GUI to services (no business logic)
+    - CLI Router manages command-based CLI interactions
+    - Services layer independent of presentation mode
+    - StorageBackend abstraction enables flexible persistence
 endlegend
 
 @enduml

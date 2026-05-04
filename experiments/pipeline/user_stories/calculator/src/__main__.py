@@ -19,6 +19,8 @@ from .cli.commands.filter_command import FilterCommand
 from .cli.commands.export_command import ExportCommand
 from .cli.commands.import_command import ImportCommand
 from .cli.formatters.memory_entry_formatter import MemoryEntryListFormatter
+from .gui.gui_controller import GUIController
+from .gui.main_window import MainWindow
 
 
 def _build_services() -> tuple[CalculatorService, MemoryService, StatisticsService, ImportExportService]:
@@ -89,6 +91,11 @@ def main() -> None:
         help="When importing: 'merge' (append to existing) or 'replace' (overwrite all)",
     )
     parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch the graphical user interface",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -97,6 +104,14 @@ def main() -> None:
 
     args = parser.parse_args()
     calculator_service, memory_service, statistics_service, import_export_service = _build_services()
+
+    # Handle --gui flag
+    if args.gui:
+        gui_controller = GUIController(calculator_service, memory_service, statistics_service)
+        window = MainWindow(gui_controller)
+        window.run()
+        sys.exit(0)
+
     cli = CalculatorCLI(calculator_service, statistics_service, import_export_service, memory_service)
 
     # Handle --export flag

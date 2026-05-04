@@ -4,9 +4,18 @@ skinparam componentStyle uml2
 skinparam defaultFontSize 13
 left to right direction
 
-package "Calculator Application (Refactored Layers)" {
+package "Calculator Application (CLI + GUI Layers)" {
 
     component "Entry Point\n(__main__)" as Main
+
+    component "GUI Layer" {
+        component "Main Window\n(MainWindow)" as Window
+        component "Input Panel\n(operation, operand entry)" as InputPanel
+        component "Result Panel\n(success/error display)" as ResultPanel
+        component "History Panel\n(scrollable list)" as HistoryPanel
+        component "Mode Selector\n(standard/scientific)" as ModeSelector
+        component "GUI Controller\n(GUIController)" as GUICtrl
+    }
 
     component "CLI Layer" {
         component "Command Router\n(CalculatorCLI)" as CLI
@@ -29,10 +38,26 @@ package "Calculator Application (Refactored Layers)" {
 
     component "Domain Models\n(MemoryEntry,\nOperation,\nCalculationStatistics)" as Models
 
-    Main --> CLI : initializes
+    Main --> Window : initializes (--gui)
+    Main --> CLI : initializes (interactive)
     Main --> Service : initializes
     Main --> Statistics : initializes
     Main --> ImportExport : initializes
+
+    Window --> InputPanel : manages
+    Window --> ResultPanel : manages
+    Window --> HistoryPanel : manages
+    Window --> ModeSelector : manages
+    Window --> GUICtrl : uses
+
+    InputPanel --> GUICtrl : calls on Calculate
+    ResultPanel --> GUICtrl : displays results from
+    HistoryPanel --> GUICtrl : refreshes from
+    ModeSelector --> InputPanel : updates operation list
+
+    GUICtrl --> Service : uses
+    GUICtrl --> Memory : queries
+    GUICtrl --> Statistics : queries
 
     CLI --> Commands : routes to
     CLI --> Formatters : uses
@@ -69,8 +94,20 @@ database "calculations.json" as DB
 
 Store --> DB : read/write
 
+note right of Window
+    Tkinter root window;
+    coordinates GUI components
+    and delegates to GUIController
+end note
+
+note right of GUICtrl
+    Bridge between GUI and services;
+    no business logic, only
+    delegation to services
+end note
+
 note right of CLI
-    Entry point for all user
+    Entry point for command-line
     interactions; orchestrates
     commands and formatters
 end note
