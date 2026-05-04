@@ -726,4 +726,4 @@ All tests pass including:
 - ✓ Clear Filters button resets both dropdowns
 - ✓ Window closes cleanly without unhandled exceptions
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 698.3s | Cost: $1.363374 USD | Turns: 13
