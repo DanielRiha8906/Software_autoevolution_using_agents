@@ -12,11 +12,23 @@ rectangle "Calculator Application" {
     usecase "View calculation history" as UC_History
     usecase "Exit application" as UC_Exit
 
+    usecase "Access via CLI" as UC_CLI
+    usecase "Access via GUI" as UC_GUI
 }
 
 User --> UC_Calc
 User --> UC_Scientific
 User --> UC_History
 User --> UC_Exit
+
+UC_CLI -.-> UC_Calc : alternative
+UC_CLI -.-> UC_Scientific : alternative
+UC_CLI -.-> UC_History : alternative
+UC_CLI -.-> UC_Exit : alternative
+
+UC_GUI -.-> UC_Calc : alternative
+UC_GUI -.-> UC_Scientific : alternative
+UC_GUI -.-> UC_History : alternative
+UC_GUI -.-> UC_Exit : alternative
 
 @enduml

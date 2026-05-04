@@ -10,6 +10,7 @@ top to bottom direction
 package "LAYER 3: INTERFACE LAYER" #DDEEFF {
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
+    component "GUI Interface\n(CalculatorGUI)" as GUI
 }
 
 ' ============================================================================
@@ -55,6 +56,7 @@ Main --> Import : initializes [optional]
 
 ' Layer 3 -> Layer 2: Interface uses orchestration service
 CLI --> Service : delegates calculations to
+GUI --> Service : delegates calculations to
 
 ' Layer 2 -> Layer 1: Service uses calculation engine
 Service --> Calc : uses pure calculation logic
@@ -72,6 +74,7 @@ Import --> HistFiles : read/write
 ' All layers use shared models
 Main ..> Models : uses
 CLI ..> Models : uses
+GUI ..> Models : uses
 Service ..> Models : uses
 Memory ..> Models : uses
 Stats ..> Models : uses
@@ -95,6 +98,12 @@ note bottom of CLI
   User interaction
   Menus and prompts
   No business logic
+end note
+
+note bottom of GUI
+  Graphical user interface
+  Button clicks & display
+  Tkinter-based
 end note
 
 @enduml
