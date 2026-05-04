@@ -8,6 +8,7 @@ package "Calculator Application" {
 
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
+    component "GUI Interface\n(CalculatorGUI)\n(tkinter)" as GUI [0..1]
     component "Application Service\n(CalculatorService)" as Service
     component "Event Recording\n(EventRecorder)" as EventRec
     component "Calculation Engine\n(Calculator)" as Calc
@@ -20,7 +21,8 @@ package "Calculator Application" {
     component "Import/Export Service\n(MemoryImportExportService)" as ImportExport [0..1]
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
 
-    Main --> CLI : initializes
+    Main --> CLI : initializes (default)
+    Main --> GUI : initializes [0..1] (--gui flag)
     Main --> Service : initializes
     Main ..> Memory : initializes [0..1]
     Main ..> ImportExport : initializes [0..1]
@@ -28,6 +30,8 @@ package "Calculator Application" {
     CLI --> Service : uses
     CLI ..> Memory : uses [0..1]
     CLI ..> ImportExport : uses [0..1]
+    GUI --> Service : uses [0..1]
+    GUI ..> Memory : uses [0..1]
     Service --> Calc : uses
     Service --> StorageAbs : uses
     Service --> EventRec : uses

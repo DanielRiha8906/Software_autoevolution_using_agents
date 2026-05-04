@@ -7,8 +7,11 @@ left to right direction
 actor User
 
 rectangle "Calculator Application" {
-    usecase "Perform calculation" as UC_Calc
-    usecase "View calculation history" as UC_History
+    usecase "Perform calculation (CLI)" as UC_Calc
+    usecase "View calculation history (CLI)" as UC_History
+    usecase "Perform calculation (GUI)" as UC_CalcGUI
+    usecase "View calculation history (GUI)" as UC_HistoryGUI
+    usecase "Clear inputs" as UC_ClearGUI
     usecase "Exit application" as UC_Exit
     usecase "Square a number" as UC_Square
     usecase "Take square root" as UC_Sqrt
@@ -33,6 +36,9 @@ rectangle "Calculator Application" {
 
 User --> UC_Calc
 User --> UC_History
+User --> UC_CalcGUI
+User --> UC_HistoryGUI
+User --> UC_ClearGUI
 User --> UC_Exit
 User --> UC_Square
 User --> UC_Sqrt
@@ -55,9 +61,13 @@ User --> UC_Import
 
 UC_Calc ..> UC_Memory : <<extends>> [if available]
 UC_Calc ..> UC_Failures : <<extends>> [if available]
+UC_CalcGUI ..> UC_HistoryGUI : <<extends>> [if memory available]
+UC_CalcGUI ..> UC_ClearGUI : <<includes>>
 UC_FilteredMemory --|> UC_Memory : specializes
 UC_Statistics --|> UC_Summary : refinement
 UC_Export --|> UC_Memory : specializes
 UC_Import --|> UC_Memory : specializes
+UC_CalcGUI --|> UC_Calc : variant (GUI)
+UC_HistoryGUI --|> UC_History : variant (GUI)
 
 @enduml

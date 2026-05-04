@@ -7,6 +7,7 @@ from .services.memory_service import MemoryService
 from .services.memory_import_export_service import MemoryImportExportService
 from .services.service_factory import build_service
 from .cli.calculator_cli import CalculatorCLI
+from .gui.calculator_gui import CalculatorGUI
 
 
 def _as_number(value: str) -> float:
@@ -59,6 +60,11 @@ def main() -> None:
         help="Import memory entries from a JSON file",
     )
     parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch graphical interface",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="ARG",
@@ -69,6 +75,12 @@ def main() -> None:
     service, memory_service = build_service()
     cli = CalculatorCLI(service, memory_service)
     import_export_service = MemoryImportExportService()
+
+    # Handle GUI flag
+    if args.gui:
+        gui = CalculatorGUI(service, memory_service)
+        gui.run()
+        return
 
     # Handle export-memory flag
     if args.export_memory:

@@ -1,0 +1,30 @@
+@startuml state_diagram_gui
+
+skinparam defaultFontSize 13
+skinparam stateFontStyle bold
+
+top to bottom direction
+
+[*] --> GUIStartup
+
+GUIStartup --> InputState : window initialized
+
+InputState --> OperationSelected : operation button clicked
+InputState --> [*] : window closed
+
+OperationSelected --> InputState : status updated with selection
+InputState --> ValidatingInput : Calculate button clicked
+
+ValidatingInput --> Calculating : input valid
+ValidatingInput --> ErrorDisplay : invalid operand
+ErrorDisplay --> InputState : error shown
+
+Calculating --> ResultDisplay : success
+Calculating --> ErrorDisplay : error
+
+ResultDisplay --> HistoryUpdate : result calculated
+HistoryUpdate --> InputState : auto-clear ready
+
+InputState --> InputState : Clear button clicked
+
+@enduml
