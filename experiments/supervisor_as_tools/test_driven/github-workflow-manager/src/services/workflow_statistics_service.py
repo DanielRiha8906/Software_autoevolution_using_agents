@@ -1,21 +1,24 @@
-from typing import Dict
+from typing import Dict, Optional
 
 from ..models.workflow_statistics_report import WorkflowStatisticsReport
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..models.workflow_status import WorkflowStatus
 from .workflow_run_service import WorkflowRunService
+from .attempt_service import AttemptService
 
 
 class WorkflowStatisticsService:
     """Service for computing workflow statistics."""
 
-    def __init__(self, workflow_run_service: WorkflowRunService) -> None:
+    def __init__(self, workflow_run_service: WorkflowRunService, attempt_service: Optional[AttemptService] = None) -> None:
         """Initialize the statistics service.
 
         Args:
             workflow_run_service: Service to retrieve workflow runs.
+            attempt_service: Optional service to retrieve workflow attempts.
         """
         self._workflow_run_service = workflow_run_service
+        self._attempt_service = attempt_service
 
     def compute(self) -> WorkflowStatisticsReport:
         """Compute workflow statistics from all runs.
@@ -49,7 +52,11 @@ class WorkflowStatisticsService:
         max_duration = max(durations) if durations else 0.0
 
         # Calculate average attempts per run (all runs)
-        attempt_service = self._workflow_run_service.attempt_service
+        # Try to get attempt_service from constructor param, fall back to workflow_run_service's property
+        attempt_service = self._attempt_service
+        if attempt_service is None and hasattr(self._workflow_run_service, 'attempt_service'):
+            attempt_service = self._workflow_run_service.attempt_service
+
         total_attempts = 0
         if attempt_service is not None:
             for run in all_runs:
