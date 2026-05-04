@@ -389,3 +389,121 @@ Implemented `ScientificCalculator` class extending Calculator with six advanced 
 - CLI consistency: Both interactive and one-shot modes handle all operations uniformly
 
 Duration: 480.8s | Cost: $0.886181 USD | Turns: 34
+
+## Task 09: Refactor into Clearly Separated Components
+
+### Summary
+Refactored the calculator codebase into three clearly separated architectural layers:
+- **Calculation Engine**: Pure mathematical operations (Calculator, ScientificCalculator)
+- **Memory/History Management**: Tracking, querying, filtering, and analytics (MemoryService, MemoryEntry)
+- **Interface Layer**: CLI coordination and user interaction (CalculatorCLI)
+
+The refactoring unifies the previously disconnected tracking systems by wiring MemoryService into CalculatorService, ensuring all calculations are recorded and available for analytics and statistics.
+
+### Files Changed
+- `src/services/calculator_service.py` - Added optional memory_service parameter, now creates MemoryEntry on every calculation (success or failure) and stores in MemoryService before persisting to JsonStorage
+- `src/__main__.py` - Updated _build_service() to accept memory_service parameter, wired MemoryService instance to CalculatorService in main()
+- `artifacts/class_diagram.puml` - Added memory_service field to CalculatorService, updated constructor signature, added CalculatorService → MemoryService dependency relationship
+- `artifacts/component_diagram.puml` - Reorganized from flat layout to three-layer architecture with clear separation: Calculation Engine → Memory/History → Persistence, added explicit data flow arrows
+
+### Test Results
+- All 82 tests passed (100% success rate)
+- Zero test modifications required
+- Test execution time: 0.12 seconds
+- No import errors, failures, or unexpected behavior
+
+Test breakdown by module:
+- test_calculator.py: 22 tests (arithmetic, advanced operations)
+- test_calculator_service.py: 8 tests (service with storage integration)
+- test_cli.py: 10 tests (CLI command and interactive modes)
+- test_import_export_service.py: 5 tests (JSON import/export)
+- test_json_storage.py: 7 tests (file persistence)
+- test_memory_entry.py: 9 tests (data model with UUID and timestamp)
+- test_memory_service.py: 5 tests (in-memory storage)
+- test_scientific_calculator.py: 9 tests (scientific functions)
+- test_statistics_service.py: 6 tests (analytics)
+
+### Implementation Details
+
+**CalculatorService.perform() workflow:**
+1. Start timing with perf_counter()
+2. Try calculator.calculate(operation, a, b)
+3. On success:
+   - Compute execution_time_ms
+   - Create MemoryEntry(operation, operands=[a,b], result, success=True, execution_time_ms)
+   - Store MemoryEntry in memory_service if provided
+   - Create CalculationResult for backward compatibility
+   - Save CalculationResult to JsonStorage
+   - Return CalculationResult
+4. On failure:
+   - Compute execution_time_ms
+   - Create MemoryEntry(operation, operands=[a,b], result=None, success=False, execution_time_ms)
+   - Store MemoryEntry in memory_service if provided
+   - Re-raise exception (preserves exception behavior for tests)
+
+**Key design decisions:**
+- MemoryService parameter is Optional[MemoryService] = None (backward compatible)
+- MemoryEntry is created for both success and failure cases (captures error patterns for analytics)
+- MemoryEntry stored BEFORE JsonStorage to ensure in-memory recording even if disk I/O fails
+- Exception is raised AFTER memory recording to capture all attempts in statistics
+- Both CalculationResult and MemoryEntry models preserved (avoids breaking existing tests)
+- Data flow unifies: Calculator → CalculatorService → (MemoryService + JsonStorage) → CalculatorCLI
+
+**Wiring in __main__.py:**
+- MemoryService instantiated first
+- MemoryService instance passed to _build_service()
+- MemoryService instance passed to CalculatorCLI
+- Both share the same MemoryService instance (ensures sync between service layer and CLI)
+
+### Architecture Benefits
+
+**Before refactoring:**
+- Two independent tracking systems: CalculationResult (auto-saved to disk) vs MemoryEntry (manually imported only)
+- MemoryService instance was empty at runtime unless user manually imported entries
+- Statistics computed on empty or manually-imported-only data, not on live calculations
+- Unclear separation of concerns; responsibilities scattered
+
+**After refactoring:**
+- Single unified entry point: all calculations flow through MemoryService
+- MemoryService automatically populated from live calculations
+- Statistics computed on actual operation history
+- Clear three-layer architecture: Calculation | Memory | Interface
+- No circular dependencies
+- Full backward compatibility maintained
+
+### Public API Preservation
+- CalculatorService.perform(operation, a, b) → CalculationResult ✓ (unchanged)
+- CalculatorService.get_history() → list[CalculationResult] ✓ (unchanged)
+- MemoryService.store(entry) → None ✓ (unchanged)
+- MemoryService.retrieve() → List[MemoryEntry] ✓ (unchanged)
+- MemoryService.query(operation, success) → List[MemoryEntry] ✓ (unchanged)
+- All exception behavior preserved ✓
+- All CLI commands functional ✓
+- `python -m src` runs identically before and after ✓
+
+### Responsibility Separation
+
+**Calculation Engine** (pure, no side effects):
+- Calculator: Basic arithmetic (add, subtract, multiply, divide, square, sqrt, power, modulo)
+- ScientificCalculator: Advanced math (sin, cos, tan, log, ln, exp)
+- No dependencies on memory, storage, or UI
+
+**Memory/History Management**:
+- MemoryService: In-memory entry lifecycle (store, retrieve, query)
+- MemoryEntry: Data model (operation, operands, result, success, execution_time_ms, id, timestamp)
+- ImportExportService: JSON serialization/deserialization
+- StatisticsService: Analytics on memory data
+
+**Interface Layer**:
+- CalculatorCLI: User interaction (menu, prompts, help)
+- CalculatorService: Orchestration (delegates to Calculator, records to Memory, persists to Storage)
+- Storage subsystem: JsonStorage for disk persistence
+
+No circular dependencies. Dependency flow: Interface → Orchestration → (Engine + Memory)
+
+### Diagrams Updated
+- class_diagram.puml: Reflects CalculatorService.memory_service field and dependency relationship
+- component_diagram.puml: Three-layer architecture with explicit data flow
+- Other diagrams (activity, state, use_case): Unchanged (no behavioral changes)
+
+Duration: 328.5s | Cost: $0.604412 USD | Turns: 28

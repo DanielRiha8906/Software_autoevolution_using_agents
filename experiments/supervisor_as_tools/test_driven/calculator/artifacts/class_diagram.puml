@@ -85,8 +85,9 @@ package "services" #DDFFD4 {
     class CalculatorService {
         -calculator : ScientificCalculator
         -storage : JsonStorage
+        -memory_service : Optional[MemoryService]
         --
-        +CalculatorService(calculator: ScientificCalculator, storage: JsonStorage)
+        +CalculatorService(calculator: ScientificCalculator, storage: JsonStorage, memory_service: Optional[MemoryService])
         +perform(operation: Operation, a: float, b: float) : CalculationResult
         +get_history() : List<CalculationResult>
     }
@@ -146,6 +147,7 @@ CalculatorCLI --> CalculatorService : service
 CalculatorCLI --> ImportExportService : uses
 CalculatorService --> ScientificCalculator : calculator
 CalculatorService --> JsonStorage : storage
+CalculatorService --> MemoryService : memory_service
 StatisticsService --> MemoryService : uses
 ImportExportService --> MemoryService : uses
 
