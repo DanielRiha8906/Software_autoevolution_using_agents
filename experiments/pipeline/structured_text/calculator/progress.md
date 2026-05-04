@@ -1039,4 +1039,4 @@ The GUI is accessible via:
   - Clear fields functionality
   - Integration with CalculationService and MemoryService
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 771.9s | Cost: $1.387833 USD | Turns: 20
