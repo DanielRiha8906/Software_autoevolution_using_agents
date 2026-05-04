@@ -2,12 +2,12 @@ import time
 
 from ..models.operation import Operation
 from ..models.calculation_result import CalculationResult
-from ..storage.json_storage import JsonStorage
+from ..protocols import Storage
 from .calculator import Calculator
 
 
 class CalculatorService:
-    def __init__(self, calculator: Calculator, storage: JsonStorage) -> None:
+    def __init__(self, calculator: Calculator, storage: Storage[CalculationResult]) -> None:
         self.calculator = calculator
         self.storage = storage
 

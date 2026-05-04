@@ -3,7 +3,9 @@
 skinparam defaultFontSize 12
 participant User as U
 participant CalculatorCLI as CLI
-participant MemoryService as MS
+participant "MemoryService\n(interface)" as MSProto
+participant "MemoryService\n(impl)" as MS
+participant "Storage<MemoryEntry>\n(interface)" as StorageProto
 participant MemoryJsonStorage as MJS
 participant "JSON File" as FILE
 
@@ -11,16 +13,20 @@ participant "JSON File" as FILE
 
 U -> CLI: export_memory(filepath)
 activate CLI
-  CLI -> MS: export_to_file(filepath)
+  CLI -> MSProto: export_to_file(filepath)
+  activate MSProto
+  MSProto -> MS: export_to_file(filepath)
   activate MS
-    MS -> MS: retrieve_all()
+    MS -> StorageProto: load_all()
+    activate StorageProto
+    StorageProto -> MJS: load_all()
+    activate MJS
+    MJS --> StorageProto: List<MemoryEntry>
+    deactivate MJS
+    StorageProto --> MS: List<MemoryEntry>
+    deactivate StorageProto
     note right MS
-      Load all MemoryEntry objects
-      from storage
-    end note
-    MS -> MS: [entry.to_dict() for entry in entries]
-    note right MS
-      Convert each entry to dict
+      Convert entries to dicts
       for JSON serialization
     end note
     MS -> FILE: Write JSON array
@@ -28,8 +34,10 @@ activate CLI
     FILE --> MS: (file written)
     deactivate FILE
     MS -> MS: return count of entries
-  MS --> CLI: count
+  MS --> MSProto: count
   deactivate MS
+  MSProto --> CLI: count
+  deactivate MSProto
   CLI -> U: Print success + count
 deactivate CLI
 
@@ -37,7 +45,9 @@ deactivate CLI
 
 U -> CLI: import_memory(filepath, skip_invalid)
 activate CLI
-  CLI -> MS: import_from_file(filepath, skip_invalid)
+  CLI -> MSProto: import_from_file(filepath, skip_invalid)
+  activate MSProto
+  MSProto -> MS: import_from_file(filepath, skip_invalid)
   activate MS
     MS -> FILE: Read JSON file
     activate FILE
@@ -61,9 +71,19 @@ activate CLI
           - Raise on first error
       end note
     deactivate MS
+    MS -> StorageProto: save(entry) [for each valid entry]
+    activate StorageProto
+    StorageProto -> MJS: save(entry)
+    activate MJS
+    MJS --> StorageProto: void
+    deactivate MJS
+    StorageProto --> MS: void
+    deactivate StorageProto
     MS -> MS: return (imported_count, skipped_list)
-  MS --> CLI: (count, skipped)
+  MS --> MSProto: (count, skipped)
   deactivate MS
+  MSProto --> CLI: (count, skipped)
+  deactivate MSProto
   CLI -> U: Print success + count + skipped errors
 deactivate CLI
 

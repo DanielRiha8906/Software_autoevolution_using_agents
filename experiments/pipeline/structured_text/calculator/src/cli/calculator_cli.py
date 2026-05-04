@@ -1,8 +1,7 @@
 import sys
 
 from ..models.operation import Operation
-from ..services.calculator_service import CalculatorService
-from ..services.memory_service import MemoryService
+from ..protocols import CalculationService, MemoryService
 
 
 class CalculatorCLI:
@@ -23,7 +22,7 @@ class CalculatorCLI:
         (Operation.EXP,      "Exp"),
     ]
 
-    def __init__(self, service: CalculatorService, memory_service: MemoryService | None = None) -> None:
+    def __init__(self, service: CalculationService, memory_service: MemoryService | None = None) -> None:
         self.service = service
         self.memory_service = memory_service
 
