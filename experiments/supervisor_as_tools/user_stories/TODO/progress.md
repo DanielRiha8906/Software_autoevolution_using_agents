@@ -1201,4 +1201,4 @@ Implemented a comprehensive tkinter GUI for managing tasks without command-line 
 - `class_diagram.puml` — Added GUI package with MainWindow class and dialog classes (AddTaskDialog, ViewTaskDialog, ConfirmDialog, CommentsDialog), showing dependencies on TodoService
 - `component_diagram.puml` — Added GUI Layer package with components for GUI Main, Main Window, Dialogs, and Comments Dialog with connections to Services layer
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 396.7s | Cost: $0.710266 USD | Turns: 17
