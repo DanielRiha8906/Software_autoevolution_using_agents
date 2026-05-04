@@ -373,3 +373,87 @@ Implemented `WorkflowImportExportService` to provide bidirectional JSON export/i
 5. UML Designer — Updated class and component diagrams to reflect new service and exception classes
 
 Duration: 394.5s | Cost: $0.746006 USD | Turns: 15
+
+---
+
+## Task 08: Implement GitHubFetchService
+
+**Status:** ✅ COMPLETE
+
+**Summary:**
+Implemented `GitHubFetchService` to retrieve workflow runs directly from GitHub using the GitHub CLI (`gh`) and convert them into `WorkflowRun` domain objects. The service includes token resolution from three sources (environment variable, .env file, user input) and safe GitHub API integration via subprocess.
+
+**Files Changed:**
+- `src/services/github_fetch_service.py` — Created new GitHubFetchService class with 5 methods
+- `src/services/__init__.py` — Added GitHubFetchService import/export
+- `tests/test_github_fetch_service.py` — Created with 8 comprehensive test cases
+- `artifacts/class_diagram.puml` — Added GitHubFetchService class and relationships
+- `artifacts/component_diagram.puml` — Added GitHubFetchService component to service layer
+
+**Test Results:**
+- All 8 new tests: ✅ PASS
+- All 83 existing tests: ✅ PASS
+- Total: 91/91 tests passed
+
+**Implementation Details:**
+
+1. **GitHubFetchService Class** (src/services/github_fetch_service.py):
+   - Constructor: `__init__(secrets_path: Optional[str] = None)`
+   - Public method: `resolve_token() -> str` — 3-step token resolution
+   - Public method: `fetch(owner: str, repo: str) -> List[WorkflowRun]` — Retrieve workflow runs from GitHub
+   - Private method: `_parse_env_file(path: str) -> Optional[str]` — Parse .env file for token
+   - Private method: `_convert_to_workflow_run(gh_data: dict) -> WorkflowRun` — Convert GitHub JSON to domain model
+
+2. **Token Resolution (3-step priority)**:
+   - Step 1: Check `GITHUB_TOKEN` environment variable
+   - Step 2: Parse `.env` file at `secrets_path` (if provided and exists)
+   - Step 3: Prompt user with `input("GitHub token: ")` as final fallback
+   - User-provided tokens are NEVER written to .env file
+
+3. **GitHub CLI Integration**:
+   - Command: `gh run list --repo <owner>/<repo> --json id,name,headBranch,status,conclusion,createdAt,updatedAt,number,headSha --limit 100`
+   - Uses `subprocess.run()` with list-based command (safe from shell injection)
+   - Parses JSON output from gh CLI
+   - Non-zero exit codes raise Exception with stderr details
+
+4. **Data Conversion**:
+   - Field mapping: GitHub JSON → WorkflowRun dataclass
+     - `id` → `id`
+     - `name` → `workflow_name`
+     - `headBranch` → `branch`
+     - `status` → `status` (WorkflowStatus enum)
+     - `conclusion` → `conclusion` (WorkflowConclusion enum or None)
+     - `createdAt` → `created_at` (ISO 8601 datetime, timezone-aware)
+     - `updatedAt` → `updated_at` (ISO 8601 datetime or None)
+     - `number` → `run_number`
+     - `headSha` → `commit_sha`
+     - `duration_seconds` ← computed from (updated_at - created_at).total_seconds() or 0.0
+   - Datetime parsing handles ISO 8601 strings with Z suffix (converts to +00:00)
+   - Enum mapping converts GitHub status/conclusion values to local enums
+   - Handles null/None values for optional fields
+
+5. **Error Handling**:
+   - Non-zero gh CLI exit codes raise Exception
+   - Malformed JSON raises JSONDecodeError (propagated)
+   - Missing required fields raise KeyError (propagated)
+   - Empty user input raises ValueError
+
+6. **Key Features**:
+   - No `requests` library dependency (uses gh CLI via subprocess only)
+   - No filesystem writes during token resolution
+   - Backward-compatible with existing service architecture
+   - Supports both camelCase (real gh CLI) and snake_case (test data) field names
+   - In-memory operation, no persistence
+
+**Bug Fixes During Testing**:
+1. Fixed JSON response parsing to handle wrapped "workflow_runs" key structure
+2. Fixed field name case mismatch — now supports both camelCase and snake_case field names
+
+**Pipeline Execution:**
+1. Data Analyst — Analyzed requirements and identified exact changes needed
+2. System Architect — Designed token resolution, gh CLI integration, and data conversion
+3. Programmer — Implemented GitHubFetchService class with all methods
+4. Pytest-Tester — Wrote 8 tests, ran full suite (91/91 pass), found and fixed 2 bugs
+5. UML Designer — Updated class and component diagrams
+
+Duration: 494.2s | Cost: $0.873044 USD | Turns: 16
