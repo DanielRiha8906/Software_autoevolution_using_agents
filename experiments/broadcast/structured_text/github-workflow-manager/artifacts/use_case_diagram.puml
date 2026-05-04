@@ -50,10 +50,20 @@ rectangle "GitHub Workflow Manager" {
     usecase "Import runs from JSON"    as C_IMPORT
     usecase "Fetch from GitHub"        as C_FETCH_GH
   }
+
+  package "GUI Mode" {
+    usecase "Launch GUI"               as GUI
+    usecase "View workflow runs"       as G_VIEW
+    usecase "Filter by status"         as G_FSTATUS
+    usecase "Filter by conclusion"     as G_FCONCL
+    usecase "Refresh table"            as G_REFRESH
+    usecase "Reset filters"            as G_RESET
+  }
 }
 
 User --> UI
 User --> CLI
+User --> GUI
 
 UI --> I_ADD
 UI --> I_LIST
@@ -97,5 +107,12 @@ C_FILTER --> C_FTIMESTAMP  : <<extend>>
 C_FILTER --> C_FATTEMPTS   : <<extend>>
 
 CLI --> C_FILTER
+
+GUI --> G_VIEW
+GUI --> G_REFRESH
+GUI --> G_RESET
+
+G_VIEW --> G_FSTATUS   : <<extend>>
+G_VIEW --> G_FCONCL    : <<extend>>
 
 @enduml

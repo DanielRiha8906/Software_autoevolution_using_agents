@@ -10,9 +10,15 @@ package "GitHub Workflow Manager" {
     component "main" as MAIN
   }
 
-  package "Interface/CLI layer" {
-    component "workflow_cli" as CLI
-    component "interactive_menu" as IM
+  package "Interface layer" {
+    package "CLI" {
+      component "workflow_cli" as CLI
+      component "interactive_menu" as IM
+    }
+    package "GUI" {
+      component "WorkflowRunViewerGUI" as VIEWER
+      component "FilterModel" as FM
+    }
   }
 
   package "Service layer" {
@@ -49,21 +55,26 @@ package "GitHub Workflow Manager" {
 
 MAIN --> CLI
 MAIN --> IM
+MAIN --> VIEWER
 
 CLI --> TRACKER
 IM --> TRACKER
 
 CLI --> SVC
 IM --> SVC
+VIEWER --> SVC
 
 CLI --> ASVC
 IM --> ASVC
+VIEWER --> ASVC
 
 CLI --> STATS
 IM --> STATS
 
 CLI --> GHS
 IM --> GHS
+
+FM --> SVC
 
 TRACKER --> SVC
 SVC --> WREPO

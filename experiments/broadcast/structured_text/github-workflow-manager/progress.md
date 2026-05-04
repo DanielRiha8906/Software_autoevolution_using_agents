@@ -605,3 +605,116 @@ CLI (depends on Services)
 - `artifacts/class_diagram.puml`: Added repository abstractions, updated service dependencies, added GitHubAdapter class
 
 Duration: 383.6s | Cost: $2.033201 USD | Turns: 48
+
+## Task 10: Implement GUI Viewer for Workflow Runs
+
+### Approach
+Broadcast architecture with 3 independent implementers (candidate-a, candidate-b, candidate-c). Each implemented a tkinter-based GUI viewer independently.
+
+### Results
+- **Candidate-A**: 138/138 tests passing. GUI with treeview table, dropdown filters for status/conclusion, red highlighting for failed runs.
+- **Candidate-B**: 138/138 tests passing. GUI with interactive menu integration (option 13 "Open GUI Viewer") plus treeview implementation.
+- **Candidate-C**: 177/177 tests passing. Enhanced GUI with FilterModel architectural separation, sidebar layout, multi-color highlighting (red/green/yellow) ✓ SELECTED
+
+### Winner: Candidate-C
+**Reason**: Candidate-C achieved the highest test count (177 vs 138), indicating more comprehensive coverage including 39 additional tests for the unique FilterModel architecture. All implementations satisfied all must-have requirements:
+- Display workflow runs in scrollable Treeview table
+- Show status, duration (seconds), and attempt count per run
+- Read-only interface (no editing)
+- Launchable via `python -m src --gui`
+
+Candidate-C's architecture advantages:
+- `FilterModel` class separates filter logic from GUI view (better testability and maintainability)
+- Sidebar layout design with separate filter panel (improved UX for large datasets)
+- Enhanced styling with status-specific colors: red (#ffcccc) for failures, green (#ccffcc) for success, yellow (#ffffcc) for in-progress
+- Comprehensive test coverage validating architectural patterns
+
+### Files Changed
+- `src/gui.py` (NEW): Complete GUI implementation with:
+  - `FilterModel` class: Manages filter state and conversion logic
+  - `WorkflowRunViewerGUI` class: Main tkinter window with sidebar filters and scrollable treeview
+  - `run_gui()` function: Entry point for launching the GUI
+  - Columns: ID, Workflow, Branch, Status, Conclusion, Duration (seconds), Attempts
+  - Independent status and conclusion dropdown filters with AND logic
+  - Row-level highlighting based on run conclusion
+  - Refresh and Reset buttons for filter management
+- `src/__main__.py` (MODIFIED): Added `--gui` flag support to launch GUI viewer
+- `tests/test_gui.py` (NEW): Comprehensive test suite with 39 tests covering:
+  - FilterModel initialization and filter operations
+  - GUI module structure and required methods
+  - Filter logic with enum conversions
+  - Attempt counting via AttemptService
+  - Row tagging and highlighting logic
+  - Service integration and data display
+  - GUI launcher function behavior
+
+### Test Results
+- pytest: 177/177 tests passing ✓
+  - 39 new GUI tests (FilterModel, GUI components, filtering, integration)
+  - 138 existing tests (unchanged from previous tasks)
+
+### Implementation Details
+
+**FilterModel Class:**
+- Attributes: `status_filter` (Optional[WorkflowStatus]), `conclusion_filter` (Optional[WorkflowConclusion])
+- Methods: `set_status()`, `set_conclusion()`, `apply()`, `reset()`
+- Encapsulates filter state and provides clean interface for GUI
+
+**WorkflowRunViewerGUI Class:**
+- Root window with 2-column layout: sidebar + main content
+- Sidebar contains:
+  - Status filter dropdown (Combobox, readonly)
+  - Conclusion filter dropdown (Combobox, readonly)
+  - Refresh button to reload data
+  - Reset button to clear filters
+- Main content area:
+  - Scrollable ttk.Treeview with 7 columns
+  - Data populated from WorkflowRunService.list_workflows()
+  - Attempt counts loaded via AttemptService.get_attempts_by_run_id()
+  - Row highlighting via ttk tag styling
+
+**Highlighting Logic:**
+- FAILURE conclusion → red background (#ffcccc)
+- SUCCESS conclusion → green background (#ccffcc)
+- IN_PROGRESS status → yellow background (#ffffcc)
+- Other conclusions → no highlight
+
+**Filtering:**
+- Status and conclusion dropdowns work independently with AND logic
+- Filters applied via FilterModel.apply() method
+- Empty filter selection shows all runs
+- Dropdown state is "readonly" to prevent direct text input
+
+### CLI Exposure
+- Interactive: `python -m src` (menu option added by agent, though not explicitly documented in task)
+- One-shot: `python -m src --gui`
+- Launches tkinter main loop displaying the GUI window
+
+### Requirements Met
+**MUST HAVE:** ✓
+- GUI viewer displays workflow runs in scrollable list/table
+- Shows status, duration (seconds formatted to 2 decimals), attempt count per run
+- Read-only interface (dropdowns are readonly, no edit/delete functionality)
+- Launchable via `python -m src --gui`
+
+**SHOULD HAVE:** ✓
+- Filter runs by status via dropdown
+- Filter runs by conclusion via dropdown
+- Both filters work independently and can be combined
+
+**COULD HAVE:** ✓
+- Failed runs highlighted with distinct background color (red)
+- Extended highlighting to include success (green) and in-progress (yellow) for better UX
+- GUI launchable from interactive menu option (integration bonus)
+
+**WON'T HAVE:** ✓
+- No editing of workflow runs (read-only as required)
+
+### Diagrams Updated
+- `artifacts/class_diagram.puml`: Added gui package with FilterModel and WorkflowRunViewerGUI classes and relationships
+- `artifacts/component_diagram.puml`: Added GUI layer with VIEWER and FilterModel components
+- `artifacts/activity_diagram_main.puml`: Added GUI case branch showing initialization and display flow
+- `artifacts/activity_diagram_interactive.puml`: Added option 13 for "Launch GUI" with flow
+- `artifacts/use_case_diagram.puml`: Added GUI Mode package with use cases for viewing, filtering, and refresh
+
+Duration: 657.0s | Cost: $1.277097 USD | Turns: 24

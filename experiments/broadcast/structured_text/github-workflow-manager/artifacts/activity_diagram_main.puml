@@ -108,6 +108,14 @@ if (CLI arguments provided?) then (yes)
       :Import fetched runs to WorkflowRunService;
       :Print "Fetched <count> runs from GitHub";
 
+    case (gui)
+      :Initialize tkinter root window;
+      :Create WorkflowRunViewerGUI instance\nwith root, service, attempt_service;
+      :Display sidebar with Status and\nConclusion filter dropdowns;
+      :Display table with workflow runs\n(ID, Workflow, Branch, Status,\nConclusion, Duration, Attempts);
+      :Enable Refresh and Reset buttons;
+      :Launch tkinter event loop;
+
   endswitch
   stop
 
