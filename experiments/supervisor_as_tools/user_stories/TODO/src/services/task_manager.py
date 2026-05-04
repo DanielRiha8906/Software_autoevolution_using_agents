@@ -3,6 +3,7 @@ from typing import Optional, Union
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
+from ..storage.repositories import TaskRepository
 from ..storage.json_storage import JsonStorage
 from ..utils.datetime_utils import parse_datetime_or_iso_string, is_datetime_in_range
 
@@ -12,7 +13,7 @@ class TaskNotFoundError(Exception):
 
 
 class TaskManager:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
+    def __init__(self, storage: Optional[TaskRepository] = None) -> None:
         self._storage = storage or JsonStorage()
         self._tasks: dict[str, Task] = {}
         self._load()

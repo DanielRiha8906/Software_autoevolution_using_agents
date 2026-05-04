@@ -77,6 +77,21 @@ package "utils" #E8F8E8 {
 }
 
 package "storage" #FFF3CC {
+    interface TaskRepository {
+        +load() : List<Dictionary>
+        +save(tasks: List<Dictionary>) : void
+    }
+
+    interface CommentRepository {
+        +load() : List<Dictionary>
+        +save(comments: List<Dictionary>) : void
+    }
+
+    interface ProjectRepository {
+        +load() : List<Dictionary>
+        +save(projects: List<Dictionary>) : void
+    }
+
     class JsonStorage {
         -path : String
         --
@@ -92,6 +107,10 @@ package "storage" #FFF3CC {
         +load() : List<Dictionary>
         +save(projects: List<Dictionary>) : void
     }
+
+    JsonStorage ..|> TaskRepository : implements
+    JsonStorage ..|> CommentRepository : implements
+    ProjectStorage ..|> ProjectRepository : implements
 }
 
 package "services" #DDFFD4 {
@@ -100,10 +119,10 @@ package "services" #DDFFD4 {
     exception ProjectNotFoundError
 
     class ProjectManager {
-        -storage : ProjectStorage
+        -storage : ProjectRepository
         -projects : Dictionary<String, Project>
         --
-        +ProjectManager(storage: ProjectStorage [0..1])
+        +ProjectManager(storage: ProjectRepository [0..1])
         +add(name: String, description: String [0..1]) : Project
         +get(project_id: String) : Project
         +list_all() : List<Project>
@@ -114,10 +133,10 @@ package "services" #DDFFD4 {
     }
 
     class TaskManager {
-        -storage : JsonStorage
+        -storage : TaskRepository
         -tasks : Dictionary<String, Task>
         --
-        +TaskManager(storage: JsonStorage [0..1])
+        +TaskManager(storage: TaskRepository [0..1])
         +add(title: String, description: String [0..1], due_date: DateTime [0..1], project_id: String [0..1]) : Task
         +get(taskId: String) : Task
         +listAll() : List<Task>
@@ -139,11 +158,11 @@ package "services" #DDFFD4 {
     }
 
     class CommentsService {
-        -storage : JsonStorage
+        -storage : CommentRepository
         -comments : Dictionary<String, TaskComment>
         -task_manager : TaskManager
         --
-        +CommentsService(task_manager: TaskManager, storage: JsonStorage [0..1])
+        +CommentsService(task_manager: TaskManager, storage: CommentRepository [0..1])
         +add(task_id: String, content: String) : TaskComment
         +get(comment_id: String) : TaskComment
         +list_by_task(task_id: String) : List<TaskComment>
@@ -227,14 +246,13 @@ package "cli" #FFE5E5 {
 Project <-- Task : "project_id"
 Task --> TaskStatus : status
 TaskComment --> Task : references
-ProjectStorage --> ProjectStorage : storage
-ProjectManager --> ProjectStorage : storage
+ProjectManager --> ProjectRepository : storage
 ProjectManager ..> ProjectNotFoundError : raises
-TaskManager --> JsonStorage : storage
+TaskManager --> TaskRepository : storage
 TaskManager ..> TaskNotFoundError : raises
 TaskManager --> DateTimeUtils : validates with
 TaskManager --> Project : filters by
-CommentsService --> JsonStorage : storage
+CommentsService --> CommentRepository : storage
 CommentsService --> TaskManager : validates with
 CommentsService ..> CommentNotFoundError : raises
 ImportExportService --> TaskManager : manager

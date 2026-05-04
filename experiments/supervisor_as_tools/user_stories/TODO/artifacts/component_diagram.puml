@@ -34,6 +34,12 @@ package "TODO Application" {
     }
 
     package "Persistence Layer" {
+        package "Repository Abstraction" {
+            component "Task Repository\n(Protocol)" as TaskRepo
+            component "Comment Repository\n(Protocol)" as CommentRepo
+            component "Project Repository\n(Protocol)" as ProjectRepo
+        }
+
         component "JSON Storage\n(JsonStorage)" as Storage
         component "Project Storage\n(ProjectStorage)" as ProjectStore
     }
@@ -57,15 +63,19 @@ SVC ..> SummaryModel : generates
 IMPEXP --> MGR : read/write tasks
 IMPEXP --> CMT : read/write comments
 
-MGR --> Storage
+MGR --> TaskRepo : storage abstraction
 MGR --> DTUtils : validate & filter dates
 MGR ..> Model
-PMGR --> ProjectStore
+PMGR --> ProjectRepo : storage abstraction
 PMGR ..> ProjectModel
 
-CMT --> Storage : persist comments
+CMT --> CommentRepo : persist comments
 CMT --> MGR : validate tasks
 CMT ..> CommentModel
+
+TaskRepo --> Storage : implemented by
+CommentRepo --> Storage : implemented by
+ProjectRepo --> ProjectStore : implemented by
 
 Storage ..> Model
 Storage ..> CommentModel

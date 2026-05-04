@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from ..models.task_comment import TaskComment
+from ..storage.repositories import CommentRepository
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager, TaskNotFoundError
 
@@ -11,9 +12,13 @@ class CommentNotFoundError(Exception):
 
 
 class CommentsService:
-    def __init__(self, task_manager: TaskManager, storage: Optional[JsonStorage] = None) -> None:
+    def __init__(self, task_manager: TaskManager, storage: Optional[CommentRepository] = None) -> None:
         self._task_manager = task_manager
-        self._storage = storage or JsonStorage(str(__import__("pathlib").Path.home() / ".todo_comments.json"))
+        if storage is None:
+            from pathlib import Path
+            default_path = str(Path.home() / ".todo_comments.json")
+            storage = JsonStorage(default_path)
+        self._storage = storage
         self._comments: dict[str, TaskComment] = {}
         self._load()
 
