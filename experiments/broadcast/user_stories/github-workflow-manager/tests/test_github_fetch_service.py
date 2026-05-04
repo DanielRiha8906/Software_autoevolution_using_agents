@@ -186,7 +186,7 @@ def test_fetch_with_gh_cli_unauthorized(mock_run, service):
         service._fetch_with_gh_cli("owner", "repo", token="ghp_invalid")
 
 
-@patch("src.services.github_fetch_service.requests")
+@patch("src.adapters.github_adapter.requests")
 def test_fetch_with_requests_success(mock_requests, service):
     """Test successful fetch using requests library."""
     service._use_gh_cli = False
@@ -218,7 +218,7 @@ def test_fetch_with_requests_success(mock_requests, service):
     assert runs[0].conclusion is None
 
 
-@patch("src.services.github_fetch_service.requests")
+@patch("src.adapters.github_adapter.requests")
 def test_fetch_with_requests_unauthorized(mock_requests, service):
     """Test fetch with requests when token is invalid."""
     service._use_gh_cli = False

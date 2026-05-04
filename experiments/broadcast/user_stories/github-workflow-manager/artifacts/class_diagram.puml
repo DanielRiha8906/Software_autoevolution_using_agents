@@ -70,6 +70,16 @@ package "models" #DDEEFF {
 }
 
 package "storage" #FFF3CC {
+    interface "<<Protocol>>\nStorageBackend" as StorageBackend {
+        +save(data: List) : None
+        +load() : List
+    }
+
+    interface "<<Protocol>>\nGitHubAPIClient" as GitHubAPIClient {
+        +fetch_workflow_runs(...) : List[WorkflowRun]
+        +fetch_incremental(...) : List[WorkflowRun]
+    }
+
     class WorkflowJsonStorage {
         +filepath : str
         --
@@ -85,14 +95,17 @@ package "storage" #FFF3CC {
         +save(attempts: List[WorkflowRunAttempt]) : None
         +load() : List[WorkflowRunAttempt]
     }
+
+    StorageBackend <|.. WorkflowJsonStorage : implements
+    StorageBackend <|.. AttemptJsonStorage : implements
 }
 
 package "services" #DDFFD4 {
     class WorkflowRunService {
-        -_storage : WorkflowJsonStorage
+        -_storage : StorageBackend
         -_runs    : List[WorkflowRun]
         --
-        +__init__(storage: WorkflowJsonStorage)
+        +__init__(storage: StorageBackend)
         +add_workflow_run(run: WorkflowRun) : WorkflowRun
         +list_runs() : List[WorkflowRun]
         +get_run_detail(run_id: str) : Optional[WorkflowRun]
@@ -101,26 +114,6 @@ package "services" #DDFFD4 {
         +filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
         +create_query(attempt_service: AttemptService) : WorkflowQuery
         -_persist() : None
-    }
-
-    class GitHubFetchService {
-        -_token : Optional[str]
-        -_repo_owner : Optional[str]
-        -_repo_name : Optional[str]
-        -_use_gh_cli : bool
-        --
-        +__init__()
-        +fetch_workflow_runs(owner: str, repo: str,\n  workflow: Optional[str], token: Optional[str],\n  validate: bool) : List[WorkflowRun]
-        +fetch_incremental(owner: str, repo: str,\n  latest_run_timestamp: Optional[datetime],\n  workflow: Optional[str], token: Optional[str]) : List[WorkflowRun]
-        -_resolve_token() : str
-        -_validate_token(token: str) : bool
-        -_check_gh_cli() : bool
-        -_fetch_with_gh_cli(...) : List[WorkflowRun]
-        -_fetch_with_requests(...) : List[WorkflowRun]
-        -_convert_github_run_to_workflow_run(github_run: dict, workflow_name: str) : WorkflowRun
-        -_map_github_status(github_status: str) : WorkflowStatus
-        -_map_github_conclusion(github_conclusion: Optional[str]) : Optional[WorkflowConclusion]
-        -_parse_iso_datetime(dt_str: str) : datetime
     }
 
     class WorkflowQuery {
@@ -152,10 +145,10 @@ package "services" #DDFFD4 {
     }
 
     class AttemptService {
-        -_storage   : AttemptJsonStorage
+        -_storage   : StorageBackend
         -_attempts  : List[WorkflowRunAttempt]
         --
-        +__init__(storage: AttemptJsonStorage)
+        +__init__(storage: StorageBackend)
         +create_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
         +get_attempts_for_run(run_id: int) : List[WorkflowRunAttempt]
         +list_all_attempts() : List[WorkflowRunAttempt]
@@ -175,6 +168,40 @@ package "services" #DDFFD4 {
         +{static} export_to_file(service: WorkflowRunService, filepath: str) : int
         +{static} import_from_file(service: WorkflowRunService, filepath: str) : Tuple[int, List[str]]
     }
+
+    WorkflowRunService "1" --> "1" StorageBackend : -_storage
+    WorkflowRunService "1" --> "1" WorkflowQuery : creates
+    WorkflowQuery --> DurationRange : uses
+    WorkflowQuery --> TimestampRange : uses
+    WorkflowQuery --> AttemptService : queries
+    WorkflowRunTracker "1" --> "1" WorkflowRunService : -_service
+    AttemptService "1" --> "1" StorageBackend : -_storage
+    WorkflowStatisticsService "1" --> "1" WorkflowRunService : -_workflow_service
+    WorkflowStatisticsService "1" --> "1" AttemptService : -_attempt_service
+}
+
+package "adapters" #FFE5E5 {
+    class GitHubFetchService {
+        -_token : Optional[str]
+        -_repo_owner : Optional[str]
+        -_repo_name : Optional[str]
+        -_use_gh_cli : bool
+        --
+        +__init__()
+        +fetch_workflow_runs(owner: str, repo: str,\n  workflow: Optional[str], token: Optional[str],\n  validate: bool) : List[WorkflowRun]
+        +fetch_incremental(owner: str, repo: str,\n  latest_run_timestamp: Optional[datetime],\n  workflow: Optional[str], token: Optional[str]) : List[WorkflowRun]
+        -_resolve_token() : str
+        -_validate_token(token: str) : bool
+        -_check_gh_cli() : bool
+        -_fetch_with_gh_cli(...) : List[WorkflowRun]
+        -_fetch_with_requests(...) : List[WorkflowRun]
+        -_convert_github_run_to_workflow_run(github_run: dict, workflow_name: str) : WorkflowRun
+        -_map_github_status(github_status: str) : WorkflowStatus
+        -_map_github_conclusion(github_conclusion: Optional[str]) : Optional[WorkflowConclusion]
+        -_parse_iso_datetime(dt_str: str) : datetime
+    }
+
+    GitHubAPIClient <|.. GitHubFetchService : implements
 }
 
 package "cli" #FFE5E5 {
@@ -203,43 +230,39 @@ package "cli" #FFE5E5 {
     }
 }
 
-WorkflowRun                ..>  WorkflowStatus        : status
-WorkflowRun                ..>  WorkflowConclusion    : conclusion
-WorkflowRun            "1" --> "*" WorkflowRunAttempt   : has attempts (run_id FK)
-WorkflowRunService    "1" --> "1" WorkflowJsonStorage : -_storage
-WorkflowRunService         ..>  WorkflowRun
-WorkflowRunService         ..>  WorkflowStatus
-WorkflowRunService         ..>  WorkflowConclusion
-WorkflowRunService    "1" --> "1" WorkflowQuery   : creates
-WorkflowQuery              ..>  WorkflowRun
-WorkflowQuery              ..>  DurationRange
-WorkflowQuery              ..>  TimestampRange
-WorkflowQuery              ..>  AttemptService
-WorkflowRunTracker    "1" --> "1" WorkflowRunService  : -_service
-WorkflowRunTracker         ..>  WorkflowRun
-AttemptService       "1" --> "1" AttemptJsonStorage   : -_storage
-AttemptService            ..>  WorkflowRunAttempt
-"workflow_cli"             ..>  WorkflowRunService
-"workflow_cli"             ..>  AttemptService
-"workflow_cli"             ..>  WorkflowRunTracker
-"workflow_cli"             ..>  WorkflowQuery
-"workflow_cli"             ..>  WorkflowStatisticsService
-"workflow_cli"             ..>  WorkflowRunExportService
-"workflow_cli"             ..>  GitHubFetchService
-"interactive_menu"         ..>  WorkflowRunService
-"interactive_menu"         ..>  AttemptService
-"interactive_menu"         ..>  WorkflowRunTracker
-"interactive_menu"         ..>  WorkflowQuery
-"interactive_menu"         ..>  WorkflowStatisticsService
-"interactive_menu"         ..>  WorkflowRunExportService
-"interactive_menu"         ..>  GitHubFetchService
-WorkflowStatisticsService  "1" --> "1" WorkflowRunService  : -_workflow_service
-WorkflowStatisticsService  "1" --> "1" AttemptService     : -_attempt_service
-WorkflowStatisticsService       ..>  WorkflowRunStatistics : returns
-WorkflowRunExportService        ..>  WorkflowRunService
-WorkflowRunExportService        ..>  WorkflowRun
-GitHubFetchService              ..>  WorkflowRun : converts to
-GitHubFetchService              ..>  WorkflowStatus : maps
-GitHubFetchService              ..>  WorkflowConclusion : maps
+' Model relationships
+WorkflowRun ..> WorkflowStatus : status
+WorkflowRun ..> WorkflowConclusion : conclusion
+WorkflowRun "1" --> "*" WorkflowRunAttempt : has attempts (run_id FK)
+
+' Service relationships to models
+WorkflowRunService ..> WorkflowRun : operates on
+WorkflowRunService ..> WorkflowStatus : filters by
+WorkflowRunService ..> WorkflowConclusion : filters by
+AttemptService ..> WorkflowRunAttempt : manages
+WorkflowStatisticsService ..> WorkflowRunStatistics : returns
+WorkflowRunExportService ..> WorkflowRunService : uses
+WorkflowRunExportService ..> WorkflowRun : exports
+
+' Adapter to model relationships
+GitHubFetchService ..> WorkflowRun : produces
+GitHubFetchService ..> WorkflowStatus : maps to
+GitHubFetchService ..> WorkflowConclusion : maps to
+
+' CLI relationships
+"workflow_cli" ..> WorkflowRunService : uses
+"workflow_cli" ..> AttemptService : uses
+"workflow_cli" ..> WorkflowRunTracker : uses
+"workflow_cli" ..> WorkflowQuery : uses
+"workflow_cli" ..> WorkflowStatisticsService : uses
+"workflow_cli" ..> WorkflowRunExportService : uses
+"workflow_cli" ..> GitHubFetchService : uses
+"interactive_menu" ..> WorkflowRunService : uses
+"interactive_menu" ..> AttemptService : uses
+"interactive_menu" ..> WorkflowRunTracker : uses
+"interactive_menu" ..> WorkflowQuery : uses
+"interactive_menu" ..> WorkflowStatisticsService : uses
+"interactive_menu" ..> WorkflowRunExportService : uses
+"interactive_menu" ..> GitHubFetchService : uses
 
 @enduml

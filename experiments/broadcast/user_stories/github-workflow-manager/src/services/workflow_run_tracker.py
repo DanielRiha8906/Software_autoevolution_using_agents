@@ -36,3 +36,6 @@ class WorkflowRunTracker:
             commit_sha=commit_sha,
         )
         return self._service.add_workflow_run(run)
+
+
+__all__ = ["WorkflowRunTracker"]
