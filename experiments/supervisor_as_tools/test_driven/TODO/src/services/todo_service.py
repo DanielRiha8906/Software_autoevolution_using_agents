@@ -22,10 +22,10 @@ class TodoService:
         if dt.tzinfo != CEST:
             raise ValueError(f"{name} must be in CEST timezone, got {dt.tzinfo}")
 
-    def add_task(self, title: str, description: Optional[str] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description)
+        return self._manager.add(title.strip(), description, project_id=project_id)
 
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
@@ -34,7 +34,8 @@ class TodoService:
                    status: Optional[TaskStatus] = None,
                    overdue: Optional[bool] = None,
                    due_before: Optional[datetime] = None,
-                   due_after: Optional[datetime] = None) -> list[Task]:
+                   due_after: Optional[datetime] = None,
+                   project_id: Optional[str] = None) -> list[Task]:
         # Validate datetime parameters
         if due_before is not None:
             self._validate_datetime_cest(due_before, "due_before")
@@ -42,12 +43,17 @@ class TodoService:
             self._validate_datetime_cest(due_after, "due_after")
 
         # Get base list
-        if status is not None:
+        if project_id is not None:
+            tasks = self._manager.list_by_project_id(project_id)
+        elif status is not None:
             tasks = self._manager.list_by_status(status)
         else:
             tasks = self._manager.list_all()
 
-        # Apply date filters with AND semantics
+        # Apply other filters with AND semantics
+        if status is not None and project_id is not None:
+            tasks = [t for t in tasks if t.status == status]
+
         if overdue is not None:
             tasks = [t for t in tasks if t.is_overdue() == overdue]
 
@@ -68,10 +74,10 @@ class TodoService:
     def reopen_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.PENDING)
 
-    def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
+    def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
         if title is not None and not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.update(task_id, title=title, description=description)
+        return self._manager.update(task_id, title=title, description=description, project_id=project_id)
 
     def delete_task(self, task_id: str) -> None:
         if self._comments_service:

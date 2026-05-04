@@ -382,3 +382,83 @@ Successfully implemented TaskImportExportService with export() and import_from()
 - File not found: FileNotFoundError propagates uncaught
 
 Duration: 459.5s | Cost: $0.916275 USD | Turns: 31
+
+## Task 08: Add Project support with ProjectService
+
+### Summary
+Successfully implemented Project domain class and ProjectService to support grouping and filtering tasks by project. Extended Task with optional project_id field and updated TodoService and TaskManager to support project-based operations while maintaining full backward compatibility with existing tasks.
+
+### Files Changed
+- `src/models/project.py` - New Project dataclass with UUID id and validated name field
+- `src/models/task.py` - Added optional project_id field with backward compatibility
+- `src/models/__init__.py` - Added Project export
+- `src/services/project_service.py` - New ProjectService class for project CRUD operations
+- `src/services/task_manager.py` - Extended add(), update() methods and added list_by_project_id()
+- `src/services/todo_service.py` - Extended add_task(), list_tasks(), update_task() with project_id support
+- `src/services/__init__.py` - Added ProjectService and ProjectNotFoundError exports
+- `tests/test_project.py` - New test suite with 10 test functions
+- `artifacts/class_diagram.puml` - Updated to reflect Project model and ProjectService
+
+### Test Results
+- **All 113 tests passing** ✅ (10 new project tests + 103 existing tests)
+- New Project/ProjectService tests:
+  - test_project_can_be_created - Project instantiation
+  - test_project_has_unique_id - UUID uniqueness across instances
+  - test_empty_project_name_raises - Name validation for empty strings
+  - test_create_and_list_projects - ProjectService.create() and list()
+  - test_task_assigned_to_project - TodoService.add_task() with project_id
+  - test_list_tasks_by_project - TodoService.list_tasks(project_id=...)
+  - test_task_without_project_id_is_none - Default None behavior
+  - test_project_id_is_uuid_string - UUID string format validation
+  - test_old_tasks_without_project_id_load_fine - Backward compatibility with old JSON
+  - test_move_task_between_projects - TodoService.update_task() with project_id
+- Existing tests all pass (no regressions)
+
+### Implementation Details
+
+**Project Model** (src/models/project.py):
+- @dataclass with two fields:
+  * `name: str` (required, non-empty, non-whitespace-only)
+  * `id: str` (auto-generated UUID string via default_factory)
+- Validation in `__post_init__()`: raises ValueError if name is empty or whitespace-only
+- Methods: `to_dict() → dict` and `from_dict(data: dict) → Project` for serialization
+
+**Task Model Extension** (src/models/task.py):
+- Added field: `project_id: Optional[str] = None`
+- Updated `to_dict()`: includes "project_id": self.project_id
+- Updated `from_dict()`: uses data.get("project_id") for backward compatibility
+- Old task JSON without project_id loads successfully with project_id=None
+
+**ProjectService** (src/services/project_service.py):
+- Exception: ProjectNotFoundError
+- Constructor: __init__(todo_service=None, storage: Optional[JsonStorage] = None)
+- In-memory dict[str, Project] indexed by id with separate JSON storage
+- Methods:
+  * create(name: str) → Project - Creates and persists new project
+  * get(project_id: str) → Project - Retrieves by id, raises ProjectNotFoundError if missing
+  * list() → list[Project] - Returns all projects
+  * delete(project_id: str) → None - Removes project
+- Private methods: _load() and _persist() for storage management
+- Uses ~/.todo_projects.json as default storage file
+
+**TaskManager Extension** (src/services/task_manager.py):
+- Updated add() signature: added `project_id: Optional[str] = None` parameter
+- Updated update() signature: added `project_id: Optional[str] = None` parameter
+- New method: list_by_project_id(project_id: str) → list[Task] - Returns tasks in project
+
+**TodoService Extension** (src/services/todo_service.py):
+- Updated add_task() signature: added `project_id: Optional[str] = None` parameter
+- Updated list_tasks() signature: added `project_id: Optional[str] = None` parameter
+- Updated update_task() signature: added `project_id: Optional[str] = None` parameter
+- All parameters flow through to TaskManager for persistence
+
+**Backward Compatibility**:
+- Existing task JSON without project_id field loads correctly
+- All existing code paths continue to work unchanged
+- project_id defaults to None for all new and old tasks
+- Filtering by project_id is optional; when omitted, all tasks are returned
+
+**Diagrams Updated**:
+- class_diagram.puml: Added Project class, extended Task with project_id, added ProjectService class with relationships
+
+Duration: 348.6s | Cost: $0.691889 USD | Turns: 35
