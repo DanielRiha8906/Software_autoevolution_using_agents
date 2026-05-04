@@ -1,59 +1,94 @@
 @startuml component_diagram
 
+title TODO Application - Component Diagram
+
 skinparam componentStyle uml2
-skinparam defaultFontSize 13
+skinparam defaultFontSize 11
+skinparam padding 5
 
-left to right direction
+top to bottom direction
 
-package "TODO Application" {
+package "CLI Layer" #FFE5E5 {
+    component [TodoCLI] as CLI
+    component [InteractiveMenu] as Menu
+}
 
-    component "Entry Point\n(main)" as Main
+package "Service Layer" #DDFFD4 {
+    component [TodoService] as Service
+    component [TaskManager] as TManager
+    component [CommentsService] as CService
+    component [ProjectManager] as PManager
+    component [ImportExportService] as IService
+}
 
-    package "CLI Layer" {
-        component "Interactive Menu" as IM
-        component "Command-line Interface\n(TodoCLI)" as CLI
+package "Domain Layer" #FFE5CC {
+    package "Task Domain" {
+        component [TaskRepositoryImpl] as TRepo
     }
 
-    package "Service Layer" {
-        component "Todo Service" as SVC
-        component "Task Manager" as MGR
-        component "Comments Service" as CSVC
-        component "Project Manager" as PMGR
-        component "Import/Export Service" as IES
+    package "Comment Domain" {
+        component [CommentRepositoryImpl] as CRepo
     }
 
-    package "Domain Model" {
-        component "Task & Project Models\n(Task, Project, TaskStatus, TaskComment)" as Model
+    package "Project Domain" {
+        component [ProjectRepositoryImpl] as PRepo
     }
+}
 
-    package "Persistence Layer" {
-        component "JSON Storage\n(JsonStorage)" as Storage
-    }
+package "Protocol Layer\n(Abstraction)" #EEEEFF {
+    interface "TaskRepository\nProtocol" as TRepoP
+    interface "CommentRepository\nProtocol" as CRepoP
+    interface "ProjectRepository\nProtocol" as PRepoP
+    interface "StorageBackend\nProtocol" as StorageP
+}
+
+package "Storage Layer" #FFF3CC {
+    component [JsonStorage] as Storage
+}
+
+package "Model Layer" #DDEEFF {
+    component [Models:\nTask, Project, TaskComment,\nTaskStatus, FilterOptions,\nTaskSummary] as Models
 }
 
 database "todo_data.json" as DB
 
-Main --> IM : interactive mode
-Main --> CLI : command mode
+' CLI layer dependencies
+CLI --> Service
+CLI --> IService
+Menu --> Service
+Menu --> IService
 
-IM --> SVC
-IM --> IES
-CLI --> SVC
-CLI --> IES
+' Service layer dependencies
+Service --> TManager
+Service --> CService
+Service --> PManager
+IService --> TManager
+IService --> CService
 
-SVC --> MGR
-SVC --> CSVC
-SVC --> PMGR
-IES --> MGR
-IES --> CSVC
-MGR --> Storage
-CSVC --> Storage
-PMGR --> Storage
-MGR ..> Model
-CSVC ..> Model
-PMGR ..> Model
-Storage ..> Model
+' Service to Domain dependencies
+TManager --> TRepo
+CService --> CRepo
+PManager --> PRepo
 
-Storage --> DB : read/write
+' Domain implements protocols
+TRepo --> TRepoP : implements
+CRepo --> CRepoP : implements
+PRepo --> PRepoP : implements
+
+' Domain uses storage protocol
+TRepo --> StorageP
+CRepo --> StorageP
+PRepo --> StorageP
+
+' Storage implements protocol
+Storage --> StorageP : implements
+
+' Storage uses database
+Storage --> DB
+
+' Models are used everywhere
+TRepo --> Models
+CRepo --> Models
+PRepo --> Models
 
 @enduml

@@ -1,0 +1,85 @@
+@startuml dependencies
+
+title TODO Application - Dependency Flow (Layered Architecture)
+
+skinparam linetype ortho
+skinparam defaultFontSize 11
+skinparam padding 10
+
+left to right direction
+
+' Layer 5: CLI - topmost
+rectangle "Layer 5: CLI" #FFE5E5 [
+    <b>TodoCLI</b>
+    <b>InteractiveMenu</b>
+]
+
+' Layer 4: Services
+rectangle "Layer 4: Services" #DDFFD4 [
+    <b>TodoService</b> (orchestrator)
+    ----
+    <b>TaskManager</b>
+    <b>CommentsService</b>
+    <b>ProjectManager</b>
+    <b>ImportExportService</b>
+]
+
+' Layer 3: Domain
+rectangle "Layer 3: Domain Repositories" #FFE5CC [
+    <b>TaskRepositoryImpl</b>
+    <b>CommentRepositoryImpl</b>
+    <b>ProjectRepositoryImpl</b>
+]
+
+' Layer 2: Protocols (abstract)
+rectangle "Layer 2: Protocol Contracts" #EEEEFF [
+    <b><<protocol>></b>
+    TaskRepository
+    CommentRepository
+    ProjectRepository
+    StorageBackend
+]
+
+' Layer 1: Storage
+rectangle "Layer 1: Storage Backend" #FFF3CC [
+    <b>JsonStorage</b>
+    (implements StorageBackend)
+]
+
+' Layer 0: Models - bottom, no dependencies
+rectangle "Layer 0: Domain Models" #DDEEFF [
+    <b>Task</b> | <b>Project</b>
+    <b>TaskComment</b> | <b>TaskStatus</b>
+    <b>FilterOptions</b> | <b>TaskSummary</b>
+]
+
+' Dependencies: top to bottom
+"Layer 5: CLI" --> "Layer 4: Services" : uses
+"Layer 4: Services" --> "Layer 3: Domain Repositories" : uses
+"Layer 3: Domain Repositories" --> "Layer 2: Protocol Contracts" : implements
+"Layer 2: Protocol Contracts" --> "Layer 1: Storage Backend" : defined by
+"Layer 1: Storage Backend" --> "Layer 0: Domain Models" : serializes
+"Layer 3: Domain Repositories" --> "Layer 0: Domain Models" : operates on
+"Layer 4: Services" --> "Layer 0: Domain Models" : uses
+
+note right of "Layer 3: Domain Repositories"
+    TaskRepositoryImpl, CommentRepositoryImpl, and
+    ProjectRepositoryImpl each implement their
+    corresponding Protocol, depending on
+    StorageBackend abstraction (not concrete JsonStorage)
+end note
+
+note right of "Layer 2: Protocol Contracts"
+    Protocols define the contract between
+    Domain and Storage layers.
+    They enable dependency injection and
+    decouple implementation from abstraction.
+end note
+
+note right of "Layer 1: Storage Backend"
+    JsonStorage implements all StorageBackend
+    methods. It is the only concrete storage
+    implementation in the system.
+end note
+
+@enduml
