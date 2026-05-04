@@ -313,3 +313,79 @@ Implemented `ImportExportService` that exports all `MemoryEntry` records from `M
 - Robustness: Handles missing files, invalid JSON, missing fields with clear exceptions
 
 Duration: 408.4s | Cost: $0.826493 USD | Turns: 25
+
+## Task 08: Scientific Calculator with Advanced Mathematical Functions
+
+### Summary
+Implemented `ScientificCalculator` class extending Calculator with six advanced mathematical functions (trigonometric, logarithmic, and exponential operations). All new functionality is fully integrated into the CLI with both interactive menu and one-shot flag support.
+
+### Files Changed
+- `src/services/scientific_calculator.py` - Created new ScientificCalculator class inheriting from Calculator with sin(), cos(), tan(), log(), ln(), exp() methods
+- `src/models/operation.py` - Extended Operation enum with SIN, COS, TAN, LOG, LN, EXP enum values
+- `src/cli/calculator_cli.py` - Added _is_single_arg_operation() method, updated _MENU to include scientific operations, reorganized _print_menu() with separate sections, updated run_interactive() to handle variable arity
+- `src/__main__.py` - Added ScientificCalculator import, changed Calculator() to ScientificCalculator(), added _is_single_arg_operation() and _is_unary_operation() helpers, extended argparse with scientific operations, updated operand validation
+- `tests/test_scientific_calculator.py` - Created new test suite with 9 comprehensive test cases
+- `tests/test_cli.py` - Updated 6 existing tests to use correct menu option numbers (exit moved to option 20, history to option 15)
+- `artifacts/class_diagram.puml` - Added ScientificCalculator class extending Calculator, updated Operation enum, updated CalculatorService dependency
+- `artifacts/component_diagram.puml` - Updated "Calculation Engine" component from Calculator to ScientificCalculator
+
+### Test Results
+- All 82 tests passed (9 new ScientificCalculator tests + 73 existing tests)
+- New tests: 9/9 passed
+  - test_scientific_calculator_exists ✓
+  - test_sin ✓
+  - test_cos ✓
+  - test_tan ✓
+  - test_log_base_10 ✓
+  - test_log_of_non_positive_raises ✓
+  - test_ln ✓
+  - test_exp ✓
+  - test_standard_operations_still_work ✓
+- All existing tests: 73/73 passed (no regressions)
+
+### Implementation Details
+- ScientificCalculator extends Calculator via inheritance, inheriting all 8 basic operations
+- Six scientific methods implemented using Python's math module:
+  - sin(x: float) → float: Trigonometric sine using math.sin()
+  - cos(x: float) → float: Trigonometric cosine using math.cos()
+  - tan(x: float) → float: Trigonometric tangent using math.tan()
+  - log(x: float) → float: Base-10 logarithm using math.log10(), raises ValueError if x <= 0
+  - ln(x: float) → float: Natural logarithm using math.log(), raises ValueError if x <= 0
+  - exp(x: float) → float: Exponential function using math.exp()
+- Overrides calculate() method with dispatch dictionary handling both binary and unary operations
+- CalculatorCLI enhanced with:
+  - _is_single_arg_operation() to identify single-argument operations
+  - Reorganized _print_menu() displaying "Standard Operations" (options 1-8) and "Scientific Functions" (options 9-14)
+  - Updated run_interactive() to prompt for appropriate number of operands based on operation type
+- CLI arguments extended:
+  - --operation flag now accepts: sin, cos, tan, log, ln, exp (in addition to existing operations)
+  - Operand validation adjusted for variable arity: 1 operand for scientific/unary, 2 for binary
+  - Both interactive and one-shot modes fully functional
+
+### Error Handling
+- log() and ln() domain validation: Raises ValueError("Cannot take logarithm of non-positive number") for x <= 0
+- Menu error handling preserved: Invalid choices retry, invalid numbers retry
+- CLI error handling: Non-positive logarithm inputs properly caught and reported to stderr
+
+### Menu Structure
+- Standard Operations (options 1-8): Add, Subtract, Multiply, Divide, Square, Square Root, Power, Modulo
+- Scientific Functions (options 9-14): Sine, Cosine, Tangent, Logarithm (base 10), Natural Logarithm, Exponential
+- Other Options (options 15-20): View history, Query memory, Show statistics, Export entries, Import entries, Exit
+
+### Accessibility
+- Interactive mode: Scientific operations accessible via menu options 9-14 with single-number prompts
+- CLI mode: `python -m src --operation sin 0` → Outputs: 0.0
+- CLI mode: `python -m src --operation log 100` → Outputs: 2.0
+- CLI mode: `python -m src --operation ln 2.718281828` → Outputs: ~1.0
+- CLI mode: `python -m src --operation exp 1` → Outputs: ~2.718 (math.e)
+- Help: `python -m src --help` lists all supported operations including scientific ones
+
+### Design Principles
+- Inheritance-based extension: ScientificCalculator reuses Calculator logic, no duplication
+- Single responsibility: Scientific operations isolated in dedicated class
+- Backward compatibility: All existing tests pass without modification
+- Uniform interface: All operations follow same method signature patterns (for compatibility with dispatch)
+- Domain validation: Logarithms validate input domains, other functions accept any float
+- CLI consistency: Both interactive and one-shot modes handle all operations uniformly
+
+Duration: 480.8s | Cost: $0.886181 USD | Turns: 34

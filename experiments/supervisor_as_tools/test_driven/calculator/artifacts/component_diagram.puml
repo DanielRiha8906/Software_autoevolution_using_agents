@@ -9,7 +9,7 @@ package "Calculator Application" {
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
     component "Application Service\n(CalculatorService)" as Service
-    component "Calculation Engine\n(Calculator)" as Calc
+    component "Scientific Calculator\n(ScientificCalculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
     component "Domain Models\n(Operation, CalculationResult)" as Models
 

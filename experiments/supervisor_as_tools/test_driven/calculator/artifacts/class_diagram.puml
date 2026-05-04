@@ -13,9 +13,15 @@ package "models" #DDEEFF {
         SQRT
         POWER
         MODULO
+        SIN
+        COS
+        TAN
+        LOG
+        LN
+        EXP
         --
-        +fromString(value: String) : Operation
-        +displayName() : String
+        +from_string(value: String) : Operation
+        +display_name() : String
     }
 
     class CalculationResult {
@@ -66,13 +72,23 @@ package "services" #DDFFD4 {
         +calculate(op: Operation, a: float, b: float) : float
     }
 
+    class ScientificCalculator extends Calculator {
+        +sin(x: float) : float
+        +cos(x: float) : float
+        +tan(x: float) : float
+        +log(x: float) : float
+        +ln(x: float) : float
+        +exp(x: float) : float
+        +calculate(op: Operation, a: float, b: float) : float
+    }
+
     class CalculatorService {
-        -calculator : Calculator
+        -calculator : ScientificCalculator
         -storage : JsonStorage
         --
-        +CalculatorService(calculator: Calculator, storage: JsonStorage)
+        +CalculatorService(calculator: ScientificCalculator, storage: JsonStorage)
         +perform(operation: Operation, a: float, b: float) : CalculationResult
-        +getHistory() : List<CalculationResult>
+        +get_history() : List<CalculationResult>
     }
 
     class MemoryService {
@@ -128,7 +144,7 @@ package "cli" #FFE5E5 {
 
 CalculatorCLI --> CalculatorService : service
 CalculatorCLI --> ImportExportService : uses
-CalculatorService --> Calculator : calculator
+CalculatorService --> ScientificCalculator : calculator
 CalculatorService --> JsonStorage : storage
 StatisticsService --> MemoryService : uses
 ImportExportService --> MemoryService : uses
@@ -136,6 +152,7 @@ ImportExportService --> MemoryService : uses
 CalculatorService ..> CalculationResult : create
 CalculatorService ..> Operation
 CalculatorCLI ..> Operation
+ScientificCalculator ..> Operation
 Calculator ..> Operation
 JsonStorage ..> CalculationResult : stores
 MemoryService ..> MemoryEntry : manages

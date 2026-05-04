@@ -19,11 +19,20 @@ class CalculatorCLI:
         (Operation.SQRT,     "Square Root"),
         (Operation.POWER,    "Power"),
         (Operation.MODULO,   "Modulo"),
+        (Operation.SIN,      "Sine"),
+        (Operation.COS,      "Cosine"),
+        (Operation.TAN,      "Tangent"),
+        (Operation.LOG,      "Logarithm (base 10)"),
+        (Operation.LN,       "Natural Logarithm"),
+        (Operation.EXP,      "Exponential"),
     ]
 
     def __init__(self, service: CalculatorService, memory_service: Optional[MemoryService] = None) -> None:
         self.service = service
         self.memory_service = memory_service or MemoryService()
+
+    def _is_single_arg_operation(self, operation: Operation) -> bool:
+        return operation in (Operation.SIN, Operation.COS, Operation.TAN, Operation.LOG, Operation.LN, Operation.EXP)
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -71,12 +80,16 @@ class CalculatorCLI:
                 print("Invalid choice — try again.\n")
                 continue
 
-            a = self._prompt_number("Enter first number: ")
+            a = self._prompt_number("Enter number: ")
             if a is None:
                 continue
-            b = self._prompt_number("Enter second number: ")
-            if b is None:
-                continue
+
+            if self._is_single_arg_operation(operation):
+                b = 0.0
+            else:
+                b = self._prompt_number("Enter second number: ")
+                if b is None:
+                    continue
 
             try:
                 result = self.service.perform(operation, a, b)
@@ -98,15 +111,39 @@ class CalculatorCLI:
     # ------------------------------------------------------------------
 
     def _print_menu(self) -> None:
-        print("\nOperations:")
-        for i, (_, label) in enumerate(self._MENU, 1):
+        print("\nStandard Operations:")
+        standard_ops = [
+            (Operation.ADD,      "Add"),
+            (Operation.SUBTRACT, "Subtract"),
+            (Operation.MULTIPLY, "Multiply"),
+            (Operation.DIVIDE,   "Divide"),
+            (Operation.SQUARE,   "Square"),
+            (Operation.SQRT,     "Square Root"),
+            (Operation.POWER,    "Power"),
+            (Operation.MODULO,   "Modulo"),
+        ]
+        for i, (_, label) in enumerate(standard_ops, 1):
             print(f"  {i}. {label}")
-        print(f"  {len(self._MENU) + 1}. View history")
-        print(f"  {len(self._MENU) + 2}. Query memory")
-        print(f"  {len(self._MENU) + 3}. Show statistics")
-        print(f"  {len(self._MENU) + 4}. Export entries")
-        print(f"  {len(self._MENU) + 5}. Import entries")
-        print(f"  {len(self._MENU) + 6}. Exit")
+
+        print("\nScientific Functions:")
+        scientific_ops = [
+            (Operation.SIN,      "Sine"),
+            (Operation.COS,      "Cosine"),
+            (Operation.TAN,      "Tangent"),
+            (Operation.LOG,      "Logarithm (base 10)"),
+            (Operation.LN,       "Natural Logarithm"),
+            (Operation.EXP,      "Exponential"),
+        ]
+        for i, (_, label) in enumerate(scientific_ops, len(standard_ops) + 1):
+            print(f"  {i}. {label}")
+
+        menu_count = len(standard_ops) + len(scientific_ops)
+        print(f"\n  {menu_count + 1}. View history")
+        print(f"  {menu_count + 2}. Query memory")
+        print(f"  {menu_count + 3}. Show statistics")
+        print(f"  {menu_count + 4}. Export entries")
+        print(f"  {menu_count + 5}. Import entries")
+        print(f"  {menu_count + 6}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
