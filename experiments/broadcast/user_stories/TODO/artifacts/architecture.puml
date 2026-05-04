@@ -1,0 +1,106 @@
+@startuml architecture
+
+title TODO Application - Layered Architecture
+
+skinparam linetype ortho
+skinparam defaultFontSize 11
+skinparam padding 10
+
+' Layer 1: CLI
+package "Layer 5: CLI" #FFE5E5 {
+    [TodoCLI]
+    [InteractiveMenu]
+}
+
+' Layer 2: Services
+package "Layer 4: Services" #DDFFD4 {
+    [TodoService]
+    [TaskManager]
+    [CommentsService]
+    [ProjectManager]
+    [ImportExportService]
+}
+
+' Layer 3: Domain
+package "Layer 3: Domain" #FFE5CC {
+    package "Task Domain" #FFFFDD {
+        [TaskRepositoryImpl]
+    }
+
+    package "Comment Domain" #FFFFDD {
+        [CommentRepositoryImpl]
+    }
+
+    package "Project Domain" #FFFFDD {
+        [ProjectRepositoryImpl]
+    }
+}
+
+' Layer 2: Protocols (Abstraction)
+package "Layer 2: Protocols" #EEEEFF {
+    interface "<<protocol>>\nTaskRepository" as TaskRepoProto
+    interface "<<protocol>>\nCommentRepository" as CommentRepoProto
+    interface "<<protocol>>\nProjectRepository" as ProjectRepoProto
+    interface "<<protocol>>\nStorageBackend" as StorageProto
+}
+
+' Layer 1: Storage
+package "Layer 1: Storage" #FFF3CC {
+    [JsonStorage]
+}
+
+' Layer 0: Models (no dependencies)
+package "Layer 0: Models" #DDEEFF {
+    [Task]
+    [TaskStatus]
+    [TaskComment]
+    [Project]
+    [FilterOptions]
+    [TaskSummary]
+}
+
+' Database
+database "todo_data.json" {
+}
+
+' CLI depends on Services
+TodoCLI --> TodoService
+InteractiveMenu --> TodoService
+TodoCLI --> ImportExportService
+InteractiveMenu --> ImportExportService
+
+' Services depend on domain repositories
+TodoService --> TaskRepositoryImpl
+TodoService --> CommentRepositoryImpl
+TodoService --> ProjectRepositoryImpl
+TaskManager --> TaskRepositoryImpl
+CommentsService --> CommentRepositoryImpl
+ProjectManager --> ProjectRepositoryImpl
+
+' Domain repositories implement protocols
+TaskRepositoryImpl ..|> TaskRepoProto : implements
+CommentRepositoryImpl ..|> CommentRepoProto : implements
+ProjectRepositoryImpl ..|> ProjectRepoProto : implements
+
+' Domain repositories use storage backend
+TaskRepositoryImpl --> StorageProto : depends on
+CommentRepositoryImpl --> StorageProto : depends on
+ProjectRepositoryImpl --> StorageProto : depends on
+
+' Storage implements protocol
+JsonStorage ..|> StorageProto : implements
+
+' Storage persists to database
+JsonStorage --> "todo_data.json"
+
+' Domain repositories use models
+TaskRepositoryImpl --> Task
+CommentRepositoryImpl --> TaskComment
+ProjectRepositoryImpl --> Project
+
+' Models have no dependencies (they reference each other)
+Task --> TaskStatus
+Task --> Project
+TaskComment --> Task
+
+@enduml

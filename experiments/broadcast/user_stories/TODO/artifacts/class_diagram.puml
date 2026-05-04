@@ -3,6 +3,8 @@
 skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
 
+' ============ LAYER 0: MODELS ============
+
 package "models" #DDEEFF {
     enum TaskStatus {
         PENDING
@@ -20,9 +22,6 @@ package "models" #DDEEFF {
         +due_date : DateTime [0..1]
         +project_id : String [0..1]
         --
-        +__post_init__() : void
-        +to_dict() : Dictionary
-        +from_dict(data: Dictionary) : Task
         +mark_in_progress() : void
         +mark_done() : void
         +reopen() : void
@@ -36,10 +35,6 @@ package "models" #DDEEFF {
         +id : String
         +name : String
         +created_at : DateTime
-        --
-        +__post_init__() : void
-        +to_dict() : Dictionary
-        +from_dict(data: Dictionary) : Project
     }
 
     class TaskComment {
@@ -49,10 +44,6 @@ package "models" #DDEEFF {
         +created_at : DateTime
         +author : String [0..1]
         +updated_at : DateTime [0..1]
-        --
-        +__post_init__() : void
-        +to_dict() : Dictionary
-        +from_dict(data: Dictionary) : TaskComment
     }
 
     class FilterOptions {
@@ -60,8 +51,6 @@ package "models" #DDEEFF {
         +due_before : DateTime [0..1]
         +due_after : DateTime [0..1]
         +overdue_only : Boolean
-        --
-        +__post_init__() : void
     }
 
     class TaskSummary {
@@ -70,100 +59,207 @@ package "models" #DDEEFF {
         +in_progress_count : Integer
         +done_count : Integer
         +overdue_count : Integer
-        +with_due_date_count : Integer
         +completion_rate : Float
-        +avg_days_to_completion : Float [0..1]
     }
 
     Task "1" --> "*" TaskComment : has
     Task "*" --> "0..1" Project : belongs_to
 }
 
+' ============ LAYER 1: STORAGE ============
+
 package "storage" #FFF3CC {
     class JsonStorage {
         -path : String
-        -cached_comments : List<Dictionary>
-        -cached_projects : List<Dictionary>
+        -cached_comments : List
+        -cached_projects : List
         --
-        +JsonStorage(path: String [0..1])
-        +load() : List<Dictionary>
-        +save(tasks: List<Dictionary>) : void
-        +load_comments() : List<Dictionary>
-        +save_all(tasks: List<Dictionary>, comments: List<Dictionary>) : void
-        +load_projects() : List<Dictionary>
-        +save_projects(projects: List<Dictionary>) : void
+        +load() : List[Dict]
+        +save(tasks: List[Dict]) : void
+        +load_tasks() : List[Task]
+        +save_tasks(tasks: List[Task]) : void
+        +load_comments() : List[TaskComment]
+        +save_comments(comments: List[TaskComment]) : void
+        +load_projects() : List[Project]
+        +save_projects(projects: List[Project]) : void
     }
 }
 
-package "services" #DDFFD4 {
-    exception TaskNotFoundError
-    exception CommentNotFoundError
-    exception ProjectNotFoundError
+' ============ LAYER 2: PROTOCOLS ============
 
-    class CommentsService {
-        -task_manager : TaskManager
-        -storage : JsonStorage
-        -comments : Dictionary<String, TaskComment>
+package "protocols" #EEEEFF {
+    interface "<<protocol>>\nTaskRepository" {
+        +load_tasks() : List[Task]
+        +save_tasks(tasks: List[Task]) : void
+    }
+
+    interface "<<protocol>>\nCommentRepository" {
+        +load_comments() : List[TaskComment]
+        +save_comments(comments: List[TaskComment]) : void
+    }
+
+    interface "<<protocol>>\nProjectRepository" {
+        +load_projects() : List[Project]
+        +save_projects(projects: List[Project]) : void
+    }
+
+    interface "<<protocol>>\nStorageBackend" {
+        +load_tasks() : List[Task]
+        +save_tasks(tasks: List[Task]) : void
+        +load_comments() : List[TaskComment]
+        +save_comments(comments: List[TaskComment]) : void
+        +load_projects() : List[Project]
+        +save_projects(projects: List[Project]) : void
+    }
+}
+
+' ============ LAYER 3: DOMAIN ============
+
+package "task_domain" #FFE5CC {
+    exception TaskNotFoundError
+
+    class TaskRepositoryImpl {
+        -storage : TaskRepository
+        -tasks : Dict[String, Task]
         --
-        +CommentsService(task_manager: TaskManager, storage: JsonStorage [0..1])
-        +add_comment(task_id: String, content: String, author: String [0..1]) : TaskComment
-        +list_comments_for_task(task_id: String) : List<TaskComment>
-        +get_comment(comment_id: String) : TaskComment
-        +delete_comment(comment_id: String) : void
-        +edit_comment(comment_id: String, content: String) : TaskComment
+        +add(task: Task) : Task
+        +get(task_id: String) : Task
+        +get_all() : List[Task]
+        +get_by_status(status: TaskStatus) : List[Task]
+        +update(task: Task) : Task
+        +delete(task_id: String) : Task
+        +apply_filters(options: FilterOptions) : List[Task]
         -load() : void
         -persist() : void
-        -delete_comments_for_task(task_id: String) : void
+    }
+
+    TaskRepositoryImpl ..|> "TaskRepository\nProtocol"
+    TaskRepositoryImpl "1" --> "*" Task : manages
+}
+
+package "comment_domain" #FFE5CC {
+    exception CommentNotFoundError
+
+    class CommentRepositoryImpl {
+        -storage : CommentRepository
+        -comments : Dict[String, TaskComment]
+        -on_cascade_delete : Callable [0..1]
+        --
+        +add(comment: TaskComment) : TaskComment
+        +get(comment_id: String) : TaskComment
+        +get_all() : List[TaskComment]
+        +get_by_task(task_id: String) : List[TaskComment]
+        +update(comment: TaskComment) : TaskComment
+        +delete(comment_id: String) : TaskComment
+        +delete_by_task(task_id: String) : void
+        -load() : void
+        -persist() : void
+    }
+
+    CommentRepositoryImpl ..|> "CommentRepository\nProtocol"
+    CommentRepositoryImpl "1" --> "*" TaskComment : manages
+}
+
+package "project_domain" #FFE5CC {
+    exception ProjectNotFoundError
+
+    class ProjectRepositoryImpl {
+        -storage : ProjectRepository
+        -projects : Dict[String, Project]
+        --
+        +add(project: Project) : Project
+        +get(project_id: String) : Project
+        +get_all() : List[Project]
+        +update(project: Project) : Project
+        +delete(project_id: String) : Project
+        -load() : void
+        -persist() : void
+    }
+
+    ProjectRepositoryImpl ..|> "ProjectRepository\nProtocol"
+    ProjectRepositoryImpl "1" --> "*" Project : manages
+}
+
+' ============ LAYER 4: SERVICES ============
+
+package "services" #DDFFD4 {
+    class TodoService {
+        -manager : TaskManager
+        -comments_service : CommentsService
+        -project_manager : ProjectManager
+        --
+        +add_task(title, description) : Task
+        +get_task(task_id) : Task
+        +list_tasks(...filters) : List[Task]
+        +start_task(task_id) : Task
+        +complete_task(task_id) : Task
+        +reopen_task(task_id) : Task
+        +update_task(task_id, title, description) : Task
+        +delete_task(task_id) : void
+        +add_comment(task_id, content, author) : TaskComment
+        +list_comments(task_id) : List[TaskComment]
+        +get_comment(comment_id) : TaskComment
+        +delete_comment(comment_id) : void
+        +edit_comment(comment_id, content) : TaskComment
+        +create_project(name) : Project
+        +get_project(project_id) : Project
+        +list_projects() : List[Project]
+        +update_project(project_id, name) : Project
+        +delete_project(project_id) : void
+        +assign_task_to_project(task_id, project_id) : Task
+        +unassign_task_from_project(task_id) : Task
+        +generate_report() : TaskSummary
     }
 
     class TaskManager {
-        -storage : JsonStorage
-        -tasks : Dictionary<String, Task>
-        -on_delete_callback : Callable [0..1]
+        -storage : TaskRepository
+        -task_repo : TaskRepositoryImpl
         --
-        +TaskManager(storage: JsonStorage [0..1])
-        +add(title: String, description: String [0..1]) : Task
-        +get(taskId: String) : Task
-        +listAll() : List<Task>
-        +listByStatus(status: TaskStatus) : List<Task>
-        +list_by_date_range(before: DateTime [0..1], after: DateTime [0..1]) : List<Task>
-        +list_overdue() : List<Task>
-        +list_by_project(project_id: String) : List<Task>
-        +list_unassigned() : List<Task>
-        +set_project(task_id: String, project_id: String [0..1]) : Task
-        +apply_filters(options: FilterOptions) : List<Task>
-        +update(taskId: String, title: String [0..1], description: String [0..1]) : Task
-        +setStatus(taskId: String, status: TaskStatus) : Task
-        +delete(taskId: String) : void
-        +set_on_delete_callback(callback: Callable) : void
-        +markInProgress(taskId: String) : Task
-        +markDone(taskId: String) : Task
-        +reopen(taskId: String) : Task
-        -load() : void
-        -persist() : void
+        +add(title, description) : Task
+        +get(task_id) : Task
+        +list_all() : List[Task]
+        +list_by_status(status) : List[Task]
+        +list_overdue() : List[Task]
+        +list_by_project(project_id) : List[Task]
+        +list_unassigned() : List[Task]
+        +set_project(task_id, project_id) : Task
+        +apply_filters(options) : List[Task]
+        +update(task_id, title, description) : Task
+        +set_status(task_id, status) : Task
+        +delete(task_id) : void
+        +set_on_delete_callback(callback) : void
+        +mark_in_progress(task_id) : Task
+        +mark_done(task_id) : Task
+        +reopen(task_id) : Task
+    }
+
+    class CommentsService {
+        -task_manager : TaskManager
+        -comment_repo : CommentRepositoryImpl
+        --
+        +add_comment(task_id, content, author) : TaskComment
+        +list_comments_for_task(task_id) : List[TaskComment]
+        +get_comment(comment_id) : TaskComment
+        +delete_comment(comment_id) : void
+        +edit_comment(comment_id, content) : TaskComment
     }
 
     class ProjectManager {
-        -storage : JsonStorage
-        -projects : Dictionary<String, Project>
+        -project_repo : ProjectRepositoryImpl
         --
-        +ProjectManager(storage: JsonStorage [0..1])
-        +add(name: String) : Project
-        +get(project_id: String) : Project
-        +list_all() : List<Project>
-        +update(project_id: String, name: String [0..1]) : Project
-        +delete(project_id: String) : void
-        -load() : void
-        -persist() : void
+        +add(name) : Project
+        +get(project_id) : Project
+        +list_all() : List[Project]
+        +update(project_id, name) : Project
+        +delete(project_id) : void
     }
 
     class ImportExportService {
         -task_manager : TaskManager
         -comments_service : CommentsService
         --
-        +ImportExportService(task_manager: TaskManager, comments_service: CommentsService)
-        +export_to_file(filepath: String) : Integer
-        +import_from_file(filepath: String, merge: Boolean [0..1]) : ImportSummary
+        +export_to_file(filepath) : Integer
+        +import_from_file(filepath, merge) : ImportSummary
     }
 
     class ImportSummary {
@@ -171,82 +267,64 @@ package "services" #DDFFD4 {
         +tasks_skipped : Integer
         +comments_imported : Integer
         +comments_skipped : Integer
-        +skipped_task_ids : List<String>
-        +skipped_comment_ids : List<String>
     }
 
-    class TodoService {
-        -manager : TaskManager
-        -comments_service : CommentsService
-        -project_manager : ProjectManager
-        --
-        +TodoService(storage: JsonStorage [0..1])
-        +addTask(title: String, description: String [0..1]) : Task
-        +getTask(taskId: String) : Task
-        +listTasks(status: TaskStatus [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1], overdue: Boolean [0..1]) : List<Task>
-        +startTask(taskId: String) : Task
-        +completeTask(taskId: String) : Task
-        +reopenTask(taskId: String) : Task
-        +updateTask(taskId: String, title: String [0..1], description: String [0..1]) : Task
-        +deleteTask(taskId: String) : void
-        +isTaskPending(taskId: String) : Boolean
-        +isTaskInProgress(taskId: String) : Boolean
-        +isTaskCompleted(taskId: String) : Boolean
-        +isTaskOverdue(taskId: String) : Boolean
-        +add_comment(taskId: String, content: String, author: String [0..1]) : TaskComment
-        +list_comments(taskId: String) : List<TaskComment>
-        +get_comment(commentId: String) : TaskComment
-        +delete_comment(commentId: String) : void
-        +edit_comment(commentId: String, content: String) : TaskComment
-        +create_project(name: String) : Project
-        +get_project(project_id: String) : Project
-        +list_projects() : List<Project>
-        +update_project(project_id: String, name: String) : Project
-        +delete_project(project_id: String) : void
-        +list_tasks_by_project(project_id: String) : List<Task>
-        +list_unassigned_tasks() : List<Task>
-        +assign_task_to_project(task_id: String, project_id: String) : Task
-        +unassign_task_from_project(task_id: String) : Task
-        +generate_report() : TaskSummary
-    }
+    TodoService --> TaskManager
+    TodoService --> CommentsService
+    TodoService --> ProjectManager
+    ImportExportService --> TaskManager
+    ImportExportService --> CommentsService
+    CommentsService --> TaskManager
+    ImportExportService --> ImportSummary
+
+    TaskManager --> TaskRepositoryImpl
+    CommentsService --> CommentRepositoryImpl
+    ProjectManager --> ProjectRepositoryImpl
+
+    TaskManager --> TaskNotFoundError
+    CommentsService --> CommentNotFoundError
+    ProjectManager --> ProjectNotFoundError
+
+    TodoService --> TaskSummary
 }
+
+' ============ LAYER 5: CLI ============
 
 package "cli" #FFE5E5 {
     class TodoCLI {
         -service : TodoService
         --
-        +TodoCLI(storagePath: String [0..1])
-        +run(argv: List<String> [0..1]) : Integer
+        +run(argv) : Integer
     }
 
     class InteractiveMenu {
         -service : TodoService
         --
-        +InteractiveMenu(storagePath: String [0..1])
         +run() : void
     }
+
+    TodoCLI --> TodoService
+    TodoCLI --> ImportExportService
+    InteractiveMenu --> TodoService
+    InteractiveMenu --> ImportExportService
 }
 
-Task --> TaskStatus : status
-TaskManager --> JsonStorage : storage
-TaskManager --> FilterOptions : uses
-TaskManager ..> TaskNotFoundError : raises
-CommentsService --> TaskManager : task_manager
-CommentsService --> JsonStorage : storage
-CommentsService ..> TaskNotFoundError : raises
-CommentsService ..> CommentNotFoundError : raises
-ProjectManager --> JsonStorage : storage
-ProjectManager ..> ProjectNotFoundError : raises
-ImportExportService --> TaskManager : task_manager
-ImportExportService --> CommentsService : comments_service
-ImportExportService --> ImportSummary : returns
-TodoService --> TaskManager : manager
-TodoService --> CommentsService : comments_service
-TodoService --> ProjectManager : project_manager
-TodoService --> TaskSummary : generates
-TodoCLI --> TodoService : service
-TodoCLI --> ImportExportService : import_export
-InteractiveMenu --> TodoService : service
-InteractiveMenu --> ImportExportService : import_export
+' ============ PROTOCOL IMPLEMENTATION ============
+
+JsonStorage ..|> "StorageBackend\nProtocol" : implements
+
+' Cross-layer relationships
+TaskRepositoryImpl --|> "TaskRepository\nProtocol" : implements
+CommentRepositoryImpl --|> "CommentRepository\nProtocol" : implements
+ProjectRepositoryImpl --|> "ProjectRepository\nProtocol" : implements
+
+TaskRepositoryImpl --> "StorageBackend\nProtocol" : depends on
+CommentRepositoryImpl --> "StorageBackend\nProtocol" : depends on
+ProjectRepositoryImpl --> "StorageBackend\nProtocol" : depends on
+
+' Storage usage
+TaskRepositoryImpl --> JsonStorage : constructed with
+CommentRepositoryImpl --> JsonStorage : constructed with
+ProjectRepositoryImpl --> JsonStorage : constructed with
 
 @enduml

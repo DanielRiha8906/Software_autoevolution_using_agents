@@ -1,3 +1,5 @@
+"""Import/Export service - enables data portability."""
+
 import json
 from pathlib import Path
 from typing import Optional
@@ -34,9 +36,20 @@ class ImportSummary:
 
 
 class ImportExportService:
-    """Service for exporting and importing tasks and comments to/from JSON files."""
+    """
+    Service for exporting and importing tasks and comments to/from JSON files.
+
+    Provides data portability across TODO instances.
+    """
 
     def __init__(self, task_manager: TaskManager, comments_service: CommentsService) -> None:
+        """
+        Initialize ImportExportService.
+
+        Args:
+            task_manager: TaskManager for task operations
+            comments_service: CommentsService for comment operations
+        """
         self._task_manager = task_manager
         self._comments_service = comments_service
 
@@ -118,9 +131,11 @@ class ImportExportService:
             skipped_comment_ids=[],
         )
 
-        # Get existing task IDs
+        # Get existing task and comment IDs
         existing_task_ids = {t.id for t in self._task_manager.list_all()}
-        existing_comment_ids = {c.id for c in self._comments_service._comments.values()}
+        existing_comment_ids = set()
+        for task in self._task_manager.list_all():
+            existing_comment_ids.update({c.id for c in self._comments_service.list_comments_for_task(task.id)})
 
         # Import tasks
         task_id_map = {}  # map of imported task IDs
@@ -148,9 +163,9 @@ class ImportExportService:
                     summary.skipped_task_ids.append(task_id[:8])
                     continue
 
-                # Create task from dict
+                # Create task from dict and add via manager
                 task = Task.from_dict(task_data)
-                self._task_manager._tasks[task.id] = task
+                self._task_manager._repository.add(task)
                 existing_task_ids.add(task.id)
                 task_id_map[task.id] = task.id
                 summary.tasks_imported += 1
@@ -160,10 +175,6 @@ class ImportExportService:
                 task_id = task_data.get("id", "unknown")
                 if isinstance(task_id, str):
                     summary.skipped_task_ids.append(task_id[:8])
-
-        # Persist after importing tasks
-        if summary.tasks_imported > 0:
-            self._task_manager._persist()
 
         # Import comments
         for comment_data in comments_data:
@@ -195,9 +206,9 @@ class ImportExportService:
                     summary.skipped_comment_ids.append(comment_id[:8])
                     continue
 
-                # Create comment from dict
+                # Create comment from dict and add via repository
                 comment = TaskComment.from_dict(comment_data)
-                self._comments_service._comments[comment.id] = comment
+                self._comments_service._repository.add(comment)
                 existing_comment_ids.add(comment.id)
                 summary.comments_imported += 1
 
@@ -206,9 +217,5 @@ class ImportExportService:
                 comment_id = comment_data.get("id", "unknown")
                 if isinstance(comment_id, str):
                     summary.skipped_comment_ids.append(comment_id[:8])
-
-        # Persist after importing comments
-        if summary.comments_imported > 0:
-            self._comments_service._persist()
 
         return summary

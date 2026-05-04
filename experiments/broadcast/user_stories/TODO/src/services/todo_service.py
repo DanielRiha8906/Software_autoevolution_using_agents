@@ -1,3 +1,5 @@
+"""High-level TODO service - orchestrates multiple domain operations."""
+
 from datetime import datetime
 from typing import Optional
 
@@ -8,16 +10,40 @@ from ..models.task_summary import TaskSummary
 from ..models.filter_options import FilterOptions
 from ..models.project import Project
 from ..storage.json_storage import JsonStorage
+from ..task_domain import TaskRepositoryImpl
+from ..comment_domain import CommentRepositoryImpl
+from ..project_domain import ProjectRepositoryImpl
 from .task_manager import TaskManager
 from .comments_service import CommentsService
 from .project_manager import ProjectManager
 
 
 class TodoService:
+    """
+    High-level TODO orchestration service.
+
+    Coordinates task, comment, and project operations by delegating to specialized managers.
+    Provides a unified interface for all TODO functionality.
+    """
+
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
-        self._manager = TaskManager(storage)
-        self._comments_service = CommentsService(self._manager, storage)
-        self._project_manager = ProjectManager(storage)
+        """
+        Initialize TodoService with storage backend.
+
+        Args:
+            storage: JsonStorage backend (uses default if not provided)
+        """
+        _storage = storage or JsonStorage()
+        # Create domain repositories
+        task_repo = TaskRepositoryImpl(_storage)
+        comment_repo = CommentRepositoryImpl(_storage)
+        project_repo = ProjectRepositoryImpl(_storage)
+        # Create service managers with repositories
+        self._manager = TaskManager(task_repo)
+        self._comments_service = CommentsService(self._manager, comment_repo)
+        self._project_manager = ProjectManager(project_repo)
+        # Store for backward compatibility with import_export_service
+        self._storage = _storage
 
     def add_task(self, title: str, description: Optional[str] = None) -> Task:
         if not title or not title.strip():
