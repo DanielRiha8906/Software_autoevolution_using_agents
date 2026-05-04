@@ -57,9 +57,22 @@ package "models" #DDEEFF {
     }
 }
 
+package "serialization" #FFF8DC {
+    class TaskSerializer {
+        --
+        +{static}to_dict(task: Task) : Dictionary
+        +{static}from_dict(data: Dictionary) : Task
+    }
+}
+
 package "storage" #FFF3CC {
+    interface StoragePort <<protocol>> {
+        +load() : List<Dictionary>
+        +save(tasks: List<Dictionary>) : void
+    }
+
     class JsonStorage {
-        -path : String
+        -path : Path
         --
         +JsonStorage(path: String [0..1])
         +load() : List<Dictionary>
@@ -71,25 +84,36 @@ package "storage" #FFF3CC {
     }
 }
 
+package "repositories" #FFE4E1 {
+    class TaskRepository {
+        -_storage : StoragePort
+        -_serializer : TaskSerializer
+        --
+        +TaskRepository(storage: StoragePort)
+        +load_all() : List<Task>
+        +save_all(tasks: List<Task>) : void
+    }
+}
+
 package "services" #DDFFD4 {
     exception TaskNotFoundError
     exception ProjectNotFoundError
 
     class TaskManager {
-        -storage : JsonStorage
-        -tasks : Dictionary<String, Task>
+        -_repository : TaskRepository
+        -_tasks : Dictionary<String, Task>
         --
-        +TaskManager(storage: JsonStorage [0..1])
+        +TaskManager(storage_or_repo: Union[JsonStorage, TaskRepository] [0..1])
         +add(title: String, description: String [0..1], project_id: String [0..1]) : Task
-        +get(taskId: String) : Task
-        +listAll() : List<Task>
-        +listByStatus(status: TaskStatus) : List<Task>
-        +listByProject(project_id: String) : List<Task>
-        +update(taskId: String, title: String [0..1], description: String [0..1], project_id: String [0..1]) : Task
-        +setStatus(taskId: String, status: TaskStatus) : Task
-        +delete(taskId: String) : void
-        -load() : void
-        -persist() : void
+        +get(task_id: String) : Task
+        +list_all() : List<Task>
+        +list_by_status(status: TaskStatus) : List<Task>
+        +list_by_project(project_id: String) : List<Task>
+        +update(task_id: String, title: String [0..1], description: String [0..1], project_id: String [0..1]) : Task
+        +set_status(task_id: String, status: TaskStatus) : Task
+        +delete(task_id: String) : void
+        -_load() : void
+        -_persist() : void
     }
 
     class ProjectService {
@@ -111,19 +135,19 @@ package "services" #DDFFD4 {
         --
         +TodoService(storage: JsonStorage [0..1])
         +add_task(title: String, description: String [0..1], due_date: DateTime [0..1], project_id: String [0..1]) : Task
-        +get_task(taskId: String) : Task
+        +get_task(task_id: String) : Task
         +list_tasks(status: TaskStatus [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1], overdue: bool, project_id: String [0..1]) : List<Task>
-        +start_task(taskId: String) : Task
-        +complete_task(taskId: String) : Task
-        +reopen_task(taskId: String) : Task
-        +update_task(taskId: String, title: String [0..1], description: String [0..1], project_id: String [0..1]) : Task
-        +delete_task(taskId: String) : void
+        +start_task(task_id: String) : Task
+        +complete_task(task_id: String) : Task
+        +reopen_task(task_id: String) : Task
+        +update_task(task_id: String, title: String [0..1], description: String [0..1], project_id: String [0..1]) : Task
+        +delete_task(task_id: String) : void
     }
 
     class CommentsService {
-        -todo_service : TodoService
-        -storage : JsonStorage
-        -comments : Dictionary<String, TaskComment>
+        -_todo_service : TodoService
+        -_storage : JsonStorage
+        -_comments : Dictionary<String, TaskComment>
         --
         +CommentsService(todo_service: TodoService, storage: JsonStorage [0..1])
         +add_comment(task_id: String, content: String) : TaskComment
@@ -155,15 +179,30 @@ package "services" #DDFFD4 {
         +export(filepath: String) : void
         +import_from(filepath: String) : Tuple<List<Task>, List<TaskComment>>
     }
+
+    class DatetimeService {
+        --
+        +{static}utc_now() : DateTime
+    }
+}
+
+package "formatters" #FFEBCD {
+    class TaskFormatter {
+        --
+        +{static}get_status_symbol(status: TaskStatus) : String
+        +{static}get_status_name(status: TaskStatus) : String
+        +{static}format_task_line(task: Task, show_project: bool) : String
+    }
 }
 
 package "cli" #FFE5E5 {
     class TodoCLI {
-        -service : TodoService
-        -comments_service : CommentsService
-        -import_export_service : TaskImportExportService
+        -_service : TodoService
+        -_project_service : ProjectService
+        -_comments_service : CommentsService
+        -_import_export_service : TaskImportExportService
         --
-        +TodoCLI(storagePath: String [0..1])
+        +TodoCLI(storage_path: String [0..1])
         +run(argv: List<String> [0..1]) : Integer
     }
 
@@ -180,26 +219,50 @@ package "cli" #FFE5E5 {
 Task --> TaskStatus : status
 Task --> Project : references [0..1]
 TaskComment --> Task : task_id
-TaskManager --> JsonStorage : storage
+
+TaskSerializer ..> Task : serializes
+TaskSerializer ..> TaskComment : serializes
+
+JsonStorage --> StoragePort : implements
+JsonStorage ..> Task : loads/saves
+JsonStorage ..> TaskComment : loads/saves
+JsonStorage ..> Project : loads/saves
+
+TaskRepository --> StoragePort : depends on
+TaskRepository --> TaskSerializer : uses
+TaskRepository ..> Task : manages
+
+TaskManager --> TaskRepository : delegates to
 TaskManager ..> TaskNotFoundError : raises
 ProjectService --> JsonStorage : storage
 ProjectService --> Project : manages
 ProjectService ..> ProjectNotFoundError : raises
+
 TodoService --> TaskManager : _manager
-CommentsService --> TodoService : todo_service
+CommentsService --> TodoService : validates via
 CommentsService --> JsonStorage : storage
 CommentsService --> TaskComment : contains
+
 TaskStatisticsService --> TodoService : uses
 TaskStatisticsService --> TaskStatistics : returns
 TaskImportExportService --> TodoService : uses
 TaskImportExportService --> CommentsService : uses
 TaskImportExportService --> Task : works with
 TaskImportExportService --> TaskComment : works with
+
+TaskFormatter ..> Task : formats
+TaskFormatter ..> TaskStatus : uses
+TaskFormatter ..> TaskComment : formats
+
 TodoCLI --> TodoService : service
+TodoCLI --> ProjectService : project_service
 TodoCLI --> CommentsService : comments_service
 TodoCLI --> TaskImportExportService : import_export_service
+TodoCLI --> TaskFormatter : uses
+
 InteractiveMenu --> TodoService : service
 InteractiveMenu --> CommentsService : comments_service
 InteractiveMenu --> TaskImportExportService : import_export_service
+InteractiveMenu --> TaskFormatter : uses
 
 @enduml

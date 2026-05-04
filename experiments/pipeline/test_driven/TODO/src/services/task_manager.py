@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Union
 
 from ..models.task import Task
 from ..models.task_status import TaskStatus
 from ..storage.json_storage import JsonStorage
+from ..repositories.task_repository import TaskRepository
 
 
 class TaskNotFoundError(Exception):
@@ -11,17 +12,29 @@ class TaskNotFoundError(Exception):
 
 
 class TaskManager:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
-        self._storage = storage or JsonStorage()
+    def __init__(self, storage_or_repo: Optional[Union[JsonStorage, TaskRepository]] = None) -> None:
+        # Support both TaskRepository and JsonStorage for backward compatibility
+        if isinstance(storage_or_repo, TaskRepository):
+            self._repository = storage_or_repo
+        elif isinstance(storage_or_repo, JsonStorage):
+            self._repository = TaskRepository(storage_or_repo)
+        elif storage_or_repo is None:
+            storage = JsonStorage()
+            self._repository = TaskRepository(storage)
+        else:
+            # Fallback: treat as JsonStorage
+            self._repository = TaskRepository(storage_or_repo)
+
         self._tasks: dict[str, Task] = {}
         self._load()
 
     def _load(self) -> None:
-        raw = self._storage.load()
-        self._tasks = {d["id"]: Task.from_dict(d) for d in raw}
+        tasks = self._repository.load_all()
+        self._tasks = {t.id: t for t in tasks}
 
     def _persist(self) -> None:
-        self._storage.save([t.to_dict() for t in self._tasks.values()])
+        tasks_list = list(self._tasks.values())
+        self._repository.save_all(tasks_list)
 
     def add(self, title: str, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
         task = Task(title=title, description=description, project_id=project_id)

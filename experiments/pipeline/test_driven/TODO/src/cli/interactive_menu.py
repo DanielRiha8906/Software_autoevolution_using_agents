@@ -4,6 +4,7 @@ from typing import Optional
 
 from ..models.task import Task, CEST
 from ..models.task_status import TaskStatus
+from ..formatters.task_formatter import TaskFormatter
 from ..services.task_manager import TaskNotFoundError
 from ..services.project_service import ProjectService, ProjectNotFoundError
 from ..services.task_statistics_service import TaskStatisticsService
@@ -11,18 +12,6 @@ from ..services.todo_service import TodoService
 from ..services.comments_service import CommentsService
 from ..services.task_import_export_service import TaskImportExportService
 from ..storage.json_storage import JsonStorage
-
-_STATUS_LABEL = {
-    TaskStatus.PENDING: "[ ]",
-    TaskStatus.IN_PROGRESS: "[~]",
-    TaskStatus.DONE: "[x]",
-}
-
-_STATUS_NAME = {
-    TaskStatus.PENDING: "pending",
-    TaskStatus.IN_PROGRESS: "in progress",
-    TaskStatus.DONE: "done",
-}
 
 
 def _clear() -> None:
@@ -50,11 +39,7 @@ def _pick(prompt: str, options: list[str]) -> Optional[int]:
 
 
 def _task_line(task: Task, show_project: bool = False) -> str:
-    sym = _STATUS_LABEL[task.status]
-    line = f"{sym} {task.id[:8]}  {task.title}"
-    if show_project and task.project_id:
-        line += f" [{task.project_id[:8]}]"
-    return line
+    return TaskFormatter.format_task_line(task, show_project=show_project)
 
 
 class InteractiveMenu:
@@ -152,7 +137,7 @@ class InteractiveMenu:
 
         _clear()
         tasks = self._service.list_tasks(status)
-        label = f"[{_STATUS_NAME[status]}]" if status else "[all]"
+        label = f"[{TaskFormatter.get_status_name(status)}]" if status else "[all]"
         print(f"  Tasks {label}\n")
         if not tasks:
             print("  (none)")

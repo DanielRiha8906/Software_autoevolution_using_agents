@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Optional
 
 from ..models.task_status import TaskStatus
+from ..formatters.task_formatter import TaskFormatter
 from ..services.task_manager import TaskNotFoundError
 from ..services.project_service import ProjectService, ProjectNotFoundError
 from ..services.task_statistics_service import TaskStatisticsService
@@ -11,12 +12,6 @@ from ..services.todo_service import TodoService
 from ..services.comments_service import CommentsService
 from ..services.task_import_export_service import TaskImportExportService
 from ..storage.json_storage import JsonStorage
-
-_STATUS_SYMBOLS = {
-    TaskStatus.PENDING: "[ ]",
-    TaskStatus.IN_PROGRESS: "[~]",
-    TaskStatus.DONE: "[x]",
-}
 
 
 class TodoCLI:
@@ -189,7 +184,7 @@ class TodoCLI:
             print("No tasks found.")
             return 0
         for task in tasks:
-            sym = _STATUS_SYMBOLS[task.status]
+            sym = TaskFormatter.get_status_symbol(task.status)
             desc = f"  {task.description}" if task.description else ""
             print(f"{sym} {task.id[:8]}  {task.title}{desc}")
         return 0
