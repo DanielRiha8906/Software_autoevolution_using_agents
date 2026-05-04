@@ -10,6 +10,7 @@ from ..services.workflow_run_service import WorkflowRunService
 from ..services.attempt_service import AttemptService
 from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.statistics_service import StatisticsService
+from ..services.github_fetch_service import GitHubFetchService
 
 
 def _fmt_run(run: WorkflowRun) -> str:
@@ -151,6 +152,14 @@ def build_parser() -> argparse.ArgumentParser:
     import_p = sub.add_parser("import", help="Import runs from JSON file")
     import_p.add_argument("--input", required=True, help="Input file path")
     import_p.add_argument("--skip-duplicates", action="store_true", help="Skip duplicate runs instead of failing")
+
+    # github-fetch
+    github_fetch_p = sub.add_parser("github-fetch", help="Fetch workflow runs from GitHub")
+    github_fetch_p.add_argument("--owner", required=True, help="GitHub repository owner")
+    github_fetch_p.add_argument("--repo", required=True, help="GitHub repository name")
+    github_fetch_p.add_argument("--workflow-id", default=None, help="Optional workflow ID or filename to filter")
+    github_fetch_p.add_argument("--token", default=None, help="GitHub Personal Access Token (optional, uses env/secrets/.env if not provided)")
+    github_fetch_p.add_argument("--skip-duplicates", action="store_true", help="Skip duplicate runs instead of failing")
 
     return parser
 
@@ -337,6 +346,47 @@ def run_cli(service: WorkflowRunService, attempt_service: AttemptService, args=N
         except FileNotFoundError as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)
+        except ValueError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            sys.exit(1)
+
+    elif ns.command == "github-fetch":
+        try:
+            github_service = GitHubFetchService()
+            runs = github_service.fetch_workflow_runs(
+                owner=ns.owner,
+                repo=ns.repo,
+                workflow_id=ns.workflow_id,
+                token=ns.token,
+            )
+
+            imported_count = 0
+            skipped_count = 0
+            errors = []
+
+            for run in runs:
+                if any(r.id == run.id for r in service.list_runs()):
+                    if ns.skip_duplicates:
+                        skipped_count += 1
+                        continue
+                    else:
+                        errors.append(f"Run {run.id} already exists")
+                        continue
+
+                try:
+                    service.add_workflow_run(run)
+                    imported_count += 1
+                except ValueError as e:
+                    errors.append(str(e))
+
+            print(f"Fetched {imported_count} new runs from GitHub ({skipped_count} duplicates skipped)")
+            if errors:
+                print(f"Warnings ({len(errors)} items):")
+                for error in errors[:5]:
+                    print(f"  - {error}")
+                if len(errors) > 5:
+                    print(f"  ... and {len(errors) - 5} more")
+
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
             sys.exit(1)

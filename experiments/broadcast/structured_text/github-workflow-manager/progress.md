@@ -416,3 +416,87 @@ python -m src import --input runs.json --skip-duplicates
 ```
 
 Duration: 691.6s | Cost: $1.627182 USD | Turns: 54
+
+## Task 08: GitHub Integration — Fetch Workflow Runs
+
+### Approach
+Broadcast architecture with 3 independent implementers (candidate-a, candidate-b, candidate-c). All three candidates converged on identical implementations.
+
+### Results
+- **Candidate-A**: 138/138 tests passing. Full GitHub integration via `gh` CLI.
+- **Candidate-B**: 138/138 tests passing. Identical implementation to Candidate-A.
+- **Candidate-C**: 138/138 tests passing. Identical implementation to Candidate-A and B.
+
+### Winner: Candidate-A
+**Reason**: All three candidates converged to the same solution independently, demonstrating excellent architectural alignment. Selected Candidate-A arbitrarily as all implementations are functionally and structurally identical. This convergence signals the design is correct and well-validated.
+
+### Files Changed
+- `src/services/github_fetch_service.py` (NEW, 321 lines)
+  - GitHubFetchService class with complete GitHub integration
+  - Token resolution chain: parameter → GITHUB_TOKEN env → .env → secrets/.env → user prompt
+  - Validates token via `gh api user` endpoint
+  - Fetches workflow runs via `gh run list` (JSON output)
+  - Maps GitHub statuses/conclusions to domain enums
+  - Handles errors: rate limits, invalid tokens, network issues, malformed JSON
+
+- `src/cli/workflow_cli.py` (MODIFIED, +50 lines)
+  - Added `github-fetch` subcommand with arguments:
+    - `--owner` (required): GitHub repository owner
+    - `--repo` (required): GitHub repository name
+    - `--workflow-id` (optional): Filter by workflow ID
+    - `--token` (optional): GitHub PAT (uses resolution chain if not provided)
+    - `--skip-duplicates`: Skip duplicate runs instead of failing
+  
+- `src/cli/interactive_menu.py` (MODIFIED, +45 lines)
+  - Added `_fetch_from_github()` function
+  - Added "Fetch from GitHub" menu option (menu item 12)
+  - Prompts for owner, repo, workflow ID, and duplicate handling
+
+- `src/services/__init__.py` (MODIFIED)
+  - Exported GitHubFetchService for public API access
+
+- `tests/test_github_fetch_service.py` (NEW, 364 lines)
+  - 31 comprehensive tests covering:
+    - Token resolution from all sources
+    - Environment file parsing
+    - Token validation
+    - Status/conclusion mapping
+    - Timestamp parsing (ISO 8601 with timezone handling)
+    - GitHub run conversion
+    - Error handling (API failures, invalid JSON, timeouts)
+
+### Requirements Met
+
+**MUST HAVE:** ✓
+- `github_fetch_mode` implemented as GitHubFetchService class
+- Fetches workflow runs via GitHub REST API (gh CLI wrapper, no external dependencies)
+- Converts GitHub API data to WorkflowRun domain model
+- Token resolution in priority order (env var → .env → secrets/.env → user prompt)
+- No persistence of user-entered tokens
+- Accessible via both CLI (`--github-fetch` flag) and interactive menu (option 12)
+
+**SHOULD HAVE:** ✓
+- API error handling (rate limits, invalid token, network timeouts, malformed JSON)
+- Token validation before API requests (via `/user` endpoint)
+
+**COULD HAVE:**
+- Incremental fetch not implemented (optional feature)
+
+### Test Coverage
+- Existing tests: 107 (all passing)
+- New tests: 31 (all passing)
+- **Total: 138 tests passing**
+
+### CLI Availability
+All functionality is accessible via `python -m src`:
+- Interactive: `python -m src` → menu option 12 "Fetch from GitHub"
+- One-shot: `python -m src github-fetch --owner <owner> --repo <repo> [--workflow-id <id>] [--token <token>] [--skip-duplicates]`
+- Help: `python -m src github-fetch --help`
+
+### Diagrams Updated
+- `artifacts/class_diagram.puml`: Added GitHubFetchService class and relationships
+- `artifacts/use_case_diagram.puml`: Added "Fetch from GitHub" use cases (both modes)
+- `artifacts/activity_diagram_interactive.puml`: Added step 12 for GitHub fetch workflow
+- `artifacts/activity_diagram_main.puml`: Added github-fetch CLI subcommand flow
+
+Duration: 508.1s | Cost: $3.770724 USD | Turns: 57

@@ -132,7 +132,16 @@ repeat
         :Print "Import cancelled.";
       endif
 
-    case (12 — Exit)
+    case (12 — Fetch from GitHub)
+      :Prompt GitHub owner;
+      :Prompt GitHub repo;
+      :Prompt workflow ID (optional);
+      :Choose duplicate handling;
+      :GitHubFetchService.fetch_workflow_runs();
+      :Import fetched runs;
+      :Print "Successfully fetched <count> runs";
+
+    case (13 — Exit)
       :Print "Goodbye.";
       stop
 
