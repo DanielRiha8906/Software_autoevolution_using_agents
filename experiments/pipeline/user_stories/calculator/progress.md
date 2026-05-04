@@ -334,4 +334,4 @@ Duration: 540.7s | Cost: $1.121241 USD | Turns: 16
 - ✅ `python -m src` behaves identically before and after refactoring
 - ✅ All existing functionality remains accessible (interactive menu + CLI flags)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 842.9s | Cost: $1.765275 USD | Turns: 20
