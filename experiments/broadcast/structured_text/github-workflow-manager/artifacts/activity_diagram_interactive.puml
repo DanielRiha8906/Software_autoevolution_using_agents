@@ -141,7 +141,14 @@ repeat
       :Import fetched runs;
       :Print "Successfully fetched <count> runs";
 
-    case (13 — Exit)
+    case (13 — Launch GUI)
+      :Initialize FilterModel;
+      :Create WorkflowRunViewerGUI\nwith service and attempt_service;
+      :Launch tkinter main loop;
+      note right: User interacts with GUI\n(filtering, viewing runs)
+      :When GUI closes, return to menu;
+
+    case (14 — Exit)
       :Print "Goodbye.";
       stop
 

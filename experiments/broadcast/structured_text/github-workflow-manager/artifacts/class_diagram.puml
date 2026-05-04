@@ -196,6 +196,43 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #FFD9B3 {
+    class FilterModel {
+        -status_filter : Optional[WorkflowStatus]
+        -conclusion_filter : Optional[WorkflowConclusion]
+        --
+        +__init__()
+        +set_status(status_str: str) : None
+        +set_conclusion(conclusion_str: str) : None
+        +apply(runs: List[WorkflowRun],\n  attempt_service: AttemptService) : List[WorkflowRun]
+        +reset() : None
+    }
+
+    class WorkflowRunViewerGUI {
+        -root : tk.Tk
+        -service : WorkflowRunService
+        -attempt_service : AttemptService
+        -filter_model : FilterModel
+        -status_var : tk.StringVar
+        -conclusion_var : tk.StringVar
+        -tree : ttk.Treeview
+        --
+        +__init__(root: tk.Tk,\n  service: WorkflowRunService,\n  attempt_service: AttemptService)
+        -_setup_ui() : None
+        -_on_filter_change(event) : None
+        -_reset_filters() : None
+        -_refresh_data() : None
+        -_get_row_tags(run: WorkflowRun) : tuple
+    }
+
+    class "run_gui" <<function>> {
+        +run_gui(service: WorkflowRunService,\n  attempt_service: AttemptService) : None
+    }
+
+    WorkflowRunViewerGUI "1" --> "1" FilterModel : -filter_model
+    run_gui ..> WorkflowRunViewerGUI : creates
+}
+
 WorkflowRun                "1" --> "*" WorkflowRunAttempt   : contains >
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
@@ -225,5 +262,14 @@ GitHubFetchService         ..>  WorkflowRun
 GitHubAdapter              ..>  WorkflowRun
 GitHubAdapter              ..>  WorkflowStatus
 GitHubAdapter              ..>  WorkflowConclusion
+FilterModel                ..>  WorkflowStatus
+FilterModel                ..>  WorkflowConclusion
+FilterModel                ..>  WorkflowRun
+FilterModel                ..>  WorkflowRunService : uses indirectly
+WorkflowRunViewerGUI  "1" --> "1" WorkflowRunService  : -service
+WorkflowRunViewerGUI  "1" --> "1" AttemptService      : -attempt_service
+WorkflowRunViewerGUI       ..>  WorkflowRun
+run_gui                    ..>  WorkflowRunService
+run_gui                    ..>  AttemptService
 
 @enduml
