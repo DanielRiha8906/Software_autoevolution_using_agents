@@ -33,10 +33,18 @@ rectangle "GitHub Workflow Manager" {
     usecase "Export data to JSON"      as C_EXPORT
     usecase "Import data from JSON"    as C_IMPORT
   }
+
+  package "GUI Mode" {
+    usecase "View workflow runs via GUI" as GUI
+    usecase "Filter by status (GUI)"     as G_FSTATUS
+    usecase "Filter by conclusion (GUI)" as G_FCONCL
+    usecase "Refresh runs (GUI)"         as G_REFRESH
+  }
 }
 
 User --> UI
 User --> CLI
+User --> GUI
 
 UI --> I_ADD
 UI --> I_LIST
@@ -61,5 +69,12 @@ CLI --> C_IMPORT
 C_LIST --> C_FBRANCH  : <<extend>>
 C_LIST --> C_FSTATUS  : <<extend>>
 C_LIST --> C_FCONCL   : <<extend>>
+
+GUI --> G_REFRESH
+GUI --> G_FSTATUS
+GUI --> G_FCONCL
+
+G_REFRESH --> G_FSTATUS : <<extend>>
+G_REFRESH --> G_FCONCL  : <<extend>>
 
 @enduml

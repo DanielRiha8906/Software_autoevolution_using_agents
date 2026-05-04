@@ -155,6 +155,25 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #FFD4D4 {
+    class WorkflowGUI {
+        -service         : WorkflowRunService
+        -root            : Optional[tk.Tk]
+        -main_frame      : Optional[tk.Frame]
+        -tree            : Optional[tk.Treeview]
+        -filter_frame    : Optional[tk.Frame]
+        -status_var      : Optional[tk.StringVar]
+        -conclusion_var  : Optional[tk.StringVar]
+        --
+        +__init__(service: WorkflowRunService)
+        +create_window(title: str) : tk.Tk
+        +refresh_runs() : None
+        +run() : None
+        -_create_filter_ui() : None
+        -_create_tree_view() : None
+    }
+}
+
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
 WorkflowRunAttempt         ..>  WorkflowRun           : run_id
@@ -181,5 +200,7 @@ WorkflowImportExportService ..> WorkflowRunAttempt
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowStatisticsService
+WorkflowGUI          "1" --> "1" WorkflowRunService : -service
+WorkflowGUI                ..>  WorkflowRun
 
 @enduml
