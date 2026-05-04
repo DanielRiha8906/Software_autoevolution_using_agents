@@ -720,3 +720,137 @@ All existing tests continue to pass. The implementation maintains full backward 
   - Standard mode menu identical to previous version
 
 Duration: 473.4s | Cost: $1.023617 USD | Turns: 38
+
+## Task 10: Add graphical user interface for calculator
+
+### Broadcast Evaluation
+
+Three independent implementers were spawned on separate branches to solve this task:
+
+**Candidate-A** — Simple tkinter GUI with number pad and operation buttons
+- Modified 2 files: `src/gui/calculator_gui.py` (403 lines), `src/__main__.py`
+- Created `src/gui/__init__.py`
+- Implements CalculatorUI protocol with tkinter window
+- Features: operation buttons (4-column grid), number pad with decimal, display area, scrollable history listbox
+- Integrates with CalculatorService for calculations and MemoryService for history
+- **Test result: 87/87 passed**
+
+**Candidate-B** — Two-column layout GUI with operations and history panels
+- Modified 2 files: `src/gui/calculator_gui.py` (~317 lines), `src/__main__.py`
+- Created `src/gui/__init__.py`
+- Two-panel side-by-side layout: left operations panel, right history panel
+- Features: Input fields for operands, scrollable operation buttons, history display
+- Integrates with CalculatorService and MemoryService
+- **Test result: 87/87 passed**
+
+**Candidate-C** — Tabbed interface with advanced features
+- Modified 2 files: `src/gui/calculator_gui.py` (501 lines), `src/__main__.py`
+- Created `src/gui/__init__.py`
+- Tabbed interface: Calculator, History, Statistics, Advanced tabs
+- Features: Input fields, scrollable operations, advanced history filtering with QueryService integration, statistics visualization, export/import support
+- Integrates with CalculatorService, MemoryService, QueryService, and StatisticsService
+- **Test result: 87/87 passed**
+
+### Winner Selection: Candidate-A
+
+**Rationale**:
+1. **All candidates tied on tests** — 87/87 passing (same as baseline)
+2. **Simplicity and clarity** — Candidate-A's straightforward button-based interface is most intuitive
+3. **Minimal code** — 403 lines is maintainable and easy to understand
+4. **Complete feature set** — Meets all Must and Should requirements
+5. **Clean protocol integration** — Properly implements CalculatorUI protocol without over-engineering
+
+Candidates B and C offered alternative designs (two-column layout, tabbed interface) but Candidate-A provides the best balance of simplicity and functionality.
+
+### Files Changed
+
+- `src/gui/__init__.py` — Package initialization
+- `src/gui/calculator_gui.py` — CalculatorGUI class (403 lines)
+  - Implements CalculatorUI protocol
+  - tkinter-based graphical interface with:
+    - Display area (read-only Entry field, 20pt font)
+    - Operation buttons (4 columns, dynamically generated for standard/scientific modes)
+    - Input area with number pad (0-9, decimal, clear, delete buttons)
+    - Scrollable history listbox showing MemoryEntry records
+    - Calculate button to perform selected operation
+  - Supports both standard mode (8 operations) and scientific mode (14 operations)
+  - Handles single-operand operations (sin, cos, tan, log, ln, exp) and dual-operand operations
+  - Error handling via messagebox for user feedback
+- `src/__main__.py` — Added `--gui` flag and GUI launch logic
+  - New argument parser flag: `--gui`
+  - Conditional branch: if `--gui`, create CalculatorGUI instance and call run_interactive()
+  - GUI entry appears in help: `python -m src --help`
+  - Supports `python -m src --gui` and `python -m src --gui --scientific`
+- `artifacts/architecture_diagram.puml` — Added CalculatorGUI to UI layer
+- `artifacts/class_diagram.puml` — Added CalculatorGUI class documentation
+- `artifacts/component_diagram.puml` — Added CalculatorGUI component and dependencies
+- `artifacts/gui_sequence_diagram.puml` — New diagram documenting GUI interaction flow
+
+### Test Results
+
+**Before**: 87 tests passing  
+**After**: 87 tests passing  
+
+All existing tests pass without modification. No regressions introduced.
+
+### Implementation Details
+
+- **CalculatorGUI Class**:
+  - Implements `CalculatorUI` protocol with `run_interactive()` and `run_command()` methods
+  - Defers Tk() window creation to avoid display errors in non-interactive contexts
+  - Initializes window with 1000x600 geometry
+  - Uses ttk (themed tkinter) for modern look
+
+- **UI Components**:
+  1. **Display Frame**: Read-only Entry field showing last result (20pt font, right-aligned)
+  2. **Operations Frame**: Dynamic button grid (4 columns)
+     - Standard mode: 8 operation buttons
+     - Scientific mode: 8 standard + 6 scientific operations
+  3. **Input Frame**: 
+     - Text Entry field for manual number input
+     - Number pad: buttons 0-9
+     - Decimal point button
+     - Clear and Delete buttons
+     - Calculate button
+  4. **History Panel**: Scrollable Listbox displaying all MemoryEntry records
+     - Shows operation, operands, result, and status (success/error)
+     - Auto-updates after each calculation
+
+- **State Management**:
+  - `operand_a`, `operand_b`: numeric inputs from user
+  - `selected_operation`: Operation enum from button click
+  - `input_buffer`: text being typed in input field
+  - `operation_complete`: flag tracking if first operand entered
+
+- **Integration**:
+  - All calculations delegate to `CalculatorService.perform()`
+  - History retrieved from `MemoryService.retrieve()` (same storage as CLI)
+  - Scientific operations (sin, cos, tan, log, ln, exp) identified by set membership
+  - Single-operand operations: set b=0.0 automatically
+  - Error display via `messagebox.showerror()` for user feedback
+
+- **CLI Integration**:
+  - Launchable via `python -m src --gui`
+  - Supports `--scientific` flag: `python -m src --gui --scientific`
+  - Appears in `python -m src --help`
+  - No conflict with other modes (--operation, --query-by-operation, --stats, etc.)
+
+- **Deferred UI Initialization**:
+  - `self.root` remains None until `run_interactive()` called
+  - Allows module to be imported in headless environments (CI/CD)
+  - Tk() window created only when GUI actually needed
+
+### GUI Interaction Flow
+
+1. User launches: `python -m src --gui`
+2. CalculatorGUI initializes and shows tkinter window
+3. User enters first operand using number pad or types in input field
+4. User clicks operation button (operation selected)
+5. If binary operation, user enters second operand
+6. User clicks Calculate button (or operation button for unary operations)
+7. CalculatorService performs calculation
+8. Result displayed in display field
+9. History listbox updated with new entry
+10. Repeat from step 3
+
+Duration: 679.4s | Cost: $1.493722 USD | Turns: 67

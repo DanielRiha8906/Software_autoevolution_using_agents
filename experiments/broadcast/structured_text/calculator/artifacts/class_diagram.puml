@@ -157,6 +157,24 @@ package "cli" {
   }
 }
 
+package "gui" {
+  class CalculatorGUI {
+    -service: CalculatorService
+    -memory_service: Optional[MemoryService]
+    -scientific_mode: bool
+    -root: Optional[tk.Tk]
+    -display: Optional[ttk.Entry]
+    -history_listbox: Optional[tk.Listbox]
+    --
+    +run_interactive(): None
+    +run_command(op_str: str, a: float, b: float): None
+    -_setup_ui(): None
+    -_on_operation(operation: Operation): None
+    -_perform_calculation(): None
+    -_refresh_history(): None
+  }
+}
+
 ' Relationships
 CalculatorService --> Calculator
 CalculatorService --> JsonStorage
@@ -177,6 +195,10 @@ CalculatorCLI --> QueryService
 CalculatorCLI --> StatisticsService
 CalculatorCLI --> HistoryManager : optional
 CalculatorCLI --> Operation
+
+CalculatorGUI --> CalculatorService
+CalculatorGUI --> MemoryService
+CalculatorGUI --> Operation
 
 QueryService --> MemoryEntry
 StatisticsService --> MemoryEntry

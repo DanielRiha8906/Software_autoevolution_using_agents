@@ -8,7 +8,9 @@ skinparam fontName Courier
 package "Interface Layer (Protocol: CalculatorUI)" as UILayer {
   interface "CalculatorUI" as CalcUI
   component "CalculatorCLI" as CLI
+  component "CalculatorGUI" as GUI
   CLI ..| CalcUI: implements
+  GUI ..| CalcUI: implements
 }
 
 package "Calculation Engine (Protocol: CalculationEngine)" as CalcLayer {
@@ -56,6 +58,9 @@ CLI --> CalcSvc: uses
 CLI --> QueryService: uses
 CLI --> StatisticsService: uses
 CLI --> HistMgr: uses for export/import
+
+GUI --> CalcSvc: uses
+GUI --> MemSvc: uses for history
 
 ' Memory service relationships
 MemSvc --> JsonStorage: uses for\npersistence

@@ -1,0 +1,66 @@
+@startuml
+!theme plain
+skinparam sequenceActorBackgroundColor #FAFAFA
+skinparam sequenceActorBorderColor #333333
+skinparam sequenceParticipantBackgroundColor #FAFAFA
+skinparam sequenceParticipantBorderColor #333333
+skinparam arrowColor #333333
+skinparam fontName Courier
+
+actor User
+participant GUI as "CalculatorGUI"
+participant CalcService as "CalculatorService"
+participant Calculator as "Calculator"
+participant Storage as "JsonStorage"
+participant MemService as "MemoryService"
+
+User -> GUI: run_interactive()
+activate GUI
+
+  GUI -> GUI: _setup_ui()
+  note right of GUI: Initialize tkinter window\nwith operation buttons,\ninput fields, and history
+
+  loop While window open
+    User -> GUI: click operation button
+    GUI -> GUI: _on_operation(operation)
+    note right of GUI: Extract operands\nfrom input fields
+
+    alt Scientific operation (single operand)
+      GUI -> GUI: _perform_calculation()
+      note right of GUI: a = input_a, b = 0
+    else Standard operation (dual operand)
+      GUI -> GUI: _perform_calculation()
+      note right of GUI: a = input_a, b = input_b
+    end
+
+    GUI -> CalcService: perform(operation, a, b)
+    activate CalcService
+
+      CalcService -> Calculator: calculate(op, a, b)
+      activate Calculator
+      Calculator --> CalcService: result
+      deactivate Calculator
+
+      CalcService -> Storage: save(CalculationResult)
+      activate Storage
+      Storage -> Storage: _write_raw(records)
+      deactivate Storage
+
+      CalcService -> MemService: store(MemoryEntry)
+      activate MemService
+      MemService -> Storage: store(entry)
+      deactivate MemService
+
+    CalcService --> GUI: CalculationResult
+    deactivate CalcService
+
+    GUI -> GUI: _refresh_history()
+    note right of GUI: Update history listbox\nwith latest entries
+
+    GUI -> User: display result\nand updated history
+  end
+
+User -> GUI: close window
+deactivate GUI
+
+@enduml
