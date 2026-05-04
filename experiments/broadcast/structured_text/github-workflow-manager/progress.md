@@ -604,4 +604,4 @@ CLI (depends on Services)
 - `artifacts/component_diagram.puml`: Added Adapter layer, Storage abstraction layer, showing dependency flow
 - `artifacts/class_diagram.puml`: Added repository abstractions, updated service dependencies, added GitHubAdapter class
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 383.6s | Cost: $2.033201 USD | Turns: 48
