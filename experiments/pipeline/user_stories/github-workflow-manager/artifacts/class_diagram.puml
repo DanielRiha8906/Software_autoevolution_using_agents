@@ -245,7 +245,7 @@ package "services" #DDFFD4 {
 }
 
 ' ============================================================================
-' CLI LAYER
+' PRESENTATION LAYER (CLI + GUI)
 ' ============================================================================
 package "cli" #FFE5E5 {
     class "workflow_cli" <<module>> {
@@ -284,6 +284,66 @@ package "cli" #FFE5E5 {
     "interactive_menu" ..> GitHubAPIFetcher : uses
     "interactive_menu" ..> GitHubCLIFetcher : uses
     "interactive_menu" ..> GitHubAuthManager : uses
+}
+
+' ============================================================================
+' GUI LAYER
+' ============================================================================
+package "gui" #E5F3FF {
+    class WorkflowRunMainWindow {
+        -root              : tk.Tk
+        -service           : WorkflowRunService
+        -attempt_service   : WorkflowRunAttemptService
+        -_tree             : ttk.Treeview
+        -_status_var       : tk.StringVar
+        -_conclusion_var   : tk.StringVar
+        -_current_status_filter   : Optional[WorkflowStatus]
+        -_current_conclusion_filter : Optional[WorkflowConclusion]
+        --
+        +__init__(root: tk.Tk,\n  service: WorkflowRunService,\n  attempt_service: WorkflowRunAttemptService)
+        +run() : None
+        -_create_widgets() : None
+        -_load_runs() : None
+        -_populate_treeview(runs: List[WorkflowRun]) : None
+        -_apply_filters() : None
+        -_view_details() : None
+        -_edit_run() : None
+        -_delete_run() : None
+        -_refresh() : None
+        -_get_attempt_count(run: WorkflowRun) : int
+    }
+
+    class WorkflowRunDetailsDialog {
+        -run               : WorkflowRun
+        -attempt_service   : WorkflowRunAttemptService
+        -top               : tk.Toplevel
+        --
+        +__init__(parent: tk.Tk,\n  run: WorkflowRun,\n  attempt_service: WorkflowRunAttemptService)
+        -_create_widgets() : None
+        -_get_attempts() : List[WorkflowRunAttempt]
+    }
+
+    class WorkflowRunEditDialog {
+        -run               : WorkflowRun
+        -parent_service    : WorkflowRunService
+        -top               : tk.Toplevel
+        -_status_var       : tk.StringVar
+        -_conclusion_var   : tk.StringVar
+        --
+        +__init__(parent: tk.Tk,\n  run: WorkflowRun,\n  service: WorkflowRunService)
+        -_create_widgets() : None
+        -_save_changes() : None
+    }
+
+    WorkflowRunMainWindow --> WorkflowRunService : uses
+    WorkflowRunMainWindow --> WorkflowRunAttemptService : uses
+    WorkflowRunMainWindow ..> WorkflowRunDetailsDialog : creates
+    WorkflowRunMainWindow ..> WorkflowRunEditDialog : creates
+    WorkflowRunMainWindow ..> WorkflowRun : displays
+    WorkflowRunDetailsDialog --> WorkflowRunAttemptService : uses
+    WorkflowRunDetailsDialog ..> WorkflowRun : displays
+    WorkflowRunEditDialog --> WorkflowRunService : uses
+    WorkflowRunEditDialog ..> WorkflowRun : modifies
 }
 
 @enduml

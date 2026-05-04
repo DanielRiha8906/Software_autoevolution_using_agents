@@ -21,6 +21,15 @@ package "src/" {
     }
 
     ' ========================================
+    ' GUI LAYER
+    ' ========================================
+    package "gui/" {
+        file "__init__.py" as GUI_INIT
+        file "workflow_gui.py" as GUI_MAIN
+        file "dialogs.py" as GUI_DIALOGS
+    }
+
+    ' ========================================
     ' SERVICE LAYER
     ' ========================================
     package "services/" {
@@ -99,11 +108,16 @@ package "src/" {
 
 MAIN_FILE --> CLI_MAIN
 MAIN_FILE --> CLI_MENU
+MAIN_FILE --> GUI_MAIN : with --gui flag
 
 CLI_MAIN --> SVC_RUN
 CLI_MAIN --> GITHUB_API
 CLI_MENU --> SVC_RUN
 CLI_MENU --> GITHUB_API
+
+GUI_MAIN --> SVC_RUN
+GUI_MAIN --> SVC_ATTEMPT
+GUI_DIALOGS --> SVC_ATTEMPT
 
 SVC_RUN --> STOR_BASE
 SVC_ATTEMPT --> STOR_BASE
