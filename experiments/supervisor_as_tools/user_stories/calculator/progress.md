@@ -466,4 +466,4 @@ Duration: 375.0s | Cost: $0.666798 USD | Turns: 20
 - Color scheme: white background with light green (#90EE90) for success, light red (#FFB6C6) for errors
 - Window layout: display at top, buttons in middle, history list at bottom with filters on the right
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 410.3s | Cost: $0.655402 USD | Turns: 19
