@@ -335,3 +335,54 @@ Duration: 540.7s | Cost: $1.121241 USD | Turns: 16
 - ✅ All existing functionality remains accessible (interactive menu + CLI flags)
 
 Duration: 842.9s | Cost: $1.765275 USD | Turns: 20
+
+## Task 10: GUI Implementation Using Tkinter
+
+**Status**: ✅ Complete
+
+**Description**: Add a graphical user interface using tkinter (stdlib) to enable users to perform calculations and review history without using the command line. The GUI calls existing calculation logic with no business logic duplication and supports both standard and scientific modes with error highlighting.
+
+**Files Changed**:
+- `src/gui/__init__.py` — NEW: Package initialization
+- `src/gui/constants.py` — NEW: UI constants (colors, fonts, dimensions, operation sets)
+- `src/gui/gui_controller.py` — NEW: Service bridge (GUIController class with perform_calculation, get_history, filter_history, get_available_operations methods)
+- `src/gui/input_panel.py` — NEW: InputPanel class for operand entry, operation selection, Calculate/Clear buttons, unary operation handling
+- `src/gui/result_panel.py` — NEW: ResultPanel class for displaying results with error highlighting
+- `src/gui/history_panel.py` — NEW: HistoryPanel class for scrollable history list with error visual distinction
+- `src/gui/mode_selector.py` — NEW: ModeSelector class for Standard/Scientific mode toggle (BONUS)
+- `src/gui/main_window.py` — NEW: MainWindow class (root Tkinter window) coordinating all components and handling calculation workflow
+- `src/__main__.py` — MODIFIED: Added --gui flag to argparse, added GUI launch logic with GUIController and MainWindow instantiation
+
+**Test Results**:
+- Total tests: 788 (627 existing + 161 new GUI tests)
+- Passed: 788 ✅
+- Failed: 0
+- Test files created: test_gui_controller.py (22), test_gui_input_panel.py (28), test_gui_result_panel.py (21), test_gui_history_panel.py (23), test_gui_mode_selector.py (23), test_gui_main_integration.py (19), test_gui_flag.py (25)
+- Coverage: Happy path (standard calculations), error handling (division by zero, invalid operands), unary operations (operand B disabled), mode toggle (6 ops standard vs 14 ops scientific), history persistence and filtering, error highlighting, CLI flag recognition, service integration
+
+**Diagrams Updated**:
+- `artifacts/calculator_architecture.puml` — Added GUI layer alongside existing CLI layer showing service delegation
+- `artifacts/component_diagram.puml` — Restructured to show both CLI and GUI entry points from __main__, added GUI components and their relationships
+- `artifacts/class_diagram.puml` — Added complete GUI package (MainWindow, InputPanel, ResultPanel, HistoryPanel, ModeSelector, GUIController) with all methods and relationships
+- `artifacts/activity_diagram.puml` — Expanded to show both GUI and CLI workflows with separate execution paths
+- `artifacts/use_case_diagram.puml` — Split use cases between CLI and GUI interfaces, added "Switch operation mode" as GUI-only use case
+
+**Acceptance Criteria Met**:
+- ✅ GUI provided using tkinter (stdlib), no new external dependencies
+- ✅ All standard mode operations (14 total: add, subtract, multiply, divide, square, sqrt, power, modulo, sin, cos, tan, log, ln, exp) accessible from GUI
+- ✅ Calculation history (MemoryEntry records) displayed in scrollable list with numbering
+- ✅ GUI calls existing calculation logic (CalculatorService, MemoryService) — no business logic duplication
+- ✅ Toggling between standard (6 ops) and scientific (14 ops) mode supported (BONUS)
+- ✅ Error entries in history list visually highlighted in red (BONUS)
+- ✅ GUI launchable via `python -m src --gui`
+- ✅ Unary operations handled correctly (operand B disabled for sqrt, sin, cos, tan, log, ln, exp, square)
+
+**Implementation Highlights**:
+- **Service Integration**: GUIController bridges GUI to CalculatorService, MemoryService, StatisticsService with zero business logic duplication
+- **Layered Architecture**: GUI is pure presentation layer; all calculations delegated to existing services
+- **Error Handling**: Input validation in GUI; business logic errors captured and displayed with highlighting
+- **Mode Toggle**: Standard/Scientific mode toggle implemented as GUI-only feature (backend supports all 14 operations)
+- **Unary Operation Handling**: Operand B automatically disabled for unary operations
+- **History Management**: Fresh history retrieved after each calculation via MemoryService.retrieve()
+
+Duration: 933.4s | Cost: $1.644038 USD | Turns: 16

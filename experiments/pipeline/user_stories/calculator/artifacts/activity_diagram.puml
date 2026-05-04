@@ -6,7 +6,45 @@ skinparam activityDiamondBackgroundColor #FFF3CC
 
 start
 
-if (CLI operation provided?) then (yes)
+if (GUI or CLI mode?) then (GUI: --gui flag)
+
+  :Initialize services;
+  :Launch Tkinter MainWindow;
+  :Show GUI;
+
+  repeat
+    :User selects mode (Standard/Scientific);
+    :User selects operation;
+    :User enters operands;
+    :User clicks Calculate button;
+
+    :InputPanel validates input;
+
+    if (Input valid?) then (yes)
+      :InputPanel calls GUIController.perform_calculation();
+
+      if (No error?) then (yes)
+        :GUIController stores MemoryEntry;
+        :ResultPanel displays result;
+        :HistoryPanel refreshes;
+      else (no)
+        :ResultPanel displays error;
+        :HistoryPanel refreshes with error entry;
+      endif
+
+    else (no)
+      :InputPanel displays error message;
+    endif
+
+  repeat while (GUI window open?) is (yes)
+
+else (CLI mode)
+
+  if (--gui flag provided?) then (no)
+    :Check for other CLI flags;
+  endif
+
+  if (CLI operation provided?) then (yes)
 
   :Validate operation and operands;
 
@@ -97,6 +135,8 @@ else (no)
     endswitch
 
   repeat while (Menu active?) is (yes)
+
+endif
 
 endif
 
