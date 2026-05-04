@@ -13,6 +13,8 @@ package "GitHub Workflow Manager" {
   package "Interface layer" {
     component "workflow_cli" as CLI
     component "interactive_menu" as IM
+    component "WorkflowRunGUI" as GUI
+    component "FilterState" as FILTER_STATE
   }
 
   package "Filtering subsystem" {
@@ -64,6 +66,7 @@ component "File System" as FILESYS
 
 MAIN --> CLI
 MAIN --> IM
+MAIN --> GUI
 
 CLI --> BASIC_FILTER
 CLI --> ADV_FILTER
@@ -71,6 +74,11 @@ CLI --> COMP_FILTER
 IM --> BASIC_FILTER
 IM --> ADV_FILTER
 IM --> COMP_FILTER
+
+GUI --> FILTER_STATE
+GUI --> SVC
+GUI --> ATTEMPT_SVC
+GUI --> STATS_SVC
 
 BASIC_FILTER --> SVC
 ADV_FILTER --> SVC

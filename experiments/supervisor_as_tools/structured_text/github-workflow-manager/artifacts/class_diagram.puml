@@ -284,6 +284,45 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #E5F5FF {
+    class FilterState {
+        -status        : Optional[WorkflowStatus]
+        -conclusion    : Optional[WorkflowConclusion]
+        --
+        +__init__(status: Optional[WorkflowStatus],\n  conclusion: Optional[WorkflowConclusion])
+        +is_active() : bool
+        +to_filter_params() : Dict[str, Any]
+        +reset() : None
+    }
+
+    class WorkflowRunGUI {
+        -root                  : tk.Tk
+        -service               : WorkflowRunService
+        -attempt_service       : AttemptService
+        -statistics_service    : StatisticsService
+        -treeview              : ttk.Treeview
+        -status_var            : tk.StringVar
+        -conclusion_var        : tk.StringVar
+        -detail_frame          : tk.Frame
+        -attempts_treeview     : ttk.Treeview
+        -filter_state          : FilterState
+        -all_runs              : List[WorkflowRun]
+        -detail_labels         : dict
+        --
+        +__init__(service: WorkflowRunService,\n  attempt_service: AttemptService,\n  statistics_service: StatisticsService)
+        +run() : None
+        -_setup_ui() : None
+        -_populate_table() : None
+        -_refresh_table() : None
+        -_apply_filters() : None
+        -_reset_filters() : None
+        -_on_row_selected(event) : None
+        -_show_detail(item_id: str) : None
+        -_show_attempts(run: WorkflowRun) : None
+        -_show_error(message: str) : None
+    }
+}
+
 WorkflowRun                ..>  WorkflowStatus        : status
 WorkflowRun                ..>  WorkflowConclusion    : conclusion
 WorkflowRunAttempt    "N" --> "1" WorkflowRun           : references run_id
@@ -325,5 +364,15 @@ GitHubFetchService         ..x  GitHubException
 "interactive_menu"         ..>  DataPortabilityService
 "interactive_menu"         ..>  GitHubFetchService
 "interactive_menu"         ..>  GitHubException
+
+WorkflowRunGUI       "1" --> "1" WorkflowRunService     : -service
+WorkflowRunGUI       "1" --> "1" AttemptService         : -attempt_service
+WorkflowRunGUI       "1" --> "1" StatisticsService      : -statistics_service
+WorkflowRunGUI       "1" --> "1" FilterState            : -filter_state
+WorkflowRunGUI            ..>  WorkflowRun
+WorkflowRunGUI            ..>  WorkflowStatus
+WorkflowRunGUI            ..>  WorkflowConclusion
+FilterState               ..>  WorkflowStatus
+FilterState               ..>  WorkflowConclusion
 
 @enduml
