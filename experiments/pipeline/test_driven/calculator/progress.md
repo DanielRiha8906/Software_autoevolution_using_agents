@@ -339,4 +339,4 @@ Duration: 676.9s | Cost: $1.175821 USD | Turns: 20
 - GUI.run() method calls tkinter root.mainloop() to start event loop
 - Entry/output model uses tkinter StringVar for data binding and observation
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 1100.1s | Cost: $0.954838 USD | Turns: 14
