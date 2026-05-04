@@ -1,4 +1,5 @@
 import sys
+import tkinter as tk
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -16,6 +17,7 @@ from ..services.attempt_service import AttemptService
 from ..services.statistics_service import StatisticsService
 from ..services.github_import_service import GitHubImportService
 from ..github_api.exceptions import GitHubApiError, TokenResolutionError
+from ..gui.main_window import MainWindow
 from .workflow_cli import _parse_iso8601
 
 
@@ -535,6 +537,13 @@ def _fetch_from_github(service: WorkflowRunService) -> None:
         print(f"\nError: {e}")
 
 
+def _launch_gui(service: WorkflowRunService) -> None:
+    """Launch the tkinter GUI."""
+    root = tk.Tk()
+    window = MainWindow(root, service)
+    window.run()
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
@@ -548,6 +557,7 @@ MENU = [
     ("Export runs", _export_runs),
     ("Import runs", _import_runs),
     ("Fetch from GitHub", _fetch_from_github),
+    ("Launch GUI", _launch_gui),
     ("Exit", None),
 ]
 

@@ -504,3 +504,105 @@ This change enables:
 - Clearer layer separation and dependency flow
 
 Duration: 411.2s | Cost: $0.734635 USD | Turns: 23
+
+---
+
+# Task 10: Graphical Interface for Workflow Runs
+
+## Summary
+Successfully implemented a tkinter-based graphical user interface for viewing, filtering, and editing workflow runs. The GUI provides a scrollable list of runs with filtering controls, a detail view, and an edit overlay form. Failed runs are highlighted in red/pink for quick identification. All functionality is accessible via `python -m src --gui`.
+
+## Files Changed
+- `src/gui/__init__.py` — NEW: GUI package marker
+- `src/gui/frames/__init__.py` — NEW: Frame component imports
+- `src/gui/frames/detail_frame.py` — NEW: Read-only run details display panel
+- `src/gui/frames/filter_frame.py` — NEW: Status/conclusion filter controls
+- `src/gui/frames/list_frame.py` — NEW: Scrollable treeview table of runs with failed run highlighting
+- `src/gui/frames/edit_frame.py` — NEW: Edit form overlay with input validation
+- `src/gui/main_window.py` — NEW: Main window orchestration and layout
+- `src/__main__.py` — MODIFIED: Added --gui flag support to launch MainWindow
+- `src/cli/interactive_menu.py` — MODIFIED: Added "Launch GUI" menu option
+- `artifacts/class_diagram.puml` — UPDATED: Added gui package with MainWindow and frame classes
+- `artifacts/component_diagram.puml` — UPDATED: Added GUI component layer with view frames
+- `artifacts/activity_diagram_interactive.puml` — UPDATED: Added GUI mode workflow with filter/select/edit flows
+
+## Test Results
+- **Total tests**: 206
+- **Passed**: 206 ✓
+- **Failed**: 0
+- **Command**: `pytest tests/ -q`
+
+## Acceptance Criteria Met
+✓ GUI provided using tkinter (stdlib) — no external GUI dependencies
+✓ Workflow runs displayed in scrollable list/table showing status, duration, and attempt count
+✓ Runs can be filtered by status or conclusion via dropdown controls
+✓ Editing workflow runs through the GUI is supported
+✓ Failed runs highlighted in distinct color (red/pink background)
+✓ GUI launchable via `python -m src --gui`
+✓ Also accessible from interactive menu ("Launch GUI" option)
+
+## Feature Coverage
+
+### GUI Components
+- **MainWindow**: Root tkinter window with three-panel layout (filters, list, details)
+- **FilterFrame**: Status and Conclusion dropdown filters with Apply/Clear buttons
+- **ListFrame**: Treeview table with columns (ID, Workflow, Branch, Status, Conclusion, Run#, Attempts)
+  - Automatic highlighting of failed runs with red/pink background tag
+  - Selection callback to update detail view
+  - Duration formatting for readability (e.g., "1m 30s")
+- **DetailFrame**: Read-only display of selected run properties with Edit button
+- **EditFrame**: Overlay form for editing editable properties with validation
+  - Fields: Workflow name, Branch, Status (enum dropdown), Conclusion (enum dropdown), Run Number, Duration
+  - Validation: rejects negative duration, non-numeric run_number, invalid enum values
+  - Status label for error/success messages
+  - Save/Cancel buttons
+
+### Layout & UX
+- Left panel: Filters + scrollable run table
+- Right panel: Details + edit overlay (initially hidden)
+- Button bar: Edit Selected, Refresh, Exit buttons
+- Color coding: Failed runs visually distinguished
+- Modal-style edit panel that can be dismissed with Cancel
+
+### Integration with Services
+- Reads runs via `service.list_runs()` and `service.filter_runs()`
+- Edits persisted via `service.update_workflow_run(run)`
+- Error handling with messagebox for update failures
+- Service instance injected into MainWindow and cascaded to all frame components
+
+### Filtering (Phase 1)
+- Status filter: Combobox with all WorkflowStatus enum values plus "All"
+- Conclusion filter: Combobox with all WorkflowConclusion enum values plus "All"
+- Clear button to reset both filters and reload all runs
+- Filters build `filter_runs()` compatible kwargs for service
+
+## CLI Usage Examples
+```bash
+# Launch GUI directly
+python -m src --gui
+
+# Launch interactive menu and select "Launch GUI"
+python -m src
+
+# Then choose menu option for "Launch GUI"
+```
+
+## Implementation Details
+- **Architecture**: Supervisor-as-tools pattern with agents
+  - Analyst: Examined codebase and requirements
+  - Architect: Designed GUI file structure and component hierarchy
+  - Programmer: Implemented all GUI components
+  - Tester: Ran pytest validation
+  - UML Designer: Updated diagrams
+- **No external dependencies**: Uses tkinter from Python stdlib
+- **Type safety**: All public methods have type hints
+- **Error handling**: ValueError caught on update failure, displayed via messagebox
+- **Validation**: EditFrame validates inputs before calling service.update_workflow_run()
+- **Immutable fields**: id and created_at displayed as read-only (not in edit form)
+
+## Diagrams Updated
+- **class_diagram.puml**: Added "gui" package with MainWindow class and nested "frames" package (DetailFrame, FilterFrame, ListFrame, EditFrame)
+- **component_diagram.puml**: Added GUI layer component depending on Services and Models layers
+- **activity_diagram_interactive.puml**: Added GUI mode workflow showing filter → select → view/edit flow
+
+Duration: 475.1s | Cost: $0.867982 USD | Turns: 16

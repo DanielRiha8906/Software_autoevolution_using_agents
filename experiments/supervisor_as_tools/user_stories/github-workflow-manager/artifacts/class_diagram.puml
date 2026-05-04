@@ -252,6 +252,62 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #F0F8FF {
+    class MainWindow {
+        -_root        : tk.Tk
+        -_service     : WorkflowRunService
+        -_filter_frame    : FilterFrame
+        -_list_frame      : ListFrame
+        -_detail_frame    : DetailFrame
+        -_edit_frame      : EditFrame
+        --
+        +__init__(root: tk.Tk, service: WorkflowRunService)
+        +run() : None
+        -_refresh() : None
+        -_on_filter_change() : None
+        -_on_run_select(run: WorkflowRun) : None
+        -_edit_selected() : None
+        -_on_edit_save(run: WorkflowRun) : None
+        -_on_edit_cancel() : None
+    }
+
+    package "frames" #E6F3FF {
+        class FilterFrame {
+            --
+            +__init__(parent: tk.Widget, callback)
+            +get_filter_kwargs() : dict
+        }
+
+        class ListFrame {
+            --
+            +__init__(parent: tk.Widget, callback)
+            +set_runs(runs: List[WorkflowRun]) : None
+        }
+
+        class DetailFrame {
+            -_run : Optional[WorkflowRun]
+            -_text : tk.Text
+            --
+            +__init__(parent: tk.Widget)
+            +set_run(run: Optional[WorkflowRun]) : None
+            -_render() : None
+        }
+
+        class EditFrame {
+            -_run : Optional[WorkflowRun]
+            --
+            +__init__(parent: tk.Widget, save_callback, cancel_callback)
+            +set_run(run: WorkflowRun) : None
+        }
+    }
+
+    MainWindow "1" --> "1" FilterFrame : -_filter_frame
+    MainWindow "1" --> "1" ListFrame : -_list_frame
+    MainWindow "1" --> "1" DetailFrame : -_detail_frame
+    MainWindow "1" --> "1" EditFrame : -_edit_frame
+    MainWindow "1" --> "1" WorkflowRunService : -_service
+}
+
 WorkflowRun                ..>  WorkflowStatus           : status
 WorkflowRun                ..>  WorkflowConclusion       : conclusion
 WorkflowRun            "1" --> "*" WorkflowRunAttempt    : +attempts
@@ -306,5 +362,13 @@ StatisticsReport           ..>  WorkflowStatus
 "interactive_menu"         ..>  GitHubImportService
 "interactive_menu"         ..>  ImportResult
 "interactive_menu"         ..>  ValidationError
+MainWindow                 ..>  WorkflowRun
+MainWindow                 ..>  WorkflowStatus
+MainWindow                 ..>  WorkflowConclusion
+FilterFrame                ..>  WorkflowStatus
+FilterFrame                ..>  WorkflowConclusion
+ListFrame                  ..>  WorkflowRun
+DetailFrame                ..>  WorkflowRun
+EditFrame                  ..>  WorkflowRun
 
 @enduml

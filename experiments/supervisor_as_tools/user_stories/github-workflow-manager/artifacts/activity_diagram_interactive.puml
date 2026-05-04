@@ -6,9 +6,48 @@ skinparam activityDiamondBackgroundColor #FFF3CC
 
 start
 
-:Display interactive menu;
+:Initialize application;
 
-repeat
+switch (mode)
+
+  case (GUI Mode)
+    :Launch MainWindow;
+    :MainWindow initializes frames;
+    repeat
+      :Display filter, list, detail panels;
+      :Wait for user interaction;
+      switch (user action)
+        case (Select run)
+          :FilterFrame.get_filter_kwargs();
+          :WorkflowRunService.filter_runs();
+          :ListFrame.set_runs();
+          :User clicks run in ListFrame;
+          :DetailFrame.set_run();
+        case (Edit selected)
+          :MainWindow shows EditFrame;
+          :EditFrame.set_run();
+          :User modifies fields;
+          if (save?) then (yes)
+            :Validate input;
+            :WorkflowRunService.update_workflow_run();
+            :MainWindow._refresh();
+            :EditFrame hidden, DetailFrame shown;
+          else (cancel)
+            :EditFrame hidden, DetailFrame shown;
+          endif
+        case (Refresh)
+          :MainWindow._refresh();
+          :FilterFrame.get_filter_kwargs();
+          :WorkflowRunService.filter_runs();
+          :ListFrame.set_runs();
+        case (Exit)
+          stop
+      endswitch
+    repeat while (user continues)
+
+  case (Interactive Menu Mode)
+    :Display interactive menu;
+    repeat
 
   :Wait for user selection;
 
@@ -153,5 +192,7 @@ repeat
   endswitch
 
 repeat while (user continues)
+
+endswitch
 
 @enduml
