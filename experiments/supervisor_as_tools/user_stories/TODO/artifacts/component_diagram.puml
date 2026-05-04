@@ -17,11 +17,13 @@ package "TODO Application" {
     package "Service Layer" {
         component "Todo Service" as SVC
         component "Task Manager" as MGR
+        component "Project Manager" as PMGR
         component "Comments Service" as CMT
         component "Import/Export Service" as IMPEXP
     }
 
     package "Domain Model" {
+        component "Project Model\n(Project)" as ProjectModel
         component "Task Model\n(Task, TaskStatus)" as Model
         component "Comment Model\n(TaskComment)" as CommentModel
         component "Task Summary Report\n(TaskSummaryReport)" as SummaryModel
@@ -33,10 +35,12 @@ package "TODO Application" {
 
     package "Persistence Layer" {
         component "JSON Storage\n(JsonStorage)" as Storage
+        component "Project Storage\n(ProjectStorage)" as ProjectStore
     }
 }
 
 database "todo_data.json" as DB
+database "todo_projects.json" as ProjectDB
 
 Main --> IM : interactive mode
 Main --> CLI : command mode
@@ -45,6 +49,7 @@ IM --> SVC
 CLI --> SVC
 
 SVC --> MGR
+SVC --> PMGR
 SVC --> CMT
 SVC --> IMPEXP : export/import
 SVC ..> SummaryModel : generates
@@ -55,14 +60,19 @@ IMPEXP --> CMT : read/write comments
 MGR --> Storage
 MGR --> DTUtils : validate & filter dates
 MGR ..> Model
+PMGR --> ProjectStore
+PMGR ..> ProjectModel
+
 CMT --> Storage : persist comments
 CMT --> MGR : validate tasks
 CMT ..> CommentModel
 
 Storage ..> Model
 Storage ..> CommentModel
+ProjectStore ..> ProjectModel
 DTUtils --> Model : works with
 
 Storage --> DB : read/write
+ProjectStore --> ProjectDB : read/write
 
 @enduml

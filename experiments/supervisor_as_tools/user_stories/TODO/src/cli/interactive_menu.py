@@ -1,8 +1,10 @@
 import os
 from typing import Optional
 
+from ..models.project import Project
 from ..models.task import Task
 from ..models.task_status import TaskStatus
+from ..services.project_manager import ProjectNotFoundError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -85,8 +87,10 @@ class InteractiveMenu:
             elif choice == "8":
                 self._do_manage_comments(tasks)
             elif choice == "9":
-                self._do_summary_report()
+                self._do_manage_projects()
             elif choice == "10":
+                self._do_summary_report()
+            elif choice == "11":
                 self._do_import_export()
             else:
                 input("  Unknown option. Press Enter to continue...")
@@ -116,8 +120,9 @@ class InteractiveMenu:
         print("  6. Delete task")
         print("  7. Check task status")
         print("  8. Manage comments")
-        print("  9. View summary report")
-        print("  10. Import / Export")
+        print("  9. Manage projects")
+        print("  10. View summary report")
+        print("  11. Import / Export")
         print("  0. Quit")
         print()
 
@@ -236,8 +241,20 @@ class InteractiveMenu:
                 print(f"\n  Error: {e}")
                 input("  Press Enter to continue...")
                 return
+        project_id = None
+        print("  \n  Assign to project? (y/n, default: n)")
+        if input("  > ").strip().lower() == "y":
+            projects = self._service.list_projects()
+            if not projects:
+                print("  No projects available.")
+            else:
+                _clear()
+                print("  Select project:\n")
+                idx = _pick("  > ", [f"{p.id[:8]}  {p.name}" for p in projects])
+                if idx is not None:
+                    project_id = projects[idx].id
         try:
-            task = self._service.add_task(title, description, due_date)
+            task = self._service.add_task(title, description, due_date, project_id)
             print(f"\n  Added: {_task_line(task)}")
         except ValueError as e:
             print(f"\n  Error: {e}")
@@ -515,6 +532,125 @@ class InteractiveMenu:
         for line in str(report).split("\n"):
             print(f"  {line}")
         print()
+        input("  Press Enter to continue...")
+
+    def _do_manage_projects(self) -> None:
+        """Project management submenu."""
+        while True:
+            _clear()
+            print("  Manage Projects\n")
+            projects = self._service.list_projects()
+            if projects:
+                for project in projects:
+                    desc = f"  {project.description}" if project.description else ""
+                    print(f"  {project.id[:8]}  {project.name}{desc}")
+            else:
+                print("  (no projects yet)")
+            print()
+            print("  1. Add project")
+            print("  2. Show project details")
+            print("  3. Update project")
+            print("  4. Delete project")
+            print("  0. Back")
+            print()
+
+            choice = input("  > ").strip().lower()
+
+            if choice in ("0", "q"):
+                break
+            elif choice == "1":
+                self._do_project_add()
+            elif choice == "2":
+                self._do_project_show(projects)
+            elif choice == "3":
+                self._do_project_update(projects)
+            elif choice == "4":
+                self._do_project_delete(projects)
+            else:
+                input("  Unknown option. Press Enter to continue...")
+
+    def _do_project_add(self) -> None:
+        _clear()
+        print("  Add new project\n")
+        name = _prompt("Name")
+        if not name:
+            input("  Name cannot be empty. Press Enter...")
+            return
+        description = _prompt("Description (optional)") or None
+        try:
+            project = self._service.add_project(name, description)
+            print(f"\n  Added: {project.id[:8]}  {project.name}")
+        except ValueError as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_project_show(self, projects: list[Project]) -> None:
+        _clear()
+        if not projects:
+            input("  No projects. Press Enter...")
+            return
+        print("  Select project:\n")
+        idx = _pick("  > ", [f"{p.id[:8]}  {p.name}" for p in projects])
+        if idx is None:
+            return
+        project = projects[idx]
+        _clear()
+        print(f"  Project: {project.name}\n")
+        print(f"  ID:          {project.id}")
+        print(f"  Name:        {project.name}")
+        print(f"  Description: {project.description or '—'}")
+        print(f"  Created:     {project.created_at.isoformat()}")
+        print(f"  Updated:     {project.updated_at.isoformat()}")
+        tasks = self._service.list_tasks(project_id=project.id)
+        print(f"\n  Tasks in project: {len(tasks)}")
+        if tasks:
+            for task in tasks[:10]:
+                print(f"    {_task_line(task)}")
+            if len(tasks) > 10:
+                print(f"    ... and {len(tasks) - 10} more")
+        print()
+        input("  Press Enter to continue...")
+
+    def _do_project_update(self, projects: list[Project]) -> None:
+        _clear()
+        if not projects:
+            input("  No projects. Press Enter...")
+            return
+        print("  Select project:\n")
+        idx = _pick("  > ", [f"{p.id[:8]}  {p.name}" for p in projects])
+        if idx is None:
+            return
+        project = projects[idx]
+        _clear()
+        print(f"  Update project: {project.name}\n")
+        new_name = _prompt("New name (leave blank to keep current)", project.name) or project.name
+        new_description = _prompt("New description (leave blank to keep current)", project.description or "") or project.description
+        try:
+            updated = self._service.update_project(project.id, new_name, new_description)
+            print(f"\n  Updated: {updated.id[:8]}  {updated.name}")
+        except ValueError as e:
+            print(f"\n  Error: {e}")
+        input("  Press Enter to continue...")
+
+    def _do_project_delete(self, projects: list[Project]) -> None:
+        _clear()
+        if not projects:
+            input("  No projects. Press Enter...")
+            return
+        print("  Select project to delete:\n")
+        idx = _pick("  > ", [f"{p.id[:8]}  {p.name}" for p in projects])
+        if idx is None:
+            return
+        project = projects[idx]
+        _clear()
+        print(f"  Delete project: {project.name}\n")
+        print("  Are you sure? (y/n)")
+        if input("  > ").strip().lower() == "y":
+            try:
+                self._service.delete_project(project.id)
+                print(f"\n  Deleted: {project.id[:8]}  {project.name}")
+            except ProjectNotFoundError as e:
+                print(f"\n  Error: {e}")
         input("  Press Enter to continue...")
 
     def _do_import_export(self) -> None:

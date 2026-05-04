@@ -31,9 +31,9 @@ class TaskManager:
         except (ValueError, TypeError) as e:
             raise ValueError(f"Invalid due_date: {e}")
 
-    def add(self, title: str, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None) -> Task:
+    def add(self, title: str, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None, project_id: Optional[str] = None) -> Task:
         validated_due_date = self._validate_due_date(due_date)
-        task = Task(title=title, description=description, due_date=validated_due_date)
+        task = Task(title=title, description=description, due_date=validated_due_date, project_id=project_id)
         self._tasks[task.id] = task
         self._persist()
         return task
@@ -71,12 +71,59 @@ class TaskManager:
         """List tasks that are overdue (past due_date and not completed)."""
         return [t for t in self._tasks.values() if t.is_overdue()]
 
+    def list_by_project(self, project_id: str) -> list[Task]:
+        """List all tasks belonging to a project."""
+        return [t for t in self._tasks.values() if t.project_id == project_id]
+
+    def list_by_project_with_filters(
+        self,
+        project_id: Optional[str] = None,
+        status: Optional[TaskStatus] = None,
+        due_before: Optional[datetime] = None,
+        due_after: Optional[datetime] = None,
+        overdue_only: bool = False,
+    ) -> list[Task]:
+        """
+        List tasks combining project, status, and date filters with AND logic.
+        Sorts by (due_date is None, due_date) so tasks with due dates appear first.
+
+        Args:
+            project_id: Filter by project_id, or None for all projects
+            status: Filter by TaskStatus, or None for all statuses
+            due_before: Filter to tasks due on or before this datetime, or None
+            due_after: Filter to tasks due on or after this datetime, or None
+            overdue_only: If True, only return overdue tasks (takes precedence over date range)
+
+        Returns:
+            Sorted list of tasks matching all filters
+        """
+        result = list(self._tasks.values())
+
+        if project_id is not None:
+            result = [t for t in result if t.project_id == project_id]
+
+        if status is not None:
+            result = [t for t in result if t.status == status]
+
+        if overdue_only:
+            result = [t for t in result if t.is_overdue()]
+        else:
+            if due_before is not None:
+                result = [t for t in result if t.due_date is not None and t.due_date <= due_before]
+            if due_after is not None:
+                result = [t for t in result if t.due_date is not None and t.due_date >= due_after]
+
+        # Sort by (due_date is None, due_date): tasks with due dates first, then by date
+        result.sort(key=lambda t: (t.due_date is None, t.due_date))
+        return result
+
     def list_by_status_with_filters(
         self,
         status: Optional[TaskStatus] = None,
         due_before: Optional[datetime] = None,
         due_after: Optional[datetime] = None,
         overdue_only: bool = False,
+        project_id: Optional[str] = None,
     ) -> list[Task]:
         """
         List tasks combining status and date filters with AND logic.
@@ -87,11 +134,15 @@ class TaskManager:
             due_before: Filter to tasks due on or before this datetime, or None
             due_after: Filter to tasks due on or after this datetime, or None
             overdue_only: If True, only return overdue tasks (takes precedence over date range)
+            project_id: Filter by project_id, or None for all projects
 
         Returns:
             Sorted list of tasks matching all filters
         """
         result = list(self._tasks.values())
+
+        if project_id is not None:
+            result = [t for t in result if t.project_id == project_id]
 
         if status is not None:
             result = [t for t in result if t.status == status]
@@ -131,3 +182,15 @@ class TaskManager:
         task = self.get(task_id)  # resolves prefix; raises if missing
         del self._tasks[task.id]
         self._persist()
+
+    def unassign_project(self, project_id: str) -> int:
+        """Unassign all tasks from a project (set project_id to None). Returns count of tasks modified."""
+        count = 0
+        for task in self._tasks.values():
+            if task.project_id == project_id:
+                task.project_id = None
+                task.updated_at = datetime.now(timezone.utc)
+                count += 1
+        if count > 0:
+            self._persist()
+        return count

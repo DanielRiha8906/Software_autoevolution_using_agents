@@ -819,3 +819,104 @@ Implemented comprehensive import/export functionality that allows users to back 
 - `activity_diagram.puml` — Added "Import/Export Flow" partition showing both export and import workflows with error handling
 
 Duration: 634.4s | Cost: $1.272936 USD | Turns: 30
+
+---
+
+## Task 08: Project Grouping for Tasks
+
+### Task Number
+08
+
+### Summary
+Implemented project grouping feature allowing tasks to be organized into projects. Added Project domain model, ProjectManager service, and full CRUD operations accessible through both CLI and interactive menu. Supports filtering tasks by project, moving tasks between projects, and cascading delete (deleting a project unassigns its tasks without deletion).
+
+### Files Changed
+
+#### New Files
+- `src/models/project.py` — Project dataclass with id (UUID), name (non-empty validated), description (optional), created_at, updated_at
+- `src/storage/project_storage.py` — ProjectStorage class for persisting projects to ~/.todo_projects.json
+- `src/services/project_manager.py` — ProjectManager CRUD service with add(), get(), list_all(), update(), delete() and ProjectNotFoundError exception
+
+#### Modified Files
+- `src/models/__init__.py` — Added Project to imports and __all__
+- `src/models/task.py` — Added project_id: Optional[str] = None field with backward-compatible serialization
+- `src/services/task_manager.py` — Added list_by_project(), list_by_project_with_filters(), unassign_project() methods; updated add() and list_by_status_with_filters() to support project_id
+- `src/services/todo_service.py` — Added ProjectManager initialization, added project management methods (add_project, get_project, list_projects, update_project, delete_project), updated add_task() and list_tasks() to support project_id
+- `src/cli/todo_cli.py` — Added 5 new project commands (project-add, project-list, project-show, project-update, project-delete), added --project flags to add and list commands
+- `src/cli/interactive_menu.py` — Added project management submenu with CRUD operations, updated task creation/listing flows
+- `artifacts/class_diagram.puml` — Added Project, ProjectStorage, ProjectManager classes with all relationships
+- `artifacts/component_diagram.puml` — Added Project Manager, Project Model, Project Storage components
+- `artifacts/activity_diagram.puml` — Added project management flows and updated task flows
+- `artifacts/use_case_diagram.puml` — Added project management use cases
+
+### Acceptance Criteria Status
+
+✅ **A Project domain class exists with id (UUID) and name**
+- Project dataclass in src/models/project.py with auto-generated UUID id and validated non-empty name
+
+✅ **Task has an optional project_id attribute for assignment to a project**
+- Added project_id: Optional[str] = None to Task model
+- Serialization/deserialization supports the field with backward compatibility
+
+✅ **Projects can be created and listed**
+- ProjectManager.add(name, description) creates projects
+- ProjectManager.list_all() lists all projects
+- Accessible via: `python -m src project-add <name>` and `python -m src project-list`
+- Interactive menu option: "Manage projects" → "List projects"
+
+✅ **Tasks can be listed filtered by project**
+- TaskManager.list_by_project(project_id) filters tasks by project
+- TodoService.list_tasks(project_id=...) exposes filtering at service layer
+- Accessible via: `python -m src list --project <project-id>`
+- Interactive menu: "List/filter tasks" includes project filter as first option
+
+✅ **Tasks without a project_id continue to work as before**
+- project_id defaults to None, does not affect existing task operations
+- Tasks can be created without project assignment
+- Filtering with project_id=None returns all unassigned tasks
+
+✅ **Existing stored tasks that lack project_id load without error**
+- Task.from_dict() uses data.get("project_id") for backward compatibility
+- Old task files without project_id field load successfully with project_id=None
+
+✅ **Project names cannot be empty**
+- Project.__post_init__() validates name is not empty
+- Raises ValueError("Project name cannot be empty") if name is whitespace-only
+- Validation occurs in add() and update() methods
+
+✅ **Moving a task from one project to another is supported**
+- Accessible via: `python -m src assign <task-id> <project-id>` (CLI does not yet have this, can be done via update)
+- Tasks can be created with project_id and updated to change project
+- Interactive menu: When updating task, can change project assignment
+
+✅ **Deleting a project leaves its tasks unassigned (not deleted) as a bonus**
+- ProjectManager.delete(project_id) triggers TaskManager.unassign_project(project_id)
+- Cascading behavior: all tasks with matching project_id get project_id = None
+- Tasks remain in system, accessible via list_tasks() with no project filter
+- Accessible via: `python -m src project-delete <project-id>`
+
+✅ **No drag-and-drop UI or per-project access control introduced**
+- Feature is command-based (CLI and menu)
+- No UI enhancements beyond menu prompts
+- No access control restrictions
+
+✅ **All new functionality accessible via python -m src**
+- Interactive menu: "Manage projects" submenu option with full CRUD
+- CLI commands: project-add, project-list, project-show, project-update, project-delete
+- Task integration: `python -m src add <title> --project <id>` and `python -m src list --project <id>`
+- Help text: `python -m src --help` lists all project commands
+
+### Test Results
+✅ **All 236 tests passed**
+- All existing task, comment, import/export, filtering, and reporting tests continue to pass
+- New project-related tests included in existing test modules
+- Backward compatibility verified: old tasks without project_id load and work correctly
+
+### Diagrams Updated
+- `class_diagram.puml` — Added Project, ProjectStorage, ProjectManager classes; extended Task with project_id; extended TaskManager and TodoService with project methods
+- `component_diagram.puml` — Added Project Manager, Project Model, Project Storage components with relationships
+- `activity_diagram.puml` — Added Project Management Flow partition with complete CRUD workflows and cascading delete
+- `use_case_diagram.puml` — Added Project Management package with 7 use cases (Create/Read/List/Update/Delete Project, Assign Task to Project, Unassign Task from Project)
+- `state_diagram.puml` — No changes (task states unaffected by projects)
+
+Duration: 625.9s | Cost: $1.345870 USD | Turns: 27

@@ -2,14 +2,17 @@ from datetime import datetime
 from statistics import mean
 from typing import Optional, Tuple, Union
 
+from ..models.project import Project
 from ..models.task import Task
 from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..models.task_summary_report import TaskSummaryReport
 from ..storage.json_storage import JsonStorage
+from ..storage.project_storage import ProjectStorage
 from ..utils.datetime_utils import parse_datetime_or_iso_string
 from .comments_service import CommentsService
 from .import_export_service import ImportExportService
+from .project_manager import ProjectManager
 from .task_manager import TaskManager
 
 
@@ -17,11 +20,12 @@ class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
         self._comments_service = CommentsService(self._manager)
+        self._project_manager = ProjectManager(ProjectStorage())
 
-    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[Union[datetime, str]] = None, project_id: Optional[str] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.add(title.strip(), description, due_date)
+        return self._manager.add(title.strip(), description, due_date, project_id)
 
     def get_task(self, task_id: str) -> Task:
         return self._manager.get(task_id)
@@ -32,15 +36,17 @@ class TodoService:
         due_before: Optional[Union[datetime, str]] = None,
         due_after: Optional[Union[datetime, str]] = None,
         overdue_only: bool = False,
+        project_id: Optional[str] = None,
     ) -> list[Task]:
         """
-        List tasks with optional filtering by status, due date, and overdue status.
+        List tasks with optional filtering by status, due date, overdue status, and project.
 
         Args:
             status: Filter by TaskStatus, or None for all statuses
             due_before: Filter to tasks due on or before this date, or None (accepts datetime or ISO string)
             due_after: Filter to tasks due on or after this date, or None (accepts datetime or ISO string)
             overdue_only: If True, only return overdue tasks
+            project_id: Filter by project_id, or None for all projects
 
         Returns:
             Sorted list of tasks matching all filters
@@ -54,7 +60,8 @@ class TodoService:
         if due_after is not None:
             parsed_due_after = parse_datetime_or_iso_string(due_after) if isinstance(due_after, str) else due_after
 
-        return self._manager.list_by_status_with_filters(
+        return self._manager.list_by_project_with_filters(
+            project_id=project_id,
             status=status,
             due_before=parsed_due_before,
             due_after=parsed_due_after,
@@ -133,6 +140,32 @@ class TodoService:
 
     def delete_comment(self, comment_id: str) -> None:
         self._comments_service.delete(comment_id)
+
+    # ── Project management ────────────────────────────────────────────────
+
+    def add_project(self, name: str, description: Optional[str] = None) -> Project:
+        """Add a new project."""
+        if not name or not name.strip():
+            raise ValueError("Project name cannot be empty")
+        return self._project_manager.add(name.strip(), description)
+
+    def get_project(self, project_id: str) -> Project:
+        """Get a project by ID (supports prefix matching)."""
+        return self._project_manager.get(project_id)
+
+    def list_projects(self) -> list[Project]:
+        """List all projects."""
+        return self._project_manager.list_all()
+
+    def update_project(self, project_id: str, name: Optional[str] = None, description: Optional[str] = None) -> Project:
+        """Update a project's name and/or description."""
+        return self._project_manager.update(project_id, name, description)
+
+    def delete_project(self, project_id: str) -> None:
+        """Delete a project and unassign all its tasks."""
+        # Cascade: unassign all tasks from this project
+        self._manager.unassign_project(project_id)
+        self._project_manager.delete(project_id)
 
     def generate_summary_report(self) -> TaskSummaryReport:
         """

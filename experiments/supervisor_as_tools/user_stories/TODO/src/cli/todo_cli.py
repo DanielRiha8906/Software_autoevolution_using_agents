@@ -4,6 +4,7 @@ from typing import Optional
 
 from ..models.task_status import TaskStatus
 from ..services.comments_service import CommentNotFoundError
+from ..services.project_manager import ProjectNotFoundError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -32,6 +33,9 @@ class TodoCLI:
         except TaskNotFoundError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+        except ProjectNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
         except CommentNotFoundError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
@@ -56,6 +60,7 @@ class TodoCLI:
         p_add.add_argument("title", help="Task title")
         p_add.add_argument("-d", "--description", help="Optional description")
         p_add.add_argument("--due-date", help="Due date (ISO 8601 format: YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS+02:00)")
+        p_add.add_argument("--project", help="Project ID")
         p_add.set_defaults(func=self._cmd_add)
 
         # list
@@ -77,6 +82,10 @@ class TodoCLI:
             "--overdue",
             action="store_true",
             help="Filter to overdue tasks only (past due date and not completed)",
+        )
+        p_list.add_argument(
+            "--project",
+            help="Filter by project ID",
         )
         p_list.set_defaults(func=self._cmd_list)
 
@@ -190,6 +199,33 @@ class TodoCLI:
                              help="How to handle duplicate IDs (default: skip)")
         p_import.set_defaults(func=self._cmd_import)
 
+        # project-add
+        p_project_add = sub.add_parser("project-add", help="Add a new project")
+        p_project_add.add_argument("name", help="Project name")
+        p_project_add.add_argument("-d", "--description", help="Optional description")
+        p_project_add.set_defaults(func=self._cmd_project_add)
+
+        # project-list
+        p_project_list = sub.add_parser("project-list", help="List all projects")
+        p_project_list.set_defaults(func=self._cmd_project_list)
+
+        # project-show
+        p_project_show = sub.add_parser("project-show", help="Show project details")
+        p_project_show.add_argument("id", help="Project ID")
+        p_project_show.set_defaults(func=self._cmd_project_show)
+
+        # project-update
+        p_project_update = sub.add_parser("project-update", help="Update a project")
+        p_project_update.add_argument("id", help="Project ID")
+        p_project_update.add_argument("-n", "--name", help="New project name")
+        p_project_update.add_argument("-d", "--description", help="New description")
+        p_project_update.set_defaults(func=self._cmd_project_update)
+
+        # project-delete
+        p_project_delete = sub.add_parser("project-delete", help="Delete a project")
+        p_project_delete.add_argument("id", help="Project ID")
+        p_project_delete.set_defaults(func=self._cmd_project_delete)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
@@ -200,7 +236,8 @@ class TodoCLI:
             except ValueError as e:
                 print(f"Error: {e}", file=sys.stderr)
                 return 1
-        task = self._service.add_task(args.title, args.description, due_date)
+        project_id = getattr(args, 'project', None)
+        task = self._service.add_task(args.title, args.description, due_date, project_id)
         print(f"Added task {task.id[:8]}  {task.title}")
         return 0
 
@@ -230,12 +267,14 @@ class TodoCLI:
             return 1
 
         overdue_only = hasattr(args, 'overdue') and args.overdue
+        project_id = getattr(args, 'project', None)
 
         tasks = self._service.list_tasks(
             status=status,
             due_before=due_before,
             due_after=due_after,
             overdue_only=overdue_only,
+            project_id=project_id,
         )
         if not tasks:
             print("No tasks found.")
@@ -396,3 +435,40 @@ class TodoCLI:
         except (FileNotFoundError, ValueError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+
+    # ── Project commands ───────────────────────────────────────────────────
+
+    def _cmd_project_add(self, args: argparse.Namespace) -> int:
+        project = self._service.add_project(args.name, args.description)
+        print(f"Added project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_project_list(self, args: argparse.Namespace) -> int:
+        projects = self._service.list_projects()
+        if not projects:
+            print("No projects found.")
+            return 0
+        for project in projects:
+            desc = f"  {project.description}" if project.description else ""
+            print(f"{project.id[:8]}  {project.name}{desc}")
+        return 0
+
+    def _cmd_project_show(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        print(f"ID:          {project.id}")
+        print(f"Name:        {project.name}")
+        print(f"Description: {project.description or '—'}")
+        print(f"Created:     {project.created_at.isoformat()}")
+        print(f"Updated:     {project.updated_at.isoformat()}")
+        return 0
+
+    def _cmd_project_update(self, args: argparse.Namespace) -> int:
+        project = self._service.update_project(args.id, args.name, args.description)
+        print(f"Updated project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_project_delete(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        self._service.delete_project(args.id)
+        print(f"Deleted project {project.id[:8]}  {project.name}")
+        return 0
