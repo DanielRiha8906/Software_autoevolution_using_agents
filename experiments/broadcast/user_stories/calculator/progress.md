@@ -1080,4 +1080,4 @@ All PlantUML diagrams updated to reflect GUI addition:
 - **sequence_diagram_gui.puml**: New diagram showing GUI interaction pattern (user click → GUIApplication → CalculatorService → calculation)
 - **activity_diagram.puml, state_diagram_interactive.puml, state_diagram_command.puml, sequence_diagram.puml**: Kept unchanged (focused on CLI workflows, not affected by GUI addition)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 513.9s | Cost: $1.959537 USD | Turns: 35
