@@ -767,4 +767,4 @@ All 169 existing tests from tasks 1-9 continue to pass:
 - Adding new storage: implement StorageInterface or MemoryStorageInterface protocol, wire in service_factory
 - Adding new UI mode: create new class (CalculatorAPI, CalculatorWeb, etc.), inject same services
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 458.3s | Cost: $0.821380 USD | Turns: 23
