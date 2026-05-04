@@ -17,6 +17,7 @@ from src.services.workflow_run_service import WorkflowRunService
 from src.services.attempt_service import AttemptService
 from src.services.statistics_service import StatisticsService
 from src.services.data_portability_service import DataPortabilityService
+from src.services.github_fetch_service import GitHubFetchService
 
 
 def _make_run(run_id: str = "run-1", duration: float = 10.0) -> WorkflowRun:
@@ -60,6 +61,11 @@ def portability_service():
     return DataPortabilityService()
 
 
+@pytest.fixture
+def github_fetch_service():
+    return GitHubFetchService("test-owner", "test-repo")
+
+
 def test_prompt_datetime_valid_input():
     """Test _prompt_datetime with valid ISO 8601 input."""
     iso_string = "2026-05-03T12:00:00"
@@ -93,7 +99,7 @@ def test_prompt_datetime_invalid_input_then_valid(capsys):
     assert "Invalid format" in captured.out
 
 
-def test_filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service, capsys):
+def test_filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service, capsys):
     """Test _filter_by_duration_interactive calls service correctly."""
     r1 = _make_run("r1", duration=5.0)
     r2 = _make_run("r2", duration=15.0)
@@ -102,14 +108,14 @@ def test_filter_by_duration_interactive(service, attempt_service, statistics_ser
 
     # Input: min=10.0, max=blank (unlimited)
     with patch("builtins.input", side_effect=["10.0", ""]):
-        _filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service)
+        _filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service)
 
     captured = capsys.readouterr()
     assert "r2" in captured.out
     assert "1 matching run(s)" in captured.out
 
 
-def test_filter_by_created_interactive(service, attempt_service, statistics_service, portability_service, capsys):
+def test_filter_by_created_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service, capsys):
     """Test _filter_by_created_interactive calls service correctly."""
     now = datetime.now(timezone.utc)
     before = now - timedelta(hours=1)
@@ -126,20 +132,20 @@ def test_filter_by_created_interactive(service, attempt_service, statistics_serv
     iso_now = now.isoformat()
     # Input: created_after=now, created_before=blank
     with patch("builtins.input", side_effect=[iso_now, ""]):
-        _filter_by_created_interactive(service, attempt_service, statistics_service, portability_service)
+        _filter_by_created_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service)
 
     captured = capsys.readouterr()
     assert "r2" in captured.out
 
 
-def test_advanced_filter_menu_navigation(service, attempt_service, statistics_service, portability_service, capsys):
+def test_advanced_filter_menu_navigation(service, attempt_service, statistics_service, portability_service, github_fetch_service, capsys):
     """Test _advanced_filter_menu navigates correctly."""
     r1 = _make_run("r1", duration=5.0)
     service.add_workflow_run(r1)
 
     # Simulate: choose "Back to main menu" immediately
     with patch("builtins.input", side_effect=["6"]):
-        _advanced_filter_menu(service, attempt_service, statistics_service, portability_service)
+        _advanced_filter_menu(service, attempt_service, statistics_service, portability_service, github_fetch_service)
 
     # Should return without error
     captured = capsys.readouterr()
@@ -147,27 +153,27 @@ def test_advanced_filter_menu_navigation(service, attempt_service, statistics_se
     assert True
 
 
-def test_filter_by_duration_interactive_with_invalid_max(service, attempt_service, statistics_service, portability_service, capsys):
+def test_filter_by_duration_interactive_with_invalid_max(service, attempt_service, statistics_service, portability_service, github_fetch_service, capsys):
     """Test _filter_by_duration_interactive handles invalid max gracefully."""
     r1 = _make_run("r1", duration=5.0)
     service.add_workflow_run(r1)
 
     # Input: min=10.0, max=invalid
     with patch("builtins.input", side_effect=["10.0", "not-a-number"]):
-        _filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service)
+        _filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service)
 
     captured = capsys.readouterr()
     assert "Invalid float" in captured.out
 
 
-def test_filter_by_duration_interactive_no_matching_runs(service, attempt_service, statistics_service, portability_service, capsys):
+def test_filter_by_duration_interactive_no_matching_runs(service, attempt_service, statistics_service, portability_service, github_fetch_service, capsys):
     """Test _filter_by_duration_interactive with no matching runs."""
     r1 = _make_run("r1", duration=5.0)
     service.add_workflow_run(r1)
 
     # Input: min=100.0, max=blank (no matches)
     with patch("builtins.input", side_effect=["100.0", ""]):
-        _filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service)
+        _filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service)
 
     captured = capsys.readouterr()
     assert "No matching runs" in captured.out

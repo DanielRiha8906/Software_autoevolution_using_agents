@@ -12,6 +12,8 @@ from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.attempt_service import AttemptService
 from ..services.statistics_service import StatisticsService
 from ..services.data_portability_service import DataPortabilityService
+from ..services.github_fetch_service import GitHubFetchService
+from ..exceptions import GitHubException
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -104,6 +106,7 @@ def _add_run(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     tracker = WorkflowRunTracker(service)
     print("\n--- Add Workflow Run ---")
@@ -135,6 +138,7 @@ def _list_runs(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     runs = service.list_runs()
     if not runs:
@@ -150,6 +154,7 @@ def _detail_run(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     run_id = _prompt("\nEnter run ID")
     run = service.get_run_detail(run_id)
@@ -164,6 +169,7 @@ def _check_run_state(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     run_id = _prompt("\nEnter run ID")
     run = service.get_run_detail(run_id)
@@ -208,6 +214,7 @@ def _filter_menu(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     filter_by = _choose("Filter by", ["branch", "status", "conclusion"])
     if filter_by == "branch":
@@ -233,6 +240,7 @@ def _filter_by_duration_interactive(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     """Interactive duration range filter."""
     print("\n--- Filter by Duration Range ---")
@@ -268,6 +276,7 @@ def _filter_by_created_interactive(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     """Interactive created date range filter."""
     print("\n--- Filter by Created Date Range ---")
@@ -296,6 +305,7 @@ def _filter_by_updated_interactive(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     """Interactive updated date range filter."""
     print("\n--- Filter by Updated Date Range ---")
@@ -324,6 +334,7 @@ def _filter_by_attempts_interactive(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     """Interactive filter by attempt presence."""
     choice = _choose("Show runs with attempts?", ["Yes", "No"])
@@ -348,6 +359,7 @@ def _filter_compound_interactive(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     """Interactive compound filter builder."""
     print("\n--- Combine Filters ---")
@@ -410,6 +422,7 @@ def _advanced_filter_menu(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     """Advanced filter sub-menu."""
     while True:
@@ -427,15 +440,15 @@ def _advanced_filter_menu(
         )
 
         if choice == "Duration range":
-            _filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service)
+            _filter_by_duration_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service)
         elif choice == "Created date range":
-            _filter_by_created_interactive(service, attempt_service, statistics_service, portability_service)
+            _filter_by_created_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service)
         elif choice == "Updated date range":
-            _filter_by_updated_interactive(service, attempt_service, statistics_service, portability_service)
+            _filter_by_updated_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service)
         elif choice == "Has attempts":
-            _filter_by_attempts_interactive(service, attempt_service, statistics_service, portability_service)
+            _filter_by_attempts_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service)
         elif choice == "Combine filters":
-            _filter_compound_interactive(service, attempt_service, statistics_service, portability_service)
+            _filter_compound_interactive(service, attempt_service, statistics_service, portability_service, github_fetch_service)
         elif choice == "Back to main menu":
             return
 
@@ -445,6 +458,7 @@ def _add_attempt(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     print("\n--- Add Workflow Attempt ---")
     run_id = int(_prompt("Run ID"))
@@ -469,6 +483,7 @@ def _list_attempts_menu(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     attempts = attempt_service.list_attempts()
     if not attempts:
@@ -484,6 +499,7 @@ def _detail_attempt(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     attempt_id = int(_prompt("\nEnter attempt ID"))
     attempt = attempt_service.get_attempt_detail(attempt_id)
@@ -498,6 +514,7 @@ def _view_statistics(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     """Display workflow statistics."""
     print("\n--- Workflow Statistics ---")
@@ -517,6 +534,7 @@ def _export_data(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     """Export workflow data to JSON file."""
     print("\n--- Export Workflow Data ---")
@@ -539,6 +557,7 @@ def _import_data(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     """Import workflow data from JSON file."""
     print("\n--- Import Workflow Data ---")
@@ -575,6 +594,81 @@ def _import_data(
         print(f"\nImport failed: {e}")
 
 
+def _fetch_from_github(
+    service: WorkflowRunService,
+    attempt_service: AttemptService,
+    statistics_service: StatisticsService,
+    portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
+) -> None:
+    """Fetch workflow runs from GitHub."""
+    print("\n--- Fetch from GitHub ---")
+
+    # Prompt for required credentials
+    owner = _prompt("Repository owner")
+    repo = _prompt("Repository name")
+    token_input = input("GitHub API token (press enter to skip): ").strip()
+    token = token_input if token_input else None
+
+    # Prompt for optional filters
+    workflow_id = input("Workflow ID to filter (press enter to skip): ").strip() or None
+    status = input("Status to filter (press enter to skip): ").strip() or None
+    conclusion = input("Conclusion to filter (press enter to skip): ").strip() or None
+    limit_input = input("Maximum runs to fetch [30]: ").strip()
+    limit = int(limit_input) if limit_input else 30
+
+    # Create service with user-provided credentials
+    gh_service = GitHubFetchService(owner=owner, repo=repo, token=token)
+
+    try:
+        # Fetch runs
+        runs = gh_service.fetch_workflow_runs(
+            workflow_id=workflow_id,
+            status=status,
+            conclusion=conclusion,
+            limit=limit,
+        )
+
+        if not runs:
+            print("\nNo runs found matching the criteria.")
+            return
+
+        # Show preview (first 5 runs)
+        preview_count = min(5, len(runs))
+        print(f"\n--- Preview ({preview_count}/{len(runs)} runs) ---")
+        for run in runs[:preview_count]:
+            print(_fmt_run(run))
+
+        # Ask for confirmation
+        confirm = input(f"\nImport these {len(runs)} runs? (y/n): ").strip().lower()
+        if confirm != 'y':
+            print("Import cancelled.")
+            return
+
+        # Import runs
+        imported_count = 0
+        skipped_count = 0
+
+        for run in runs:
+            try:
+                service.add_workflow_run(run)
+                imported_count += 1
+            except ValueError:
+                # Duplicate run
+                skipped_count += 1
+
+        print(f"\nImported {imported_count} runs from GitHub")
+        if skipped_count > 0:
+            print(f"Skipped {skipped_count} duplicate(s)")
+
+    except GitHubException as e:
+        print(f"\nGitHub error: {e}")
+    except ValueError as e:
+        print(f"\nValidation error: {e}")
+    except Exception as e:
+        print(f"\nUnexpected error: {e}")
+
+
 MENU = [
     ("Add workflow run", _add_run),
     ("List all runs", _list_runs),
@@ -582,6 +676,7 @@ MENU = [
     ("Check run state", _check_run_state),
     ("Filter runs", _filter_menu),
     ("Advanced Filter", _advanced_filter_menu),
+    ("Fetch from GitHub", _fetch_from_github),
     ("Add attempt", _add_attempt),
     ("List attempts", _list_attempts_menu),
     ("Get attempt detail", _detail_attempt),
@@ -597,6 +692,7 @@ def run_interactive(
     attempt_service: AttemptService,
     statistics_service: StatisticsService,
     portability_service: DataPortabilityService,
+    github_fetch_service: GitHubFetchService,
 ) -> None:
     print("\nGitHub Workflow Tracker — Interactive Menu")
     while True:
@@ -612,6 +708,6 @@ def run_interactive(
             print("Goodbye.")
             sys.exit(0)
         try:
-            handler(service, attempt_service, statistics_service, portability_service)
+            handler(service, attempt_service, statistics_service, portability_service, github_fetch_service)
         except KeyboardInterrupt:
             print()
