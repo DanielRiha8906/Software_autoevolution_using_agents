@@ -3,7 +3,123 @@
 skinparam classAttributeIconSize 0
 skinparam classFontStyle bold
 
-package "models" #DDEEFF {
+' ============================================================================
+' LAYER 1: CALCULATION ENGINE (Pure, Stateless Logic)
+' ============================================================================
+package "LAYER 1: CALCULATION ENGINE (core/)" #FFE5E5 {
+    interface "<<protocol>>\nCalculationEngine" as CalcEngineProto {
+        +add(a: float, b: float) : float
+        +subtract(a: float, b: float) : float
+        +multiply(a: float, b: float) : float
+        +divide(a: float, b: float) : float
+        +square(x: float) : float
+        +sqrt(x: float) : float
+        +power(x: float, y: float) : float
+        +modulo(x: float, y: float) : float
+        +calculate(operation, a, b) : float
+    }
+
+    class BasicCalculationEngine {
+        +add(a: float, b: float) : float
+        +subtract(a: float, b: float) : float
+        +multiply(a: float, b: float) : float
+        +divide(a: float, b: float) : float
+        +square(x: float) : float
+        +sqrt(x: float) : float
+        +power(x: float, y: float) : float
+        +modulo(x: float, y: float) : float
+        +calculate(operation, a, b) : float
+    }
+
+    BasicCalculationEngine ..|> CalcEngineProto : implements
+}
+
+' ============================================================================
+' LAYER 2: MEMORY/HISTORY MANAGEMENT (Storage & Tracking)
+' ============================================================================
+package "LAYER 2: MEMORY/HISTORY MANAGEMENT (history/, services/)" #DDFFD4 {
+    interface "<<protocol>>\nMemoryManager" as MemoryManagerProto {
+        +store(entry: MemoryEntry) : void
+        +retrieve() : List[MemoryEntry]
+        +query(operation, success) : List[MemoryEntry]
+    }
+
+    class MemoryService {
+        -_entries : List[MemoryEntry]
+        --
+        +store(entry: MemoryEntry) : void
+        +retrieve() : List[MemoryEntry]
+        +query(operation, success) : List[MemoryEntry]
+    }
+
+    class CalculatorService {
+        -calculator : CalculationEngine
+        -storage : JsonStorage
+        --
+        +perform(operation, a, b) : CalculationResult
+        +get_history() : List[CalculationResult]
+    }
+
+    class StatisticsService {
+        -memory_service : MemoryService
+        --
+        +compute() : StatisticsReport
+    }
+
+    class ImportExportService {
+        -memory_service : MemoryService
+        --
+        +export(filepath) : void
+        +import_from(filepath) : void
+    }
+
+    MemoryService ..|> MemoryManagerProto : implements
+    StatisticsService --> MemoryService : uses
+    ImportExportService --> MemoryService : uses
+}
+
+package "Storage Layer (storage/)" #FFF3CC {
+    class JsonStorage {
+        -filepath : String
+        --
+        +save(result: CalculationResult) : void
+        +load_all() : List[CalculationResult]
+    }
+
+    CalculatorService --> JsonStorage : persists to
+}
+
+' ============================================================================
+' LAYER 3: INTERFACE LAYER (User Interaction)
+' ============================================================================
+package "LAYER 3: INTERFACE LAYER (cli/, interface/)" #DDEEFF {
+    interface "<<protocol>>\nUserInterface" as UIProto {
+        +run_interactive() : void
+        +run_command(operation, a, b) : void
+    }
+
+    class CLIBase {
+        #_resolve_menu_choice(choice, menu_len) : int
+        #_prompt_number(prompt) : float
+    }
+
+    class CalculatorCLI {
+        -_MENU : List[Operation, str]
+        -service : CalculatorService
+        --
+        +run_interactive() : void
+        +run_command(operation, a, b) : void
+    }
+
+    CalculatorCLI --|> CLIBase : extends
+    CalculatorCLI ..|> UIProto : implements
+    CalculatorCLI --> CalculatorService : delegates to
+}
+
+' ============================================================================
+' SHARED DATA MODELS (models/)
+' ============================================================================
+package "Shared Data Models (models/)" #F0F0F0 {
     enum Operation {
         ADD
         SUBTRACT
@@ -14,21 +130,20 @@ package "models" #DDEEFF {
         POWER
         MODULO
         --
-        +fromString(value: String) : Operation
-        +displayName() : String
+        +from_string(value) : Operation
+        +display_name() : String
     }
 
     class CalculationResult {
         +operation : Operation
-        +operandA : float
-        +operandB : float
+        +operand_a : float
+        +operand_b : float
         +result : float
         +timestamp : String
-        +executionTimeMs : float
+        +execution_time_ms : float
         --
-        +toDict() : Dictionary
-        +fromDict(data: Dictionary) : CalculationResult
-        +toString() : String
+        +to_dict() : Dictionary
+        +from_dict(data) : CalculationResult
     }
 
     class MemoryEntry {
@@ -39,69 +154,8 @@ package "models" #DDEEFF {
         +execution_time_ms : float
         +id : String
         +timestamp : String
-        --
-        +to_dict() : Dictionary
-        +from_dict(data: Dictionary) : MemoryEntry
-    }
-}
-
-package "services" #DDFFD4 {
-    class Calculator {
-        +add(a: float, b: float) : float
-        +subtract(a: float, b: float) : float
-        +multiply(a: float, b: float) : float
-        +divide(a: float, b: float) : float
-        +square(x: float) : float
-        +sqrt(x: float) : float
-        +power(x: float, y: float) : float
-        +modulo(x: float, y: float) : float
-        +calculate(op: Operation, a: float, b: float) : float
     }
 
-    class ScientificCalculator {
-        +sin(x: float) : float
-        +cos(x: float) : float
-        +tan(x: float) : float
-        +log(x: float) : float
-        +ln(x: float) : float
-        +exp(x: float) : float
-    }
-
-    class CalculatorService {
-        -calculator : Calculator
-        -storage : JsonStorage
-        --
-        +CalculatorService(calculator: Calculator, storage: JsonStorage)
-        +perform(operation: Operation, a: float, b: float) : CalculationResult
-        +getHistory() : List<CalculationResult>
-    }
-
-    class MemoryService {
-        -_entries : List[MemoryEntry]
-        --
-        +MemoryService()
-        +store(entry: MemoryEntry) : void
-        +retrieve() : List[MemoryEntry]
-        +query(operation: String [0..1], success: Boolean [0..1]) : List[MemoryEntry]
-    }
-
-    class StatisticsService {
-        -memory_service : MemoryService
-        --
-        +StatisticsService(memory_service: MemoryService)
-        +compute() : StatisticsReport
-    }
-
-    class ImportExportService {
-        -_memory_service : MemoryService
-        --
-        +ImportExportService(memory_service: MemoryService)
-        +export(filepath: String) : void
-        +import_from(filepath: String) : void
-    }
-}
-
-package "reports" #E5F3FF {
     class StatisticsReport {
         +count_per_operation : Dict[String, int]
         +total_errors : int
@@ -110,48 +164,21 @@ package "reports" #E5F3FF {
     }
 }
 
-package "storage" #FFF3CC {
-    class JsonStorage {
-        -filepath : String
-        --
-        +JsonStorage(filepath: String)
-        +save(result: CalculationResult) : void
-        +loadAll() : List<CalculationResult>
-        -readRaw() : List<Dictionary>
-        -writeRaw(records: List<Dictionary>) : void
-    }
-}
+' ============================================================================
+' DEPENDENCIES (Upward Flow - No Circular Dependencies)
+' ============================================================================
 
-package "cli" #FFE5E5 {
-    class CalculatorCLI {
-        -MENU : List<Tuple<Operation, String>>
-        -service : CalculatorService
-        --
-        +CalculatorCLI(service: CalculatorService)
-        +runInteractive() : void
-        +runCommand(operation: String, a: float, b: float) : void
-        -printMenu() : void
-        -resolveMenuChoice(choice: String) : Operation [0..1]
-        -promptNumber(prompt: String) : float [0..1]
-        -showHistory() : void
-    }
-}
+' Layer 3 -> Layer 2
+CalculatorCLI ..> Operation : uses
 
-ScientificCalculator --|> Calculator : extends
+' Layer 2 -> Layer 1
+CalculatorService --> BasicCalculationEngine : uses
+CalculatorService ..> CalculationResult : creates
+MemoryService ..> MemoryEntry : manages
 
-CalculatorCLI --> CalculatorService : service
-CalculatorService --> Calculator : calculator
-CalculatorService --> JsonStorage : storage
-MemoryService --> MemoryEntry : manages
-StatisticsService --> MemoryService : analyzes
-ImportExportService --> MemoryService : persists/retrieves
+' Shared Models
 StatisticsService ..> StatisticsReport : creates
+JsonStorage ..> CalculationResult : persists
 
-CalculatorService ..> CalculationResult : create
-CalculatorService ..> Operation
-CalculatorCLI ..> Operation
-Calculator ..> Operation
-JsonStorage ..> CalculationResult : stores
-MemoryService ..> MemoryEntry
-
+@enduml
 @enduml

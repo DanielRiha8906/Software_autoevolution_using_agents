@@ -1,45 +1,100 @@
 @startuml component_diagram
 
 skinparam componentStyle uml2
-skinparam defaultFontSize 13
-left to right direction
+skinparam defaultFontSize 12
+top to bottom direction
 
-package "Calculator Application" {
-
+' ============================================================================
+' LAYER 3: INTERFACE LAYER (top)
+' ============================================================================
+package "LAYER 3: INTERFACE LAYER" #DDEEFF {
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
-    component "Application Service\n(CalculatorService)" as Service
+}
+
+' ============================================================================
+' LAYER 2: MEMORY/HISTORY MANAGEMENT (middle)
+' ============================================================================
+package "LAYER 2: MEMORY/HISTORY MANAGEMENT" #DDFFD4 {
+    component "Orchestration Service\n(CalculatorService)" as Service
     component "Memory Service\n(MemoryService)" as Memory
     component "Statistics Service\n(StatisticsService)" as Stats
     component "Import/Export Service\n(ImportExportService)" as Import
-    component "Calculation Engine\n(Calculator)" as Calc
     component "JSON Storage\n(JsonStorage)" as Store
-    component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
-
-    Main --> CLI : initializes
-    Main --> Service : initializes
-    Main --> Stats : initializes [optional]
-
-    CLI --> Service : uses
-    Service --> Calc : uses
-    Service --> Store : uses
-    Service --> Memory : manages
-
-    Stats --> Memory : analyzes
-    Import --> Memory : reads/writes
-
-    Main --> Import : initializes [optional]
-
-    Service ..> Models
-    Store ..> Models
-    Memory ..> Models
-    Import ..> Models
 }
 
-database "calculations.json" as DB
-database "Import/Export\nJSON Files" as Files
+' ============================================================================
+' LAYER 1: CALCULATION ENGINE (bottom)
+' ============================================================================
+package "LAYER 1: CALCULATION ENGINE" #FFE5E5 {
+    component "Calculation Engine\n(BasicCalculationEngine)" as Calc
+}
 
+' ============================================================================
+' SHARED DATA MODELS (accessible to all layers)
+' ============================================================================
+package "SHARED DATA MODELS" #F0F0F0 {
+    component "Domain Models\n(Operation, CalculationResult,\nMemoryEntry, StatisticsReport)" as Models
+}
+
+' ============================================================================
+' EXTERNAL STORAGE (outside application)
+' ============================================================================
+database "calculations.json" as DB
+database "History Export\nFiles" as HistFiles
+
+' ============================================================================
+' DEPENDENCIES (Upward Flow - Layer 3 -> Layer 2 -> Layer 1)
+' ============================================================================
+
+' Entry point initialization
+Main --> CLI : initializes
+Main --> Service : initializes
+Main --> Stats : initializes [optional]
+Main --> Import : initializes [optional]
+
+' Layer 3 -> Layer 2: Interface uses orchestration service
+CLI --> Service : delegates calculations to
+
+' Layer 2 -> Layer 1: Service uses calculation engine
+Service --> Calc : uses pure calculation logic
+
+' Layer 2 Internal: Service coordination
+Service --> Store : persists results to
+Service --> Memory : may track entries via
+Stats --> Memory : analyzes history in
+Import --> Memory : reads/writes to
+
+' Layer 2 -> External Storage
 Store --> DB : read/write
-Import --> Files : read/write
+Import --> HistFiles : read/write
+
+' All layers use shared models
+Main ..> Models : uses
+CLI ..> Models : uses
+Service ..> Models : uses
+Memory ..> Models : uses
+Stats ..> Models : uses
+Import ..> Models : uses
+Calc ..> Models : uses
+Store ..> Models : serializes
+
+note bottom of Calc
+  Pure stateless logic
+  No side effects
+  No dependencies
+end note
+
+note bottom of Service
+  Orchestration & timing
+  Coordinates between
+  Engine and Storage
+end note
+
+note bottom of CLI
+  User interaction
+  Menus and prompts
+  No business logic
+end note
 
 @enduml

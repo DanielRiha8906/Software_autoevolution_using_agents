@@ -1,29 +1,58 @@
 @startuml sequence_diagram_perform
 
-skinparam sequenceParticipantPadding 30
-skinparam sequenceActorBorderColor #3366AA
-skinparam sequenceLifeLineBorderColor #3366AA
-skinparam sequenceArrowColor #3366AA
+skinparam sequenceParticipantPadding 25
+skinparam sequenceActorBorderColor #1F77B4
+skinparam sequenceLifeLineBorderColor #1F77B4
+skinparam sequenceArrowColor #1F77B4
+skinparam noteBkgColor #FFFFCC
 
-participant User as U
-participant CalculatorCLI as CLI
-participant CalculatorService as Service
-participant Calculator as Calc
-participant JsonStorage as Store
+' Participants grouped by layer
+participant "User" as User #FFE5E5
+participant "CalculatorCLI\n(LAYER 3)" as CLI #FFE5E5
+participant "CalculatorService\n(LAYER 2)" as Service #DDFFD4
+participant "BasicCalculationEngine\n(LAYER 1)" as Engine #FFE5E5
+participant "JsonStorage\n(LAYER 2)" as Storage #DDFFD4
 participant "time module" as Time
 
-U -> CLI: runCommand(operation, a, b)
+User -> CLI: run_command(operation, a, b)
+activate CLI
+
+note over CLI
+  LAYER 3: INTERFACE LAYER
+  Parse input & delegate
+end note
+
 CLI -> Service: perform(operation, a, b)
+activate Service
+
+note over Service
+  LAYER 2: ORCHESTRATION
+  Coordinate Engine + Storage
+  Start timing
+end note
 
 Service -> Time: start_time = perf_counter()
 activate Time
 Time --> Service: start_time (float)
 deactivate Time
 
-Service -> Calc: calculate(operation, a, b)
-activate Calc
-Calc --> Service: result (float)
-deactivate Calc
+note over Service, Engine
+  Cross-layer call: LAYER 2 -> LAYER 1
+  Service uses CalculationEngine protocol
+end note
+
+Service -> Engine: calculate(operation, a, b)
+activate Engine
+
+note over Engine
+  LAYER 1: PURE CALCULATION ENGINE
+  No side effects
+  Stateless logic only
+  Returns result
+end note
+
+Engine --> Service: result (float)
+deactivate Engine
 
 Service -> Time: end_time = perf_counter()
 activate Time
@@ -31,17 +60,31 @@ Time --> Service: end_time (float)
 deactivate Time
 
 note over Service
+  Calculate execution time
   execution_time_ms = (end_time - start_time) * 1000
 end note
 
-Service -> Service: create CalculationResult(\n  operation, a, b, result,\n  execution_time_ms)
+Service -> Service: Create CalculationResult(\n  operation=operation,\n  operand_a=a,\n  operand_b=b,\n  result=result,\n  execution_time_ms=ms)
 
-Service -> Store: save(calc_result)
-activate Store
-Store --> Service: void
-deactivate Store
+note over Service, Storage
+  Cross-layer call: LAYER 2 -> Storage
+  Persist calculation to JSON file
+end note
+
+Service -> Storage: save(calc_result)
+activate Storage
+Storage --> Service: (void)
+deactivate Storage
 
 Service --> CLI: CalculationResult
-CLI --> U: display result & execution time
+deactivate Service
+
+note over CLI
+  Format and display result
+  Show calculation & timing
+end note
+
+CLI --> User: Display:\nOperation, Operands, Result,\nExecution Time
+deactivate CLI
 
 @enduml

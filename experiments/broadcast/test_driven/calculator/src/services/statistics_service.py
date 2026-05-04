@@ -1,3 +1,9 @@
+"""Statistics service - aggregates history metrics.
+
+This module provides statistics computation for memory entries, part of
+the history/memory management component.
+"""
+
 from dataclasses import dataclass
 
 from .memory_service import MemoryService
@@ -20,7 +26,11 @@ class StatisticsReport:
 
 
 class StatisticsService:
-    """Service to compute aggregated statistics from MemoryEntry history."""
+    """Service to compute aggregated statistics from MemoryEntry history.
+
+    Part of the history/memory management component, providing analytics
+    on stored calculation entries.
+    """
 
     def __init__(self, memory_service: MemoryService) -> None:
         """Initialize StatisticsService with a MemoryService.
