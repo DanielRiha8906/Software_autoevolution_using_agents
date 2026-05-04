@@ -1,59 +1,78 @@
 @startuml component_diagram
 
 skinparam componentStyle uml2
-skinparam defaultFontSize 13
+skinparam defaultFontSize 12
+skinparam backgroundColor #FAFAFA
 
 left to right direction
 
-package "TODO Application" {
+package "TODO Application - 5-Layer Architecture" {
 
-    component "Entry Point\n(main)" as Main
+    component "Entry Point\n(__main__)" as Main
 
-    package "CLI Layer" {
-        component "Interactive Menu" as IM
-        component "Command-line Interface\n(TodoCLI)" as CLI
+    package "5. CLI Layer" {
+        component "TodoCLI\n(commands)" as CLI
+        component "InteractiveMenu\n(user interface)" as IM
     }
 
-    package "Service Layer" {
-        component "Todo Service" as SVC
-        component "Task Manager" as MGR
-        component "Project Manager" as PMGR
-        component "Comments Service" as CMTS
-        component "Import/Export Service" as IMPEXP
+    package "4. Services Layer" {
+        component "TodoService\n(main coordinator)" as SVC
+        component "TaskService" as TaskSvc
+        component "CommentService" as CommentSvc
+        component "ProjectService" as ProjectSvc
+        component "StatisticsService" as StatSvc
+        component "ImportExportService" as ImpExpSvc
     }
 
-    package "Domain Model" {
-        component "Task Model\n(Task, TaskStatus, TaskComment)" as Model
-        component "Project Model\n(Project)" as ProjModel
+    package "3. Repositories Layer" {
+        component "TaskRepository\n(protocol)" as TaskRepo
+        component "CommentRepository\n(protocol)" as CommentRepo
+        component "ProjectRepository\n(protocol)" as ProjectRepo
+        component "Json Implementations\n(JsonTaskRepository, etc)" as JsonImpls
     }
 
-    package "Persistence Layer" {
-        component "JSON Storage\n(JsonStorage)" as Storage
+    package "2. Models Layer" {
+        component "Task, TaskStatus" as TaskModel
+        component "TaskComment" as CommentModel
+        component "Project" as ProjectModel
+        component "TaskStatistics" as StatsModel
+    }
+
+    package "1. Storage Layer" {
+        component "StorageProtocol\n(interface)" as StorageProto
+        component "JsonStorage\n(implementation)" as Storage
     }
 }
 
-database "todo_data.json" as DB
+database "~/.todo_data.json" as DB
 
-Main --> IM : interactive mode
 Main --> CLI : command mode
+Main --> IM : interactive mode
 
-IM --> SVC
-CLI --> SVC
-CLI --> IMPEXP
+CLI --> SVC : uses
+IM --> SVC : uses
+CLI --> ImpExpSvc : uses
+CLI --> StatSvc : uses
 
-SVC --> MGR
-SVC --> PMGR
-SVC --> CMTS
-MGR --> Storage
-PMGR --> Storage
-CMTS --> Storage
-IMPEXP --> Storage
-MGR ..> Model
-PMGR ..> ProjModel
-CMTS ..> Model
-Storage ..> Model
-Storage ..> ProjModel
+SVC --> TaskSvc : delegates
+SVC --> CommentSvc : delegates
+SVC --> ProjectSvc : delegates
 
+TaskSvc --> TaskRepo : implements
+CommentSvc --> CommentRepo : implements
+ProjectSvc --> ProjectRepo : implements
+
+JsonImpls --> Storage : uses
+JsonImpls --> TaskModel : works with
+JsonImpls --> CommentModel : works with
+JsonImpls --> ProjectModel : works with
+
+TaskRepo ..> TaskModel : returns
+CommentRepo ..> CommentModel : returns
+ProjectRepo ..> ProjectModel : returns
+StatSvc ..> StatsModel : returns
+
+Storage --|> StorageProto : implements
 Storage --> DB : read/write
 
 @enduml

@@ -1,16 +1,16 @@
 import os
 from typing import Optional
 
-from ..models.task import Task
-from ..models.project import Project
-from ..models.task_status import TaskStatus
-from ..services.task_manager import TaskNotFoundError
-from ..services.project_manager import ProjectNotFoundError
-from ..services.comments_service import CommentNotFoundError
-from ..services.todo_service import TodoService
-from ..services.statistics_service import StatisticsService
-from ..services.import_export_service import ImportExportService, ImportExportValidationError
-from ..storage.json_storage import JsonStorage
+from ..layers.models.task import Task
+from ..layers.models.project import Project
+from ..layers.models.task_status import TaskStatus
+from ..layers.repositories import TaskNotFoundError
+from ..layers.repositories import ProjectNotFoundError
+from ..layers.repositories import CommentNotFoundError
+from ..layers.services.todo_service import TodoService
+from ..layers.services.statistics_service import StatisticsService
+from ..layers.services.import_export_service import ImportExportService, ImportExportValidationError
+from ..layers.storage.json_storage import JsonStorage
 
 _STATUS_LABEL = {
     TaskStatus.PENDING: "[ ]",

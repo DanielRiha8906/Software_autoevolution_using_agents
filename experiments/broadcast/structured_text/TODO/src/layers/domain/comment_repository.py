@@ -1,36 +1,46 @@
+"""Repository for persisting and retrieving task comments."""
+
 from datetime import datetime, timezone
 from typing import Optional
 
 from ..models.task_comment import TaskComment
-from ..storage.json_storage import JsonStorage
-from .unified_storage import JsonCommentRepository
+from ..storage.protocols import StorageProtocol
+from .exceptions import CommentNotFoundError
 
 
-class CommentNotFoundError(Exception):
-    """Raised when a comment cannot be found."""
-    pass
+class CommentRepository:
+    """Repository managing comment persistence and retrieval.
 
-
-class CommentsService:
-    """Service for managing TaskComment objects.
-
-    This service encapsulates comment domain logic and coordinates with
-    the storage layer for persistence.
+    Uses StorageProtocol for abstraction from storage implementation.
     """
 
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
-        self._storage = storage or JsonStorage()
-        self._repository = JsonCommentRepository(self._storage)
+    def __init__(self, storage: StorageProtocol) -> None:
+        self._storage = storage
         self._comments: dict[str, TaskComment] = {}
         self._load()
 
     def _load(self) -> None:
-        """Load all comments from the repository."""
-        self._comments = self._repository.load()
+        """Load comments from storage."""
+        raw = self._storage.load()
+        # Filter for comment objects (they have task_id field)
+        # We'll store comments in a separate structure
+        self._comments = {}
+        if isinstance(raw, dict) and "comments" in raw:
+            for c in raw.get("comments", []):
+                comment = TaskComment.from_dict(c)
+                self._comments[comment.id] = comment
 
     def _persist(self) -> None:
-        """Persist all comments to the repository."""
-        self._repository.save(self._comments)
+        """Persist comments to storage."""
+        raw = self._storage.load()
+        # Preserve existing tasks and structure
+        if not isinstance(raw, dict):
+            raw = {"tasks": raw if raw else []}
+        if "tasks" not in raw:
+            raw["tasks"] = [t for t in raw] if isinstance(raw, list) else []
+
+        raw["comments"] = [c.to_dict() for c in self._comments.values()]
+        self._storage.save(raw)
 
     def add_comment(self, task_id: str, content: str, author: Optional[str] = None) -> TaskComment:
         """Add a comment to a task.

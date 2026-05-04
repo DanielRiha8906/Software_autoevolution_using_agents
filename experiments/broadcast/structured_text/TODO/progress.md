@@ -727,3 +727,123 @@ One-shot flags:
 - Project deletion unassigns tasks rather than deleting them
 
 Duration: 808.6s | Cost: $2.048400 USD | Turns: 37
+
+## Task 09: Separate core components into distinct layers
+
+### Broadcast Fan-out Results
+
+Three independent implementations were created on separate branches to tackle the architectural refactoring challenge:
+
+| Candidate | Approach | Test Results | Key Features |
+|-----------|----------|--------------|--------------|
+| **A** | Comprehensive `src/layers/` architecture with ARCHITECTURE.md | 151/151 ✓ | **Selected** - Full layer separation, protocol-based design, extensive documentation |
+| **B** | Explicit layer modules with strong `__all__` exports | 151/151 ✓ | Backward compatibility focus, interface-first design via protocols |
+| **C** | Minimal surgical refactoring with inline abstractions | 151/151 ✓ | Least disruptive, preserves existing structure, repository patterns |
+
+### Selected Solution: Implementer-A (broadcast-candidate-a)
+
+**Rationale**: While all three solutions achieved 151/151 tests passing with complete layer separation and no circular dependencies, Implementer-A provided the most comprehensive approach with excellent documentation. It creates a professional, documented architecture that serves as both working code and reference documentation. The ARCHITECTURE.md file addresses the "Should" requirement to "improve code structure and readability without changing external behavior."
+
+### Architecture Overview
+
+**Layer Structure (No Circular Dependencies):**
+```
+CLI Layer (src/cli/)
+  ↓ depends on
+Services Layer (src/layers/services/)
+  ↓ depends on
+Repositories Layer (src/layers/repositories/)
+  ↓ depends on
+Models Layer (src/layers/models/) + Storage Layer (src/layers/storage/)
+  ↓ (no further dependencies)
+```
+
+**Additional Domain Layer** (src/layers/domain/): Alternative domain logic approach with repository and domain service patterns, available for advanced use cases.
+
+### Files Changed
+
+**New Layer Structure (47 files changed):**
+- `ARCHITECTURE.md` - Comprehensive architecture documentation
+- `src/layers/models/` - Domain models (Task, TaskComment, Project, TaskStatus, TaskStatistics)
+- `src/layers/storage/` - Storage protocol and JsonStorage implementation
+- `src/layers/repositories/` - Repository protocols and JSON implementations
+- `src/layers/services/` - High-level services (TodoService, TaskService, CommentService, etc.)
+- `src/layers/domain/` - Alternative domain logic with repositories and domain services
+
+**Backward Compatibility:**
+- `src/models/` - Re-exports from `src/layers/models/` for backward compatibility
+- `src/storage/` - Re-exports from `src/layers/storage/`
+- `src/services/` - Re-exports with new abstractions (base_repositories.py, unified_storage.py)
+
+**Updated Modules:**
+- `src/__init__.py` - Enhanced exports
+- `src/cli/` - Updated imports to use new layer structure
+- All existing services refactored to use repository abstractions
+
+### Requirements Compliance
+
+**Must:**
+- ✓ Separate into distinct layers: task, comment, project, storage, interface
+- ✓ No circular dependencies (strict acyclic dependency graph)
+- ✓ Preserve existing public interfaces (TodoService, JsonStorage, Task, etc.)
+- ✓ `python -m src` behaves identically before and after refactor
+
+**Should:**
+- ✓ Introduce abstract base classes/protocols (TaskRepository, CommentRepository, ProjectRepository, StorageProtocol)
+- ✓ Improve code structure and readability (comprehensive ARCHITECTURE.md documentation)
+
+**Could:**
+- ✓ Repository-style abstractions (json_repositories.py with protocol-based design)
+- ✓ Module-level `__all__` declarations (explicit public API in every module)
+
+**Won't:**
+- ✗ Rewrite domain logic (algorithms unchanged, only organized)
+
+### Test Results
+
+- **Total tests: 151/151 passing** ✓
+- **Test categories:**
+  - Task tests: 11/11 ✓
+  - Storage tests: 4/4 ✓
+  - TaskManager tests: 11/11 ✓
+  - TodoService tests: 11/11 ✓
+  - CLI tests: 11/11 ✓
+  - Comment tests: 16/16 ✓
+  - Project tests: 32/32 ✓
+  - Statistics tests: 11/11 ✓
+  - Import/Export tests: 44/44 ✓
+- **CLI Verification:**
+  - `python -m src --help` → All commands listed ✓
+  - `python -m src add <task>` → Works identically ✓
+  - All task operations (start, done, reopen, update, delete) → Unchanged ✓
+  - Project operations (add, list, show, update, delete) → Unchanged ✓
+  - Comment operations (add, list, delete, update) → Unchanged ✓
+  - Statistics generation → Unchanged ✓
+
+### Design Highlights
+
+1. **Interface-First Architecture**: Uses Python protocols for storage and repository abstractions, enabling loose coupling and easy testing with mocks
+
+2. **Unidirectional Dependency Flow**: Carefully structured to prevent any circular imports or dependencies
+
+3. **Comprehensive Documentation**: ARCHITECTURE.md provides:
+   - Clear description of each layer's purpose
+   - File organization and dependencies
+   - Public API specifications
+   - Dependency flow diagram
+
+4. **Full Backward Compatibility**: 
+   - All existing import paths preserved via re-exports
+   - No breaking changes to public APIs
+   - Existing code continues to work unchanged
+
+5. **Explicit Module Exports**: All modules use `__all__` declarations making the public API explicit and discoverable
+
+### Backward Compatibility
+
+- All public imports work identically: `from src import TodoService, JsonStorage, Task, ...`
+- Existing code using the old service structure continues to work
+- Storage format unchanged; all persisted data compatible
+- No migration needed for existing deployments
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING
