@@ -287,4 +287,4 @@ Duration: 391.3s | Cost: $0.758979 USD | Turns: 18
 - No new dependencies added (uses typing.Protocol from standard library)
 - Code compiles without errors, no circular dependencies, clear responsibility boundaries
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 676.9s | Cost: $1.175821 USD | Turns: 20
