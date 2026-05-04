@@ -354,3 +354,50 @@ Duration: 454.1s | Cost: $0.940096 USD | Turns: 24
 - Interactive menu support: Options 9-14 for new scientific operations
 
 Duration: 508.4s | Cost: $1.067696 USD | Turns: 26
+
+## Task 09: Refactor for clear layer boundaries
+
+**Objective:** Establish clear separation of concerns between calculation engine, memory/history management, and interface layers, enabling independent changes to each layer without breaking others.
+
+**Acceptance Criteria:** ✅ All met
+- Calculation engine (Calculator + CalculatorService) is distinct from memory/history (MemoryService) and interface (CalculatorCLI + __main__)
+- Cross-layer coupling is explicit and minimal; abstract interfaces decouple the layers
+- External behavior is preserved: `python -m src` behaves identically before and after refactoring
+- All 337 existing tests pass without modification
+- Domain logic and algorithms are not rewritten, only reorganised
+
+**Files Changed:**
+- `src/services/calculator_service.py` — Added public `execute(operation: str, a: float, b: float) -> float` method to expose calculation engine without persistence wrapping
+- `src/services/memory_service.py` — Updated `record()` to call `calculator_service.execute()` instead of directly accessing `.calculator` attribute; added public `export_memory_entries()` and `import_memory_entries()` delegation methods
+- `src/cli/calculator_cli.py` — Updated `_export_memory_interactive()` and `_import_memory_interactive()` to call MemoryService methods instead of accessing `.storage` directly (2 lines)
+- `src/__main__.py` — Updated export and import flag handlers to call MemoryService methods instead of accessing `.storage` directly (2 lines)
+- `src/protocols/executable.py` — Created new file with Executable protocol documenting the execute() interface
+- `src/protocols/storage.py` — Created new file with StorageExportable and StorageImportable protocols documenting export/import interfaces
+- `src/protocols/__init__.py` — Created new file to initialize protocols module
+- `artifacts/class_diagram.puml` — Added execute() method to CalculatorService; added export/import methods to MemoryService; updated relationship labels
+- `artifacts/component_diagram.puml` — Updated component data flow labels to show clearer service boundaries
+
+**Test Results:**
+- Total tests: 337
+- Passed: 337 ✅
+- Failed: 0
+- Execution time: 0.44s
+- Coverage: All existing tests pass without modification; refactoring is transparent to test code
+
+**Architecture Improvements:**
+1. **Decoupled calculation execution:** MemoryService no longer reaches through CalculatorService to access calculator.calculate(). Uses public execute() method instead.
+2. **Encapsulated storage access:** CLI and __main__ no longer directly access memory_service.storage. Use public export/import methods instead.
+3. **Clear layer boundaries:** Three distinct layers with explicit interfaces:
+   - **Engine:** Calculator.calculate() for raw arithmetic dispatch
+   - **Orchestration:** CalculatorService.perform() for persistence; execute() for raw execution. MemoryService for error handling and record management.
+   - **Interface:** CalculatorCLI and __main__ call service methods only, not storage
+4. **Protocol documentation:** Added Protocol interfaces (Executable, StorageExportable, StorageImportable) for clarity and type hinting
+
+**Implementation Notes:**
+- CalculatorService.execute() converts string operation names to Operation enum and delegates to Calculator.calculate(); returns raw float result only
+- MemoryService.export_memory_entries() and import_memory_entries() are pure delegation methods that wrap corresponding storage methods
+- Exception propagation is preserved throughout delegation chain
+- No changes to external API signatures; all public interfaces remain backward compatible
+- Protocols are purely documentation; they have zero runtime impact and enable better IDE support and type checking
+
+Duration: 375.0s | Cost: $0.666798 USD | Turns: 20

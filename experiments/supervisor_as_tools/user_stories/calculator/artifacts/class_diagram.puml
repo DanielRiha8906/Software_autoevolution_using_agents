@@ -84,6 +84,7 @@ package "services" #DDFFD4 {
         -storage : JsonStorage
         --
         +CalculatorService(calculator: Calculator, storage: JsonStorage)
+        +execute(operation: String, a: float, b: float) : float
         +perform(operation: Operation, a: float, b: float) : CalculationResult
         +getHistory() : List<CalculationResult>
     }
@@ -98,6 +99,8 @@ package "services" #DDFFD4 {
         +filterByOperation(operationName: str) : List<MemoryEntry>
         +filterBySuccess(success: bool) : List<MemoryEntry>
         +filter(operationName: str, success: bool) : List<MemoryEntry>
+        +exportMemoryEntries(outputPath: String) : int
+        +importMemoryEntries(inputPath: String, overwrite: bool) : Tuple[int, int]
     }
 
     class StatisticsService {
@@ -154,7 +157,7 @@ CalculatorCLI --> MemoryService : memory service
 CalculatorCLI --> StatisticsService : statistics service
 CalculatorService --> Calculator : calculator
 CalculatorService --> JsonStorage : storage
-MemoryService --> CalculatorService : uses
+MemoryService --> CalculatorService : uses execute()
 MemoryService --> JsonStorage : persists to
 StatisticsService --> MemoryService : uses
 

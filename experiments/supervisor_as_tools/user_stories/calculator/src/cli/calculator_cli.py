@@ -256,7 +256,7 @@ class CalculatorCLI:
             return
 
         try:
-            count = self.memory_service.storage.export_memory_entries(output_path)
+            count = self.memory_service.export_memory_entries(output_path)
             print(f"\n  Exported {count} memory entries to {output_path}\n")
         except (IOError, OSError) as exc:
             print(f"\n  Error exporting memory entries: {exc}\n", file=sys.stderr)
@@ -276,7 +276,7 @@ class CalculatorCLI:
         overwrite = overwrite_str in ("yes", "y")
 
         try:
-            imported, skipped = self.memory_service.storage.import_memory_entries(
+            imported, skipped = self.memory_service.import_memory_entries(
                 input_path, overwrite=overwrite
             )
             print(f"\n  Imported {imported} memory entries (skipped {skipped} invalid entries)\n")
