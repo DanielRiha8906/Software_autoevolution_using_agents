@@ -1060,4 +1060,4 @@ Root (tk.Tk)
 - ✅ Edge case testing (long titles, special characters, boundary dates)
 - ✅ Integration testing (real Container, TodoService, tmp_path storage)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 813.7s | Cost: $1.495953 USD | Turns: 23
