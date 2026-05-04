@@ -16,6 +16,12 @@ class CalculatorCLI:
         (Operation.SQRT,     "Square Root"),
         (Operation.POWER,    "Power"),
         (Operation.MODULO,   "Modulo"),
+        (Operation.SIN,      "Sine"),
+        (Operation.COS,      "Cosine"),
+        (Operation.TAN,      "Tangent"),
+        (Operation.LOG,      "Logarithm (base 10)"),
+        (Operation.LN,       "Natural Logarithm"),
+        (Operation.EXP,      "Exponential"),
     ]
 
     def __init__(self, service: CalculatorService, memory_service: MemoryService | None = None, import_export_service: ImportExportService | None = None) -> None:

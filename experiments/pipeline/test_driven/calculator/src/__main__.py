@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from .models.operation import Operation
-from .services.calculator import Calculator
+from .services.scientific_calculator import ScientificCalculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
 from .services.import_export_service import ImportExportService
@@ -13,7 +13,7 @@ from .cli.calculator_cli import CalculatorCLI
 
 def _build_service() -> CalculatorService:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
-    return CalculatorService(Calculator(), JsonStorage(storage_path))
+    return CalculatorService(ScientificCalculator(), JsonStorage(storage_path))
 
 
 def _build_memory_service() -> MemoryService:
@@ -35,13 +35,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--export FILE] [--import FILE]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B] [--export FILE] [--import FILE]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
-        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo", "sin", "cos", "tan", "log", "ln", "exp"],
+        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo | sin | cos | tan | log | ln | exp)",
     )
     parser.add_argument(
         "--export",

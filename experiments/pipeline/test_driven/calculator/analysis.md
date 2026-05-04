@@ -1,268 +1,258 @@
-# Task 07 Analysis: ImportExportService for MemoryEntry Records
+# Task 08 Analysis: ScientificCalculator Implementation
 
 ## Task Overview
 
-Implement an `ImportExportService` that provides JSON serialization/deserialization capabilities for `MemoryEntry` records. This service must support:
-1. Exporting MemoryEntry objects from MemoryService to JSON files
-2. Importing MemoryEntry objects from JSON files back into MemoryService
-3. Safe merging on import (preserve existing entries, skip duplicates)
-4. Validation of JSON schema on import
-5. CLI/interactive menu integration via `python -m src`
+Implement a `ScientificCalculator` class that extends the existing calculator functionality with trigonometric, logarithmic, and exponential operations. The new class must reuse existing `Calculator` logic (composition or inheritance) and expose all operations via `python -m src` (both interactive menu and CLI flags).
 
-## Current State: Files and Implementations
+**Operations to implement:**
+1. `sin(x)` — trigonometric sine
+2. `cos(x)` — trigonometric cosine
+3. `tan(x)` — trigonometric tangent
+4. `log(x)` — logarithm base 10 (raises Exception for x <= 0)
+5. `ln(x)` — natural logarithm base e
+6. `exp(x)` — exponential function e^x
 
-### Existing Models and Services
+**Existing operations must still work:**
+- `add(a, b)`, `subtract(a, b)`, `multiply(a, b)`, `divide(a, b)` (from Calculator)
+- `square(a)`, `sqrt(a)`, `power(a, b)`, `modulo(a, b)` (already in Calculator)
 
-#### MemoryEntry (src/models/memory_entry.py)
-- Dataclass with 7 fields: `operation`, `operands`, `result`, `success`, `execution_time_ms`, `id`, `timestamp`
-- `id` field is auto-generated (uuid4) as a string
-- `timestamp` is auto-generated in ISO 8601 format via `__post_init__()` if not provided
-- Already implements `to_dict()` for serialization → returns all 7 fields as dict
-- Already implements `from_dict(cls, data)` classmethod for deserialization
-- Round-trip serialization fully preserves all fields including id and timestamp
+## Current State: Source Code Structure
 
-#### MemoryService (src/services/memory_service.py)
-- Manages MemoryEntry objects in-memory via internal list `_entries: list[MemoryEntry]`
-- `store(entry: MemoryEntry) -> None` — appends entries to list
-- `retrieve() -> list[MemoryEntry]` — returns all entries in insertion order
-- `query(operation: Optional[str], success: Optional[bool]) -> list[MemoryEntry]` — filters entries
-- Already supports checking if an ID exists (by iterating entries)
-- Contains NO file I/O or JSON handling (per design)
+### Existing Calculator Class
+**Location:** `src/services/calculator.py`
 
-#### JsonStorage (src/storage/json_storage.py)
-- Handles CalculationResult JSON serialization/persistence
-- Pattern: reads list from file, appends dict, writes list back
-- Uses `json.load()` and `json.dump()` with indentation
-- Creates parent directories as needed (`mkdir(parents=True, exist_ok=True)`)
-- Gracefully handles missing files and corrupted JSON
+Contains 8 methods:
+- Basic operations: `add()`, `subtract()`, `multiply()`, `divide()`
+- Advanced operations: `square()`, `sqrt()`, `power()`, `modulo()`
+- Dispatch method: `calculate(operation: Operation, a: float, b: float)` with dispatch table
 
-#### CalculatorCLI (src/cli/calculator_cli.py)
-- Interactive menu-driven interface
-- Dynamically calculates menu options (currently 8 operations + View History + Exit)
-- Menu option numbering: operations 1-8, View history at position `len(MENU)+1`, Exit at `len(MENU)+2`
-- Also supports one-shot mode via `run_command(operation_str, a, b)` called from `__main__.py`
+**Key observations:**
+- Single-responsibility: core math operations only
+- Uses Python `math` module for sqrt and (implicitly) for power
+- Error handling: raises `ValueError` for division by zero and sqrt of negative
+- Dispatch pattern: maps Operation enum members to method references
 
-#### Entry Point (src/__main__.py)
-- Uses `argparse.ArgumentParser` for CLI argument parsing
-- Accepts `--operation` flag with specific choices (add, subtract, multiply, divide, square, sqrt, power, modulo)
-- Requires exactly 2 operands when `--operation` is provided
-- Without flags, runs interactive mode via `cli.run_interactive()`
-- Pattern: build service with dependency injection, then create CLI and dispatch
+### Operation Enum
+**Location:** `src/models/operation.py`
 
-### Package Exports
-- `src/services/__init__.py` exports: Calculator, CalculatorService, MemoryService, StatisticsService
-- `src/models/__init__.py` exports: Operation, CalculationResult, MemoryEntry, StatisticsResult
-- `src/storage/__init__.py` exports: JsonStorage
+Defines 8 enum members:
+- ADD, SUBTRACT, MULTIPLY, DIVIDE, SQUARE, SQRT, POWER, MODULO
+- Has `from_string(value: str)` classmethod for CLI parsing
+- Has `display_name()` method for UI output
 
-### Test Patterns
-- Use pytest fixtures for temporary directories (`tmp_path` fixture)
-- Test helper functions (e.g., `_make_entry()` with kwargs for customization)
-- Tests import from `src.models` and `src.services` directly
-- JsonStorage tests verify: missing files, save/load round-trips, data persistence, corrupted JSON handling, parent directory creation
-- MemoryService tests verify: store, retrieve, query filtering, no file I/O
+**Observation:** No scientific operations defined yet (SIN, COS, TAN, LOG, LN, EXP)
 
-## What Needs to be Created
+### CalculatorService (Orchestration Layer)
+**Location:** `src/services/calculator_service.py`
 
-### 1. ImportExportService Class
-**Location:** `src/services/import_export_service.py`
+- Wraps Calculator and JsonStorage
+- `perform(operation: Operation, a: float, b: float) -> CalculationResult` — executes and persists calculations
+- `get_history() -> list[CalculationResult]` — retrieves stored results
+- Times execution and records it in CalculationResult
 
-Required interface (from task requirements):
+**Observation:** Service expects Operation enum and calls `calculator.calculate(operation, a, b)`
+
+### CLI Integration Points
+**Entry Point:** `src/__main__.py`
+- Hard-coded operation choices: `["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"]` (line 43)
+- Usage string lists same 8 operations (line 38)
+- Requires CLI updates to expose new operations
+
+**Interactive Menu:** `src/cli/calculator_cli.py`
+- Static `_MENU` list with 8 (Operation, label) tuples (lines 10-19)
+- Menu numbering and dispatch logic tied to `_MENU` length
+- Requires menu update to include scientific operations
+
+## Files That Exist vs. Missing
+
+### Existing
+- ✓ `src/services/calculator.py` — base Calculator with 8 operations
+- ✓ `src/services/calculator_service.py` — orchestration layer
+- ✓ `src/models/operation.py` — Operation enum (8 members)
+- ✓ `src/__main__.py` — CLI entry point
+- ✓ `src/cli/calculator_cli.py` — interactive menu
+- ✓ `src/__init__.py`, `src/services/__init__.py`, `src/models/__init__.py` — package exports
+- ✓ `tests/test_advanced_operations.py` — comprehensive test suite for existing operations
+- ✓ `artifacts/class_diagram.puml` — UML class diagram
+
+### Missing (Must Create)
+- ✗ `src/services/scientific_calculator.py` — ScientificCalculator class
+- ✗ Test file for scientific operations (user said tests are provided, so this may be added by tester)
+- ✗ Extensions to Operation enum to add SIN, COS, TAN, LOG, LN, EXP
+
+## Test Suite Requirements
+
+From prompt.txt, 8 test cases:
+1. `test_scientific_calculator_exists()` — instantiation works
+2. `test_sin()` — sin(0) ≈ 0.0
+3. `test_cos()` — cos(0) ≈ 1.0
+4. `test_tan()` — tan(0) ≈ 0.0
+5. `test_log_base_10()` — log(100) ≈ 2.0
+6. `test_log_of_non_positive_raises()` — log(0) raises Exception, log(-1) raises Exception
+7. `test_ln()` — ln(e) ≈ 1.0
+8. `test_exp()` — exp(1) ≈ e
+9. `test_standard_operations_still_work()` — ScientificCalculator.add(2, 3) == 5, ScientificCalculator.divide(10, 2) == 5
+
+**Key constraint:** Imports from `src.services.scientific_calculator import ScientificCalculator` — must be accessible from services package
+
+## Identified Gaps and Missing Pieces
+
+### 1. ScientificCalculator Class Missing
+- Must be at `src/services/scientific_calculator.py`
+- Must provide methods: `sin()`, `cos()`, `tan()`, `log()`, `ln()`, `exp()`
+- Must inherit from or wrap Calculator to reuse `add()`, `subtract()`, etc.
+- All methods should follow Calculator's style: take float args, return float, raise Exception on domain errors
+
+### 2. Operation Enum Must Extend
+- Add 6 new enum members: SIN, COS, TAN, LOG, LN, EXP
+- Each needs a string value (e.g., "sin", "cos", "tan", "log", "ln", "exp")
+- Required for dispatch logic and CLI parsing
+
+### 3. CLI Hard-Coded Values Must Update
+- `src/__main__.py` line 43: operation choices list
+- `src/__main__.py` line 38: usage string
+- Must include new operation strings
+
+### 4. Interactive Menu Must Extend
+- `src/cli/calculator_cli.py` line 10-19: _MENU list
+- Add 6 new menu entries with (Operation, label) tuples
+- Labels could be: "Sine", "Cosine", "Tangent", "Logarithm (base 10)", "Natural Logarithm", "Exponential"
+
+### 5. Calculator.calculate() Dispatch Must Extend
+- Update dispatch table in `src/services/calculator.py` (lines 38-50)
+- Must handle new Operation enum members
+- Must route to corresponding ScientificCalculator methods
+
+### 6. Package Exports May Need Update
+- `src/services/__init__.py` — may need to add ScientificCalculator to exports (depends on how other services are integrated)
+
+## Architectural Observations
+
+### How to Extend Calculator Without Duplication
+
+**Option A: Inheritance (Recommended by Task)**
 ```python
-class ImportExportService:
-    def export(self, memory_service: MemoryService, filepath: Path | str) -> None:
-        """Export MemoryEntry records from MemoryService to JSON file.
-        
-        - Retrieves all entries from memory_service via retrieve()
-        - Converts each MemoryEntry to dict via to_dict()
-        - Writes list of dicts as JSON to filepath
-        - Creates parent directories if needed
-        """
-
-    def import_entries(self, memory_service: MemoryService, filepath: Path | str) -> None:
-        """Import MemoryEntry records from JSON file into MemoryService.
-        
-        - Reads JSON file
-        - Validates structure (should be list of dicts)
-        - For each entry dict:
-          - Create MemoryEntry via from_dict()
-          - Check if entry.id already exists in memory_service
-          - If exists: skip (preserve existing, no overwrite)
-          - If not exists: store via memory_service.store()
-        - Raise Exception on invalid JSON schema
-        """
+class ScientificCalculator(Calculator):
+    def sin(self, x: float) -> float:
+        return math.sin(x)
+    # ... other scientific operations ...
+    # inherit add, subtract, multiply, divide, square, sqrt, power, modulo from parent
 ```
 
-**Key design decisions:**
-- Constructor should accept MemoryService dependency injection? Or methods take MemoryService as parameter?
-  - Task spec shows methods taking MemoryService as parameter → implement that way
-- Validation: must check that JSON is valid JSON and structure is a list
-- Duplicate detection: by ID comparison, not by full entry equality
-- No overwriting: skip duplicates, don't raise errors on them
-- File path handling: follow JsonStorage pattern (parent dir creation, Path normalization)
+**Option B: Composition**
+```python
+class ScientificCalculator:
+    def __init__(self):
+        self.calc = Calculator()
+    
+    def add(self, a, b):
+        return self.calc.add(a, b)  # delegate
+    # ... reimplement all Calculator methods ...
+    def sin(self, x):
+        return math.sin(x)
+```
 
-### 2. Integration Points
+Task requirement says "Do not reimplement basic operations" and "extend or reuse existing Calculator logic" → **Inheritance is correct choice.**
 
-#### src/services/__init__.py
-- Add ImportExportService to imports: `from .import_export_service import ImportExportService`
-- Add to `__all__`: `"ImportExportService"`
+### Integration with CalculatorService
 
-#### src/__main__.py Updates
-- Add argparse flag: `--export FILEPATH` to export current memory to JSON
-- Add argparse flag: `--import FILEPATH` to import memory from JSON
-- OR add to interactive menu if export/import should only be interactive
-- Task requirement states: "Must be accessible via python -m src (interactive menu and CLI flag)"
-  - Interpret as: both interactive menu option AND CLI flags must work
-  - Interactive menu: add two menu options (e.g., "Export memory" and "Import memory")
-  - CLI flags: add `--export` and `--import` arguments
-  
-#### src/cli/calculator_cli.py Updates
-- Add methods to handle export/import:
-  - `def export_memory(self, filepath: str) -> None` — calls service export, prints confirmation
-  - `def import_memory(self, filepath: str) -> None` — calls service import, prints confirmation
-- Add menu options (e.g., positions after statistics, before Exit):
-  - "Export to JSON"
-  - "Import from JSON"
-- Prompt for file path in interactive mode if user selects export/import
+Current flow:
+1. CLI calls `CalculatorService.perform(operation, a, b)`
+2. Service calls `calculator.calculate(operation, a, b)`
+3. Calculator uses dispatch table
 
-#### Service Integration
-- Need to decide: should CalculatorService or a new service coordinate with ImportExportService?
-  - Current pattern: CalculatorService orchestrates Calculator and JsonStorage
-  - MemoryService is standalone (no file I/O)
-  - Create ImportExportService to handle MemoryEntry JSON I/O only
-  - CalculatorService likely doesn't need changes (it works with CalculationResult, not MemoryEntry)
-  - ImportExportService should be independent service for MemoryEntry I/O
+**Question:** Will CalculatorService receive a ScientificCalculator instance instead of Calculator?
 
-### 3. Test Suite
+Looking at `src/__main__.py` line 16:
+```python
+return CalculatorService(Calculator(), JsonStorage(storage_path))
+```
 
-**Location:** `tests/test_import_export_service.py`
+For scientific operations to work through CalculatorService, either:
+- Option 1: Change line 16 to `ScientificCalculator()` instead of `Calculator()`
+- Option 2: Keep Calculator but ScientificCalculator duplicates dispatch logic (violates task rule)
 
-Required tests (from task spec):
-- `test_export_creates_valid_json_file` — verify JSON file contains list of entry dicts
-- `test_import_loads_entries` — verify entries from JSON loaded into MemoryService
-- `test_import_validates_structure` — invalid JSON structure raises Exception
-- `test_import_preserves_existing_entries` — existing entries not overwritten
-- `test_import_skips_duplicate_entries` — duplicate IDs skipped on import
+**Most likely:** Change __main__.py to use ScientificCalculator (since it's a drop-in subclass, polymorphism works)
 
-Additional tests (coverage):
-- Export empty memory service (creates empty list in JSON)
-- Export multiple entries (preserves all fields)
-- Import from missing file (handle gracefully)
-- Import corrupted JSON (raise Exception)
-- Round-trip: export then import restores all data
-- Import with mixed new and existing entries
+### Domain Error Handling
 
-## What Exists and Does NOT Need to Change
+Tests expect:
+- `log(0)` raises Exception
+- `log(negative)` raises Exception
+- `ln(0)` raises Exception (implied by math domain)
+- `sqrt(negative)` already raises ValueError in Calculator
 
-### Read-Only / Stable
-- MemoryEntry model: fully functional, already has to_dict() and from_dict()
-- MemoryService: fully functional, no changes needed
-- JsonStorage: pattern can be followed but focused on CalculationResult
-- CalculatorCLI: can be extended with new methods without changing existing ones
-- All existing tests: should remain passing
+All unary scientific operations should validate input and raise ValueError with clear message.
 
-## Ambiguities and Working Assumptions
+## CLI Exposure Requirements
 
-1. **Should MemoryService be integrated with CalculatorService?**
-   - Assumption: No. MemoryService is independent, CalculatorService works with CalculationResult.
-   - Task only mentions ImportExportService for MemoryEntry records.
+From experiment governance:
+- "All functionality must be reachable via `python -m src`"
+- Must support both: interactive menu + one-shot CLI flag
+- No internal-only implementations allowed
 
-2. **Where should ImportExportService be instantiated?**
-   - Assumption: In `__main__.py`, build service similar to CalculatorService
-   - Pass it to CLI for interactive dispatch
+**Required CLI additions:**
+1. Update argparse choices to include: sin, cos, tan, log, ln, exp
+2. Update usage string to show new operations
+3. Update interactive menu (_MENU list) to show new operations as menu items
+4. Each scientific operation takes 1 argument (unary), so CLI must handle --operation flag with 1 operand
 
-3. **Should import prompt user if file not found?**
-   - Assumption: Raise exception, let caller handle (consistent with JsonStorage pattern)
-   - However, interactive CLI can catch and prompt retry
+**Current constraint:** argparse setup assumes all operations need 2 operands (checks `len(args.operands) != 2` on line 71)
 
-4. **JSON schema validation — how strict?**
-   - Assumption: Must be a list at top level, each element must be dict-like with at least required MemoryEntry fields
-   - If MemoryEntry.from_dict() succeeds, schema is valid
-   - Catch exceptions during from_dict() and raise as generic Exception
+**Problem to solve:** How to handle unary operations in CLI that expects 2 operands?
 
-5. **Menu integration — where to add export/import options?**
-   - Assumption: After operation menu items, before "View history", since those are data management operations
-   - Or after "View history" to keep utility options together
-   - Task doesn't specify, so flexibility here
+Looking at existing Calculator: `square()` and `sqrt()` are unary but have optional `b=0` parameter for dispatch compatibility. Same pattern must apply to scientific operations.
 
-6. **CLI flags for export/import — one-shot or interactive?**
-   - Assumption: One-shot with filepath argument
-   - `python -m src --export /path/to/file.json` exports and exits
-   - `python -m src --import /path/to/file.json` imports and exits
-   - Cannot combine with `--operation` (mutually exclusive)
+## Summary: Scope In vs. Out
 
-## Scope Signals
+**In Scope (Task 08):**
+- Implement ScientificCalculator class with 6 new methods
+- Extend Operation enum with 6 new members
+- Update __main__.py to expose new operations via CLI
+- Update CalculatorCLI menu to show new operations
+- All tests pass
+- Existing tests still pass
+- Code compiles without errors
 
-### In Scope
-- ImportExportService class with export() and import_entries() methods
-- JSON file I/O using standard library json module
-- Duplicate detection by entry ID
-- Safe merging (skip duplicates, preserve existing)
-- Schema validation
-- Both CLI flag and interactive menu access
-- New test file with at least 5 specified tests
-- Integration with existing MemoryService (no modification to MemoryService itself)
+**Borderline (Likely In Scope):**
+- Update CalculatorService to use ScientificCalculator instead of Calculator
+- Update artifact diagrams to show new ScientificCalculator class and operations
 
-### Explicitly Out of Scope
-- Modifications to MemoryEntry or MemoryService internals
-- Changes to CalculatorService or its integration
-- GUI enhancements
-- Database instead of JSON
-- Batch operations (export/import works with single file at a time)
+**Out of Scope:**
+- GUI implementation (not mentioned)
+- Persist scientific calculations to storage (existing storage already does this)
+- Create new test file (tests are provided in prompt)
 
-### Borderline
-- Whether to create MemoryService instance in __main__ or reuse from CalculatorService
-  - Currently, CalculatorService has its own storage but doesn't use MemoryService
-  - Task creates isolated ImportExportService for MemoryEntry, separate concern
+## Suggested Priorities
 
-## Key Integration Points
+1. **HIGH:** Implement ScientificCalculator class with inheritance from Calculator
+   - Directly unblocks tests
+   - Foundation for everything else
 
-1. **File location:** Import/export from where?
-   - Assumption: Allow user-specified path (no fixed location)
-   - Pattern: Follow JsonStorage which takes path in constructor
+2. **HIGH:** Extend Operation enum to add 6 scientific operations
+   - Required for dispatch logic
+   - Required for CLI parsing
 
-2. **Menu positioning:** Where in CLI menu?
-   - Current menu: 8 operations, View History, Exit
-   - Add: Export Memory (position 10), Import Memory (position 11)
+3. **HIGH:** Update Calculator.calculate() dispatch table
+   - Required for operations to be executable
 
-3. **MemoryService instantiation:** Currently not used anywhere in main
-   - Need to create MemoryService instance in __main__.py if not already done
-   - Pass to CLI for interactive dispatch
+4. **HIGH:** Update __main__.py CLI argument parsing
+   - Required to expose scientific operations via CLI
+   - Handle unary operations constraint (all use b=0 pattern)
 
-4. **Error handling:**
-   - Missing file on import: raise Exception (can be FileNotFoundError)
-   - Invalid JSON: raise Exception (json.JSONDecodeError)
-   - Schema validation: raise Exception on structural mismatch
+5. **MEDIUM:** Update CalculatorCLI interactive menu
+   - Required for "python -m src" interactive mode to show new operations
+   - Governance rule: all functionality must be reachable via CLI
 
-## Implementation Checklist for Next Phase
+6. **MEDIUM:** Update __main__.py to use ScientificCalculator
+   - Ensures operations work through normal CalculatorService flow
+   - Makes operations persist to history correctly
 
-1. Create `src/services/import_export_service.py` with class and two methods
-2. Update `src/services/__init__.py` with ImportExportService export
-3. Create MemoryService instance in `src/__main__.py`
-4. Create ImportExportService instance in `src/__main__.py`
-5. Pass both to CalculatorCLI (or create new method to bind them)
-6. Add export_memory() and import_memory() methods to CalculatorCLI
-7. Update CalculatorCLI menu to include export/import options
-8. Add --export and --import argparse flags in `src/__main__.py`
-9. Wire CLI dispatch in __main__.py for export/import operations
-10. Create `tests/test_import_export_service.py` with full test suite
+7. **LOW:** Update package exports in src/services/__init__.py
+   - May be needed if ScientificCalculator must be publicly exported
+   - Check existing import patterns first
 
-## Files to Read/Understand (Already Done)
-- src/models/memory_entry.py ✓
-- src/services/memory_service.py ✓
-- src/storage/json_storage.py ✓
-- src/cli/calculator_cli.py ✓
-- src/__main__.py ✓
-- tests/test_json_storage.py ✓
-- tests/test_memory_service.py ✓
-
-## Files to Create
-- src/services/import_export_service.py (new)
-- tests/test_import_export_service.py (new)
-
-## Files to Modify
-- src/services/__init__.py
-- src/__main__.py
-- src/cli/calculator_cli.py
-- artifacts/component_diagram.puml (add ImportExportService component)
-- artifacts/class_diagram.puml (add ImportExportService class)
+8. **LOW:** Update UML diagrams (class_diagram.puml, component_diagram.puml)
+   - Shows new ScientificCalculator class and relationships
+   - Consistency with documentation
 
