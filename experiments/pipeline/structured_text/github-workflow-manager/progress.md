@@ -602,4 +602,4 @@ All tests pass including:
 - **GitHubToWorkflowConverter** (46 tests) — Field mapping (camelCase/snake_case), timestamp parsing, duration calculation, enum validation
 - **Integration** (2 tests) — End-to-end adapter composition
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 773.2s | Cost: $1.589822 USD | Turns: 19
