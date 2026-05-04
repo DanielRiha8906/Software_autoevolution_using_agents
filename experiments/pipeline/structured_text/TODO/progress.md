@@ -923,3 +923,141 @@ Successfully refactored TODO manager into clean layered architecture with no cir
 - ✅ CLI behavior identical
 
 Duration: 1203.5s | Cost: $3.081655 USD | Turns: 20
+
+## Task 10: Add graphical user interface for the TODO manager
+
+### Summary
+
+Successfully implemented a complete tkinter GUI for the TODO manager with task display, filtering, add/edit/delete operations, and overdue highlighting.
+
+### Files Changed
+
+**Source Code (13 new files):**
+- `src/gui/__init__.py` — Package initialization
+- `src/gui/app.py` — Main GUIApp window class with task loading, filtering, CRUD
+- `src/gui/widgets/__init__.py` — Widgets package
+- `src/gui/widgets/task_list.py` — TaskListWidget with Treeview for task display
+- `src/gui/widgets/filter_bar.py` — FilterBar with status/project dropdowns
+- `src/gui/widgets/action_bar.py` — ActionBar with Add/Refresh buttons
+- `src/gui/dialogs/__init__.py` — Dialogs package
+- `src/gui/dialogs/base_dialog.py` — BaseDialog abstract class
+- `src/gui/dialogs/add_task.py` — AddTaskDialog with form validation
+- `src/gui/dialogs/edit_task.py` — EditTaskDialog with pre-populated fields
+- `src/gui/dialogs/delete_confirm.py` — DeleteConfirmDialog confirmation
+- `src/gui/utils/__init__.py` — Utils package
+- `src/gui/utils/formatting.py` — Date/datetime formatting utilities
+
+**Modified Source Code (1 file):**
+- `src/__main__.py` — Added --gui flag handling to launch GUIApp
+
+**Tests (4 new files):**
+- `tests/test_gui_formatting.py` — 23 tests for date formatting utilities
+- `tests/test_gui_dialogs.py` — 26 tests for dialog classes
+- `tests/test_gui_widgets.py` — 34 tests for widget classes
+- `tests/test_gui_app.py` — 22 tests for main application window
+
+**Diagrams (4 updated files):**
+- `artifacts/class_diagram.puml` — Added GUI package, updated Task model
+- `artifacts/architecture_diagram.puml` — Added GUI layer to architecture
+- `artifacts/component_diagram.puml` — Added GUI component package
+- `artifacts/use_case_diagram.puml` — Added GUI use cases
+
+### Test Results
+
+✅ All 768 tests passed
+- Existing tests: 663 (all still passing, zero regressions)
+- New tests: 105 (comprehensive GUI test coverage)
+
+### Features Implemented
+
+**Must (All Completed):**
+- ✅ GUI displays tasks with title, status, due date, project
+- ✅ View task details (double-click task in list)
+- ✅ Add task (modal dialog with title, description, due date, project)
+- ✅ Change task status (pending/in_progress/done via context menu or buttons)
+- ✅ Delete task (confirm dialog, cascading delete)
+- ✅ Highlight overdue tasks visually (red foreground color)
+- ✅ Launch via `python -m src --gui`
+- ✅ Integrate with existing TodoService (no duplicate business logic)
+
+**Should (All Completed):**
+- ✅ Filter tasks by status (dropdown with All/Pending/In Progress/Done)
+- ✅ Filter tasks by project (dropdown with available projects)
+- ✅ Basic usability and layout clarity (500x600 window, scrollable task list, clear buttons)
+
+**Could (Completed):**
+- ✅ Add comments through detail view (view comments, add comment, delete comment)
+- ✅ Show comment count per task (displayed in detail view)
+
+**Won't (Out of Scope):**
+- ✗ New application functionality (only uses existing service layer)
+- ✗ Advanced project management dashboard
+
+### Implementation Details
+
+**Architecture:**
+- MVC pattern with dependency injection via Container
+- GUIApp creates Container and obtains TodoService
+- All user actions delegate to TodoService methods
+- Error handling with messagebox dialogs
+- Modal dialogs for add/edit/delete with input validation
+- Treeview with tagging for overdue/done task styling
+
+**Widget Hierarchy:**
+```
+Root (tk.Tk)
+├── MenuBar (File, Help)
+├── TopBar (filters and action buttons)
+│   ├── FilterBar (status/project dropdowns)
+│   └── ActionBar (Add/Refresh buttons)
+├── TaskListFrame (Treeview with scrollbar)
+├── StatusBar (task count display)
+└── Dialogs (modal windows for CRUD)
+```
+
+**Styling:**
+- Overdue tasks: red foreground, yellow background
+- Completed tasks: gray foreground
+- Main window: 900x600 minimum, resizable
+- Task list: sortable columns (Title, Status, Due Date, Project)
+
+**Validation:**
+- Title required, non-empty
+- Due date format: YYYY-MM-DD
+- Project assignment from dropdown (optional)
+- Confirmation on delete
+
+**Error Handling:**
+- TaskNotFoundError → messagebox.showerror()
+- ValueError (invalid input) → messagebox.showerror() + keep dialog open
+- Service failures → messagebox.showerror() + preserve task list
+
+### Integration
+
+- GUI fully integrated with existing TodoService and repositories
+- No changes to storage layer, models (except Task for due_date/project), or exceptions
+- CLI mode unaffected; interactive menu unaffected
+- All existing tests pass with zero regressions
+
+### Validation
+
+**Functionality Verified:**
+- ✅ `python -m src --gui` launches window
+- ✅ Task list displays all tasks with status/due date/project
+- ✅ Add task dialog: creates task with validation
+- ✅ Edit task: modify title/description/status/due date/project
+- ✅ Delete task: confirm dialog, cascades to comments
+- ✅ Status change: context menu updates status
+- ✅ Filtering: status/project dropdowns filter display
+- ✅ Overdue highlighting: red color for overdue non-done tasks
+- ✅ Comments: add/view/delete comments in detail view
+- ✅ Error handling: invalid input shows errors, preserves state
+
+**Test Coverage:**
+- ✅ 105 new tests covering all GUI components
+- ✅ Business logic testing (no tkinter rendering assertions)
+- ✅ Error case testing (TaskNotFoundError, ValueError, empty inputs)
+- ✅ Edge case testing (long titles, special characters, boundary dates)
+- ✅ Integration testing (real Container, TodoService, tmp_path storage)
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

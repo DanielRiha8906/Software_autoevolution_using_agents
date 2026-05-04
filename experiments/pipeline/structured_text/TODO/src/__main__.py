@@ -7,6 +7,11 @@ from .container import Container
 
 def main() -> None:
     if len(sys.argv) > 1:
+        if sys.argv[1] == "--gui":
+            from .gui.app import GUIApp
+            app = GUIApp()
+            app.mainloop()
+            sys.exit(0)
         sys.exit(TodoCLI().run())
 
     menu = InteractiveMenu()

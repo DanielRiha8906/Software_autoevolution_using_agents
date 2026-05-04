@@ -6,6 +6,19 @@ actor User
 
 rectangle "TODO Manager" {
 
+  package "GUI Mode" {
+    usecase "Use graphical interface" as GUI
+    usecase "Add task via dialog" as G_ADD
+    usecase "Edit task" as G_EDIT
+    usecase "Delete task" as G_DELETE
+    usecase "List / filter tasks" as G_LIST
+    usecase "Filter by status" as G_STATUS_FILTER
+    usecase "Filter by project" as G_PROJECT_FILTER
+    usecase "View task details" as G_SHOW
+    usecase "Double-click to edit" as G_DOUBLE_CLICK
+    usecase "See overdue indicator" as G_OVERDUE_INDICATOR
+  }
+
   package "Interactive mode" {
     usecase "Use interactive menu" as UI
     usecase "Add task" as I_ADD
@@ -58,8 +71,19 @@ rectangle "TODO Manager" {
   }
 }
 
+User --> GUI
 User --> UI
 User --> CLI
+
+GUI ..> G_ADD           : <<exclude>>
+GUI ..> G_EDIT          : <<exclude>>
+GUI ..> G_DELETE        : <<exclude>>
+GUI ..> G_LIST          : <<exclude>>
+G_LIST ..> G_STATUS_FILTER : <<include>>
+G_LIST ..> G_PROJECT_FILTER : <<include>>
+GUI ..> G_SHOW          : <<exclude>>
+GUI ..> G_DOUBLE_CLICK  : <<exclude>>
+GUI ..> G_OVERDUE_INDICATOR : <<exclude>>
 
 UI ..> I_ADD       : <<exclude>>
 UI ..> I_LIST      : <<exclude>>
