@@ -9,6 +9,7 @@ from .services.memory_service import MemoryService
 from .services.statistics_service import StatisticsService
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
+from .gui.calculator_window import CalculatorWindow
 
 
 def _build_service() -> tuple[CalculatorService, MemoryService, StatisticsService]:
@@ -29,8 +30,13 @@ def _as_number(value: str) -> float:
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
-        description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B]",
+        description="OOP Calculator — run interactively, pass --operation for one-shot use, or use --gui for graphical interface",
+        usage="python -m src [--gui] [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B]",
+    )
+    parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch the graphical user interface",
     )
     parser.add_argument(
         "--operation",
@@ -89,6 +95,12 @@ def main() -> None:
     args = parser.parse_args()
     calculator_service, memory_service, statistics_service = _build_service()
     cli = CalculatorCLI(calculator_service, memory_service, statistics_service)
+
+    # Handle GUI mode
+    if args.gui:
+        gui = CalculatorWindow(memory_service)
+        gui.run()
+        sys.exit(0)
 
     if args.filter_success and args.filter_error:
         parser.error("Cannot use both --filter-success and --filter-error")
