@@ -1,63 +1,92 @@
 @startuml component_diagram
 
 skinparam componentStyle uml2
-skinparam defaultFontSize 13
+skinparam defaultFontSize 12
 
-left to right direction
+top to bottom direction
 
 package "TODO Application" {
 
-    component "Entry Point\n(main)" as Main
+    component "Entry Point\n(__main__)" as Main
 
-    package "CLI Layer" {
-        component "Interactive Menu" as IM
+    package "CLI Layer" #FFE5E5 {
+        component "Interactive Menu\n(InteractiveMenu)" as IM
         component "Command-line Interface\n(TodoCLI)" as CLI
     }
 
-    package "Service Layer" {
-        component "Todo Service" as SVC
-        component "Task Manager" as MGR
-        component "Project Service" as PSVC
-        component "Comments Service" as CSVC
-        component "Task Statistics Service" as STATS
-        component "Import/Export Service" as IESVC
+    package "Formatter Layer" #FFEBCD {
+        component "Task Formatter\n(TaskFormatter)" as TF
     }
 
-    package "Domain Model" {
-        component "Task Model\n(Task, TaskStatus)" as Model
-        component "Project Model\n(Project)" as PModel
+    package "Service Layer" #DDFFD4 {
+        component "Todo Service\n(TodoService)" as SVC
+        component "Task Manager\n(TaskManager)" as MGR
+        component "Project Service\n(ProjectService)" as PSVC
+        component "Comments Service\n(CommentsService)" as CSVC
+        component "Statistics Service\n(TaskStatisticsService)" as STATS
+        component "Import/Export Service\n(TaskImportExportService)" as IESVC
+        component "Datetime Service\n(DatetimeService)" as DTS
     }
 
-    package "Persistence Layer" {
+    package "Repository Layer" #FFE4E1 {
+        component "Task Repository\n(TaskRepository)" as REPO
+    }
+
+    package "Serialization Layer" #FFF8DC {
+        component "Task Serializer\n(TaskSerializer)" as SER
+    }
+
+    package "Storage Layer" #FFF3CC {
+        component "Storage Protocol\n(StoragePort)" as SP
         component "JSON Storage\n(JsonStorage)" as Storage
+    }
+
+    package "Models Layer" #DDEEFF {
+        component "Task, TaskStatus\n(models)" as Model
+        component "Project\n(models)" as PModel
+        component "TaskComment\n(models)" as CModel
     }
 }
 
 database "todo_data.json" as DB
 
-Main --> IM : interactive mode
-Main --> CLI : command mode
+Main --> IM : interactive
+Main --> CLI : command-line
 
 IM --> SVC
 IM --> PSVC
 IM --> IESVC
+IM --> TF
 CLI --> SVC
 CLI --> PSVC
 CLI --> IESVC
+CLI --> TF
 
-SVC --> MGR
-PSVC --> Storage
-CSVC --> SVC : validates tasks
-CSVC --> Storage : persistence
-STATS --> SVC : analyzes tasks
-IESVC --> SVC : uses
-IESVC --> CSVC : uses
-MGR --> Storage
-MGR ..> Model
-PSVC ..> PModel
-Storage ..> Model
-Storage ..> PModel
+TF ..> Model : depends
+TF ..> CModel : depends
 
+SVC --> MGR : delegates
+SVC --> DTS : uses
+PSVC --> Storage : uses
+CSVC --> SVC : validates
+CSVC --> Storage : persists
+STATS --> SVC : analyzes
+
+IESVC --> SVC : exports
+IESVC --> CSVC : exports
+
+MGR --> REPO : delegates
+REPO --> SER : uses
+REPO --> SP : depends
+
+SER ..> Model : serializes
+SER ..> CModel : serializes
+
+SP <|.. Storage : implements
 Storage --> DB : read/write
+
+Storage ..> Model : loads/saves
+Storage ..> PModel : loads/saves
+Storage ..> CModel : loads/saves
 
 @enduml

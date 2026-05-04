@@ -1,0 +1,67 @@
+@startuml sequence_diagram
+
+title Task Management - Key Flows
+
+participant "CLI/Menu" as CLI
+participant "TodoService" as TodoSvc
+participant "TaskManager" as TskMgr
+participant "TaskRepository" as Repo
+participant "TaskSerializer" as Ser
+participant "JsonStorage" as Storage
+database "todo_data.json" as DB
+
+== Add Task Flow ==
+
+CLI -> TodoSvc: add_task(title, description, due_date)
+TodoSvc -> TskMgr: add(title, description, project_id)
+TskMgr -> TskMgr: create Task instance
+TskMgr -> TskMgr: _persist()
+TskMgr -> Repo: save_all(tasks)
+Repo -> Ser: to_dict(task)
+Ser --> Repo: task dict
+Repo -> Storage: save(task_dicts)
+Storage -> DB: write JSON
+Storage --> Repo: complete
+Repo --> TskMgr: complete
+TskMgr --> TodoSvc: Task instance
+TodoSvc --> CLI: Task instance
+
+== List Tasks Flow ==
+
+CLI -> TodoSvc: list_tasks(filters...)
+TodoSvc -> TskMgr: list_all()
+TskMgr -> TskMgr: apply filters
+TskMgr --> TodoSvc: filtered List<Task>
+TodoSvc --> CLI: List<Task>
+
+== Start Task Flow ==
+
+CLI -> TodoSvc: start_task(task_id)
+TodoSvc -> TskMgr: set_status(task_id, IN_PROGRESS)
+TskMgr -> TskMgr: get(task_id)
+TskMgr -> TskMgr: update status
+TskMgr -> TskMgr: _persist()
+TskMgr -> Repo: save_all(tasks)
+Repo -> Ser: to_dict(task)
+Ser --> Repo: task dict
+Repo -> Storage: save(task_dicts)
+Storage -> DB: write JSON
+Storage --> Repo: complete
+Repo --> TskMgr: complete
+TskMgr -> TskMgr: return updated Task
+TskMgr --> TodoSvc: Task instance
+TodoSvc --> CLI: Task instance
+
+== Load Tasks on Startup ==
+
+TskMgr -> Repo: load_all()
+Repo -> Storage: load()
+Storage -> DB: read JSON
+DB --> Storage: task dicts
+Storage --> Repo: List<Dict>
+Repo -> Ser: from_dict(dict)
+Ser --> Repo: Task instances
+Repo --> TskMgr: List<Task>
+TskMgr -> TskMgr: populate cache
+
+@enduml
