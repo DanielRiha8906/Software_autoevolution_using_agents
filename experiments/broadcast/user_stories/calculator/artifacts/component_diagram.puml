@@ -1,49 +1,54 @@
 @startuml component_diagram
 
-skinparam componentStyle uml2
-skinparam defaultFontSize 13
-left to right direction
+!define CALC_COLOR #FFE6E6
+!define MEMORY_COLOR #E6FFE6
+!define INTERFACE_COLOR #FFF9E6
 
-package "Calculator Application" {
+package "Calculator System" {
+    ' Layer 1: Calculation Engine
+    package "Layer 1: Calculation Engine" #FFE6E6 {
+        component [CalculationEngine Protocol] as CalcProtocol
+        component [Calculator\n(Pure Arithmetic)] as CalcImpl
+        component [CalculationLayer\n(Wrapper)] as CalcLayer
 
-    component "Entry Point\n(__main__)" as Main
-    component "CLI Interface\n(CalculatorCLI)" as CLI
-    component "Calculation Service\n(CalculatorService)" as Service
-    component "Memory Service\n(MemoryService)" as MemService
-    component "Statistics Service\n(StatisticsService)" as StatSvc
-    component "Filter Service\n(FilterService)" as FilterSvc
-    component "History Export Service\n(HistoryExportService)" as ExportSvc
-    component "Calculation Engine\n(Calculator)" as Calc
-    component "JSON Storage\n(JsonStorage)" as Store
-    component "Domain Models\n(Operation, CalculationResult, MemoryEntry, Statistics)" as Models
+        CalcProtocol -- CalcImpl: implements
+        CalcLayer -- CalcProtocol: delegates to
+    }
 
-    Main --> CLI : initializes
-    Main --> Service : initializes
-    Main --> MemService : initializes
-    Main --> StatSvc : initializes
+    ' Layer 2: Memory/History
+    package "Layer 2: Memory/History" #E6FFE6 {
+        component [MemoryStore Protocol] as MemProtocol
+        component [MemoryService\n(Implementation)] as MemService
+        component [MemoryStoreImpl\n(Implementation)] as MemStoreImpl
+        component [MemoryLayer\n(Wrapper)] as MemLayer
+        component [JsonStorage\n(Persistence)] as Storage
 
-    CLI --> Service : uses
-    CLI --> MemService : uses
-    CLI --> StatSvc : uses
-    Service --> Calc : uses
-    Service --> Store : uses
-    MemService --> Store : delegates to
-    MemService --> FilterSvc : uses for filtering
-    MemService --> ExportSvc : uses for export/import
-    StatSvc --> MemService : uses
+        MemProtocol -- MemService: implements
+        MemProtocol -- MemStoreImpl: implements
+        MemLayer -- MemProtocol: delegates to
+        MemService -- Storage: uses
+        MemStoreImpl -- Storage: uses
+    }
 
-    Service ..> Models
-    MemService ..> Models
-    FilterSvc ..> Models
-    ExportSvc ..> Models
-    StatSvc ..> Models
-    Store ..> Models
+    ' Layer 3: Interface & CLI
+    package "Layer 3: Interface Layer" #FFF9E6 {
+        component [InterfaceLayer\n(Orchestration)] as Interface
+        component [CalculatorService\n(High-level API)] as CalcService
+        component [CalculatorCLI\n(User Interaction)] as CLI
+    }
+
+    ' Inter-layer Communication
+    Interface --> CalcLayer: calculate(operation, a, b)
+    Interface --> MemLayer: store_entry()\nretrieve()
+    CalcService --> Interface: perform()
+    CLI --> CalcService: execute operation
+    CLI --> MemProtocol: access memory
+
+    ' External Dependencies
+    Interface --> Storage: access history
+    CalcService --> Storage: access history
+    CLI --> Storage: import/export
+
 }
-
-database "calculations.json" as DB
-database "calculations_memory.json" as MemDB
-
-Store --> DB : read/write
-Store --> MemDB : read/write
 
 @enduml

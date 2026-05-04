@@ -5,8 +5,7 @@ from pathlib import Path
 from .models.operation import Operation
 from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
-from .services.memory_service import MemoryService
-from .services.statistics_service import StatisticsService
+from .services.memory_store_impl import MemoryStoreImpl
 from .storage.json_storage import JsonStorage
 from .cli.calculator_cli import CalculatorCLI
 
@@ -16,9 +15,9 @@ def _build_service() -> CalculatorService:
     return CalculatorService(Calculator(), JsonStorage(storage_path))
 
 
-def _build_memory_service() -> MemoryService:
+def _build_memory_store() -> MemoryStoreImpl:
     storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
-    return MemoryService(JsonStorage(storage_path))
+    return MemoryStoreImpl(JsonStorage(storage_path))
 
 
 def _as_number(value: str) -> float:
@@ -110,8 +109,8 @@ def main() -> None:
 
     args = parser.parse_args()
     service = _build_service()
-    memory_service = _build_memory_service()
-    cli = CalculatorCLI(service, memory_service)
+    memory_store = _build_memory_store()
+    cli = CalculatorCLI(service, memory_store)
 
     if args.operation:
         try:

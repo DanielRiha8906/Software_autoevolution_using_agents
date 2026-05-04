@@ -1,30 +1,96 @@
 @startuml use_case_diagram
 
-skinparam defaultFontSize 13
+title Calculator System - Use Cases by Layer
 
 left to right direction
 
-actor User
+' Actors
+actor User as user
+actor System as system
 
-rectangle "Calculator Application" {
-    usecase "Perform calculation" as UC_Calc
-    usecase "View calculation history" as UC_History
-    usecase "View memory history" as UC_MemHistory
-    usecase "Filter entries" as UC_Filter
-    usecase "View statistics" as UC_Stats
-    usecase "Export history to JSON" as UC_Export
-    usecase "Import history from JSON" as UC_Import
-    usecase "Exit application" as UC_Exit
-
+package "Calculation Engine Layer" #FFE6E6 {
+    usecase "Perform Arithmetic" as calc_arithmetic
+    usecase "Validate Operation" as calc_validate
+    usecase "Handle Errors" as calc_error
 }
 
-User --> UC_Calc
-User --> UC_History
-User --> UC_MemHistory
-User --> UC_Filter
-User --> UC_Stats
-User --> UC_Export
-User --> UC_Import
-User --> UC_Exit
+package "Memory/History Layer" #E6FFE6 {
+    usecase "Store Entry" as mem_store
+    usecase "Retrieve History" as mem_retrieve
+    usecase "Filter Entries" as mem_filter
+    usecase "Export History" as mem_export
+    usecase "Import History" as mem_import
+    usecase "Get Statistics" as mem_stats
+}
+
+package "Interface Layer" #FFF9E6 {
+    usecase "Coordinate Layers" as iface_coord
+    usecase "Capture Execution Time" as iface_timing
+    usecase "Provide Unified API" as iface_api
+}
+
+package "User Interaction (CLI)" #FFFFCC {
+    usecase "Interactive Menu" as cli_interactive
+    usecase "One-Shot Calculate" as cli_oneshot
+    usecase "View History" as cli_history
+    usecase "Export/Import Data" as cli_import_export
+    usecase "View Statistics" as cli_statistics
+}
+
+' Relationships
+user --> cli_interactive: use
+user --> cli_oneshot: use
+user --> cli_history: use
+user --> cli_import_export: use
+user --> cli_statistics: use
+
+cli_interactive --> iface_coord: delegates to
+cli_oneshot --> iface_coord: delegates to
+cli_history --> mem_retrieve: queries
+cli_import_export --> mem_export: uses
+cli_import_export --> mem_import: uses
+cli_statistics --> mem_stats: uses
+
+iface_coord --> calc_arithmetic: calls
+iface_coord --> calc_validate: calls
+iface_coord --> mem_store: calls
+iface_timing --> calc_arithmetic: measures
+
+calc_arithmetic --> calc_error: may raise
+calc_error --> mem_store: captured as ErrorEntry
+
+mem_filter ..> mem_retrieve: filters result of
+mem_stats ..> mem_retrieve: computes from
+
+system --> mem_export: external tool
+mem_export --> system: produces file
+system --> mem_import: external source
+mem_import --> system: reads file
+
+note right of calc_arithmetic
+  **Calculation Engine:**
+  Pure arithmetic operations
+  No state/history
+  Stateless functions
+end note
+
+note right of mem_store
+  **Memory/History:**
+  All operations logged
+  Supports filtering
+  Enables statistics
+end note
+
+note right of iface_coord
+  **Interface Layer:**
+  Glue between Cal & Mem
+  Transparent coordination
+end note
+
+note right of cli_interactive
+  **User Interaction:**
+  Menu-driven or CLI args
+  Human-friendly output
+end note
 
 @enduml
