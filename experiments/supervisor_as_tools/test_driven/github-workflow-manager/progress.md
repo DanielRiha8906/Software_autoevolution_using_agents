@@ -197,4 +197,4 @@ Duration: 160.3s | Cost: $0.327618 USD | Turns: 18
 - **Acyclic Dependencies**: Zero circular dependency issues; all relationships are uni-directional
 - **Testability**: Services can be instantiated with or without storage/dependencies for flexible test scenarios
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 422.3s | Cost: $0.799162 USD | Turns: 26
