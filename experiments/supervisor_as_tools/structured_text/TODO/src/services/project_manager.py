@@ -1,6 +1,7 @@
 from typing import Optional
 
 from ..models.project import Project
+from ..storage.storage import Storage
 from ..storage.json_storage import JsonStorage
 
 
@@ -9,7 +10,7 @@ class ProjectNotFoundError(Exception):
 
 
 class ProjectManager:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
+    def __init__(self, storage: Optional[Storage] = None) -> None:
         self._storage = storage or JsonStorage()
         self._projects: dict[str, Project] = {}
         self._load()

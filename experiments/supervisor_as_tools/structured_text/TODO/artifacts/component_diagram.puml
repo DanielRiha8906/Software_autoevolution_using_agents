@@ -3,24 +3,26 @@
 skinparam componentStyle uml2
 skinparam defaultFontSize 13
 
-left to right direction
+top to bottom direction
 
 package "TODO Application" {
 
     component "Entry Point\n(main)" as Main
 
-    package "CLI Layer" {
+    package "Presentation Layer" {
         component "Interactive Menu" as IM
         component "Command-line Interface\n(TodoCLI)" as CLI
-        component "Import/Export Handler" as IEH
     }
 
-    package "Service Layer" {
+    package "Orchestration Layer" {
         component "Todo Service" as SVC
+    }
+
+    package "Business Logic Layer" {
         component "Task Manager" as MGR
         component "Project Manager" as PMR
         component "Comments Service" as COM
-        component "Validation\n(import)" as VAL
+        component "Task Repository" as REPO
     }
 
     package "Domain Model" {
@@ -28,6 +30,10 @@ package "TODO Application" {
         component "Project Model\n(Project)" as ProjectModel
         component "Comment Model\n(TaskComment)" as CommentModel
         component "Statistics Model\n(TaskStatistics)" as StatsModel
+    }
+
+    package "Storage Abstraction Layer" {
+        component "Storage (ABC)" as StorageABC
     }
 
     package "Persistence Layer" {
@@ -46,24 +52,30 @@ Main --> CLI : command mode
 
 IM --> SVC
 CLI --> SVC
-IEH --> SVC
 
 SVC --> MGR
 SVC --> PMR
 SVC --> COM
-SVC --> VAL : validates on import
+SVC --> REPO
 SVC ..> StatsModel : returns
-MGR --> Storage
+
+REPO --> MGR : coordinates
+REPO --> COM : coordinates
+
+MGR --> StorageABC : depends on
 MGR ..> Model
-PMR --> Storage
+PMR --> StorageABC : depends on
 PMR ..> ProjectModel
-COM --> Storage
+COM --> StorageABC : depends on
+COM --> REPO : validates via
 COM ..> CommentModel
+
+StorageABC --> Storage : abstraction for
+Storage --> DB : read/write
 Storage ..> Model
 Storage ..> ProjectModel
 Storage ..> CommentModel
 
-Storage --> DB : read/write
 SVC --> Files : export to / import from
 
 @enduml

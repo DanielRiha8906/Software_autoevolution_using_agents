@@ -2,8 +2,10 @@ import json
 from pathlib import Path
 from typing import Optional
 
+from .storage import Storage
 
-class JsonStorage:
+
+class JsonStorage(Storage):
     def __init__(self, path: Optional[str] = None) -> None:
         self._path = Path(path) if path else Path.home() / ".todo_data.json"
 
