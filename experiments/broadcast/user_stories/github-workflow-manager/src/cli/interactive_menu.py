@@ -12,6 +12,7 @@ from ..services.workflow_run_tracker import WorkflowRunTracker
 from ..services.workflow_query import DurationRange, TimestampRange
 from ..services.workflow_statistics_service import WorkflowStatisticsService
 from ..services.workflow_run_export_service import WorkflowRunExportService
+from ..services.github_fetch_service import GitHubFetchService
 
 
 def _prompt(label: str, default: Optional[str] = None) -> str:
@@ -337,6 +338,67 @@ def _import_runs(workflow_service: WorkflowRunService) -> None:
         print(f"\nError importing: {e}")
 
 
+def _fetch_from_github(workflow_service: WorkflowRunService) -> None:
+    """Fetch workflow runs from GitHub API."""
+    print("\n--- Fetch from GitHub ---")
+    owner = _prompt("Repository owner (username or org)")
+    repo = _prompt("Repository name")
+    workflow = _prompt("Workflow ID or filename (leave blank to fetch all)", "")
+    workflow = workflow if workflow else None
+
+    incremental_raw = _prompt("Incremental fetch only? (yes/no)", "no")
+    incremental = incremental_raw.lower() in ("yes", "y", "true")
+
+    try:
+        fetch_service = GitHubFetchService()
+
+        if incremental:
+            # Get the latest run timestamp from stored runs
+            all_runs = workflow_service.list_runs()
+            latest_timestamp = None
+            if all_runs:
+                latest_timestamp = max(run.created_at for run in all_runs)
+            runs = fetch_service.fetch_incremental(
+                owner=owner,
+                repo=repo,
+                latest_run_timestamp=latest_timestamp,
+                workflow=workflow,
+            )
+        else:
+            runs = fetch_service.fetch_workflow_runs(
+                owner=owner,
+                repo=repo,
+                workflow=workflow,
+            )
+
+        if not runs:
+            print("\nNo workflow runs fetched from GitHub.")
+            return
+
+        # Add fetched runs to storage (skip duplicates)
+        added_count = 0
+        skipped_count = 0
+        for run in runs:
+            try:
+                workflow_service.add_workflow_run(run)
+                added_count += 1
+            except ValueError:
+                # Run already exists
+                skipped_count += 1
+
+        print(f"\nFetched {len(runs)} workflow run(s) from GitHub.")
+        print(f"Added {added_count} new run(s) to storage.")
+        if skipped_count > 0:
+            print(f"Skipped {skipped_count} run(s) (already exist).")
+
+    except ValueError as e:
+        print(f"\nError: {e}")
+    except RuntimeError as e:
+        print(f"\nError: {e}")
+    except Exception as e:
+        print(f"\nError fetching from GitHub: {e}")
+
+
 MENU = [
     ("Add workflow run", lambda ws, as_: _add_run(ws)),
     ("List all runs", lambda ws, as_: _list_runs(ws)),
@@ -349,6 +411,7 @@ MENU = [
     ("View statistics", lambda ws, as_: _view_statistics(ws, as_)),
     ("Export workflow runs", lambda ws, as_: _export_runs(ws)),
     ("Import workflow runs", lambda ws, as_: _import_runs(ws)),
+    ("Fetch from GitHub", lambda ws, as_: _fetch_from_github(ws)),
     ("Exit", None),
 ]
 

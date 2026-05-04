@@ -103,6 +103,26 @@ package "services" #DDFFD4 {
         -_persist() : None
     }
 
+    class GitHubFetchService {
+        -_token : Optional[str]
+        -_repo_owner : Optional[str]
+        -_repo_name : Optional[str]
+        -_use_gh_cli : bool
+        --
+        +__init__()
+        +fetch_workflow_runs(owner: str, repo: str,\n  workflow: Optional[str], token: Optional[str],\n  validate: bool) : List[WorkflowRun]
+        +fetch_incremental(owner: str, repo: str,\n  latest_run_timestamp: Optional[datetime],\n  workflow: Optional[str], token: Optional[str]) : List[WorkflowRun]
+        -_resolve_token() : str
+        -_validate_token(token: str) : bool
+        -_check_gh_cli() : bool
+        -_fetch_with_gh_cli(...) : List[WorkflowRun]
+        -_fetch_with_requests(...) : List[WorkflowRun]
+        -_convert_github_run_to_workflow_run(github_run: dict, workflow_name: str) : WorkflowRun
+        -_map_github_status(github_status: str) : WorkflowStatus
+        -_map_github_conclusion(github_conclusion: Optional[str]) : Optional[WorkflowConclusion]
+        -_parse_iso_datetime(dt_str: str) : datetime
+    }
+
     class WorkflowQuery {
         -_runs : List[WorkflowRun]
         -_attempt_service : Optional[AttemptService]
@@ -179,6 +199,7 @@ package "cli" #FFE5E5 {
         -_view_statistics(workflow_service, attempt_service) : None
         -_export_runs(workflow_service: WorkflowRunService) : None
         -_import_runs(workflow_service: WorkflowRunService) : None
+        -_fetch_from_github(workflow_service: WorkflowRunService) : None
     }
 }
 
@@ -204,16 +225,21 @@ AttemptService            ..>  WorkflowRunAttempt
 "workflow_cli"             ..>  WorkflowQuery
 "workflow_cli"             ..>  WorkflowStatisticsService
 "workflow_cli"             ..>  WorkflowRunExportService
+"workflow_cli"             ..>  GitHubFetchService
 "interactive_menu"         ..>  WorkflowRunService
 "interactive_menu"         ..>  AttemptService
 "interactive_menu"         ..>  WorkflowRunTracker
 "interactive_menu"         ..>  WorkflowQuery
 "interactive_menu"         ..>  WorkflowStatisticsService
 "interactive_menu"         ..>  WorkflowRunExportService
+"interactive_menu"         ..>  GitHubFetchService
 WorkflowStatisticsService  "1" --> "1" WorkflowRunService  : -_workflow_service
 WorkflowStatisticsService  "1" --> "1" AttemptService     : -_attempt_service
 WorkflowStatisticsService       ..>  WorkflowRunStatistics : returns
 WorkflowRunExportService        ..>  WorkflowRunService
 WorkflowRunExportService        ..>  WorkflowRun
+GitHubFetchService              ..>  WorkflowRun : converts to
+GitHubFetchService              ..>  WorkflowStatus : maps
+GitHubFetchService              ..>  WorkflowConclusion : maps
 
 @enduml
