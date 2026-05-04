@@ -18,6 +18,11 @@ rectangle "TODO Manager" {
     usecase "View statistics" as I_STATS
     usecase "Export tasks and comments" as I_EXPORT
     usecase "Import tasks and comments" as I_IMPORT
+    usecase "Create project" as I_CREATE_PROJ
+    usecase "List projects" as I_LIST_PROJ
+    usecase "Update project" as I_UPDATE_PROJ
+    usecase "Delete project" as I_DELETE_PROJ
+    usecase "Assign task to project" as I_ASSIGN_PROJ
     usecase "Quit application" as I_QUIT
   }
 
@@ -35,6 +40,10 @@ rectangle "TODO Manager" {
     usecase "View statistics" as C_STATS
     usecase "Export tasks and comments" as C_EXPORT
     usecase "Import tasks and comments" as C_IMPORT
+    usecase "Create project" as C_CREATE_PROJ
+    usecase "List projects" as C_LIST_PROJ
+    usecase "Update project" as C_UPDATE_PROJ
+    usecase "Delete project" as C_DELETE_PROJ
   }
 }
 
@@ -51,6 +60,11 @@ UI ..> I_DUE_FILTER : <<exclude>>
 UI ..> I_STATS      : <<exclude>>
 UI ..> I_EXPORT     : <<exclude>>
 UI ..> I_IMPORT     : <<exclude>>
+UI ..> I_CREATE_PROJ : <<exclude>>
+UI ..> I_LIST_PROJ  : <<exclude>>
+UI ..> I_UPDATE_PROJ : <<exclude>>
+UI ..> I_DELETE_PROJ : <<exclude>>
+UI ..> I_ASSIGN_PROJ : <<exclude>>
 UI ..> I_QUIT       : <<exclude>>
 
 CLI ..> C_ADD        : <<exclude>>
@@ -65,5 +79,9 @@ CLI ..> C_DUE_FILTER : <<exclude>>
 CLI ..> C_STATS      : <<exclude>>
 CLI ..> C_EXPORT     : <<exclude>>
 CLI ..> C_IMPORT     : <<exclude>>
+CLI ..> C_CREATE_PROJ : <<exclude>>
+CLI ..> C_LIST_PROJ  : <<exclude>>
+CLI ..> C_UPDATE_PROJ : <<exclude>>
+CLI ..> C_DELETE_PROJ : <<exclude>>
 
 @enduml

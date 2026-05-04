@@ -5,6 +5,7 @@ from typing import Optional
 
 from ..models.task_status import TaskStatus
 from ..services.task_manager import TaskNotFoundError
+from ..services.project_service import ProjectService, ProjectNotFoundError
 from ..services.task_statistics_service import TaskStatisticsService
 from ..services.todo_service import TodoService
 from ..services.comments_service import CommentsService
@@ -22,6 +23,7 @@ class TodoCLI:
     def __init__(self, storage_path: Optional[str] = None) -> None:
         storage = JsonStorage(storage_path) if storage_path else JsonStorage()
         self._service = TodoService(storage)
+        self._project_service = ProjectService(storage)
         self._comments_service = CommentsService(self._service, storage)
         self._import_export_service = TaskImportExportService(self._service, self._comments_service)
 
@@ -33,7 +35,7 @@ class TodoCLI:
             return 0
         try:
             return args.func(args)
-        except TaskNotFoundError as e:
+        except (TaskNotFoundError, ProjectNotFoundError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
         except ValueError as e:
@@ -56,6 +58,7 @@ class TodoCLI:
         p_add = sub.add_parser("add", help="Add a new task")
         p_add.add_argument("title", help="Task title")
         p_add.add_argument("-d", "--description", help="Optional description")
+        p_add.add_argument("-p", "--project", help="Project ID (optional)")
         p_add.set_defaults(func=self._cmd_add)
 
         # list
@@ -68,6 +71,7 @@ class TodoCLI:
         p_list.add_argument("--due-before", help="Filter tasks with due_date before cutoff (ISO format, CEST timezone)")
         p_list.add_argument("--due-after", help="Filter tasks with due_date after cutoff (ISO format, CEST timezone)")
         p_list.add_argument("--overdue", action="store_true", help="Filter only overdue tasks")
+        p_list.add_argument("-p", "--project", help="Filter by project ID")
         p_list.set_defaults(func=self._cmd_list)
 
         # show
@@ -95,6 +99,7 @@ class TodoCLI:
         p_update.add_argument("id", help="Task ID")
         p_update.add_argument("-t", "--title", help="New title")
         p_update.add_argument("-d", "--description", help="New description")
+        p_update.add_argument("-p", "--project", help="New project ID")
         p_update.set_defaults(func=self._cmd_update)
 
         # delete
@@ -116,10 +121,36 @@ class TodoCLI:
         p_import.add_argument("filepath", help="Path to import file")
         p_import.set_defaults(func=self._cmd_import)
 
+        # project subcommands
+        p_project = sub.add_parser("project", help="Manage projects")
+        project_subs = p_project.add_subparsers(title="project commands")
+
+        p_proj_create = project_subs.add_parser("create", help="Create a new project")
+        p_proj_create.add_argument("name", help="Project name")
+        p_proj_create.add_argument("--description", help="Project description (optional)")
+        p_proj_create.set_defaults(func=self._cmd_project_create)
+
+        p_proj_list = project_subs.add_parser("list", help="List all projects")
+        p_proj_list.set_defaults(func=self._cmd_project_list)
+
+        p_proj_show = project_subs.add_parser("show", help="Show project details")
+        p_proj_show.add_argument("id", help="Project ID")
+        p_proj_show.set_defaults(func=self._cmd_project_show)
+
+        p_proj_delete = project_subs.add_parser("delete", help="Delete a project")
+        p_proj_delete.add_argument("id", help="Project ID")
+        p_proj_delete.set_defaults(func=self._cmd_project_delete)
+
+        p_proj_update = project_subs.add_parser("update", help="Update a project")
+        p_proj_update.add_argument("id", help="Project ID")
+        p_proj_update.add_argument("--name", help="New project name")
+        p_proj_update.add_argument("--description", help="New project description")
+        p_proj_update.set_defaults(func=self._cmd_project_update)
+
         return parser
 
     def _cmd_add(self, args: argparse.Namespace) -> int:
-        task = self._service.add_task(args.title, args.description)
+        task = self._service.add_task(args.title, args.description, project_id=args.project)
         print(f"Added task {task.id[:8]}  {task.title}")
         return 0
 
@@ -148,6 +179,7 @@ class TodoCLI:
                 due_before=due_before,
                 due_after=due_after,
                 overdue=args.overdue,
+                project_id=args.project,
             )
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
@@ -168,6 +200,7 @@ class TodoCLI:
         print(f"Title:       {task.title}")
         print(f"Description: {task.description or '—'}")
         print(f"Status:      {task.status.value}")
+        print(f"Project ID:  {task.project_id or '—'}")
         print(f"Created:     {task.created_at.isoformat()}")
         print(f"Updated:     {task.updated_at.isoformat()}")
         return 0
@@ -188,7 +221,7 @@ class TodoCLI:
         return 0
 
     def _cmd_update(self, args: argparse.Namespace) -> int:
-        task = self._service.update_task(args.id, title=args.title, description=args.description)
+        task = self._service.update_task(args.id, title=args.title, description=args.description, project_id=args.project)
         print(f"Updated {task.id[:8]}  {task.title}")
         return 0
 
@@ -234,3 +267,37 @@ class TodoCLI:
         except ValueError as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
+
+    def _cmd_project_create(self, args: argparse.Namespace) -> int:
+        project = self._project_service.create(args.name, description=args.description)
+        print(f"Created project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_project_list(self, args: argparse.Namespace) -> int:
+        projects = self._project_service.list_all()
+        if not projects:
+            print("No projects found.")
+            return 0
+        for project in projects:
+            desc = f"  {project.description}" if project.description else ""
+            print(f"  {project.id[:8]}  {project.name}{desc}")
+        return 0
+
+    def _cmd_project_show(self, args: argparse.Namespace) -> int:
+        project = self._project_service.get(args.id)
+        print(f"ID:          {project.id}")
+        print(f"Name:        {project.name}")
+        print(f"Description: {project.description or '—'}")
+        print(f"Created:     {project.created_at.isoformat()}")
+        return 0
+
+    def _cmd_project_delete(self, args: argparse.Namespace) -> int:
+        project = self._project_service.get(args.id)
+        self._project_service.delete(args.id)
+        print(f"Deleted project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_project_update(self, args: argparse.Namespace) -> int:
+        project = self._project_service.update(args.id, name=args.name, description=args.description)
+        print(f"Updated project {project.id[:8]}  {project.name}")
+        return 0

@@ -11,10 +11,10 @@ class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
 
-    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None) -> Task:
+    def add_task(self, title: str, description: Optional[str] = None, due_date: Optional[datetime] = None, project_id: Optional[str] = None) -> Task:
         if not title or not title.strip():
             raise ValueError("Task title cannot be empty")
-        task = self._manager.add(title.strip(), description)
+        task = self._manager.add(title.strip(), description, project_id=project_id)
         if due_date is not None:
             task.due_date = due_date
             self._manager._persist()
@@ -29,6 +29,7 @@ class TodoService:
         due_before: Optional[datetime] = None,
         due_after: Optional[datetime] = None,
         overdue: bool = False,
+        project_id: Optional[str] = None,
     ) -> list[Task]:
         # Validate timezone for date parameters
         if due_before is not None and due_before.tzinfo != CEST:
@@ -55,6 +56,10 @@ class TodoService:
         if overdue:
             tasks = [t for t in tasks if t.is_overdue()]
 
+        # Apply project_id filter if provided
+        if project_id is not None:
+            tasks = [t for t in tasks if t.project_id == project_id]
+
         return tasks
 
     def start_task(self, task_id: str) -> Task:
@@ -66,10 +71,10 @@ class TodoService:
     def reopen_task(self, task_id: str) -> Task:
         return self._manager.set_status(task_id, TaskStatus.PENDING)
 
-    def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None) -> Task:
+    def update_task(self, task_id: str, title: Optional[str] = None, description: Optional[str] = None, project_id: Optional[str] = None) -> Task:
         if title is not None and not title.strip():
             raise ValueError("Task title cannot be empty")
-        return self._manager.update(task_id, title=title, description=description)
+        return self._manager.update(task_id, title=title, description=description, project_id=project_id)
 
     def delete_task(self, task_id: str) -> None:
         self._manager.delete(task_id)

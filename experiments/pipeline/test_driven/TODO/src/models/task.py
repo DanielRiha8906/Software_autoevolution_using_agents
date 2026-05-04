@@ -19,6 +19,7 @@ class Task:
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     due_date: Optional[datetime] = None
+    project_id: Optional[str] = None
 
     def __post_init__(self) -> None:
         if self.due_date is not None and self.due_date.tzinfo is None:
@@ -35,6 +36,8 @@ class Task:
         }
         if self.due_date is not None:
             result["due_date"] = self.due_date.isoformat()
+        if self.project_id is not None:
+            result["project_id"] = self.project_id
         return result
 
     @classmethod
@@ -52,6 +55,7 @@ class Task:
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
             due_date=due_date,
+            project_id=data.get("project_id"),
         )
 
     def mark_in_progress(self) -> None:
