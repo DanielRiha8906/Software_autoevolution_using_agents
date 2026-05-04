@@ -9,9 +9,13 @@ package "Calculator Application" {
     component "Entry Point\n(__main__)" as Main
     component "CLI Interface\n(CalculatorCLI)" as CLI
     component "Application Service\n(CalculatorService)" as Service
+    component "Event Recording\n(EventRecorder)" as EventRec
     component "Calculation Engine\n(Calculator)" as Calc
-    component "JSON Storage\n(JsonStorage)" as Store
+    component "Storage Abstraction\n(StorageInterface)" as StorageAbs
+    component "Memory Repository\n(MemoryRepository)" as MemoryAbs
+    component "JsonStorage\n(JsonStorage)" as JsonStore
     component "Memory Service\n(MemoryService)" as Memory [0..1]
+    component "Memory Storage Abstraction\n(MemoryStorageInterface)" as MemStorageAbs [0..1]
     component "Memory Storage\n(MemoryJsonStorage)" as MemStore [0..1]
     component "Import/Export Service\n(MemoryImportExportService)" as ImportExport [0..1]
     component "Domain Models\n(Operation, CalculationResult, MemoryEntry)" as Models
@@ -25,21 +29,29 @@ package "Calculator Application" {
     CLI ..> Memory : uses [0..1]
     CLI ..> ImportExport : uses [0..1]
     Service --> Calc : uses
-    Service --> Store : uses
-    Service ..> Memory : uses [0..1]
-    Memory --> MemStore : uses
+    Service --> StorageAbs : uses
+    Service --> EventRec : uses
+    Service ..> MemoryAbs : uses [0..1]
+    EventRec --> StorageAbs : uses
+    EventRec ..> MemoryAbs : uses [0..1]
+    Memory ..|> MemoryAbs : implements [0..1]
+    Memory --> MemStorageAbs : uses [0..1]
+    JsonStore ..|> StorageAbs : implements
+    MemStore ..|> MemStorageAbs : implements [0..1]
     ImportExport --> MemStore : reads/writes [0..1]
     Service ..> Models
-    Store ..> Models
-    Memory ..> Models
-    MemStore ..> Models
+    Calc ..> Models
+    EventRec ..> Models
+    StorageAbs ..> Models
+    MemoryAbs ..> Models [0..1]
+    MemStorageAbs ..> Models [0..1]
     ImportExport ..> Models
 }
 
 database "calculations.json" as DB
 database "memory.json" as MemDB [0..1]
 
-Store --> DB : read/write
+JsonStore --> DB : read/write
 MemStore ..> MemDB : read/write [0..1]
 
 @enduml

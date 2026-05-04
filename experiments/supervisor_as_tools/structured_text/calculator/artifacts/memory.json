@@ -53,5 +53,71 @@
     "result": 2.0,
     "error_message": null,
     "id": "23389a6d-79a8-4c4a-8ebe-55b7b7fdb630"
+  },
+  {
+    "operation": "add",
+    "operand_a": 5.0,
+    "operand_b": 3.0,
+    "success": true,
+    "timestamp": "2026-05-04T13:36:58.548687",
+    "execution_time_ms": 0.009032999969349476,
+    "result": 8.0,
+    "error_message": null,
+    "id": "a8600b44-e989-4c5b-bb3b-738fcf6bfd51"
+  },
+  {
+    "operation": "divide",
+    "operand_a": 10.0,
+    "operand_b": 2.0,
+    "success": true,
+    "timestamp": "2026-05-04T13:36:59.946160",
+    "execution_time_ms": 0.009063999982572568,
+    "result": 5.0,
+    "error_message": null,
+    "id": "0cfec8f9-3be0-41cc-9b53-de1dc189a09e"
+  },
+  {
+    "operation": "sqrt",
+    "operand_a": 16.0,
+    "operand_b": 0,
+    "success": true,
+    "timestamp": "2026-05-04T13:37:01.313747",
+    "execution_time_ms": 0.010636000013164448,
+    "result": 4.0,
+    "error_message": null,
+    "id": "f5b3630a-4ca8-4c45-aae2-b43ba919ced8"
+  },
+  {
+    "operation": "add",
+    "operand_a": 5,
+    "operand_b": 3,
+    "success": true,
+    "timestamp": "2026-05-04T13:37:16.779863",
+    "execution_time_ms": 0.01387000003205685,
+    "result": 8,
+    "error_message": null,
+    "id": "0db0b099-631d-41e0-b774-5b7a4441d1f2"
+  },
+  {
+    "operation": "divide",
+    "operand_a": 1,
+    "operand_b": 0,
+    "success": false,
+    "timestamp": "2026-05-04T13:37:19.948794",
+    "execution_time_ms": 0.014973000020290783,
+    "result": null,
+    "error_message": "Division by zero is not allowed",
+    "id": "2b21e728-70cd-4958-91bc-5011d8da13e1"
+  },
+  {
+    "operation": "add",
+    "operand_a": 3.0,
+    "operand_b": 5.0,
+    "success": true,
+    "timestamp": "2026-05-04T13:37:42.022145",
+    "execution_time_ms": 0.009865000038189464,
+    "result": 8.0,
+    "error_message": null,
+    "id": "7c6c900d-241c-484d-adaf-d4f0bd983a75"
   }
 ]

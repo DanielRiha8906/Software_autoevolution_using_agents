@@ -1,26 +1,12 @@
 import argparse
 import sys
-from pathlib import Path
 
 from .models.operation import Operation
-from .services.calculator import Calculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
 from .services.memory_import_export_service import MemoryImportExportService
-from .storage.json_storage import JsonStorage
-from .storage.memory_json_storage import MemoryJsonStorage
+from .services.service_factory import build_service
 from .cli.calculator_cli import CalculatorCLI
-
-
-def _build_service() -> tuple[CalculatorService, MemoryService]:
-    storage_path = Path(__file__).parent.parent / "artifacts" / "calculations.json"
-    memory_storage_path = Path(__file__).parent.parent / "artifacts" / "memory.json"
-    memory_storage = MemoryJsonStorage(memory_storage_path)
-    memory_service = MemoryService(memory_storage)
-    calc_service = CalculatorService(
-        Calculator(), JsonStorage(storage_path), memory_service
-    )
-    return calc_service, memory_service
 
 
 def _as_number(value: str) -> float:
@@ -80,7 +66,7 @@ def main() -> None:
     )
 
     args = parser.parse_args()
-    service, memory_service = _build_service()
+    service, memory_service = build_service()
     cli = CalculatorCLI(service, memory_service)
     import_export_service = MemoryImportExportService()
 
