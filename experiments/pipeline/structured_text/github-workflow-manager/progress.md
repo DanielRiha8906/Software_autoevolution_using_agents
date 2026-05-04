@@ -499,3 +499,107 @@ All tests pass including:
 - `requests` library (2.33.1) — Already a standard HTTP library, imported in github_integration_service.py
 
 Duration: 833.2s | Cost: $1.736629 USD | Turns: 15
+
+## Task 09: Layered Architecture Refactoring (Service, Storage, GitHub Adapter)
+
+### Task Summary
+Refactored the codebase to separate concerns into three distinct layers: Service layer, Storage layer, and GitHub adapter layer. The refactoring introduces abstract repository protocols for storage, extracts GitHub integration concerns into four focused adapter classes, and ensures no circular dependencies while preserving all existing public interfaces and backward compatibility.
+
+### Files Changed
+
+**New Files Created:**
+- `src/storage/base.py` — Abstract repository protocols: `WorkflowRunRepository`, `WorkflowAttemptRepository`
+- `src/adapters/__init__.py` — Adapter package initialization
+- `src/adapters/github/__init__.py` — GitHub adapter subpackage initialization
+- `src/adapters/github/token_resolver.py` — GitHubTokenResolver class for token resolution and validation
+- `src/adapters/github/api_client.py` — GitHubApiClient class for REST API client operations
+- `src/adapters/github/cli_adapter.py` — GitHubCliAdapter class for gh CLI wrapper operations
+- `src/adapters/github/converter.py` — GitHubToWorkflowConverter class for GitHub API to domain model conversion
+- `src/adapters/github/integration_service.py` — Refactored GitHubIntegrationService facade
+- `tests/test_github_adapters.py` — 90 comprehensive tests for all four adapter classes
+
+**Modified Files:**
+- `src/storage/__init__.py` — Added exports for abstract protocols and updated `__all__`
+- `src/storage/workflow_json_storage.py` — No code changes (already compliant with WorkflowRunRepository protocol)
+- `src/storage/workflow_attempt_json_storage.py` — No code changes (already compliant with WorkflowAttemptRepository protocol)
+- `src/services/workflow_run_service.py` — Constructor now accepts abstract `WorkflowRunRepository` instead of concrete `WorkflowJsonStorage`
+- `src/services/workflow_attempt_service.py` — Constructor now accepts abstract `WorkflowAttemptRepository` instead of concrete `WorkflowAttemptJsonStorage`
+- `src/services/github_integration_service.py` — Completely refactored to compose four adapter classes; backward-compatible deprecated private methods provided
+- `src/services/__init__.py` — Updated `__all__` with new adapter exports
+- `artifacts/class_diagram.puml` — Updated to show abstract storage layer, new GitHub adapter classes, and refactored service relationships
+- `artifacts/component_diagram.puml` — Updated to show GitHub adapter component, abstract storage layer, and acyclic dependency graph
+- `artifacts/sequence_github_integration.puml` — Updated to reflect delegation to new adapter classes
+
+### Test Result
+✓ **604 tests passed** (1.19s)
+
+All tests pass including:
+- 90 new adapter tests (18 GitHubTokenResolver + 11 GitHubApiClient + 13 GitHubCliAdapter + 46 GitHubToWorkflowConverter + 2 integration)
+- 514 pre-existing tests (maintained backward compatibility; no test modifications required)
+
+### Implementation Details
+
+**Must Have (All Completed):**
+- ✓ Separated Service layer from Storage layer via abstract repository protocols
+- ✓ Extracted GitHub adapter layer with four focused classes:
+  - `GitHubTokenResolver` — Handles token resolution (env → secrets file → prompt) and validation
+  - `GitHubApiClient` — Pure REST API client for GitHub
+  - `GitHubCliAdapter` — Wraps `gh` CLI commands via subprocess
+  - `GitHubToWorkflowConverter` — Transforms GitHub API responses to domain models
+- ✓ Ensured no circular dependencies (acyclic dependency graph verified)
+- ✓ Services depend on abstract repositories, not concrete implementations
+
+**Should Have (All Completed):**
+- ✓ Preserved ALL existing public interfaces (method signatures, class names, return types unchanged)
+- ✓ Introduced abstract base classes and protocols for storage (`WorkflowRunRepository`, `WorkflowAttemptRepository`)
+- ✓ Introduced abstract protocols for GitHub adapter components
+
+**Could Have (Completed):**
+- ✓ Module-level `__all__` declarations added to `src/storage/__init__.py` and `src/services/__init__.py`
+
+**Won't Have (Not Applicable):**
+- Full rewrite of domain logic — only refactored for separation of concerns
+
+**Architecture Improvements:**
+
+1. **Abstract Storage Layer** — Services now depend on protocols, not concrete storage implementations:
+   - `WorkflowRunRepository` protocol defines save/load contract
+   - `WorkflowAttemptRepository` protocol defines save/load contract
+   - Concrete implementations (`WorkflowJsonStorage`, `WorkflowAttemptJsonStorage`) implement protocols
+   - Enables testing with mock storage and future database backends
+
+2. **Separated GitHub Adapter Layer** — Four focused classes extracted from monolithic 500+ line service:
+   - **Token Management** (`GitHubTokenResolver`) — Resolves tokens from env, secrets file, or user prompt; validates via API/CLI
+   - **REST API Client** (`GitHubApiClient`) — Pure HTTP client; no domain coupling; testable with mocks
+   - **CLI Adapter** (`GitHubCliAdapter`) — Wraps `gh` CLI commands; subprocess isolation; independent of API client
+   - **Data Conversion** (`GitHubToWorkflowConverter`) — Transforms GitHub API JSON to WorkflowRun/WorkflowRunAttempt domain models
+   - Each concern is independently testable and reusable
+
+3. **Maintained Backward Compatibility** — All existing tests pass without modification:
+   - All public method signatures unchanged
+   - All class names and import paths unchanged
+   - Deprecated private methods still available (marked with DEPRECATED comments) for gradual migration
+   - Existing code imports continue to work
+
+4. **Acyclic Dependency Graph** — Verified clean layering:
+   - Models layer → no dependencies
+   - Storage/Base → Models
+   - Storage/Implementations → Models + Storage/Base
+   - Adapters/GitHub → Models
+   - Services → Models + Storage/Base + Adapters
+   - No circular imports
+
+5. **Clear Module Organization:**
+   - `src/storage/` — Persistence layer with abstract protocols and concrete implementations
+   - `src/adapters/` — External system integration (currently GitHub)
+   - `src/adapters/github/` — GitHub-specific adapter classes
+   - `src/services/` — Business logic layer (public APIs unchanged)
+
+**Test Coverage:**
+- **GitHubTokenResolver** (18 tests) — Environment variables, secrets files, prompts, validation in API/CLI modes
+- **GitHubApiClient** (11 tests) — Successful fetches, parameter handling, HTTP error conditions, JSON parsing
+- **GitHubCliAdapter** (13 tests) — Command execution, JSON parsing, timeouts, missing CLI, process errors
+- **GitHubToWorkflowConverter** (46 tests) — Field mapping (camelCase/snake_case), timestamp parsing, duration calculation, enum validation
+- **Integration** (2 tests) — End-to-end adapter composition
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

@@ -4,11 +4,11 @@ from datetime import datetime
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
-from ..storage.workflow_json_storage import WorkflowJsonStorage
+from ..storage.base import WorkflowRunRepository
 
 
 class WorkflowRunService:
-    def __init__(self, storage: WorkflowJsonStorage):
+    def __init__(self, storage: WorkflowRunRepository):
         self._storage = storage
         self._runs: List[WorkflowRun] = storage.load()
 
