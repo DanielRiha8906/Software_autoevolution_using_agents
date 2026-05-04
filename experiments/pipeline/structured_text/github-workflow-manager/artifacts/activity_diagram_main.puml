@@ -8,7 +8,14 @@ start
 
 :Load WorkflowJsonStorage,\nWorkflowAttemptJsonStorage,\nWorkflowRunService &\nWorkflowAttemptService;
 
-if (CLI arguments provided?) then (yes)
+if (--gui flag detected?) then (yes)
+  :run_gui()\n(see component_diagram);
+  :Launch tkinter window\nwith Treeview table;
+  :Populate with workflow runs;
+  :Wait for user interaction;
+  stop
+
+else if (CLI arguments provided?) then (yes)
   :Parse args with argparse;
   switch (subcommand)
 

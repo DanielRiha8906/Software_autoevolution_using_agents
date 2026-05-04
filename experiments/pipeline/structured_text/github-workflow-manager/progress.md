@@ -603,3 +603,127 @@ All tests pass including:
 - **Integration** (2 tests) — End-to-end adapter composition
 
 Duration: 773.2s | Cost: $1.589822 USD | Turns: 19
+
+## Task 10: GUI Viewer for Workflow Runs
+
+### Task Summary
+Implemented a tkinter-based graphical user interface (GUI) viewer for workflow runs with scrollable Treeview table, read-only display of status/duration/attempt count per run, and filtering by status/conclusion. The system now supports three interface modes: interactive menu, CLI, and GUI, all launched via `python -m src`.
+
+### Files Changed
+
+**New Files:**
+- `src/gui/__init__.py` — GUI package initialization
+- `src/gui/gui_viewer.py` — WorkflowRunsGUIViewer class with full tkinter implementation (254 lines, 12 methods)
+- `tests/test_gui_viewer.py` — 44 comprehensive unit tests for GUI logic and data binding (626 lines)
+
+**Modified Files:**
+- `src/__main__.py` — Added import for run_gui, implemented three-way branching logic (--gui flag → interactive menu → CLI)
+- `artifacts/class_diagram.puml` — Added WorkflowRunsGUIViewer class to gui package with all methods
+- `artifacts/component_diagram.puml` — Added gui_viewer component to Interface layer, wired to services
+- `artifacts/activity_diagram_main.puml` — Updated entry point flow with three-way branching (--gui detection)
+
+### Test Result
+✓ **648 tests passed** (1.34s)
+
+All tests pass including:
+- 44 new GUI viewer tests (initialization, data binding, filtering, formatting, highlighting)
+- 604 pre-existing tests (maintained backward compatibility)
+
+### Implementation Details
+
+**Must Have (All Completed):**
+- ✓ Implemented GUI viewer with tkinter Treeview widget
+- ✓ Displays workflow runs in scrollable table with 8 columns: ID, Workflow, Branch, Status, Conclusion, Duration, Attempts, Created
+- ✓ Shows status, duration_seconds, and attempt count per run (queried via attempt_service.filter_by_run_id())
+- ✓ Read-only interface (no edit/delete operations)
+- ✓ Launchable via `python -m src --gui`
+
+**Should Have (All Completed):**
+- ✓ Filter runs by status via dropdown (all enum values + "All" option)
+- ✓ Filter runs by conclusion via dropdown (all enum values + "All" option)
+- ✓ "Clear Filters" button to reset dropdowns and refresh table
+- ✓ Live filter application with dynamic treeview refresh
+
+**Could Have (Completed):**
+- ✓ Highlight failed runs with light red background (#ffcccc) using Treeview row tagging
+- ✓ Failed run detection via run.is_failed() method
+- ✓ Support for timed_out runs to receive same highlighting
+
+**Won't Have (Not Applicable):**
+- Editing workflow runs — conflicts with read-only requirement
+- Real-time data refresh — static snapshot at launch time
+
+**GUI Architecture:**
+
+1. **Window Layout** (1200x600px):
+   - Filter Frame: Status dropdown, Conclusion dropdown, Clear Filters button
+   - Status Label: "N runs" display
+   - Treeview Frame: 8-column table with vertical scrollbar, expand to fill space
+
+2. **WorkflowRunsGUIViewer Class Methods**:
+   - `__init__(run_service, attempt_service, root=None)` — Initialize with services
+   - `run()` — Launch the GUI window and start event loop
+   - `_setup_window()` — Create root window (1200x600) with styling
+   - `_create_widgets()` — Build frames, dropdowns, buttons, Treeview
+   - `_populate_treeview(runs)` — Fill table with run data, apply failed_row tags
+   - `_get_attempt_count(run_id)` — Query attempt_service.filter_by_run_id()
+   - `_apply_filters()` — Re-query service with selected status/conclusion, refresh table
+   - `_clear_filters()` — Reset dropdowns to "All" and refresh
+   - `_on_filter_changed(event)` — Callback for dropdown change events
+   - `_format_duration(seconds)` — Format as decimal string with 2 places
+   - `_format_conclusion(conclusion)` — Format enum.value or return "—" for None
+   - `_format_timestamp(dt)` — Format as ISO string
+
+3. **Service Integration**:
+   - Uses existing `WorkflowRunService` to list and filter runs
+   - Uses existing `WorkflowAttemptService` to count attempts per run
+   - No new service methods created; leverages existing APIs
+   - Reuses `WorkflowRun.is_failed()` method for row highlighting
+
+4. **Entry Point Logic** (src/__main__.py):
+   ```python
+   if "--gui" in sys.argv:
+       run_gui(service, attempt_service)
+   elif len(sys.argv) == 1:
+       run_interactive(...)  # existing menu
+   else:
+       run_cli(...)  # existing CLI
+   ```
+
+5. **No External Dependencies**:
+   - tkinter (stdlib, no import needed)
+   - ttk (stdlib, part of tkinter)
+   - All other imports from existing project modules
+
+**Test Coverage** (44 tests):
+- 2 initialization tests (with/without custom root window)
+- 3 attempt count tests (multiple, zero, single attempts)
+- 8 duration formatting tests (decimal places, edge cases, parametrized)
+- 10 conclusion formatting tests (all enum values, None handling, parametrized)
+- 3 timestamp formatting tests (ISO format, edge cases)
+- 4 treeview population tests (data insertion, empty list, clearing, None handling)
+- 2 failed run highlighting tests (status detection, timed_out handling)
+- 4 filtering tests (status, conclusion, combined, None filters)
+- 2 clear filters tests (dropdown reset, treeview refresh)
+- 2 filter callback tests (trigger behavior, event parameter handling)
+- 1 run() method test (integration: window + data)
+- 2 run_gui() entry point tests (viewer creation, service passing)
+
+**CLI Usage:**
+- `python -m src --gui` — Launch tkinter GUI
+- `python -m src` — Launch interactive menu (unchanged)
+- `python -m src list [filters]` — CLI commands (unchanged)
+
+**GUI Features Verified:**
+- ✓ Window displays with correct title and geometry
+- ✓ Treeview columns properly sized and labeled
+- ✓ Scrollbar enables scrolling of large datasets
+- ✓ Dropdowns populate with enum values and "All" option
+- ✓ Selecting dropdown value immediately filters table
+- ✓ Failed runs highlighted with red background
+- ✓ Attempt counts correctly queried from service
+- ✓ Durations and timestamps properly formatted
+- ✓ Clear Filters button resets both dropdowns
+- ✓ Window closes cleanly without unhandled exceptions
+
+Duration: 698.3s | Cost: $1.363374 USD | Turns: 13

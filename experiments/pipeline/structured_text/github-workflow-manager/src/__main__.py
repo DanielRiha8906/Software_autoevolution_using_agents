@@ -9,6 +9,7 @@ from .services.workflow_data_portability_service import WorkflowDataPortabilityS
 from .services.github_integration_service import GitHubIntegrationService
 from .cli.workflow_cli import run_cli
 from .cli.interactive_menu import run_interactive
+from .gui.gui_viewer import run_gui
 
 
 def main() -> None:
@@ -27,8 +28,11 @@ def main() -> None:
     # Initialize GitHub integration service
     github_service = GitHubIntegrationService(fetch_mode="api")
 
+    # Check for --gui flag first
+    if "--gui" in sys.argv:
+        run_gui(service, attempt_service)
     # No sub-command args → launch interactive menu
-    if len(sys.argv) == 1:
+    elif len(sys.argv) == 1:
         run_interactive(service, attempt_service, stats_service, portability_service, github_service)
     else:
         run_cli(service, attempt_service, stats_service, portability_service, github_service)
