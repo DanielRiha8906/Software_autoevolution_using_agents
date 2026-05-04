@@ -21,11 +21,11 @@ package "Calculator Application" {
     Main --> StatService : initializes
 
     CLI --> Service : uses
-    CLI --> MemService : uses
+    CLI --> MemService : uses export/import
     CLI --> StatService : uses
     Service --> Calc : uses
     Service --> Store : uses
-    MemService --> Service : uses
+    MemService --> Service : uses execute()
     MemService --> Store : uses
     StatService --> MemService : uses
 

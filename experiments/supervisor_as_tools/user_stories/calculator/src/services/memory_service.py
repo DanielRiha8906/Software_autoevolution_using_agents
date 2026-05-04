@@ -18,7 +18,7 @@ class MemoryService:
 
         start_time = time.perf_counter()
         try:
-            result = self.calculator_service.calculator.calculate(operation_enum, operand_a, operand_b)
+            result = self.calculator_service.execute(operation, operand_a, operand_b)
             end_time = time.perf_counter()
             execution_time_ms = (end_time - start_time) * 1000
 
@@ -100,3 +100,39 @@ class MemoryService:
             entries = [e for e in entries if e.success == success]
 
         return entries
+
+    def export_memory_entries(self, output_path: str) -> int:
+        """Export memory entries to a file.
+
+        Delegates to the storage layer for the actual export operation.
+
+        Args:
+            output_path: Path to the output file.
+
+        Returns:
+            Number of entries exported.
+
+        Raises:
+            IOError: If there is a problem writing to the file.
+        """
+        return self.storage.export_memory_entries(output_path)
+
+    def import_memory_entries(
+        self, input_path: str, overwrite: bool = False
+    ) -> tuple[int, int]:
+        """Import memory entries from a file.
+
+        Delegates to the storage layer for the actual import operation.
+
+        Args:
+            input_path: Path to the input file.
+            overwrite: If True, overwrite existing entries with matching IDs.
+
+        Returns:
+            Tuple of (imported_count, skipped_count).
+
+        Raises:
+            FileNotFoundError: If the input file does not exist.
+            IOError: If there is a problem reading from the file.
+        """
+        return self.storage.import_memory_entries(input_path, overwrite)

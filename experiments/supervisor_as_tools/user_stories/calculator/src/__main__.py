@@ -96,7 +96,7 @@ def main() -> None:
     # Handle export flag
     if args.export_memory:
         try:
-            count = memory_service.storage.export_memory_entries(args.export_memory)
+            count = memory_service.export_memory_entries(args.export_memory)
             print(f"Exported {count} memory entries to {args.export_memory}")
             sys.exit(0)
         except (FileNotFoundError, IOError, OSError) as exc:
@@ -106,7 +106,7 @@ def main() -> None:
     # Handle import flag
     if args.import_memory:
         try:
-            imported, skipped = memory_service.storage.import_memory_entries(
+            imported, skipped = memory_service.import_memory_entries(
                 args.import_memory, overwrite=args.overwrite
             )
             print(f"Imported {imported} memory entries (skipped {skipped} invalid entries)")

@@ -10,6 +10,27 @@ class CalculatorService:
         self.calculator = calculator
         self.storage = storage
 
+    def execute(self, operation: str, a: float, b: float) -> float:
+        """Execute a calculation and return the raw float result.
+
+        This is the bare execution method that performs the operation without
+        wrapping the result. It converts the string operation name to an Operation
+        enum and delegates to the calculator.
+
+        Args:
+            operation: Operation name as a string (e.g., "add", "subtract").
+            a: First operand.
+            b: Second operand.
+
+        Returns:
+            Raw float result of the calculation.
+
+        Raises:
+            ValueError: If the operation is invalid or the calculation fails.
+        """
+        operation_enum = Operation.from_string(operation)
+        return self.calculator.calculate(operation_enum, a, b)
+
     def perform(self, operation: Operation, a: float, b: float) -> CalculationResult:
         start_time = time.perf_counter()
         result = self.calculator.calculate(operation, a, b)
