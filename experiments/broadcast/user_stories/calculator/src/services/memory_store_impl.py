@@ -1,48 +1,46 @@
-"""MemoryService handles the lifecycle of memory entries.
+"""
+Memory Store Implementation - Concrete implementation of MemoryStore protocol
 
-This service provides a clean separation of concerns by:
-- Handling store() and retrieve() operations for memory entries
-- Delegating persistence to the storage layer (JsonStorage)
-- Supporting filtering operations on stored entries
-- Supporting export and import of history to/from JSON files
-- Maintaining no business logic - only entry management
+This module provides a concrete implementation that satisfies the MemoryStore protocol,
+delegating to the existing MemoryService, FilterService, and HistoryExportService
+while maintaining backward compatibility.
 """
 
 from pathlib import Path
 from typing import Optional
 from ..models.memory_entry import MemoryEntry
 from ..storage.json_storage import JsonStorage
-from .filter_service import FilterService
-from .history_export_service import HistoryExportService
-from .memory_store import MemoryStore
+from .memory_service import MemoryService
+from .statistics_service import StatisticsService
 
 
-class MemoryService(MemoryStore):
-    """Service for managing calculator operation memory (history).
+class MemoryStoreImpl:
+    """Concrete implementation of the MemoryStore interface.
 
-    Separates memory entry management from persistence details.
-    All persistence is delegated to JsonStorage.
-    Supports filtering entries by operation type and result state.
-    Supports exporting and importing history to/from JSON files.
+    This implementation wraps the existing MemoryService and related services
+    to provide a unified interface for all memory/history operations.
     """
 
     def __init__(self, storage: JsonStorage) -> None:
-        """Initialize with a storage backend.
+        """Initialize the memory store implementation.
 
         Args:
-            storage: JsonStorage instance handling persistence
+            storage: JsonStorage instance for persistence
         """
         self.storage = storage
-        self._filter_service = FilterService()
-        self._export_service = HistoryExportService()
+        self._memory_service = MemoryService(storage)
+        self._statistics_service = StatisticsService(self._memory_service)
 
     def store(self, entry: MemoryEntry) -> None:
-        """Store a memory entry via the storage layer.
+        """Store a memory entry.
 
         Args:
             entry: MemoryEntry (ResultEntry or ErrorEntry) to store
+
+        Raises:
+            IOError: If the entry cannot be persisted
         """
-        self.storage.save(entry)
+        self._memory_service.store(entry)
 
     def retrieve(self) -> list[MemoryEntry]:
         """Retrieve all stored memory entries.
@@ -50,7 +48,7 @@ class MemoryService(MemoryStore):
         Returns:
             List of MemoryEntry objects (ResultEntry or ErrorEntry)
         """
-        return self.storage.load_memory_all()
+        return self._memory_service.retrieve()
 
     def filter_entries(
         self,
@@ -71,8 +69,7 @@ class MemoryService(MemoryStore):
         Raises:
             ValueError: If state is not 'success', 'error', or None
         """
-        entries = self.retrieve()
-        return self._filter_service.filter_entries(entries, operation=operation, state=state)
+        return self._memory_service.filter_entries(operation=operation, state=state)
 
     def get_valid_operations(self) -> list[str]:
         """Get all unique operation types present in stored entries.
@@ -80,8 +77,7 @@ class MemoryService(MemoryStore):
         Returns:
             Sorted list of unique operation names
         """
-        entries = self.retrieve()
-        return self._filter_service.get_valid_operations(entries)
+        return self._memory_service.get_valid_operations()
 
     def export_history(self, filepath: str | Path) -> None:
         """Export all memory entries to a JSON file.
@@ -92,8 +88,7 @@ class MemoryService(MemoryStore):
         Raises:
             IOError: If the file cannot be written
         """
-        entries = self.retrieve()
-        self._export_service.export_history(entries, filepath)
+        self._memory_service.export_history(filepath)
 
     def import_history(
         self,
@@ -101,9 +96,6 @@ class MemoryService(MemoryStore):
         overwrite: bool = False,
     ) -> tuple[int, list[str]]:
         """Import memory entries from a JSON file.
-
-        Validates imported data structure before applying.
-        Skips invalid or duplicate entries individually.
 
         Args:
             filepath: Path to the input JSON file
@@ -119,20 +111,7 @@ class MemoryService(MemoryStore):
             IOError: If the file cannot be read
             ValueError: If the JSON structure is invalid
         """
-        existing_entries = self.retrieve() if not overwrite else []
-        existing_ids = {e.entry_id for e in existing_entries}
-
-        entries, errors = self._export_service.import_history(
-            filepath,
-            skip_duplicates=not overwrite,
-            existing_ids=existing_ids,
-        )
-
-        # Store imported entries
-        for entry in entries:
-            self.store(entry)
-
-        return len(entries), errors
+        return self._memory_service.import_history(filepath, overwrite=overwrite)
 
     def get_statistics(self) -> dict:
         """Compute and return statistics over stored entries.
@@ -144,9 +123,7 @@ class MemoryService(MemoryStore):
             - error_rate_percentage: float
             - average_execution_time_ms: float
         """
-        from .statistics_service import StatisticsService
-        stats_service = StatisticsService(self)
-        stats = stats_service.compute_statistics()
+        stats = self._statistics_service.compute_statistics()
         return {
             "operation_counts": stats.operation_counts,
             "total_errors": stats.total_errors,
@@ -154,10 +131,20 @@ class MemoryService(MemoryStore):
             "average_execution_time_ms": stats.average_execution_time_ms,
         }
 
-    def get_memory_service(self) -> "MemoryService":
-        """Return self for backward compatibility with MemoryStore interface.
+    # ---- Convenience methods for backward compatibility ----
+
+    def get_memory_service(self) -> MemoryService:
+        """Get the underlying MemoryService for direct access if needed.
 
         Returns:
-            self (MemoryService instance)
+            The MemoryService instance
         """
-        return self
+        return self._memory_service
+
+    def get_statistics_service(self) -> StatisticsService:
+        """Get the underlying StatisticsService for direct access if needed.
+
+        Returns:
+            The StatisticsService instance
+        """
+        return self._statistics_service

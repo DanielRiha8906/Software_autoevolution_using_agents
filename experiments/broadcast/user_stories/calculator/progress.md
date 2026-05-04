@@ -861,3 +861,113 @@ All PlantUML diagrams updated to reflect scientific mode:
 - **state_diagram_interactive.puml**: Added mode switching states
 
 Duration: 943.8s | Cost: $1.867512 USD | Turns: 35
+
+## Task 09
+
+**Description:** Refactor calculator to separate calculation engine, memory/history management, and interface layers with clear boundaries
+
+**Status:** ✅ Complete
+
+### Broadcast Evaluation
+
+**Candidate A:**
+- Approach: Used Protocol-based structural typing to define layer boundaries. Created CalculationEngine and MemoryStore protocols. Wrapped existing services with layer implementations (CalculationLayer, MemoryLayer, InterfaceLayer). Used dependency injection for loose coupling.
+- Test Result: 293/293 passed ✅
+- Key achievement: Clean protocol definitions enabling structural subtyping, backward-compatible through MemoryService implementing MemoryStore
+
+**Candidate B:**
+- Approach: Used typing.Protocol instead of ABC for structural typing. Defined CalculationEngine protocol with single calculate() method. Created MemoryStore protocol with CRUD/filtering/statistics/export-import methods. Implemented layers through composition and DI.
+- Test Result: 293/293 passed ✅
+- Key achievement: Identical implementation to Candidate A, demonstrating convergence on optimal design
+
+**Candidate C:**
+- Approach: Hybrid approach using concrete service classes with minimal abstraction overhead. Created CalculationLayer, MemoryLayer, InterfaceLayer as concrete services. Used Protocol for interfaces but focused on clear service boundaries through dependency injection.
+- Test Result: 293/293 passed ✅
+- Key achievement: Balanced abstraction and simplicity, same implementation as A and B
+
+**Winner:** Candidate A (all three produced identical implementations, all passed all tests)
+
+### Files Changed
+
+**New Files:**
+1. `src/services/calculation_engine.py` - Protocol defining pure calculation interface
+2. `src/services/memory_store.py` - Protocol defining memory/history operations interface
+3. `src/services/memory_store_impl.py` - Concrete MemoryStore implementation delegating to existing services
+4. `src/services/calculation_layer.py` - Calculation engine layer wrapper
+5. `src/services/memory_layer.py` - Memory/history layer wrapper
+6. `src/services/interface_layer.py` - Interface layer coordinating other layers
+
+**Modified Files:**
+1. `src/services/calculator.py`
+   - Implements CalculationEngine protocol (no logic changes, pure refactoring)
+   
+2. `src/services/memory_service.py`
+   - Now implements MemoryStore protocol for backward compatibility
+   
+3. `src/services/calculator_service.py`
+   - Updated to use new layer abstractions while maintaining existing API
+   - Now uses CalculationLayer and MemoryLayer internally
+   
+4. `src/cli/calculator_cli.py`
+   - Updated to depend on MemoryStore protocol instead of concrete MemoryService
+   - Uses backward-compatible property decorator for compatibility
+   
+5. `src/__main__.py`
+   - Updated imports to expose new layer classes
+
+### Test Results
+
+- Total tests: 293
+- Passed: 293
+- Failed: 0
+- Status: ✅ All tests pass
+- Duration: ~0.5s
+
+### Architecture Changes
+
+**Three-Layer Architecture:**
+
+1. **Calculation Engine Layer**
+   - Interface: `CalculationEngine` protocol
+   - Responsibility: Pure arithmetic (add, subtract, multiply, divide, sqrt, power, sin, cos, tan, log, ln, exp)
+   - Implementation: `Calculator` class (unchanged logic, now implements protocol)
+   - Key property: Stateless, no memory/history dependencies
+
+2. **Memory/History Layer**
+   - Interface: `MemoryStore` protocol
+   - Methods: store, retrieve, filter_entries, get_valid_operations, export_history, import_history, get_statistics
+   - Implementation: `MemoryStoreImpl` (delegates to MemoryService and sub-services)
+   - Key property: Unified interface for all persistence operations
+
+3. **Interface Layer**
+   - Components: `InterfaceLayer` (coordinates other layers), `CalculatorCLI` (user interaction)
+   - Responsibility: User interaction and service coordination
+   - Implementation: Uses protocol dependencies instead of concrete implementations
+
+### Acceptance Criteria Met
+
+- ✅ Three layers with clearly defined boundaries and responsibilities
+- ✅ Protocol-based abstraction decouples layers; cross-component coupling is explicit (via protocol contracts)
+- ✅ Abstract base classes/protocols define layer contracts (Protocol typing used)
+- ✅ All existing external behavior preserved: CLI works identically, all APIs unchanged
+- ✅ Domain logic and algorithms NOT rewritten—only reorganized
+- ✅ `python -m src` behaves identically (all commands, interactive menu, one-shot mode work as before)
+- ✅ All 293 tests pass
+
+### Verification
+
+- Existing functionality fully preserved
+- All 293 tests pass without modification
+- `python -m src --operation add 5 3` produces identical results
+- Interactive menu unaffected by refactoring
+- History, filtering, statistics, and import/export all work correctly
+- CLI scientific mode operations unchanged
+
+### Diagrams Updated
+
+Updated artifacts/*.puml to reflect three-layer architecture:
+- **class_diagram.puml**: Shows CalculationEngine and MemoryStore protocols with implementations
+- **component_diagram.puml**: Depicts three layers with clear boundaries and dependencies
+- **sequence_diagram.puml**: Shows interlayer communication through protocol contracts
+
+Duration: 707.6s | Cost: $1.696739 USD | Turns: 41

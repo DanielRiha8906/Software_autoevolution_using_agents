@@ -3,7 +3,7 @@ import sys
 from ..models.operation import Operation
 from ..models.memory_entry import ErrorEntry, ResultEntry
 from ..services.calculator_service import CalculatorService
-from ..services.memory_service import MemoryService
+from ..services.memory_store import MemoryStore
 from ..services.statistics_service import StatisticsService
 
 
@@ -28,12 +28,21 @@ class CalculatorCLI:
         (Operation.EXP,      "Exponential (e^x)"),
     ]
 
-    def __init__(self, service: CalculatorService, memory_service: MemoryService) -> None:
+    def __init__(self, service: CalculatorService, memory_store: MemoryStore) -> None:
         self.service = service
-        self.memory_service = memory_service
-        self.statistics_service = StatisticsService(memory_service)
+        self.memory_store = memory_store
+        self.statistics_service = StatisticsService(memory_store.get_memory_service())
         self.mode = "standard"  # "standard" or "scientific"
         self._menu = self._STANDARD_OPS
+
+    @property
+    def memory_service(self):
+        """Backward compatibility property returning the underlying memory service.
+
+        Returns:
+            The MemoryService instance from the memory store
+        """
+        return self.memory_store.get_memory_service()
 
     # ------------------------------------------------------------------
     # Public entry points
@@ -135,7 +144,7 @@ class CalculatorCLI:
 
     def memory_retrieve_command(self) -> None:
         """Retrieve and display all memory entries (one-shot mode)."""
-        entries = self.memory_service.retrieve()
+        entries = self.memory_store.retrieve()
         if not entries:
             print("No memory entries recorded yet.")
             return
@@ -170,7 +179,7 @@ class CalculatorCLI:
                     operands=operands,
                     result=result,
                 )
-            self.memory_service.store(entry)
+            self.memory_store.store(entry)
             print(f"Stored {entry}")
         except Exception as exc:
             print(f"Error storing entry: {exc}", file=sys.stderr)
@@ -184,7 +193,7 @@ class CalculatorCLI:
             state: Result state to filter by ('success' or 'error')
         """
         try:
-            results = self.memory_service.filter_entries(operation=operation, state=state)
+            results = self.memory_store.filter_entries(operation=operation, state=state)
             if not results:
                 print("No entries match the specified filters.")
                 return
@@ -207,7 +216,7 @@ class CalculatorCLI:
             filepath: Path where the JSON file will be saved
         """
         try:
-            self.memory_service.export_history(filepath)
+            self.memory_store.export_history(filepath)
             print(f"History exported successfully to {filepath}")
         except Exception as exc:
             print(f"Error exporting history: {exc}", file=sys.stderr)
@@ -221,7 +230,7 @@ class CalculatorCLI:
             overwrite: If True, import all entries even if IDs exist; if False (default), skip duplicates
         """
         try:
-            count, errors = self.memory_service.import_history(filepath, overwrite=overwrite)
+            count, errors = self.memory_store.import_history(filepath, overwrite=overwrite)
             print(f"Imported {count} entries from {filepath}")
             if errors:
                 print(f"Skipped {len(errors)} invalid entries:")
@@ -303,7 +312,7 @@ class CalculatorCLI:
         print("\n=== Filter Calculations ===")
 
         # Get available operations
-        valid_ops = self.memory_service.get_valid_operations()
+        valid_ops = self.memory_store.get_valid_operations()
         if not valid_ops:
             print("  No operations recorded yet.\n")
             return
@@ -325,7 +334,7 @@ class CalculatorCLI:
 
         # Perform filtering
         try:
-            results = self.memory_service.filter_entries(operation=operation, state=state)
+            results = self.memory_store.filter_entries(operation=operation, state=state)
             if not results:
                 print("\n  No entries match the specified filters.\n")
                 return
@@ -379,8 +388,8 @@ class CalculatorCLI:
             return
 
         try:
-            self.memory_service.export_history(filepath)
-            entries = self.memory_service.retrieve()
+            self.memory_store.export_history(filepath)
+            entries = self.memory_store.retrieve()
             print(f"  Exported {len(entries)} entries to {filepath}\n")
         except Exception as exc:
             print(f"  Error exporting history: {exc}\n")
@@ -397,7 +406,7 @@ class CalculatorCLI:
         overwrite = overwrite_input == 'y'
 
         try:
-            count, errors = self.memory_service.import_history(filepath, overwrite=overwrite)
+            count, errors = self.memory_store.import_history(filepath, overwrite=overwrite)
             print(f"  Imported {count} entries from {filepath}")
             if errors:
                 print(f"  Skipped {len(errors)} invalid/duplicate entries:")

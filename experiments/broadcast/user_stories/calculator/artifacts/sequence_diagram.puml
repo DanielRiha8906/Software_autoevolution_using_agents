@@ -1,214 +1,89 @@
 @startuml sequence_diagram
 
+title Interlayer Communication: Calculation with Memory Storage
+
 actor User
-participant CalculatorCLI
-participant CalculatorService
-participant MemoryService
-participant HistoryExportService
-participant StatisticsService
-participant FilterService
-participant Calculator
-participant JsonStorage
+participant CalculatorCLI as CLI
+participant CalculatorService as Service
+participant InterfaceLayer as Interface
+participant CalculationLayer as CalcLayer
+participant CalculationEngine as Engine
+participant MemoryLayer as MemLayer
+participant MemoryStore as MemStore
+participant JsonStorage as Storage
 
-== Unary Operation Flow (Scientific Mode) ==
-User -> CalculatorCLI: selects unary operation (sin, cos, tan, log, ln, exp, sqrt, square)
-activate CalculatorCLI
+User -> CLI: perform_operation(add, 5, 3)
+activate CLI
 
-note over CalculatorCLI: operation.is_unary() returns true\nonly asks for one operand
+CLI -> Service: calculate(add, 5, 3)
+activate Service
 
-CalculatorCLI -> CalculatorService: perform(operation, a, None)
-activate CalculatorService
+Service -> Interface: perform_with_memory(add, 5, 3)
+activate Interface
 
-note over CalculatorService: b parameter is None\nperform_with_memory() handles None gracefully
+' Calculate phase
+Interface -> CalcLayer: perform_calculation(add, 5, 3)
+activate CalcLayer
 
-CalculatorService -> Calculator: calculate(operation, a, 0)
-activate Calculator
-Calculator --> CalculatorService: result
-deactivate Calculator
+CalcLayer -> Engine: calculate(add, 5, 3)
+activate Engine
+Engine --> Engine: dispatch[add](5, 3)
+Engine --> CalcLayer: return 8.0
+deactivate Engine
 
-note over CalculatorService: operands = [a] (only one operand)\noperand_b is None in CalculationResult
+CalcLayer --> Interface: return CalculationResult(add, [5,3], 8.0, 1.2ms)
+deactivate CalcLayer
 
-CalculatorService --> CalculatorCLI: CalculationResult with operand_b=None
-deactivate CalculatorService
+' Store phase
+Interface -> MemLayer: store_entry(ResultEntry)
+activate MemLayer
 
-CalculatorCLI -> User: shows result as "sin(a) = r"
-deactivate CalculatorCLI
+MemLayer -> MemStore: store(ResultEntry(add, [5,3], 8.0))
+activate MemStore
 
-== Binary Operation Flow (Standard & Scientific Mode) ==
-User -> CalculatorCLI: selects binary operation (add, subtract, multiply, power, modulo)
-activate CalculatorCLI
+MemStore -> Storage: save(ResultEntry)
+activate Storage
+Storage --> Storage: write to JSON file
+Storage --> MemStore: return
+deactivate Storage
 
-note over CalculatorCLI: operation.is_unary() returns false\nasks for two operands
+MemStore --> MemLayer: return
+deactivate MemStore
 
-CalculatorCLI -> CalculatorService: perform(operation, a, b)
-activate CalculatorService
+MemLayer --> Interface: return
+deactivate MemLayer
 
-note over CalculatorService: start_time = perf_counter()
+Interface --> Service: return ResultEntry
+deactivate Interface
 
-CalculatorService -> Calculator: calculate(operation, a, b)
-activate Calculator
-Calculator --> CalculatorService: result
-deactivate Calculator
+Service --> CLI: return CalculationResult
+deactivate Service
 
-note over CalculatorService: end_time = perf_counter()\ncreate CalculationResult with execution_time_ms
+CLI -> CLI: display result "5 + 3 = 8"
+CLI --> User: show result
+deactivate CLI
 
-CalculatorService -> JsonStorage: save(memory_entry)
-activate JsonStorage
-JsonStorage --> CalculatorService: saved
-deactivate JsonStorage
+note right of Engine
+  **Calculation Engine Layer**
+  - Pure arithmetic only
+  - No memory/history awareness
+  - Stateless
+  - Raises exceptions on invalid ops
+end note
 
-CalculatorService --> CalculatorCLI: CalculationResult with operand_b value
-deactivate CalculatorService
+note right of MemStore
+  **Memory/History Layer**
+  - Persists all operations
+  - Stores results AND errors
+  - Supports filtering/export/import
+  - No calculation logic
+end note
 
-CalculatorCLI -> User: shows result as "a op b = r"
-deactivate CalculatorCLI
-
-== Mode Toggle Flow ==
-User -> CalculatorCLI: selects mode toggle option from menu
-activate CalculatorCLI
-
-CalculatorCLI -> CalculatorCLI: _toggle_mode()
-
-note over CalculatorCLI: if mode == "standard": switch to "scientific"\nupdate _menu to include scientific ops\nelse: switch back to "standard"
-
-CalculatorCLI -> User: show mode switch confirmation
-deactivate CalculatorCLI
-
-== Memory Retrieve Flow ==
-User -> CalculatorCLI: --memory-retrieve flag
-activate CalculatorCLI
-
-CalculatorCLI -> MemoryService: retrieve()
-activate MemoryService
-
-MemoryService -> JsonStorage: load_memory_all()
-activate JsonStorage
-JsonStorage --> MemoryService: list[MemoryEntry]
-deactivate JsonStorage
-
-MemoryService --> CalculatorCLI: list[MemoryEntry]
-deactivate MemoryService
-
-CalculatorCLI -> User: display memory history
-deactivate CalculatorCLI
-
-== Memory Store Flow ==
-User -> CalculatorCLI: --memory-store OP [--result R | --error MSG]
-activate CalculatorCLI
-
-CalculatorCLI -> MemoryService: store(entry)
-activate MemoryService
-
-MemoryService -> JsonStorage: save(memory_entry)
-activate JsonStorage
-JsonStorage --> MemoryService: saved
-deactivate JsonStorage
-
-MemoryService --> CalculatorCLI: done
-deactivate MemoryService
-
-CalculatorCLI -> User: confirm stored
-deactivate CalculatorCLI
-
-== Filter Flow ==
-User -> CalculatorCLI: --filter-op OP [--filter-state STATE] or interactive menu
-activate CalculatorCLI
-
-CalculatorCLI -> MemoryService: filter_entries(operation, state)
-activate MemoryService
-
-MemoryService -> JsonStorage: load_memory_all()
-activate JsonStorage
-JsonStorage --> MemoryService: list[MemoryEntry]
-deactivate JsonStorage
-
-MemoryService -> FilterService: filter_entries(entries, operation, state)
-activate FilterService
-FilterService --> MemoryService: filtered list[MemoryEntry]
-deactivate FilterService
-
-MemoryService --> CalculatorCLI: filtered results
-deactivate MemoryService
-
-CalculatorCLI -> User: display filtered entries
-deactivate CalculatorCLI
-
-== Statistics Flow ==
-User -> CalculatorCLI: --statistics flag or interactive menu option
-activate CalculatorCLI
-
-CalculatorCLI -> StatisticsService: compute_statistics()
-activate StatisticsService
-
-StatisticsService -> MemoryService: retrieve()
-activate MemoryService
-
-MemoryService -> JsonStorage: load_memory_all()
-activate JsonStorage
-JsonStorage --> MemoryService: list[MemoryEntry]
-deactivate JsonStorage
-
-MemoryService --> StatisticsService: list[MemoryEntry]
-deactivate MemoryService
-
-note over StatisticsService: compute operation counts\ncount errors\ncalculate error rate\ncompute average execution time
-
-StatisticsService --> CalculatorCLI: Statistics object
-deactivate StatisticsService
-
-CalculatorCLI -> User: display statistics
-deactivate CalculatorCLI
-
-== Export History Flow ==
-User -> CalculatorCLI: --export-history FILE or interactive menu option
-activate CalculatorCLI
-
-CalculatorCLI -> MemoryService: export_history(filepath)
-activate MemoryService
-
-MemoryService -> JsonStorage: load_memory_all()
-activate JsonStorage
-JsonStorage --> MemoryService: list[MemoryEntry]
-deactivate JsonStorage
-
-MemoryService -> HistoryExportService: export_history(entries, filepath)
-activate HistoryExportService
-
-note over HistoryExportService: serialize entries to dict\nwrite JSON file
-
-HistoryExportService --> MemoryService: done
-deactivate HistoryExportService
-
-MemoryService --> CalculatorCLI: done
-deactivate MemoryService
-
-CalculatorCLI -> User: confirm export
-deactivate CalculatorCLI
-
-== Import History Flow ==
-User -> CalculatorCLI: --import-history FILE [--overwrite] or interactive menu option
-activate CalculatorCLI
-
-CalculatorCLI -> MemoryService: import_history(filepath, overwrite)
-activate MemoryService
-
-MemoryService -> HistoryExportService: import_history(filepath, skip_duplicates, existing_ids)
-activate HistoryExportService
-
-note over HistoryExportService: read JSON file\nvalidate structure\ndeserialize entries\ncheck for duplicates
-
-HistoryExportService --> MemoryService: (entries, errors)
-deactivate HistoryExportService
-
-MemoryService -> JsonStorage: save(entry) [for each entry]
-activate JsonStorage
-JsonStorage --> MemoryService: saved
-deactivate JsonStorage
-
-MemoryService --> CalculatorCLI: (count, errors)
-deactivate MemoryService
-
-CalculatorCLI -> User: show import results
-deactivate CalculatorCLI
+note right of Interface
+  **Interface Layer**
+  - Coordinates Cal & Mem layers
+  - Handles timing/error capture
+  - Provides unified API
+end note
 
 @enduml

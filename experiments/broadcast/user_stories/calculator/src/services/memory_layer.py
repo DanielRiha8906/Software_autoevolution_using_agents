@@ -1,11 +1,9 @@
-"""MemoryService handles the lifecycle of memory entries.
+"""
+Memory Layer - Data Persistence and History Management
 
-This service provides a clean separation of concerns by:
-- Handling store() and retrieve() operations for memory entries
-- Delegating persistence to the storage layer (JsonStorage)
-- Supporting filtering operations on stored entries
-- Supporting export and import of history to/from JSON files
-- Maintaining no business logic - only entry management
+This layer handles all persistence, history, filtering, and statistics operations.
+It is completely independent of the calculation engine and operates only on
+MemoryEntry objects that are passed to it.
 """
 
 from pathlib import Path
@@ -14,23 +12,30 @@ from ..models.memory_entry import MemoryEntry
 from ..storage.json_storage import JsonStorage
 from .filter_service import FilterService
 from .history_export_service import HistoryExportService
-from .memory_store import MemoryStore
+from .statistics_service import StatisticsService
 
 
-class MemoryService(MemoryStore):
-    """Service for managing calculator operation memory (history).
+class MemoryLayer:
+    """Service layer for managing calculation memory and history.
 
-    Separates memory entry management from persistence details.
-    All persistence is delegated to JsonStorage.
-    Supports filtering entries by operation type and result state.
-    Supports exporting and importing history to/from JSON files.
+    This layer:
+    - Stores and retrieves calculation entries
+    - Filters entries by operation type and state
+    - Computes statistics over stored entries
+    - Exports and imports history to/from files
+    - Maintains entry IDs and timestamps
+
+    It does NOT:
+    - Perform any calculations
+    - Define business logic for operations
+    - Interact with the calculation engine
     """
 
     def __init__(self, storage: JsonStorage) -> None:
         """Initialize with a storage backend.
 
         Args:
-            storage: JsonStorage instance handling persistence
+            storage: JsonStorage instance for persistence
         """
         self.storage = storage
         self._filter_service = FilterService()
@@ -144,8 +149,11 @@ class MemoryService(MemoryStore):
             - error_rate_percentage: float
             - average_execution_time_ms: float
         """
-        from .statistics_service import StatisticsService
-        stats_service = StatisticsService(self)
+        from .memory_service import MemoryService
+        # Create a temporary memory service for statistics computation
+        # (StatisticsService requires a MemoryService interface)
+        memory_service = MemoryService(self.storage)
+        stats_service = StatisticsService(memory_service)
         stats = stats_service.compute_statistics()
         return {
             "operation_counts": stats.operation_counts,
@@ -153,11 +161,3 @@ class MemoryService(MemoryStore):
             "error_rate_percentage": stats.error_rate_percentage,
             "average_execution_time_ms": stats.average_execution_time_ms,
         }
-
-    def get_memory_service(self) -> "MemoryService":
-        """Return self for backward compatibility with MemoryStore interface.
-
-        Returns:
-            self (MemoryService instance)
-        """
-        return self
