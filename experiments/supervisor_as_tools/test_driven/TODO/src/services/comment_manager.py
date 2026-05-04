@@ -9,8 +9,13 @@ class CommentNotFoundError(Exception):
 
 
 class CommentManager:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
-        self._storage = storage or JsonStorage(str(__file__.replace("comment_manager.py", "../../.todo_comments.json")))
+    def __init__(self, storage: Optional[JsonStorage] = None, storage_path: Optional[str] = None) -> None:
+        if storage:
+            self._storage = storage
+        elif storage_path:
+            self._storage = JsonStorage(storage_path)
+        else:
+            self._storage = JsonStorage(str(__file__.replace("comment_manager.py", "../../.todo_comments.json")))
         self._comments: dict[str, TaskComment] = {}
         self._load()
 
@@ -36,6 +41,25 @@ class CommentManager:
         comments = [c for c in self._comments.values() if c.task_id == task_id]
         return sorted(comments, key=lambda c: c.created_at)
 
+    def get_all_comments(self) -> list[TaskComment]:
+        """Get all comments.
+
+        Returns:
+            A list of all comments.
+        """
+        return list(self._comments.values())
+
+    def get_comments_for_task(self, task_id: str) -> list[TaskComment]:
+        """Get all comments for a specific task.
+
+        Args:
+            task_id: The task ID.
+
+        Returns:
+            A sorted list of comments for the task.
+        """
+        return self.list_by_task(task_id)
+
     def delete(self, comment_id: str) -> None:
         comment = self.get(comment_id)  # raises if missing
         del self._comments[comment.id]
@@ -46,4 +70,15 @@ class CommentManager:
         for comment_id in comment_ids:
             del self._comments[comment_id]
         if comment_ids:
+            self._persist()
+
+    def import_comments(self, comments: list[TaskComment]) -> None:
+        """Import a list of comments to storage.
+
+        Args:
+            comments: A list of TaskComment objects to import.
+        """
+        for comment in comments:
+            self._comments[comment.id] = comment
+        if comments:
             self._persist()

@@ -78,7 +78,7 @@ class TaskImportExportService:
         # Deserialize tasks with duplicate detection
         imported_tasks: list[Task] = []
         imported_task_ids: set[str] = set()
-        existing_task_ids = set(self._todo_service._manager._tasks.keys())
+        existing_task_ids = set(task.id for task in self._todo_service._manager.get_all_tasks())
 
         for task_dict in data["tasks"]:
             try:
@@ -94,7 +94,7 @@ class TaskImportExportService:
 
         # Deserialize comments with duplicate detection
         imported_comments: list[TaskComment] = []
-        existing_comment_ids = set(self._comments_service._comment_manager._comments.keys())
+        existing_comment_ids = set(comment.id for comment in self._comments_service._comment_manager.get_all_comments())
 
         for comment_dict in data["comments"]:
             try:
@@ -111,15 +111,9 @@ class TaskImportExportService:
                 continue
 
         # Persist imported tasks to storage
-        for task in imported_tasks:
-            self._todo_service._manager._tasks[task.id] = task
-        if imported_tasks:
-            self._todo_service._manager._persist()
+        self._todo_service._manager.import_tasks(imported_tasks)
 
         # Persist imported comments to storage
-        for comment in imported_comments:
-            self._comments_service._comment_manager._comments[comment.id] = comment
-        if imported_comments:
-            self._comments_service._comment_manager._persist()
+        self._comments_service._comment_manager.import_comments(imported_comments)
 
         return (imported_tasks, imported_comments)

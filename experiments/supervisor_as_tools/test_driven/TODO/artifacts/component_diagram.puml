@@ -29,6 +29,7 @@ package "TODO Application" {
     }
 
     package "Persistence Layer" {
+        component "Storage Interface\n(StorageInterface)" as StorageInterface
         component "JSON Storage\n(JsonStorage)" as Storage
     }
 }
@@ -49,13 +50,14 @@ SVC --> MGR
 CSVC --> SVC
 CSVC --> CMGR
 SSVC --> SVC
-IEXVC --> SVC
-IEXVC --> CSVC
-MGR --> Storage
-CMGR --> Storage
+IEXVC --> SVC : uses public APIs
+IEXVC --> CSVC : uses public APIs
+MGR --> StorageInterface : implements
+CMGR --> StorageInterface : implements
+StorageInterface --> Storage : <<implements>>
 MGR ..> Model
 SSVC ..> StatsModel
-Storage ..> Model
+Storage --> Model
 
 Storage --> DB : read/write
 

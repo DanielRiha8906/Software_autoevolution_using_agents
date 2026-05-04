@@ -8,12 +8,14 @@ from .task_manager import TaskManager
 
 if TYPE_CHECKING:
     from .comments_service import CommentsService
+    from .comment_manager import CommentManager
 
 
 class TodoService:
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
+    def __init__(self, storage: Optional[JsonStorage] = None, comment_manager: Optional["CommentManager"] = None) -> None:
         self._manager = TaskManager(storage)
         self._comments_service: Optional["CommentsService"] = None
+        self._comment_manager = comment_manager
 
     def _validate_datetime_cest(self, dt: datetime, name: str) -> None:
         """Validate that a datetime is timezone-aware and uses CEST timezone."""
@@ -80,6 +82,8 @@ class TodoService:
         return self._manager.update(task_id, title=title, description=description, project_id=project_id)
 
     def delete_task(self, task_id: str) -> None:
-        if self._comments_service:
+        if self._comment_manager:
+            self._comment_manager.delete_all_by_task(task_id)
+        elif self._comments_service:
             self._comments_service.delete_comments_for_task(task_id)
         self._manager.delete(task_id)

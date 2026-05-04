@@ -61,13 +61,21 @@ package "models" #DDEEFF {
 }
 
 package "storage" #FFF3CC {
+    abstract class StorageInterface {
+        {abstract} +load() : List<Dictionary>
+        {abstract} +save(data: List<Dictionary>) : void
+    }
+
     class JsonStorage {
-        -path : String
+        -path : Path
         --
         +JsonStorage(path: String [0..1])
+        +path : Property[Path]
         +load() : List<Dictionary>
-        +save(tasks: List<Dictionary>) : void
+        +save(data: List<Dictionary>) : void
     }
+
+    JsonStorage --|> StorageInterface
 }
 
 package "services" #DDFFD4 {
@@ -82,12 +90,14 @@ package "services" #DDFFD4 {
         +TaskManager(storage: JsonStorage [0..1])
         +add(title: String, description: String [0..1], project_id: String [0..1]) : Task
         +get(task_id: String) : Task
+        +get_all_tasks() : List<Task>
         +list_all() : List<Task>
         +list_by_status(status: TaskStatus) : List<Task>
         +list_by_project_id(project_id: String) : List<Task>
         +update(task_id: String, title: String [0..1], description: String [0..1], project_id: String [0..1]) : Task
         +set_status(task_id: String, status: TaskStatus) : Task
         +delete(task_id: String) : void
+        +import_tasks(tasks: List<Task>) : void
         -load() : void
         -persist() : void
     }
@@ -96,20 +106,25 @@ package "services" #DDFFD4 {
         -storage : JsonStorage
         -comments : Dictionary<String, TaskComment>
         --
-        +CommentManager(storage: JsonStorage [0..1])
+        +CommentManager(storage: JsonStorage [0..1], storage_path: String [0..1])
         +add(task_id: String, content: String) : TaskComment
         +get(comment_id: String) : TaskComment
+        +get_all_comments() : List<TaskComment>
+        +get_comments_for_task(task_id: String) : List<TaskComment>
         +list_by_task(task_id: String) : List<TaskComment>
         +delete(comment_id: String) : void
         +delete_all_by_task(task_id: String) : void
+        +import_comments(comments: List<TaskComment>) : void
         -load() : void
         -persist() : void
     }
 
     class TodoService {
         -manager : TaskManager
+        -comments_service : CommentsService [0..1]
+        -comment_manager : CommentManager [0..1]
         --
-        +TodoService(storage: JsonStorage [0..1])
+        +TodoService(storage: JsonStorage [0..1], comment_manager: CommentManager [0..1])
         +add_task(title: String, description: String [0..1], project_id: String [0..1]) : Task
         +get_task(task_id: String) : Task
         +list_tasks(status: TaskStatus [0..1], overdue: Boolean [0..1], due_before: DateTime [0..1], due_after: DateTime [0..1], project_id: String [0..1]) : List<Task>
@@ -125,7 +140,7 @@ package "services" #DDFFD4 {
         -storage : JsonStorage
         -projects : Dictionary<String, Project>
         --
-        +ProjectService(todo_service: TodoService [0..1], storage: JsonStorage [0..1])
+        +ProjectService(todo_service: TodoService [0..1], storage: JsonStorage [0..1], storage_path: String [0..1])
         +create(name: String) : Project
         +get(project_id: String) : Project
         +list() : List<Project>
@@ -160,6 +175,14 @@ package "services" #DDFFD4 {
         +export(filepath: String) : void
         +import_from(filepath: String) : Tuple<List<Task>, List<TaskComment>>
     }
+
+    note on right of TaskImportExportService
+        Uses public APIs only:
+        - TodoService.list_tasks()
+        - CommentsService.list_comments()
+        - TaskManager.import_tasks()
+        - CommentManager.import_comments()
+    end note
 }
 
 package "cli" #FFE5E5 {
@@ -181,22 +204,23 @@ package "cli" #FFE5E5 {
 Task --> TaskStatus : status
 Task --> Project : references (0..1)
 TaskComment --> Task : references
-TaskManager --> JsonStorage : storage
+TaskManager --> StorageInterface : storage (interface)
 TaskManager ..> TaskNotFoundError : raises
 ProjectService --> Project : manages
-ProjectService --> JsonStorage : storage
+ProjectService --> StorageInterface : storage (interface)
 ProjectService ..> ProjectNotFoundError : raises
-CommentManager --> JsonStorage : storage
+CommentManager --> StorageInterface : storage (interface)
 CommentManager --> TaskComment : manages
 CommentManager ..> CommentNotFoundError : raises
 TodoService --> TaskManager : manager
+TodoService --> CommentManager : optional dependency
 CommentsService --> TodoService : todo_service
 CommentsService --> CommentManager : comment_manager
 TaskStatisticsService --> TodoService : dependency
 TaskStatisticsService ..> TaskStatistics : returns
 TaskStatistics --> TaskStatus : uses
-TaskImportExportService --> TodoService : uses
-TaskImportExportService --> CommentsService : uses
+TaskImportExportService --> TodoService : uses public APIs
+TaskImportExportService --> CommentsService : uses public APIs
 TodoCLI --> TodoService : service
 TodoCLI --> CommentsService : comments_service
 TodoCLI --> TaskImportExportService : import_export
