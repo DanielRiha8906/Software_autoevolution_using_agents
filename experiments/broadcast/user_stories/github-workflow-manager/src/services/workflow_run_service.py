@@ -3,7 +3,7 @@ from typing import List, Optional, TYPE_CHECKING
 from ..models.workflow_run import WorkflowRun
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
-from ..storage.workflow_json_storage import WorkflowJsonStorage
+from ..storage.protocols import StorageBackend
 
 if TYPE_CHECKING:
     from .workflow_query import WorkflowQuery
@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class WorkflowRunService:
-    def __init__(self, storage: WorkflowJsonStorage):
+    def __init__(self, storage: StorageBackend):
         self._storage = storage
         self._runs: List[WorkflowRun] = storage.load()
 
@@ -51,3 +51,6 @@ class WorkflowRunService:
         """
         from .workflow_query import WorkflowQuery
         return WorkflowQuery(list(self._runs), attempt_service)
+
+
+__all__ = ["WorkflowRunService"]

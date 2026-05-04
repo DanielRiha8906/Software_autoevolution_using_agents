@@ -1,0 +1,194 @@
+@startuml architecture
+
+skinparam packageStyle rectangle
+skinparam linetype ortho
+top to bottom direction
+
+title Layer Architecture: Clear Boundaries via Protocols
+
+package "Layer 1: Models (Domain)" #DDEEFF {
+    enum WorkflowStatus {
+        QUEUED
+        IN_PROGRESS
+        COMPLETED
+        WAITING
+        REQUESTED
+        PENDING
+    }
+
+    enum WorkflowConclusion {
+        SUCCESS
+        FAILURE
+        CANCELLED
+        SKIPPED
+        TIMED_OUT
+        ACTION_REQUIRED
+        NEUTRAL
+        STALE
+    }
+
+    class WorkflowRun {
+        id: str
+        workflow_name: str
+        branch: str
+        status: WorkflowStatus
+        conclusion: Optional[WorkflowConclusion]
+        created_at: datetime
+        updated_at: Optional[datetime]
+        run_number: Optional[int]
+        commit_sha: Optional[str]
+    }
+
+    class WorkflowRunAttempt {
+        id: int
+        run_id: int
+        attempt_number: int
+        status: str
+        conclusion: Optional[str]
+        created_at: datetime
+        duration_seconds: Optional[float]
+    }
+
+    WorkflowRun --> WorkflowStatus
+    WorkflowRun --> WorkflowConclusion
+}
+
+package "Layer 2: Storage (Protocol-Driven)" #FFF3CC {
+    interface "<<Protocol>>\nStorageBackend" as IStorageBackend {
+        +save(data: List) : None
+        +load() : List
+    }
+
+    interface "<<Protocol>>\nGitHubAPIClient" as IGitHubAPIClient {
+        +fetch_workflow_runs(...) : List[WorkflowRun]
+        +fetch_incremental(...) : List[WorkflowRun]
+    }
+
+    class WorkflowJsonStorage implements IStorageBackend {
+        filepath: str
+        --
+        save(runs: List[WorkflowRun]) : None
+        load() : List[WorkflowRun]
+    }
+
+    class AttemptJsonStorage implements IStorageBackend {
+        filepath: str
+        --
+        save(attempts: List[WorkflowRunAttempt]) : None
+        load() : List[WorkflowRunAttempt]
+    }
+
+    note on right of IStorageBackend
+        Decouples services from
+        concrete storage implementations.
+        Any class with save/load methods
+        satisfies the protocol.
+    end note
+
+    note on right of IGitHubAPIClient
+        Decouples services from
+        GitHub API implementation.
+        Adapters implement this protocol.
+    end note
+}
+
+package "Layer 3: Services (Abstract Dependencies)" #DDFFD4 {
+    class WorkflowRunService {
+        -_storage: StorageBackend
+        -_runs: List[WorkflowRun]
+        --
+        __init__(storage: StorageBackend)
+        add_workflow_run(run: WorkflowRun) : WorkflowRun
+        list_runs() : List[WorkflowRun]
+        get_run_detail(run_id: str) : Optional[WorkflowRun]
+        filter_by_branch(branch: str) : List[WorkflowRun]
+        filter_by_status(status: WorkflowStatus) : List[WorkflowRun]
+        filter_by_conclusion(conclusion: WorkflowConclusion) : List[WorkflowRun]
+    }
+
+    class AttemptService {
+        -_storage: StorageBackend
+        -_attempts: List[WorkflowRunAttempt]
+        --
+        __init__(storage: StorageBackend)
+        create_attempt(attempt: WorkflowRunAttempt) : WorkflowRunAttempt
+        get_attempts_for_run(run_id: int) : List[WorkflowRunAttempt]
+        list_all_attempts() : List[WorkflowRunAttempt]
+    }
+
+    class WorkflowStatisticsService {
+        -_workflow_service: WorkflowRunService
+        -_attempt_service: AttemptService
+        --
+        __init__(workflow_service, attempt_service)
+        compute_statistics() : WorkflowRunStatistics
+    }
+
+    class WorkflowRunTracker {
+        -_service: WorkflowRunService
+        --
+        track(...) : WorkflowRun
+    }
+
+    WorkflowRunService --|> IStorageBackend : depends on\n(duck typing)
+    AttemptService --|> IStorageBackend : depends on\n(duck typing)
+
+    note on right of WorkflowRunService
+        Depends on StorageBackend protocol,
+        not concrete WorkflowJsonStorage.
+        Can accept any implementation.
+    end note
+}
+
+package "Layer 4: Adapters (External Integration)" #FFE5E5 {
+    class GitHubFetchService implements IGitHubAPIClient {
+        -_token: Optional[str]
+        -_repo_owner: Optional[str]
+        -_repo_name: Optional[str]
+        -_use_gh_cli: bool
+        --
+        __init__()
+        fetch_workflow_runs(...) : List[WorkflowRun]
+        fetch_incremental(...) : List[WorkflowRun]
+        -_resolve_token() : str
+        -_validate_token(token: str) : bool
+        -_check_gh_cli() : bool
+        -_fetch_with_gh_cli(...) : List[WorkflowRun]
+        -_fetch_with_requests(...) : List[WorkflowRun]
+    }
+
+    note on right of GitHubFetchService
+        Lives in adapters/ layer.
+        Implements GitHubAPIClient protocol.
+        Handles concrete GitHub API details:
+        - Token resolution
+        - gh CLI vs requests fallback
+        - API response mapping to domain models
+    end note
+}
+
+' Unidirectional dependencies (no cycles)
+WorkflowRunService --> WorkflowRun : uses
+WorkflowRunService --> WorkflowStatus : uses
+WorkflowRunService --> WorkflowConclusion : uses
+WorkflowJsonStorage --> WorkflowRun : persists
+AttemptService --> WorkflowRunAttempt : uses
+AttemptJsonStorage --> WorkflowRunAttempt : persists
+WorkflowStatisticsService --> WorkflowRunService : uses
+WorkflowStatisticsService --> AttemptService : uses
+WorkflowRunTracker --> WorkflowRunService : uses
+GitHubFetchService --> WorkflowRun : produces
+GitHubFetchService --> WorkflowStatus : maps to
+GitHubFetchService --> WorkflowConclusion : maps to
+
+' These show dependency direction (adapters layer is used by higher layers, not depended upon)
+note bottom of architecture
+    Dependency Flow (Unidirectional):
+
+    Models (1) ← Storage (2) ← Services (3) ← Adapters (4)
+
+    No circular dependencies. Services depend on Protocols, not Implementations.
+    Adapters are injected into services that need external integration.
+end note
+
+@enduml

@@ -1,11 +1,11 @@
 from typing import List, Optional
 
 from ..models.workflow_run_attempt import WorkflowRunAttempt
-from ..storage.attempt_json_storage import AttemptJsonStorage
+from ..storage.protocols import StorageBackend
 
 
 class AttemptService:
-    def __init__(self, storage: AttemptJsonStorage):
+    def __init__(self, storage: StorageBackend):
         self._storage = storage
         self._attempts: List[WorkflowRunAttempt] = storage.load()
 
@@ -56,3 +56,6 @@ class AttemptService:
             A list of all attempts.
         """
         return list(self._attempts)
+
+
+__all__ = ["AttemptService"]

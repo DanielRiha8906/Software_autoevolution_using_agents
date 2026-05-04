@@ -101,3 +101,6 @@ class WorkflowStatisticsService:
             average_attempts_per_run=average_attempts_per_run,
             per_status_breakdown=per_status_breakdown,
         )
+
+
+__all__ = ["WorkflowStatisticsService"]
