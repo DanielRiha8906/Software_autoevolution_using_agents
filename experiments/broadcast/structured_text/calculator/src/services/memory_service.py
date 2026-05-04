@@ -1,8 +1,17 @@
+from typing import TYPE_CHECKING
+
 from ..models.memory_entry import MemoryEntry
 from ..storage.json_storage import JsonStorage
 
+if TYPE_CHECKING:
+    from ..protocols import HistoryStorage
+
 
 class MemoryService:
+    """Concrete implementation of the HistoryStorage protocol.
+
+    Manages calculation history and memory entries with no knowledge of UI or calculation logic.
+    """
     """Service for managing MemoryEntry objects.
 
     Responsibilities:

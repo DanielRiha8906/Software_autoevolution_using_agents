@@ -6,12 +6,18 @@ from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
 from ..services.query_service import QueryService
 from ..services.statistics_service import StatisticsService
+from ..protocols import CalculatorUI
 
 if TYPE_CHECKING:
     from ..services.history_manager import HistoryManager
 
 
-class CalculatorCLI:
+class CalculatorCLI(CalculatorUI):
+    """Concrete implementation of the CalculatorUI protocol.
+
+    Provides command-line interface for calculator operations.
+    No knowledge of calculation logic or persistence internals.
+    """
     _STANDARD_MENU: list[tuple[Operation, str]] = [
         (Operation.ADD,      "Add"),
         (Operation.SUBTRACT, "Subtract"),

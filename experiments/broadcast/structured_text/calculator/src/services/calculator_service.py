@@ -4,18 +4,24 @@ from ..models.operation import Operation
 from ..models.calculation_result import CalculationResult
 from ..models.memory_entry import MemoryEntry
 from ..storage.json_storage import JsonStorage
-from .calculator import Calculator
+from ..protocols import CalculationEngine, HistoryStorage
 
 if TYPE_CHECKING:
-    from .memory_service import MemoryService
+    pass
 
 
 class CalculatorService:
+    """Orchestrates the three core components: calculation, history, and storage.
+
+    Uses protocol-based dependency injection to decouple from concrete implementations.
+    Depends on CalculationEngine and HistoryStorage protocols, not concrete classes.
+    """
+
     def __init__(
         self,
-        calculator: Calculator,
+        calculator: CalculationEngine,
         storage: JsonStorage,
-        memory_service: Optional["MemoryService"] = None,
+        memory_service: Optional[HistoryStorage] = None,
     ) -> None:
         self.calculator = calculator
         self.storage = storage

@@ -5,82 +5,110 @@ skinparam boxBorderColor #333333
 skinparam arrowColor #333333
 skinparam fontName Courier
 
-package "Presentation Layer" as Presentation {
-  component "CalculatorCLI"
+package "Interface Layer (Protocol: CalculatorUI)" as UILayer {
+  interface "CalculatorUI" as CalcUI
+  component "CalculatorCLI" as CLI
+  CLI ..| CalcUI: implements
 }
 
-package "Service Layer" as Services {
-  component "CalculatorService"
-  component "MemoryService"
-  component "HistoryManager"
+package "Calculation Engine (Protocol: CalculationEngine)" as CalcLayer {
+  interface "CalculationEngine" as CalcEngine
+  component "Calculator" as Calc
+  Calc ..| CalcEngine: implements
+}
+
+package "Memory/History Storage (Protocol: HistoryStorage)" as MemLayer {
+  interface "HistoryStorage" as HistoryProto
+  component "MemoryService" as MemSvc
+  MemSvc ..| HistoryProto: implements
+  component "HistoryManager" as HistMgr
+}
+
+package "Service/Orchestration Layer" as ServiceLayer {
+  component "CalculatorService" as CalcSvc
+}
+
+package "Supporting Services" as SupportServices {
   component "QueryService"
   component "StatisticsService"
-  component "Calculator"
 }
 
-package "Domain Models" as Models {
+package "Data Models" as Models {
   component "Operation"
   component "CalculationResult"
   component "MemoryEntry"
   component "StatisticsReport"
 }
 
-package "Storage/Persistence" as Persistence {
+package "Persistence" as Persistence {
   component "JsonStorage"
   database "calculations.json"
   database "memory.json"
 }
 
-' Dependencies
-Presentation --> CalculatorService: depends on
-Presentation --> QueryService: depends on
-Presentation --> StatisticsService: depends on
-Presentation --> HistoryManager: depends on for export/import
+' Core component relationships
+CalcSvc --> CalcEngine: depends on\n(abstract interface)
+CalcSvc --> HistoryProto: depends on\n(abstract interface)
+CalcSvc --> JsonStorage: uses for\npersistence
 
-CalculatorService --> Calculator: uses
-CalculatorService --> CalculationResult: uses
-CalculatorService --> MemoryService: optionally uses for storage
-CalculatorService --> JsonStorage: uses for persistence
+' UI dependencies
+CLI --> CalcSvc: uses
+CLI --> QueryService: uses
+CLI --> StatisticsService: uses
+CLI --> HistMgr: uses for export/import
 
-MemoryService --> MemoryEntry: manages
-MemoryService --> JsonStorage: uses for persistence
+' Memory service relationships
+MemSvc --> JsonStorage: uses for\npersistence
+MemSvc --> MemoryEntry: manages
 
-HistoryManager --> MemoryEntry: exports/imports
-HistoryManager --> JsonStorage: uses for persistence
+HistMgr --> MemoryEntry: exports/imports
+HistMgr --> JsonStorage: uses for persistence
 
-QueryService --> MemoryService: queries
+' Supporting services
+QueryService --> MemSvc: queries
 QueryService --> MemoryEntry: filters
 
-StatisticsService --> MemoryService: queries
+StatisticsService --> MemSvc: queries
 StatisticsService --> MemoryEntry: analyzes
 StatisticsService --> StatisticsReport: produces
 
+' Storage relationships
 JsonStorage --> CalculationResult: serializes
 JsonStorage --> MemoryEntry: serializes
 JsonStorage --> calculations.json: reads/writes
 JsonStorage --> memory.json: reads/writes
 
-note right of Presentation
-  CLI provides interactive menu
-  and one-shot command mode.
-  Supports standard and scientific modes:
-  - Standard: 8 operations
-  - Scientific: 14 operations (adds SIN, COS, TAN, LOG, LN, EXP)
+note right of CalcUI
+  **CalculatorUI Protocol**
+  - Defines contract for user interfaces
+  - Separates UI from business logic
+  - Can be implemented by CLI, GUI, Web, etc.
+  - Methods: run_interactive(), run_command()
 end note
 
-note right of Services
-  Business logic separated
-  from persistence and I/O
+note right of CalcEngine
+  **CalculationEngine Protocol**
+  - Defines contract for calculation logic
+  - Pure arithmetic operations
+  - No knowledge of persistence or UI
+  - Method: calculate(operation, a, b)
 end note
 
-note right of Models
-  Pure domain objects
-  implementing to_dict()/from_dict()
+note right of HistoryProto
+  **HistoryStorage Protocol**
+  - Defines contract for memory/history
+  - No knowledge of calculations or UI
+  - Methods: store(entry), retrieve()
+  - Separates persistence concerns
 end note
 
-note right of Persistence
-  Generic storage abstraction
-  supports multiple models
+note right of CalcSvc
+  **Orchestration Layer**
+  - CalculatorService coordinates the three
+    core components via abstract protocols
+  - Depends on interfaces, not concrete
+    implementations
+  - Enables substitution and testing
 end note
 
 @enduml
