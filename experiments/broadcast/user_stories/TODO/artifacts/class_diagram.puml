@@ -288,7 +288,76 @@ package "services" #DDFFD4 {
     TodoService --> TaskSummary
 }
 
-' ============ LAYER 5: CLI ============
+' ============ LAYER 5: PRESENTATION (GUI & CLI) ============
+
+package "gui" #FFE5E5 {
+    class TodoGUI {
+        -_service : TodoService
+        -root : tk.Tk
+        -task_tree : ttk.Treeview
+        -status_var : tk.StringVar
+        -project_var : tk.StringVar
+        -overdue_var : tk.BooleanVar
+        --
+        +__init__(storage_path: String [0..1])
+        -_setup_ui() : void
+        -_update_project_list() : void
+        -_refresh_task_list() : void
+        -_get_selected_task_id() : String [0..1]
+        -_add_task() : void
+        -_on_task_double_click(event) : void
+        -_show_task_details(task_id: String) : void
+        -_start_task() : void
+        -_complete_task() : void
+        -_reopen_task() : void
+        -_delete_task() : void
+        -_add_comment_dialog() : void
+        -_view_comments() : void
+        +run() : void
+    }
+
+    class AddTaskDialog {
+        -service : TodoService
+        -dialog : tk.Toplevel
+        -result : Task [0..1]
+        --
+        +__init__(parent: tk.Widget, service: TodoService)
+        -_add() : void
+    }
+
+    class TaskDetailsDialog {
+        -task : Task
+        -service : TodoService
+        -dialog : tk.Toplevel
+        --
+        +__init__(parent: tk.Widget, task: Task, service: TodoService)
+        -_edit_title() : void
+        -_edit_description() : void
+    }
+
+    class AddCommentDialog {
+        -task_id : String
+        -service : TodoService
+        -dialog : tk.Toplevel
+        --
+        +__init__(parent: tk.Widget, task_id: String, service: TodoService)
+        -_add() : void
+    }
+
+    class ViewCommentsDialog {
+        -task_id : String
+        -service : TodoService
+        -dialog : tk.Toplevel
+        --
+        +__init__(parent: tk.Widget, task_id: String, service: TodoService)
+    }
+
+    TodoGUI --> TodoService
+    AddTaskDialog --> TodoService
+    TaskDetailsDialog --> TodoService
+    AddCommentDialog --> TodoService
+    ViewCommentsDialog --> TodoService
+}
 
 package "cli" #FFE5E5 {
     class TodoCLI {

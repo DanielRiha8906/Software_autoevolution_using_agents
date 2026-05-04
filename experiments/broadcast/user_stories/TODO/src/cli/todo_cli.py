@@ -46,10 +46,12 @@ class TodoCLI:
         description=(
         "Simple TODO manager.\n\n"
         "Task IDs are UUIDs.\nIn CLI commands you can use a unique prefix "
-        "\n(e.g. first 8 characters shown in 'list')."
+        "\n(e.g. first 8 characters shown in 'list').\n\n"
+        "Use --gui to launch the tkinter GUI."
         ),
         formatter_class=argparse.RawTextHelpFormatter,
         )
+        parser.add_argument("--gui", action="store_true", help="Launch the tkinter GUI")
         sub = parser.add_subparsers(title="commands")
 
         # add

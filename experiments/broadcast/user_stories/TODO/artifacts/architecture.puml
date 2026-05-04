@@ -6,8 +6,9 @@ skinparam linetype ortho
 skinparam defaultFontSize 11
 skinparam padding 10
 
-' Layer 1: CLI
-package "Layer 5: CLI" #FFE5E5 {
+' Layer 1: GUI and CLI
+package "Layer 5: Presentation (GUI & CLI)" #FFE5E5 {
+    [TodoGUI]
     [TodoCLI]
     [InteractiveMenu]
 }
@@ -63,7 +64,8 @@ package "Layer 0: Models" #DDEEFF {
 database "todo_data.json" {
 }
 
-' CLI depends on Services
+' Presentation layer depends on Services
+TodoGUI --> TodoService
 TodoCLI --> TodoService
 InteractiveMenu --> TodoService
 TodoCLI --> ImportExportService
