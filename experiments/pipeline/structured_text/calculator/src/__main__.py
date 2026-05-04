@@ -32,13 +32,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass flags for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--memory] [--statistics] [--memory-filter {operation,status} ...] [--export [FILE]] [--import [FILE]] [--skip-invalid]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo,sin,cos,tan,log,ln,exp} A B] [--memory] [--statistics] [--memory-filter {operation,status} ...] [--export [FILE]] [--import [FILE]] [--skip-invalid]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
-        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo", "sin", "cos", "tan", "log", "ln", "exp"],
+        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo | sin | cos | tan | log | ln | exp)",
     )
     parser.add_argument(
         "--memory",
@@ -59,7 +59,7 @@ def main() -> None:
     parser.add_argument(
         "--filter-operation",
         metavar="OPERATION",
-        help="Operation name to filter by (use with --memory-filter operation)",
+        help="Operation name to filter by: add | subtract | multiply | divide | square | sqrt | power | modulo | sin | cos | tan | log | ln | exp (use with --memory-filter operation)",
     )
     parser.add_argument(
         "--filter-status",

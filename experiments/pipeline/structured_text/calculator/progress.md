@@ -665,3 +665,101 @@ The import/export feature is fully accessible via:
 - Integration testing: CLI flag combinations and interactive prompting
 
 Duration: 849.8s | Cost: $1.411345 USD | Turns: 20
+
+## Task 08
+
+**Description:** Add scientific mode with trigonometric and logarithmic operations
+
+**Status:** ✅ Complete
+
+### Files Changed
+
+1. `src/models/operation.py`
+   - Added 6 new Operation enum members: SIN, COS, TAN, LOG, LN, EXP (lines 13-18)
+
+2. `src/services/calculator.py`
+   - Added 6 new methods (lines 37-57):
+     - `sin(a: float, b: float) -> float` — returns math.sin(a)
+     - `cos(a: float, b: float) -> float` — returns math.cos(a)
+     - `tan(a: float, b: float) -> float` — returns math.tan(a)
+     - `log(a: float, b: float) -> float` — returns math.log10(a), raises ValueError if a <= 0
+     - `ln(a: float, b: float) -> float` — returns math.log(a), raises ValueError if a <= 0
+     - `exp(a: float, b: float) -> float` — returns math.exp(a)
+   - Updated `calculate()` dispatch dictionary (lines 69-74) to include all 6 new operations
+
+3. `src/models/calculation_result.py`
+   - Extended `_SYMBOLS` dictionary (lines 14-19) with 6 new mappings: sin, cos, tan, log, ln, exp
+
+4. `src/cli/calculator_cli.py`
+   - Extended `_MENU` list (lines 18-23) with 6 new operation entries (options 9-14)
+   - Updated `_filter_memory_by_operation()` prompt (line 247) to include all 14 operations
+
+5. `src/__main__.py`
+   - Extended `--operation` argparse choices (line 40) to include all 14 operations
+   - Updated `--operation` help text (line 41) to list all operations
+   - Updated `--filter-operation` help text (line 62) to list all operations
+   - Updated usage string (line 35) to include new operations
+
+6. `tests/test_calculator.py`
+   - Added 45 new tests covering sin, cos, tan, log, ln, exp operations
+   - Tests cover valid inputs, domain validation, unary behavior, and operation dispatch
+
+7. `tests/test_cli.py`
+   - Added 25 new tests for CLI menu integration and interactive operation execution
+   - Tests cover menu options 9-14 for scientific operations and error handling
+
+8. `tests/test_cli_flags.py`
+   - Added 11 new tests for one-shot CLI flags
+   - Tests cover --operation sin|cos|tan|log|ln|exp and error cases
+   - Tests cover memory filtering with new operation names
+
+9. `artifacts/class_diagram.puml`
+   - Updated Operation enum to show all 14 members (8 standard + 6 scientific)
+   - Updated Calculator class to show all 14 methods (8 standard + 6 scientific)
+
+### Test Results
+
+- Total tests: 433 (81 new + 352 existing)
+- Passed: 433
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Requirements Met
+
+**Must:**
+- ✅ Added 6 scientific operations: sin, cos, tan, log (base 10), ln (natural log), exp
+- ✅ Mode extends existing functionality without breaking it
+- ✅ Switching between standard and scientific mode is implicit (unified menu)
+- ✅ All new functionality accessible via `python -m src` (interactive menu options 9-14 + CLI flags)
+
+**Should:**
+- ✅ Consistency with base calculator behavior (same operation interface, unary signature)
+- ✅ Domain error handling (log/ln require positive input, raise ValueError on invalid)
+
+**Could:**
+- ⏭ Further trigonometric/hyperbolic functions (not implemented - not Must)
+
+**Won't:**
+- ✅ No reimplementation of existing operations
+
+### Key Implementation Details
+
+1. **Unary Operations Pattern:** All 6 new operations follow the existing unary pattern (square, sqrt) — accept (a, b) signature but ignore b
+2. **Domain Validation:** log() and ln() validate a > 0, raising ValueError with clear messages
+3. **Implicit Mode:** Scientific operations seamlessly integrated into menu (options 9-14) rather than behind explicit mode toggle
+4. **CLI Exposure:**
+   - Interactive: menu options 9-14
+   - One-shot: `python -m src --operation sin|cos|tan|log|ln|exp A B`
+   - Help: `python -m src --help` lists all 14 operations
+5. **Symbol Mapping:** All scientific operations have symbol entries for consistent formatting
+6. **Menu Structure:** Operations 1-8 (standard), 9-14 (scientific), admin options 15-22
+
+### CLI Accessibility
+
+The scientific mode is fully accessible via:
+1. **Interactive mode:** `python -m src` → options 9-14 for sin, cos, tan, log, ln, exp
+2. **One-shot CLI:** `python -m src --operation sin 0` — all 6 operations work with CLI flags
+3. **Help:** `python -m src --help` documents all 14 operations
+4. **Memory filtering:** `python -m src --memory-filter operation --filter-operation sin` works with new operations
+
+Duration: 584.0s | Cost: $1.343593 USD | Turns: 15
