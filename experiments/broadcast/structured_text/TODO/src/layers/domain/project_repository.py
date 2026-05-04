@@ -1,37 +1,45 @@
+"""Repository for persisting and retrieving projects."""
+
 from typing import Optional
 
 from ..models.project import Project
-from ..storage.json_storage import JsonStorage
-from .unified_storage import JsonProjectRepository
+from ..storage.protocols import StorageProtocol
+from .exceptions import ProjectNotFoundError
 
 
-class ProjectNotFoundError(Exception):
-    """Raised when a project cannot be found."""
-    pass
+class ProjectRepository:
+    """Repository managing project persistence and retrieval.
 
-
-class ProjectManager:
-    """Manager for CRUD operations on projects.
-
-    This service encapsulates project domain logic and coordinates with
-    the storage layer for persistence.
+    Uses StorageProtocol for abstraction from storage implementation.
     """
 
-    def __init__(self, storage: Optional[JsonStorage] = None) -> None:
-        self._storage = storage or JsonStorage()
-        self._repository = JsonProjectRepository(self._storage)
+    def __init__(self, storage: StorageProtocol) -> None:
+        self._storage = storage
         self._projects: dict[str, Project] = {}
         self._load()
 
     def _load(self) -> None:
-        """Load all projects from the repository."""
-        self._projects = self._repository.load()
+        """Load projects from storage."""
+        raw = self._storage.load()
+        # Handle both formats: list (legacy) or dict (with tasks/comments/projects)
+        if isinstance(raw, dict):
+            project_list = raw.get("projects", [])
+        else:
+            project_list = []
+        self._projects = {d["id"]: Project.from_dict(d) for d in project_list}
 
     def _persist(self) -> None:
-        """Persist all projects to the repository."""
-        self._repository.save(self._projects)
+        """Persist projects to storage."""
+        raw = self._storage.load()
+        # Preserve existing structure (with tasks/comments if present)
+        if isinstance(raw, dict):
+            raw["projects"] = [p.to_dict() for p in self._projects.values()]
+        else:
+            raw = {"projects": [p.to_dict() for p in self._projects.values()]}
+        self._storage.save(raw)
 
     def add(self, name: str) -> Project:
+        """Add a new project."""
         if not name or not name.strip():
             raise ValueError("Project name cannot be empty")
         project = Project(name=name.strip())
@@ -40,6 +48,7 @@ class ProjectManager:
         return project
 
     def get(self, project_id: str) -> Project:
+        """Get a project by ID, supporting prefix lookup."""
         if project_id in self._projects:
             return self._projects[project_id]
         # support short prefix lookup (e.g. first 8 chars shown by list)
@@ -51,9 +60,11 @@ class ProjectManager:
         raise ProjectNotFoundError(f"Project '{project_id}' not found")
 
     def list_all(self) -> list[Project]:
+        """List all projects."""
         return list(self._projects.values())
 
     def update(self, project_id: str, name: str) -> Project:
+        """Update a project."""
         if not name or not name.strip():
             raise ValueError("Project name cannot be empty")
         project = self.get(project_id)
@@ -62,6 +73,7 @@ class ProjectManager:
         return project
 
     def delete(self, project_id: str) -> None:
+        """Delete a project."""
         project = self.get(project_id)  # resolves prefix; raises if missing
         del self._projects[project.id]
         self._persist()

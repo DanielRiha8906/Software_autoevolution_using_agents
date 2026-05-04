@@ -1,7 +1,8 @@
-from enum import Enum
+"""Task status enumeration (backward compatibility wrapper).
 
+Re-exports from the new layers/models structure.
+"""
 
-class TaskStatus(Enum):
-    PENDING = "pending"
-    IN_PROGRESS = "in_progress"
-    DONE = "done"
+from ..layers.models.task_status import TaskStatus
+
+__all__ = ["TaskStatus"]

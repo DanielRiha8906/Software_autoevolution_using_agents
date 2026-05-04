@@ -1,0 +1,105 @@
+@startuml architecture
+
+!define LAYER_COLOR #E1F5FE
+!define SERVICE_COLOR #FFF9C4
+!define MODEL_COLOR #F3E5F5
+!define STORAGE_COLOR #E8F5E9
+!define CLI_COLOR #FFE0B2
+
+skinparam packageBackgroundColor<<layer>> LAYER_COLOR
+skinparam packageBorderColor #0277BD
+skinparam classBorderColor #0277BD
+skinparam classBackgroundColor #F5F5F5
+
+left to right direction
+
+' ============================================================================
+' CLI LAYER (top)
+' ============================================================================
+package "5. CLI Layer" <<layer>> {
+    class TodoCLI <<cli>>
+    class InteractiveMenu <<cli>>
+}
+
+' ============================================================================
+' SERVICES LAYER
+' ============================================================================
+package "4. Services Layer" <<layer>> {
+    class TodoService <<service>>
+    class TaskService <<service>>
+    class CommentService <<service>>
+    class ProjectService <<service>>
+    class StatisticsService <<service>>
+    class ImportExportService <<service>>
+}
+
+' ============================================================================
+' REPOSITORIES LAYER
+' ============================================================================
+package "3. Repositories Layer" <<layer>> {
+    interface TaskRepository <<protocol>>
+    interface CommentRepository <<protocol>>
+    interface ProjectRepository <<protocol>>
+    class JsonTaskRepository <<impl>>
+    class JsonCommentRepository <<impl>>
+    class JsonProjectRepository <<impl>>
+}
+
+' ============================================================================
+' MODELS LAYER
+' ============================================================================
+package "2. Models Layer" <<layer>> {
+    class Task <<domain>>
+    enum TaskStatus <<enum>>
+    class TaskComment <<domain>>
+    class Project <<domain>>
+    class TaskStatistics <<value>>
+}
+
+' ============================================================================
+' STORAGE LAYER
+' ============================================================================
+package "1. Storage Layer" <<layer>> {
+    interface StorageProtocol <<protocol>>
+    class JsonStorage <<impl>>
+}
+
+' ============================================================================
+' DEPENDENCIES (downward flow only, no cycles)
+' ============================================================================
+
+' CLI → Services
+TodoCLI --> TodoService : uses
+InteractiveMenu --> TodoService : uses
+TodoCLI --> StatisticsService : uses
+TodoCLI --> ImportExportService : uses
+
+' Services → Repositories (TodoService coordinates all services)
+TodoService --> TaskService : delegates
+TodoService --> CommentService : delegates
+TodoService --> ProjectService : delegates
+TaskService --> TaskRepository : uses
+CommentService --> CommentRepository : uses
+ProjectService --> ProjectRepository : uses
+
+' Repositories → Models
+JsonTaskRepository --> Task : creates/reads
+JsonTaskRepository --> TaskStatus : uses
+JsonCommentRepository --> TaskComment : creates/reads
+JsonProjectRepository --> Project : creates/reads
+
+' Repositories → Storage
+JsonTaskRepository --> JsonStorage : persists
+JsonCommentRepository --> JsonStorage : persists
+JsonProjectRepository --> JsonStorage : persists
+
+' Services → Models (for return types, statistics)
+TaskService --> Task : returns
+CommentService --> TaskComment : returns
+ProjectService --> Project : returns
+StatisticsService --> TaskStatistics : returns
+
+' Storage abstraction
+JsonStorage --|> StorageProtocol : implements
+
+@enduml
