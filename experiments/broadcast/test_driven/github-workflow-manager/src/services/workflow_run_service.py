@@ -2,6 +2,7 @@ from typing import List, Optional
 from datetime import datetime
 
 from ..models.workflow_run import WorkflowRun
+from ..models.workflow_run_attempt import WorkflowRunAttempt
 from ..models.workflow_status import WorkflowStatus
 from ..models.workflow_conclusion import WorkflowConclusion
 from ..storage.workflow_json_storage import WorkflowJsonStorage
@@ -18,6 +19,37 @@ class WorkflowRunService:
     def attempt_service(self) -> Optional[AttemptService]:
         """Get the attempt service instance."""
         return self._attempt_service
+
+    def get_attempts_for_run(self, run_id: str) -> List[WorkflowRunAttempt]:
+        """Get all attempts for a specific run.
+
+        This public API provides access to attempts without exposing
+        the internal attempt service.
+
+        Args:
+            run_id: The run ID to fetch attempts for.
+
+        Returns:
+            A list of WorkflowRunAttempt objects for the run, or empty list if no attempts or service unavailable.
+        """
+        if self._attempt_service is None:
+            return []
+        return self._attempt_service.get_by_run_id(run_id)
+
+    def add_attempt(self, attempt: WorkflowRunAttempt) -> None:
+        """Add an attempt to a workflow run.
+
+        This public API manages attempts without exposing the internal attempt service.
+
+        Args:
+            attempt: The WorkflowRunAttempt to add.
+
+        Raises:
+            ValueError: If the attempt service is not configured or if a duplicate attempt exists.
+        """
+        if self._attempt_service is None:
+            raise ValueError("Attempt service is not configured")
+        self._attempt_service.create(attempt)
 
     def _persist(self) -> None:
         self._storage.save(self._runs)
@@ -86,8 +118,8 @@ class WorkflowRunService:
             if created_after is not None and run.created_at < created_after:
                 continue
 
-            if has_attempts is not None and self._attempt_service is not None:
-                attempts = self._attempt_service.get_by_run_id(run.id)
+            if has_attempts is not None:
+                attempts = self.get_attempts_for_run(run.id)
                 has_any_attempts = len(attempts) > 0
 
                 if has_attempts and not has_any_attempts:

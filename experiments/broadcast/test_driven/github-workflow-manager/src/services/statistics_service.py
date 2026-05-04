@@ -55,10 +55,9 @@ class WorkflowStatisticsService:
         # Average attempts per run
         # Count total attempts across all runs
         total_attempts = 0
-        if self._run_service._attempt_service is not None:
-            for run in runs:
-                attempts = self._run_service._attempt_service.get_by_run_id(run.id)
-                total_attempts += len(attempts)
+        for run in runs:
+            attempts = self._run_service.get_attempts_for_run(run.id)
+            total_attempts += len(attempts)
 
         # avg_attempts_per_run counts all runs, including those with zero attempts
         avg_attempts = total_attempts / len(runs) if runs else 0.0

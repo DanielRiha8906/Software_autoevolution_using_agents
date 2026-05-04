@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-from src.services.github_fetch_service import GitHubFetchService
+from src.integrations.github_fetch_service import GitHubFetchService
 from src.models.workflow_run import WorkflowRun
 
 
@@ -81,7 +81,7 @@ def test_gh_cli_failure_raises(monkeypatch):
 
 
 def test_no_requests_usage():
-    from src.services import github_fetch_service
+    from src.integrations import github_fetch_service
     import inspect
     source = inspect.getsource(github_fetch_service)
     assert "requests" not in source
