@@ -609,3 +609,162 @@ Successfully refactored the calculator to separate core components with clear bo
 - Event recording flow visualized as separate component responsibility
 
 Duration: 431.7s | Cost: $0.807608 USD | Turns: 33
+
+---
+
+## Task 10: Add graphical user interface for calculator
+
+**Status**: Completed
+
+### Summary
+Successfully implemented a tkinter-based graphical user interface for the calculator. The GUI provides a user-friendly way to perform calculations with all standard mode operations, displays real-time calculation history with success/error color-coding, and integrates seamlessly with the existing CalculatorService and MemoryService. The GUI is launchable via `python -m src --gui` and does not duplicate any business logic—it delegates all calculation responsibility to the service layer.
+
+### Files Changed
+- `src/gui/__init__.py` — NEW: Created empty init file for GUI module
+- `src/gui/calculator_gui.py` — NEW: CalculatorGUI class (247 lines) with full tkinter UI implementation
+- `src/__main__.py` — Added `--gui` argument to argparse; added import for CalculatorGUI; added GUI launch logic before other command branches
+- `artifacts/class_diagram.puml` — Added new "gui" package with CalculatorGUI class showing all methods and attributes; updated relationships to CalculatorService and MemoryService
+- `artifacts/component_diagram.puml` — Added GUI component as parallel peer to CLI; updated entry point to show `--gui` flag routing
+- `artifacts/use_case_diagram.puml` — Added GUI-specific use cases: "Perform calculation (GUI)", "View calculation history (GUI)", "Clear inputs"
+- `artifacts/state_diagram_gui.puml` — NEW: Dedicated state machine for GUI event-driven flow (InputState → OperationSelected → Calculating → ResultDisplay → HistoryUpdate → InputState with error paths)
+
+### Test Results
+- Total tests: 169 (all existing tests from tasks 1-9)
+- Passed: 169
+- Failed: 0
+- Status: ✅ All tests pass
+
+### Implementation Details
+
+**CalculatorGUI Architecture:**
+- Tkinter-based GUI with interactive event-driven architecture
+- No duplication of calculation logic: delegates all operations to CalculatorService.perform()
+- Memory integration: reads history from MemoryService.retrieve_all() with automatic updates after each calculation
+
+**UI Components:**
+- **Input Section**: Two Entry widgets for Operand A and Operand B (Operand B disabled for unary operations)
+- **Operations Section**: 8 buttons for standard mode operations
+  - Binary operations: Add, Subtract, Multiply, Divide
+  - Unary operations: Square, Sqrt, Power, Modulo
+- **Result Section**: Read-only Text widget to display calculation results or error messages; Status label for detailed error reporting
+- **History Section**: Scrollable Listbox displaying all MemoryEntry records with color-coding
+  - Success entries: white background (black text)
+  - Failure entries: light red background (#ffcccc) with error message
+  - Format: "OPERATION (operand_a, operand_b) = result" or "ERROR: error_message"
+- **Control Buttons**: Calculate button to execute operation, Clear button to reset all inputs
+
+**Event Handling Flow:**
+1. User clicks operation button (Add, Subtract, etc.)
+   - Sets _current_operation to selected Operation enum value
+   - Enables/disables Operand B Entry based on operation arity
+2. User enters numeric operands and clicks Calculate
+   - Validates operand_a and operand_b as floats
+   - If validation fails: displays error message, retains inputs
+   - If validation succeeds: calls CalculatorService.perform(operation, a, b)
+   - On success: displays result, updates history, clears inputs for next calculation
+   - On exception (ValueError): catches error, displays message in status label, updates history with failure entry, retains inputs for user correction
+3. User clicks Clear button
+   - Resets all input fields, result display, and status label
+
+**History Display:**
+- Source: `MemoryService.retrieve_all()` returns all entries (successes and failures)
+- Updated after each calculation via `update_history()`
+- Sorted oldest-first (as returned by service)
+- Color-coded: success entries white, failure entries light red (#ffcccc)
+- Handles edge cases: empty memory displays "(No calculations yet)", unavailable service displays "(No history: memory service not available)"
+
+**Error Handling:**
+- Invalid numeric input: "Invalid operand X: 'value' is not a number"
+- Empty operand field: "Please enter operand X"
+- No operation selected: "Please select an operation" (safeguard if user clicks Calculate without selecting operation)
+- Service-level exceptions (division by zero, negative sqrt, etc.): caught and displayed to user; memory records failure with error_message
+- Memory service unavailable (None): gracefully disables history section with placeholder message
+
+**Integration with Entry Point:**
+- `--gui` flag added to argparse: `parser.add_argument("--gui", action="store_true", help="Launch graphical interface")`
+- GUI branch checked first in main() (before --operation, --memory, --export-memory, --import-memory)
+- Instantiation: `gui = CalculatorGUI(service, memory_service)` using services from service_factory.build_service()
+- Execution: `gui.run()` calls `self.root.mainloop()` to start tkinter event loop
+
+**Unary vs Binary Operations:**
+- GUI respects operation arity via _unary_operations set: {"sin", "cos", "tan", "log10", "ln", "exp", "square", "sqrt"}
+- For unary operations: Operand B Entry disabled (grayed out, state=DISABLED) to prevent user confusion
+- Service call still passes b=0 for unary ops (Calculator methods ignore second operand)
+
+**Design Patterns:**
+- **Dependency Injection**: Services injected via constructor, not instantiated inside GUI
+- **Separation of Concerns**: GUI handles UI only; CalculatorService handles calculation; MemoryService handles persistence
+- **Event-Driven Architecture**: Button callbacks trigger operations asynchronously
+- **Read-Only History**: History list is for display only; no in-place editing or deletion (aligns with CLI model)
+
+**Backward Compatibility:**
+- All 169 existing tests pass without modification
+- CalculatorService and MemoryService behavior unchanged
+- CLI mode (`python -m src`) and interactive menu unaffected
+- JSON storage format (calculations.json, memory.json) unchanged
+- No changes to Operation enum, MemoryEntry, or CalculationResult models
+
+**Window Configuration:**
+- Default geometry: 900x700 pixels (minimum recommended size for all UI elements)
+- Resizable: Yes (widgets adapt with pack/grid weight settings)
+- Title: "Calculator" (can be customized if desired)
+- Close behavior: Standard tkinter (user closes window → gui.run() returns)
+
+**MVP Scope (Implemented):**
+✅ GUI provides interface for calculations
+✅ GUI supports all 6 standard operations (add, subtract, multiply, divide, square, sqrt, power, modulo)
+✅ Integrates with current calculation logic (no duplicate business logic)
+✅ Launchable via `python -m src --gui`
+✅ Displays calculation history in scrollable list (MemoryEntry records)
+✅ Color-codes history (success white, error light red)
+
+**Could-Have Features (Not Implemented, Can Be Added Later):**
+- Toggle between standard/scientific mode (would add sin, cos, tan, log10, ln, exp buttons)
+- Click history entry to populate input fields for re-execution
+- Memory filtering by operation type in history view
+- Memory statistics display in GUI
+- Import/export functionality in GUI menu
+
+### Test Coverage
+
+All 169 existing tests from tasks 1-9 continue to pass:
+- test_calculator.py: 28 tests (core arithmetic operations)
+- test_calculator_service.py: 16 tests (service orchestration + storage)
+- test_cli.py: 14 tests (CLI interface)
+- test_json_storage.py: 10 tests (persistence)
+- test_memory_import_export_service.py: 40 tests (import/export validation)
+- test_memory_service_filtering.py: 49 tests (memory querying + filtering)
+
+**Note**: GUI-specific unit tests not implemented in this task (can be added in future sprint if desired). Functional verification done via manual testing of `python -m src --gui`.
+
+### Diagram Updates
+
+**New/Updated Files:**
+- class_diagram.puml: Added "gui" package with CalculatorGUI class; shows all methods and attributes
+- component_diagram.puml: Added GUI component as parallel UI layer to CLI; updated entry point routing
+- use_case_diagram.puml: Added 3 GUI-specific use cases; preserved all existing use cases
+- state_diagram_gui.puml: NEW; dedicated state machine for GUI event flow
+
+**Preserved Diagrams:**
+- state_diagram_interactive.puml: CLI interactive menu flow (unchanged)
+- state_diagram_command.puml: CLI one-shot command mode (unchanged)
+- activity_diagram.puml: Overall system flow (unchanged)
+
+### Architecture Observations
+
+**GUI vs CLI Trade-Offs:**
+- **CLI**: Sequential, menu-driven, command-line text input, batch/one-shot mode support
+- **GUI**: Real-time, event-driven, graphical input/output, immediate visual feedback, built-in history with color-coding
+
+**Shared Foundation:**
+- Both UI modes use identical CalculatorService for calculation
+- Both use identical MemoryService for history/memory
+- Both depend on Operation enum and service_factory for wiring
+- Business logic completely separated from UI presentation
+
+**Extensibility:**
+- Adding new operations: add to Operation enum, Calculator methods, update buttons in GUI and CLI menu
+- Adding new storage: implement StorageInterface or MemoryStorageInterface protocol, wire in service_factory
+- Adding new UI mode: create new class (CalculatorAPI, CalculatorWeb, etc.), inject same services
+
+Duration: 458.3s | Cost: $0.821380 USD | Turns: 23

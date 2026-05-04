@@ -206,10 +206,41 @@ package "cli" #FFE5E5 {
     }
 }
 
+package "gui" #F0E5FF {
+    class CalculatorGUI {
+        -service : CalculatorService
+        -memory_service : MemoryService [0..1]
+        -root : Tk
+        -operand_a_var : StringVar
+        -operand_b_var : StringVar
+        -_current_operation : Operation | None
+        -_unary_operations : Set<Operation>
+        -result_text : Text
+        -history_listbox : Listbox [0..1]
+        -status_label : Label
+        --
+        +CalculatorGUI(service: CalculatorService, memory_service: MemoryService | None)
+        +run() : void
+        +setup_ui() : void
+        +perform_calculation() : void
+        +update_history() : void
+        +clear_inputs() : void
+        -_on_operation_button_click(operation: Operation) : void
+        -_get_float_operand(operand_name: str) : float | None
+        -_is_unary_operation(operation: Operation) : bool
+        -_display_result(result: float) : void
+        -_display_error(error_message: str) : void
+        -_format_history_entry(entry: MemoryEntry) : str
+    }
+}
+
 CalculatorCLI --> CalculatorService : service
 CalculatorCLI ..> MemoryService : memory_service [0..1]
 CalculatorCLI ..> MemoryImportExportService : import_export_service [0..1]
 CalculatorCLI ..> MemoryStatistics : displays
+CalculatorGUI --> CalculatorService : service
+CalculatorGUI ..> MemoryService : memory_service [0..1]
+CalculatorGUI ..> MemoryEntry : displays
 CalculatorService --> Calculator : calculator
 CalculatorService --> StorageInterface : storage
 CalculatorService ..> MemoryRepository : memory_service [0..1]
