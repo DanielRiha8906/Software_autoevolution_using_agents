@@ -6,15 +6,18 @@ from ..models.task_comment import TaskComment
 from ..models.task_status import TaskStatus
 from ..models.task_summary import TaskSummary
 from ..models.filter_options import FilterOptions
+from ..models.project import Project
 from ..storage.json_storage import JsonStorage
 from .task_manager import TaskManager
 from .comments_service import CommentsService
+from .project_manager import ProjectManager
 
 
 class TodoService:
     def __init__(self, storage: Optional[JsonStorage] = None) -> None:
         self._manager = TaskManager(storage)
         self._comments_service = CommentsService(self._manager, storage)
+        self._project_manager = ProjectManager(storage)
 
     def add_task(self, title: str, description: Optional[str] = None) -> Task:
         if not title or not title.strip():
@@ -123,6 +126,62 @@ class TodoService:
     def edit_comment(self, comment_id: str, content: str) -> TaskComment:
         """Edit a comment's content."""
         return self._comments_service.edit_comment(comment_id, content)
+
+    # Project management methods
+    def create_project(self, name: str) -> Project:
+        """Create a new project."""
+        return self._project_manager.add(name)
+
+    def get_project(self, project_id: str) -> Project:
+        """Get a project by ID."""
+        return self._project_manager.get(project_id)
+
+    def list_projects(self) -> list[Project]:
+        """List all projects."""
+        return self._project_manager.list_all()
+
+    def update_project(self, project_id: str, name: str) -> Project:
+        """Update a project's name."""
+        return self._project_manager.update(project_id, name)
+
+    def delete_project(self, project_id: str) -> None:
+        """Delete a project (tasks remain unassigned)."""
+        # Unassign all tasks in this project
+        tasks_in_project = self._manager.list_by_project(project_id)
+        for task in tasks_in_project:
+            task.project_id = None
+        if tasks_in_project:
+            self._manager._persist()
+        # Delete the project itself
+        self._project_manager.delete(project_id)
+
+    def list_tasks_by_project(self, project_id: str) -> list[Task]:
+        """List all tasks in a specific project."""
+        # Verify the project exists
+        self._project_manager.get(project_id)
+        # Return tasks with this project_id
+        return [t for t in self._manager.list_all() if t.project_id == project_id]
+
+    def list_unassigned_tasks(self) -> list[Task]:
+        """List all tasks not assigned to any project."""
+        return [t for t in self._manager.list_all() if t.project_id is None]
+
+    def assign_task_to_project(self, task_id: str, project_id: str) -> Task:
+        """Assign a task to a project."""
+        # Verify the project exists
+        self._project_manager.get(project_id)
+        # Get the task and update its project_id
+        task = self._manager.get(task_id)
+        task.project_id = project_id
+        self._manager._persist()
+        return task
+
+    def unassign_task_from_project(self, task_id: str) -> Task:
+        """Remove a task from its project."""
+        task = self._manager.get(task_id)
+        task.project_id = None
+        self._manager._persist()
+        return task
 
     def generate_report(self) -> TaskSummary:
         """Generate a summary report of all tasks."""

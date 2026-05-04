@@ -20,6 +20,7 @@ class Task:
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     due_date: Optional[datetime] = None
+    project_id: Optional[str] = None  # UUID of project this task belongs to, or None for unassigned
 
     def __post_init__(self) -> None:
         """Validate due_date after initialization."""
@@ -43,6 +44,8 @@ class Task:
             # Store the timezone key if it's a ZoneInfo for proper deserialization
             if isinstance(self.due_date.tzinfo, ZoneInfo):
                 result["due_date_tz"] = self.due_date.tzinfo.key
+        if self.project_id is not None:
+            result["project_id"] = self.project_id
         return result
 
     @classmethod
@@ -66,6 +69,7 @@ class Task:
             created_at=datetime.fromisoformat(data["created_at"]),
             updated_at=datetime.fromisoformat(data["updated_at"]),
             due_date=due_date,
+            project_id=data.get("project_id"),
         )
 
     def mark_in_progress(self) -> None:

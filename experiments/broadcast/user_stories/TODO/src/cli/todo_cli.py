@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 from ..models.task_status import TaskStatus
 from ..services.comments_service import CommentNotFoundError
 from ..services.import_export_service import ImportExportService
+from ..services.project_manager import ProjectNotFoundError
 from ..services.task_manager import TaskNotFoundError
 from ..services.todo_service import TodoService
 from ..storage.json_storage import JsonStorage
@@ -32,7 +33,7 @@ class TodoCLI:
             return 0
         try:
             return args.func(args)
-        except (TaskNotFoundError, CommentNotFoundError) as e:
+        except (TaskNotFoundError, CommentNotFoundError, ProjectNotFoundError) as e:
             print(f"Error: {e}", file=sys.stderr)
             return 1
         except (ValueError, FileNotFoundError) as e:
@@ -168,6 +169,48 @@ class TodoCLI:
         p_import.add_argument("filepath", help="Path to import JSON file")
         p_import.add_argument("--merge", action="store_true", default=True, help="Merge with existing data (default)")
         p_import.set_defaults(func=self._cmd_import)
+
+        # project commands
+        # create-project
+        p_create_project = sub.add_parser("create-project", help="Create a new project")
+        p_create_project.add_argument("name", help="Project name")
+        p_create_project.set_defaults(func=self._cmd_create_project)
+
+        # list-projects
+        p_list_projects = sub.add_parser("list-projects", help="List all projects")
+        p_list_projects.set_defaults(func=self._cmd_list_projects)
+
+        # show-project
+        p_show_project = sub.add_parser("show-project", help="Show project details")
+        p_show_project.add_argument("id", help="Project ID")
+        p_show_project.set_defaults(func=self._cmd_show_project)
+
+        # update-project
+        p_update_project = sub.add_parser("update-project", help="Update a project's name")
+        p_update_project.add_argument("id", help="Project ID")
+        p_update_project.add_argument("name", help="New project name")
+        p_update_project.set_defaults(func=self._cmd_update_project)
+
+        # delete-project
+        p_delete_project = sub.add_parser("delete-project", help="Delete a project")
+        p_delete_project.add_argument("id", help="Project ID")
+        p_delete_project.set_defaults(func=self._cmd_delete_project)
+
+        # list-tasks-by-project
+        p_list_tasks_by_project = sub.add_parser("list-tasks-by-project", help="List tasks in a project")
+        p_list_tasks_by_project.add_argument("project_id", help="Project ID")
+        p_list_tasks_by_project.set_defaults(func=self._cmd_list_tasks_by_project)
+
+        # assign-task-to-project
+        p_assign_task = sub.add_parser("assign-task-to-project", help="Assign a task to a project")
+        p_assign_task.add_argument("task_id", help="Task ID")
+        p_assign_task.add_argument("project_id", help="Project ID")
+        p_assign_task.set_defaults(func=self._cmd_assign_task_to_project)
+
+        # unassign-task-from-project
+        p_unassign_task = sub.add_parser("unassign-task-from-project", help="Remove a task from a project")
+        p_unassign_task.add_argument("task_id", help="Task ID")
+        p_unassign_task.set_defaults(func=self._cmd_unassign_task_from_project)
 
         return parser
 
@@ -321,4 +364,112 @@ class TodoCLI:
         summary = self._import_export.import_from_file(args.filepath, merge=args.merge)
         print(f"Import Summary:")
         print(summary)
+        return 0
+
+    def _cmd_create_project(self, args: argparse.Namespace) -> int:
+        project = self._service.create_project(args.name)
+        print(f"Created project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_list_projects(self, args: argparse.Namespace) -> int:
+        projects = self._service.list_projects()
+        if not projects:
+            print("No projects found.")
+            return 0
+        for project in projects:
+            print(f"  {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_show_project(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        print(f"ID:         {project.id}")
+        print(f"Name:       {project.name}")
+        print(f"Created:    {project.created_at.isoformat()}")
+        return 0
+
+    def _cmd_update_project(self, args: argparse.Namespace) -> int:
+        project = self._service.update_project(args.id, args.name)
+        print(f"Updated project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_delete_project(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        self._service.delete_project(args.id)
+        print(f"Deleted project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_list_tasks_by_project(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.project_id)
+        tasks = self._service.list_tasks_by_project(args.project_id)
+        if not tasks:
+            print(f"No tasks in project '{project.name}'.")
+            return 0
+        print(f"Tasks in project '{project.name}':")
+        for task in tasks:
+            sym = _STATUS_SYMBOLS[task.status]
+            desc = f"  {task.description}" if task.description else ""
+            print(f"{sym} {task.id[:8]}  {task.title}{desc}")
+        return 0
+
+    def _cmd_assign_task_to_project(self, args: argparse.Namespace) -> int:
+        task = self._service.assign_task_to_project(args.task_id, args.project_id)
+        project = self._service.get_project(args.project_id)
+        print(f"Assigned task {task.id[:8]} to project '{project.name}'")
+        return 0
+
+    def _cmd_unassign_task_from_project(self, args: argparse.Namespace) -> int:
+        task = self._service.unassign_task_from_project(args.task_id)
+        print(f"Unassigned task {task.id[:8]} from project")
+        return 0
+
+    def _cmd_create_project(self, args: argparse.Namespace) -> int:
+        project = self._service.create_project(args.name)
+        print(f"Created project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_list_projects(self, args: argparse.Namespace) -> int:
+        projects = self._service.list_projects()
+        if not projects:
+            print("No projects found.")
+            return 0
+        for project in projects:
+            print(f"  {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_show_project(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        print(f"ID:    {project.id}")
+        print(f"Name:  {project.name}")
+        return 0
+
+    def _cmd_update_project(self, args: argparse.Namespace) -> int:
+        project = self._service.update_project(args.id, args.name)
+        print(f"Updated project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_delete_project(self, args: argparse.Namespace) -> int:
+        project = self._service.get_project(args.id)
+        self._service.delete_project(args.id)
+        print(f"Deleted project {project.id[:8]}  {project.name}")
+        return 0
+
+    def _cmd_list_tasks_by_project(self, args: argparse.Namespace) -> int:
+        tasks = self._service.list_tasks_by_project(args.project_id)
+        if not tasks:
+            print("No tasks in this project.")
+            return 0
+        for task in tasks:
+            sym = _STATUS_SYMBOLS[task.status]
+            desc = f"  {task.description}" if task.description else ""
+            print(f"{sym} {task.id[:8]}  {task.title}{desc}")
+        return 0
+
+    def _cmd_assign_task_to_project(self, args: argparse.Namespace) -> int:
+        task = self._service.assign_task_to_project(args.task_id, args.project_id)
+        print(f"Assigned task {task.id[:8]} to project {args.project_id[:8]}")
+        return 0
+
+    def _cmd_unassign_task_from_project(self, args: argparse.Namespace) -> int:
+        task = self._service.unassign_task_from_project(args.task_id)
+        print(f"Unassigned task {task.id[:8]} from project")
         return 0
