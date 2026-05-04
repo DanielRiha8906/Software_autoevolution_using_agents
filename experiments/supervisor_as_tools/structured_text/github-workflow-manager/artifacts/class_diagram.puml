@@ -174,26 +174,26 @@ package "services" #DDFFD4 {
     }
 
     class DataPortabilityService {
+        -_file_handler : FileHandler
         --
+        +__init__(file_handler: Optional[FileHandler])
         +export_data(service: WorkflowRunService,\n  attempt_service: AttemptService,\n  output_path: str) : ExportResult
         +import_data(service: WorkflowRunService,\n  attempt_service: AttemptService,\n  input_path: str,\n  skip_duplicates: bool,\n  skip_invalid: bool) : ImportResult
     }
 
     class GitHubFetchService {
-        -owner         : str
-        -repo          : str
-        -token         : Optional[str]
-        -base_url      : str
-        -timeout       : int
+        -owner              : str
+        -repo               : str
+        -token              : Optional[str]
+        -base_url           : str
+        -github_api_client  : GitHubAPIClient
+        -data_mapper        : GitHubDataMapper
         --
-        +__init__(owner: str, repo: str,\n  token: Optional[str],\n  base_url: str, timeout: int)
+        +__init__(owner: str, repo: str,\n  github_api_client: Optional[GitHubAPIClient],\n  data_mapper: Optional[GitHubDataMapper],\n  token: Optional[str],\n  base_url: str)
         +fetch_workflow_runs(workflow_id: Optional[str],\n  status: Optional[str],\n  conclusion: Optional[str],\n  limit: int) : List[WorkflowRun]
         +fetch_workflow_run_detail(run_id: str) : WorkflowRun
         +get_available_workflows() : List[dict]
-        -_make_request(endpoint: str,\n  params: Optional[dict]) : dict
-        -_map_github_run_to_workflow_run(github_run: dict) : WorkflowRun
         -_validate_params(status: Optional[str],\n  conclusion: Optional[str],\n  limit: int) : None
-        -_parse_datetime(iso_string: str) : datetime
     }
 
     class PortabilityEnvelope {
@@ -218,6 +218,43 @@ package "services" #DDFFD4 {
         +attempts_failed : int
         +errors : List[str]
     }
+}
+
+package "adapters" #FFCCCC {
+    interface GitHubAPIClient {
+        {abstract} +make_request(endpoint: str,\n  params: Optional[dict]) : dict
+    }
+
+    interface GitHubDataMapper {
+        {abstract} +parse_datetime(iso_string: str) : datetime
+        {abstract} +map_github_run_to_workflow_run(github_run: dict) : WorkflowRun
+    }
+
+    interface FileHandler {
+        {abstract} +export_to_file(data: dict,\n  output_path: str) : str
+        {abstract} +import_from_file(input_path: str) : dict
+    }
+
+    class GhCliGitHubAdapter {
+        -timeout : int
+        --
+        +__init__(timeout: int)
+        +make_request(endpoint: str,\n  params: Optional[dict]) : dict
+    }
+
+    class GithubDataMapperImpl {
+        +parse_datetime(iso_string: str) : datetime
+        +map_github_run_to_workflow_run(github_run: dict) : WorkflowRun
+    }
+
+    class JsonFileAdapter {
+        +export_to_file(data: dict,\n  output_path: str) : str
+        +import_from_file(input_path: str) : dict
+    }
+
+    GhCliGitHubAdapter     --|> GitHubAPIClient
+    GithubDataMapperImpl    --|> GitHubDataMapper
+    JsonFileAdapter        --|> FileHandler
 }
 
 package "cli" #FFE5E5 {
@@ -262,11 +299,18 @@ AttemptService            ..>  WorkflowRunAttempt
 StatisticsService    "1" --> "1" WorkflowRunService  : -_workflow_run_service
 StatisticsService    "1" --> "1" AttemptService      : -_attempt_service
 StatisticsService         ..>  WorkflowStatistics    : returns
+DataPortabilityService "1" --> "1" FileHandler : -_file_handler
 DataPortabilityService     ..>  WorkflowRunService
 DataPortabilityService     ..>  AttemptService
 DataPortabilityService     ..>  ExportResult
 DataPortabilityService     ..>  ImportResult
 DataPortabilityService     ..>  PortabilityEnvelope
+GitHubFetchService    "1" --> "1" GitHubAPIClient    : -github_api_client
+GitHubFetchService    "1" --> "1" GitHubDataMapper   : -data_mapper
+GitHubFetchService         ..>  WorkflowRun
+GitHubFetchService         ..>  WorkflowStatus
+GitHubFetchService         ..>  WorkflowConclusion
+GitHubFetchService         ..x  GitHubException
 "workflow_cli"             ..>  WorkflowRunService
 "workflow_cli"             ..>  AttemptService
 "workflow_cli"             ..>  StatisticsService
@@ -281,9 +325,5 @@ DataPortabilityService     ..>  PortabilityEnvelope
 "interactive_menu"         ..>  DataPortabilityService
 "interactive_menu"         ..>  GitHubFetchService
 "interactive_menu"         ..>  GitHubException
-GitHubFetchService         ..>  WorkflowRun
-GitHubFetchService         ..>  WorkflowStatus
-GitHubFetchService         ..>  WorkflowConclusion
-GitHubFetchService         ..x GitHubException
 
 @enduml

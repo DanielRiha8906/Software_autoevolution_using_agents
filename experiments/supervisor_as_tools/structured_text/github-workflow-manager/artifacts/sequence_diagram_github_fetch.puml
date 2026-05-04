@@ -1,11 +1,14 @@
 @startuml sequence_diagram_github_fetch
 
-title GitHub Fetch Flow
+title GitHub Fetch Flow with Adapter Layer
 
 actor User
 participant "CLI / Interactive Menu" as CLIENT
 participant "GitHubFetchService" as GH_SERVICE
+participant "GitHubAPIClient" as GH_CLIENT
+participant "GhCliGitHubAdapter" as GH_ADAPTER
 participant "GitHub API" as GH_API
+participant "GitHubDataMapper" as GH_MAPPER
 participant "WorkflowRunService" as WF_SERVICE
 participant "WorkflowJsonStorage" as STORAGE
 
@@ -17,7 +20,7 @@ Client -> CLIENT: Prompt for optional filters (workflow_id, status, conclusion, 
 
 User -> CLIENT: Provide credentials and filters
 activate GH_SERVICE
-Client -> GH_SERVICE: __init__(owner, repo, token)
+Client -> GH_SERVICE: __init__(owner, repo, github_api_client, data_mapper)
 deactivate GH_SERVICE
 
 Client -> GH_SERVICE: fetch_workflow_runs(workflow_id, status, conclusion, limit)
@@ -29,21 +32,33 @@ GH_SERVICE -> GH_SERVICE: Check limits and valid enums
 deactivate GH_SERVICE
 
 GH_SERVICE -> GH_SERVICE: Build request endpoint and params
-GH_SERVICE -> GH_SERVICE: _make_request(endpoint, params)
-activate GH_SERVICE
+GH_SERVICE -> GH_CLIENT: make_request(endpoint, params)
+activate GH_CLIENT
 
-GH_SERVICE -> GH_API: gh api GET /repos/{owner}/{repo}/actions/runs
+GH_CLIENT -> GH_ADAPTER: make_request(endpoint, params)
+activate GH_ADAPTER
+
+GH_ADAPTER -> GH_API: gh api GET /repos/{owner}/{repo}/actions/runs
 activate GH_API
-GH_API -> GH_SERVICE: JSON response with workflow_runs array
+GH_API -> GH_ADAPTER: JSON response with workflow_runs array
 deactivate GH_API
 
-GH_SERVICE -> GH_SERVICE: Parse JSON response
-GH_SERVICE -> GH_SERVICE: For each workflow_run, _map_github_run_to_workflow_run()
-activate GH_SERVICE
-GH_SERVICE -> GH_SERVICE: Convert GitHub run dict to WorkflowRun model
-GH_SERVICE -> GH_SERVICE: Parse timestamps, map status/conclusion enums
-deactivate GH_SERVICE
-deactivate GH_SERVICE
+GH_ADAPTER -> GH_CLIENT: Return parsed JSON
+deactivate GH_ADAPTER
+
+GH_CLIENT -> GH_SERVICE: Return API response
+deactivate GH_CLIENT
+
+GH_SERVICE -> GH_SERVICE: Parse response, extract workflow_runs array
+GH_SERVICE -> GH_SERVICE: For each workflow_run, call data mapper
+loop For each run in workflow_runs
+  GH_SERVICE -> GH_MAPPER: map_github_run_to_workflow_run(github_run)
+  activate GH_MAPPER
+  GH_MAPPER -> GH_MAPPER: parse_datetime() for timestamps
+  GH_MAPPER -> GH_MAPPER: Convert status/conclusion to enums
+  GH_MAPPER -> GH_SERVICE: Return WorkflowRun model instance
+  deactivate GH_MAPPER
+end
 
 GH_SERVICE -> CLIENT: Return List[WorkflowRun]
 deactivate GH_SERVICE
