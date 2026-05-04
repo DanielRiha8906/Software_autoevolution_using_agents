@@ -451,4 +451,4 @@ Candidate C was selected as the representative solution based on highest test sc
 - **Compliance:** Meets all 6 test requirements plus architectural constraints
 - **CLI Integration:** GUI launchable via interactive menu (next task: add `--gui` flag to CLI)
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 363.2s | Cost: $0.628303 USD | Turns: 40
