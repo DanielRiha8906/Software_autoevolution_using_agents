@@ -11,6 +11,12 @@ _SYMBOLS = {
     "sqrt": "√",
     "power": "^",
     "modulo": "%",
+    "sin": "sin",
+    "cos": "cos",
+    "tan": "tan",
+    "log10": "log10",
+    "ln": "ln",
+    "exp": "exp",
 }
 
 

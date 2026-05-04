@@ -42,13 +42,13 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
         description="OOP Calculator — run interactively or pass --operation for one-shot use",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A [B]] [--memory {list,detail,failures,summary,stats,clear} [ID]] [--export-memory FILE] [--import-memory FILE]",
+        usage="python -m src [--operation {add,subtract,multiply,divide,sin,cos,tan,log10,ln,exp,square,sqrt,power,modulo} A [B]] [--memory {list,detail,failures,summary,stats,clear} [ID]] [--export-memory FILE] [--import-memory FILE]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
-        choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
-        help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo) or filter memory by operation type (use with --memory list)",
+        choices=["add", "subtract", "multiply", "divide", "sin", "cos", "tan", "log10", "ln", "exp", "square", "sqrt", "power", "modulo"],
+        help="Operation to perform (add | subtract | multiply | divide | sin | cos | tan | log10 | ln | exp | square | sqrt | power | modulo) or filter memory by operation type (use with --memory list)",
     )
     parser.add_argument(
         "--memory",
@@ -144,7 +144,7 @@ def main() -> None:
 
     if args.operation:
         # Unary operations need 1 operand, binary operations need 2
-        unary_ops = {"square", "sqrt"}
+        unary_ops = {"square", "sqrt", "sin", "cos", "tan", "log10", "ln", "exp"}
         is_unary = args.operation in unary_ops
         required_operands = 1 if is_unary else 2
 

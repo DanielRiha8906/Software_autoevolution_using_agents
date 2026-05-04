@@ -14,6 +14,12 @@ rectangle "Calculator Application" {
     usecase "Take square root" as UC_Sqrt
     usecase "Raise to power" as UC_Power
     usecase "Perform modulo" as UC_Modulo
+    usecase "Use sine" as UC_Sin
+    usecase "Use cosine" as UC_Cos
+    usecase "Use tangent" as UC_Tan
+    usecase "Use log base 10" as UC_Log10
+    usecase "Use natural log" as UC_Ln
+    usecase "Use exponential" as UC_Exp
     usecase "View memory entries" as UC_Memory
     usecase "Query memory with filters" as UC_FilteredMemory
     usecase "View memory summary" as UC_Summary
@@ -32,6 +38,12 @@ User --> UC_Square
 User --> UC_Sqrt
 User --> UC_Power
 User --> UC_Modulo
+User --> UC_Sin
+User --> UC_Cos
+User --> UC_Tan
+User --> UC_Log10
+User --> UC_Ln
+User --> UC_Exp
 User --> UC_Memory
 User --> UC_FilteredMemory
 User --> UC_Summary
