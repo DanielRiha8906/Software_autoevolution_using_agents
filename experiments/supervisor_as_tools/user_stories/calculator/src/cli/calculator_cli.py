@@ -19,6 +19,12 @@ class CalculatorCLI:
         (Operation.SQRT,     "Sqrt"),
         (Operation.POWER,    "Power"),
         (Operation.MODULO,   "Modulo"),
+        (Operation.SIN,      "Sin"),
+        (Operation.COS,      "Cos"),
+        (Operation.TAN,      "Tan"),
+        (Operation.LOG,      "Log"),
+        (Operation.LN,       "Ln"),
+        (Operation.EXP,      "Exp"),
     ]
 
     def __init__(
@@ -182,7 +188,7 @@ class CalculatorCLI:
                 entries = self.memory_service.get_all_entries()
                 self._display_memory_entries(entries)
             elif choice == "2":
-                operation = input("  Enter operation name (add/subtract/multiply/divide/square/sqrt/power/modulo): ").strip()
+                operation = input("  Enter operation name (add/subtract/multiply/divide/square/sqrt/power/modulo/sin/cos/tan/log/ln/exp): ").strip()
                 if operation:
                     entries = self.memory_service.filter_by_operation(operation)
                     self._display_memory_entries(entries)
@@ -228,6 +234,12 @@ class CalculatorCLI:
         print(f"  Sqrt:     {stats.operation_counts['sqrt']}")
         print(f"  Power:    {stats.operation_counts['power']}")
         print(f"  Modulo:   {stats.operation_counts['modulo']}")
+        print(f"  Sin:      {stats.operation_counts['sin']}")
+        print(f"  Cos:      {stats.operation_counts['cos']}")
+        print(f"  Tan:      {stats.operation_counts['tan']}")
+        print(f"  Log:      {stats.operation_counts['log']}")
+        print(f"  Ln:       {stats.operation_counts['ln']}")
+        print(f"  Exp:      {stats.operation_counts['exp']}")
         print(f"\nTotal errors: {stats.total_errors}")
         print(f"Error rate: {stats.error_rate:.1f}%")
         print(f"Average execution time: {stats.avg_execution_time_ms:.2f} ms\n")

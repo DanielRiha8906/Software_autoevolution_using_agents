@@ -221,7 +221,7 @@ class TestInteractiveMemoryOption:
     def test_interactive_menu_has_view_memory_option(self, capsys):
         """Test interactive menu displays 'View memory entries' option."""
         cli = CalculatorCLI(MagicMock())
-        with patch("builtins.input", side_effect=["12"]):  # Exit
+        with patch("builtins.input", side_effect=["18"]):  # Exit
             cli.run_interactive()
         captured = capsys.readouterr()
         # Menu should show "View memory entries"
@@ -233,29 +233,29 @@ class TestInteractiveMemoryOption:
         entry = MemoryEntry("add", 1.0, 2.0, 3.0, True, "id1234567890123456789012345678901", None, _TS, 1.0)
         memory_service.get_all_entries.return_value = [entry]
         cli = CalculatorCLI(MagicMock(), memory_service=memory_service)
-        # Menu option 10 = view memory, 1 = view all, 7 = back, 12 = exit
-        with patch("builtins.input", side_effect=["10", "1", "7", "12"]):
+        # Menu option 16 = view memory, 1 = view all, 7 = back, 18 = exit
+        with patch("builtins.input", side_effect=["16", "1", "7", "18"]):
             cli.run_interactive()
         captured = capsys.readouterr()
         # Should show memory entry
         assert "add" in captured.out
 
     def test_interactive_memory_option_number(self, capsys):
-        """Test memory option is at position 10 in interactive menu."""
+        """Test memory option is at position 16 in interactive menu."""
         memory_service = MagicMock()
         memory_service.get_all_entries.return_value = []
         cli = CalculatorCLI(MagicMock(), memory_service=memory_service)
-        # Menu option 10 = view memory, 1 = view all, 7 = back, 12 = exit
-        with patch("builtins.input", side_effect=["10", "1", "7", "12"]):
+        # Menu option 16 = view memory, 1 = view all, 7 = back, 18 = exit
+        with patch("builtins.input", side_effect=["16", "1", "7", "18"]):
             cli.run_interactive()
         captured = capsys.readouterr()
-        # Option 10 should be memory
+        # Option 16 should be memory
         assert "View memory entries" in captured.out
 
     def test_interactive_menu_exit_is_option_11(self, capsys):
-        """Test exit option is at position 12 (after statistics at 11)."""
+        """Test exit option is at position 18 (after statistics at 17)."""
         cli = CalculatorCLI(MagicMock())
-        with patch("builtins.input", side_effect=["12"]):  # Exit
+        with patch("builtins.input", side_effect=["18"]):  # Exit
             cli.run_interactive()
         captured = capsys.readouterr()
         assert "Goodbye" in captured.out
@@ -274,7 +274,7 @@ class TestMemoryCliWithoutMemoryService:
     def test_interactive_menu_with_no_memory_service(self, capsys):
         """Test interactive menu with no memory service."""
         cli = CalculatorCLI(MagicMock(), memory_service=None)
-        with patch("builtins.input", side_effect=["10", "12"]):  # Option 10 = memory, 12 = exit
+        with patch("builtins.input", side_effect=["16", "18"]):  # Option 16 = memory, 18 = exit
             cli.run_interactive()
         captured = capsys.readouterr()
         # Memory option should still be in menu

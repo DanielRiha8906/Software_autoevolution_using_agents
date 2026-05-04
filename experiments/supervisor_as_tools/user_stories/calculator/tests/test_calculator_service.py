@@ -65,7 +65,8 @@ class TestCalculatorService:
 
     def test_perform_execution_time_all_operations(self):
         for operation in [Operation.ADD, Operation.SUBTRACT, Operation.MULTIPLY, Operation.DIVIDE,
-                          Operation.SQUARE, Operation.SQRT, Operation.POWER, Operation.MODULO]:
+                          Operation.SQUARE, Operation.SQRT, Operation.POWER, Operation.MODULO,
+                          Operation.SIN, Operation.COS, Operation.TAN, Operation.LOG, Operation.LN, Operation.EXP]:
             result = self.service.perform(operation, 3, 5)
             assert result.execution_time_ms > 0
 
@@ -180,4 +181,207 @@ class TestServiceModulo:
         assert result.operation == "modulo"
         assert result.operand_a == 7
         assert result.operand_b == 3
+        assert result.execution_time_ms > 0
+
+
+class TestServiceSin:
+    def setup_method(self):
+        self.storage = MagicMock()
+        self.service = CalculatorService(Calculator(), self.storage)
+
+    def test_perform_sin_zero(self):
+        result = self.service.perform(Operation.SIN, 0, 0)
+        assert result.result == pytest.approx(0.0)
+
+    def test_perform_sin_pi_over_2(self):
+        import math
+        result = self.service.perform(Operation.SIN, math.pi / 2, 0)
+        assert result.result == pytest.approx(1.0)
+
+    def test_perform_sin_saves_to_storage(self):
+        self.service.perform(Operation.SIN, 0, 0)
+        self.storage.save.assert_called_once()
+
+    def test_perform_sin_result_has_correct_fields(self):
+        result = self.service.perform(Operation.SIN, 0.5, 0)
+        assert result.operation == "sin"
+        assert result.operand_a == 0.5
+        assert result.operand_b == 0
+        assert result.execution_time_ms > 0
+
+
+class TestServiceCos:
+    def setup_method(self):
+        self.storage = MagicMock()
+        self.service = CalculatorService(Calculator(), self.storage)
+
+    def test_perform_cos_zero(self):
+        result = self.service.perform(Operation.COS, 0, 0)
+        assert result.result == pytest.approx(1.0)
+
+    def test_perform_cos_pi(self):
+        import math
+        result = self.service.perform(Operation.COS, math.pi, 0)
+        assert result.result == pytest.approx(-1.0)
+
+    def test_perform_cos_saves_to_storage(self):
+        self.service.perform(Operation.COS, 0, 0)
+        self.storage.save.assert_called_once()
+
+    def test_perform_cos_result_has_correct_fields(self):
+        result = self.service.perform(Operation.COS, 0.5, 0)
+        assert result.operation == "cos"
+        assert result.operand_a == 0.5
+        assert result.operand_b == 0
+        assert result.execution_time_ms > 0
+
+
+class TestServiceTan:
+    def setup_method(self):
+        self.storage = MagicMock()
+        self.service = CalculatorService(Calculator(), self.storage)
+
+    def test_perform_tan_zero(self):
+        result = self.service.perform(Operation.TAN, 0, 0)
+        assert result.result == pytest.approx(0.0)
+
+    def test_perform_tan_pi_over_4(self):
+        import math
+        result = self.service.perform(Operation.TAN, math.pi / 4, 0)
+        assert result.result == pytest.approx(1.0)
+
+    def test_perform_tan_saves_to_storage(self):
+        self.service.perform(Operation.TAN, 0, 0)
+        self.storage.save.assert_called_once()
+
+    def test_perform_tan_result_has_correct_fields(self):
+        result = self.service.perform(Operation.TAN, 0.3, 0)
+        assert result.operation == "tan"
+        assert result.operand_a == 0.3
+        assert result.operand_b == 0
+        assert result.execution_time_ms > 0
+
+
+class TestServiceLog:
+    def setup_method(self):
+        self.storage = MagicMock()
+        self.service = CalculatorService(Calculator(), self.storage)
+
+    def test_perform_log_100(self):
+        result = self.service.perform(Operation.LOG, 100, 0)
+        assert result.result == pytest.approx(2.0)
+
+    def test_perform_log_10(self):
+        result = self.service.perform(Operation.LOG, 10, 0)
+        assert result.result == pytest.approx(1.0)
+
+    def test_perform_log_saves_to_storage(self):
+        self.service.perform(Operation.LOG, 100, 0)
+        self.storage.save.assert_called_once()
+
+    def test_perform_log_zero_raises(self):
+        with pytest.raises(ValueError, match="Logarithm of x <= 0 is not allowed"):
+            self.service.perform(Operation.LOG, 0, 0)
+
+    def test_perform_log_zero_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.LOG, 0, 0)
+        self.storage.save.assert_not_called()
+
+    def test_perform_log_negative_raises(self):
+        with pytest.raises(ValueError, match="Logarithm of x <= 0 is not allowed"):
+            self.service.perform(Operation.LOG, -5, 0)
+
+    def test_perform_log_negative_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.LOG, -5, 0)
+        self.storage.save.assert_not_called()
+
+    def test_perform_log_result_has_correct_fields(self):
+        result = self.service.perform(Operation.LOG, 100, 0)
+        assert result.operation == "log"
+        assert result.operand_a == 100
+        assert result.operand_b == 0
+        assert result.execution_time_ms > 0
+
+
+class TestServiceLn:
+    def setup_method(self):
+        self.storage = MagicMock()
+        self.service = CalculatorService(Calculator(), self.storage)
+
+    def test_perform_ln_e(self):
+        import math
+        result = self.service.perform(Operation.LN, math.e, 0)
+        assert result.result == pytest.approx(1.0)
+
+    def test_perform_ln_1(self):
+        result = self.service.perform(Operation.LN, 1, 0)
+        assert result.result == pytest.approx(0.0)
+
+    def test_perform_ln_saves_to_storage(self):
+        import math
+        self.service.perform(Operation.LN, math.e, 0)
+        self.storage.save.assert_called_once()
+
+    def test_perform_ln_zero_raises(self):
+        with pytest.raises(ValueError, match="Logarithm of x <= 0 is not allowed"):
+            self.service.perform(Operation.LN, 0, 0)
+
+    def test_perform_ln_zero_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.LN, 0, 0)
+        self.storage.save.assert_not_called()
+
+    def test_perform_ln_negative_raises(self):
+        with pytest.raises(ValueError, match="Logarithm of x <= 0 is not allowed"):
+            self.service.perform(Operation.LN, -5, 0)
+
+    def test_perform_ln_negative_does_not_save(self):
+        with pytest.raises(ValueError):
+            self.service.perform(Operation.LN, -5, 0)
+        self.storage.save.assert_not_called()
+
+    def test_perform_ln_result_has_correct_fields(self):
+        import math
+        result = self.service.perform(Operation.LN, math.e, 0)
+        assert result.operation == "ln"
+        assert result.operand_a == math.e
+        assert result.operand_b == 0
+        assert result.execution_time_ms > 0
+
+
+class TestServiceExp:
+    def setup_method(self):
+        self.storage = MagicMock()
+        self.service = CalculatorService(Calculator(), self.storage)
+
+    def test_perform_exp_zero(self):
+        result = self.service.perform(Operation.EXP, 0, 0)
+        assert result.result == pytest.approx(1.0)
+
+    def test_perform_exp_one(self):
+        import math
+        result = self.service.perform(Operation.EXP, 1, 0)
+        assert result.result == pytest.approx(math.e)
+
+    def test_perform_exp_two(self):
+        import math
+        result = self.service.perform(Operation.EXP, 2, 0)
+        assert result.result == pytest.approx(math.e ** 2)
+
+    def test_perform_exp_saves_to_storage(self):
+        self.service.perform(Operation.EXP, 0, 0)
+        self.storage.save.assert_called_once()
+
+    def test_perform_exp_negative(self):
+        import math
+        result = self.service.perform(Operation.EXP, -1, 0)
+        assert result.result == pytest.approx(1.0 / math.e)
+
+    def test_perform_exp_result_has_correct_fields(self):
+        result = self.service.perform(Operation.EXP, 0, 0)
+        assert result.operation == "exp"
+        assert result.operand_a == 0
+        assert result.operand_b == 0
         assert result.execution_time_ms > 0

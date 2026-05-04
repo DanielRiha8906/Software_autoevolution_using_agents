@@ -18,7 +18,7 @@ class StatisticsService:
         """
         entries = self.memory_service.get_all_entries()
 
-        # Initialize operation counts for all 8 operations
+        # Initialize operation counts for all 14 operations
         operation_counts: dict[str, int] = {
             "add": 0,
             "subtract": 0,
@@ -28,6 +28,12 @@ class StatisticsService:
             "sqrt": 0,
             "power": 0,
             "modulo": 0,
+            "sin": 0,
+            "cos": 0,
+            "tan": 0,
+            "log": 0,
+            "ln": 0,
+            "exp": 0,
         }
 
         total_errors = 0
