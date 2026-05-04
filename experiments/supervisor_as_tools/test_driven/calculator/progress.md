@@ -507,3 +507,94 @@ No circular dependencies. Dependency flow: Interface → Orchestration → (Engi
 - Other diagrams (activity, state, use_case): Unchanged (no behavioral changes)
 
 Duration: 328.5s | Cost: $0.604412 USD | Turns: 28
+
+## Task 10: Tkinter GUI for Calculator
+
+### Summary
+Implemented a tkinter GUI for the calculator that delegates all calculation logic to the existing service layer. The GUI provides a standard calculator interface with number buttons, operation buttons, a display, and a calculation history view without duplicating any arithmetic logic.
+
+### Files Changed
+- `src/gui/__init__.py` - Created new GUI module with CalculatorGUI export
+- `src/gui/calculator_gui.py` - Created CalculatorGUI class with tkinter UI (constructor, run(), widget creation, event handlers, display updates, history refresh)
+- `src/__main__.py` - Added --gui argparse argument and conditional to launch GUI mode
+- `artifacts/class_diagram.puml` - Added CalculatorGUI class showing dependency on CalculatorService, listed all key methods
+- `artifacts/component_diagram.puml` - Added GUI component to presentation layer, showing delegation to service layer
+
+### Test Results
+- All 104 tests passed (22 new GUI tests + 82 existing tests)
+- Task 10 tests: 22/22 passed
+  - test_calculator_gui_module_exists ✓
+  - test_calculator_gui_is_class ✓
+  - test_calculator_gui_accepts_service ✓
+  - test_calculator_gui_stores_service_reference ✓
+  - test_calculator_gui_initializes_state ✓
+  - test_calculator_gui_initializes_widgets_as_none ✓
+  - test_gui_does_not_instantiate_calculator_directly ✓
+  - test_gui_contains_no_arithmetic_logic_functions ✓
+  - test_gui_references_service ✓
+  - test_gui_delegates_operations_to_service ✓
+  - test_gui_service_parameter_is_required ✓
+  - test_gui_state_is_mutable ✓
+  - test_gui_has_clear_method ✓
+  - test_gui_has_run_method ✓
+  - test_gui_has_create_widgets_method ✓
+  - test_gui_has_display_update_method ✓
+  - test_gui_has_number_click_handler ✓
+  - test_gui_has_operation_click_handler ✓
+  - test_gui_has_equals_click_handler ✓
+  - test_gui_has_backspace_handler ✓
+  - test_gui_has_history_refresh_method ✓
+  - test_gui_queries_service_for_history ✓
+- All existing tests: 82/82 passed (no regressions)
+
+### Implementation Details
+- CalculatorGUI class with dependency injection of CalculatorService in constructor
+- State machine tracking: current input, pending operation, first operand, result display state
+- UI layout:
+  - Top: Display showing current input and result
+  - Middle: Operation buttons (binary: add, subtract, multiply, divide, power, modulo; unary: square, sqrt, sin, cos, tan, log, ln, exp)
+  - Number buttons 0-9 and decimal point
+  - Clear and Backspace buttons
+  - Equals button to trigger calculation
+  - Bottom: History display showing recent calculations from service.get_history()
+- Event handlers:
+  - _on_number_click(digit) - append digit to display
+  - _on_operation_click(operation) - handle binary operations (store operand_a and operation)
+  - _on_unary_operation_click(operation) - handle unary operations (calculate immediately with single operand)
+  - _on_equals_click() - trigger service.perform() with stored operands and operation
+  - _on_clear_click() - reset all state and display
+  - _on_backspace_click() - remove last character from input
+  - _show_history() - populate history at startup
+  - _refresh_history() - refresh history display after each calculation
+  - _update_display() - update display label with current input/result
+- All arithmetic delegated to self.service.perform(operation, a, b)
+- Error handling: catches ValueError exceptions and displays error messages in display
+- GUI can be instantiated without starting main loop automatically (required by tests)
+- GUI launchable via: python -m src --gui
+
+### Constraints Satisfied
+- No direct Calculator() instantiation in source code ✓
+- No arithmetic logic functions (no "def add(", "def divide(", etc.) ✓
+- References "service" in code ✓
+- Service parameter required in constructor ✓
+- Importable as: from src.gui.calculator_gui import CalculatorGUI ✓
+- Delegates all calculations to service.perform() ✓
+- No duplication of arithmetic or history logic ✓
+
+### Accessibility
+- Interactive GUI: `python -m src --gui` launches the tkinter window
+- Display updates show pending operations and results
+- History display shows all recent calculations with timestamps
+- All 15 calculator operations accessible via GUI buttons
+- Error messages display for invalid operations (e.g., division by zero)
+- State persists across calculations (display, history updates)
+
+### Design Principles
+- Separation of concerns: GUI only handles UI state and event dispatching, no arithmetic
+- Dependency injection: CalculatorService injected via constructor for testability
+- Delegation pattern: All computation delegated to service layer
+- No code duplication: Service logic reused for both CLI and GUI
+- Layered architecture: GUI layer → Service layer → Calculation engine
+- Testability: GUI can be instantiated and tested without running main loop
+
+Duration: PENDING | Cost: PENDING | Turns: PENDING

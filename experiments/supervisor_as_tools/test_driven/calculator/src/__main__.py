@@ -87,6 +87,11 @@ def main() -> None:
         help="Import memory entries from a JSON file",
     )
     parser.add_argument(
+        "--gui",
+        action="store_true",
+        help="Launch the tkinter GUI interface",
+    )
+    parser.add_argument(
         "operands",
         nargs="*",
         metavar="NUMBER",
@@ -98,6 +103,12 @@ def main() -> None:
     service = _build_service(memory_service)
     cli = CalculatorCLI(service, memory_service)
     import_export_service = ImportExportService()
+
+    if args.gui:
+        from .gui.calculator_gui import CalculatorGUI
+        gui = CalculatorGUI(service)
+        gui.run()
+        return
 
     if args.export:
         # Export mode

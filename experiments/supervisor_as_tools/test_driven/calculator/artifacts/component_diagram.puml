@@ -8,8 +8,10 @@ package "Calculator Application" {
 
     package "Interface Layer" #FFE5E5 {
         component "CLI Interface\n(CalculatorCLI)" as CLI
+        component "GUI Interface\n(CalculatorGUI)" as GUI
         component "Entry Point\n(__main__)" as Main
         Main --> CLI : initializes
+        Main --> GUI : initializes
     }
 
     package "Calculation Engine" #DDFFD4 {
@@ -38,9 +40,11 @@ package "Calculator Application" {
     }
 
     CLI --> Calc : execute(operation, a, b)
-    Calc --> Op : uses
     CLI --> Memory : retrieve history
     CLI --> ImportExport : uses
+    GUI --> Calc : execute(operation, a, b)
+    GUI --> Op : uses
+    Calc --> Op : uses
 
     component "CalculatorService" as Service
     Service --> Calc : delegate calculation
@@ -50,6 +54,7 @@ package "Calculator Application" {
     Service --> MemEntry : create
 
     CLI --> Service : orchestrate
+    GUI --> Service : delegate calculation
     Store --> CalcResult : serialize/deserialize
     Memory --> Store : import/export via
 }
