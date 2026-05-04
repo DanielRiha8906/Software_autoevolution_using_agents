@@ -229,4 +229,4 @@ Duration: 422.3s | Cost: $0.799162 USD | Turns: 26
 - **Minimal State**: GUI maintains only current_runs list and selected_run_id; all data access through service
 - **Error Resilience**: Try-except blocks wrap all service calls with user-friendly error feedback via messagebox and status bar
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 344.8s | Cost: $0.627161 USD | Turns: 25
