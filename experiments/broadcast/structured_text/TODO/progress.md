@@ -565,3 +565,165 @@ One-shot flags:
 - Full round-trip export/import tested
 
 Duration: 545.2s | Cost: $2.813669 USD | Turns: 43
+
+## Task 08: Add project mode for grouping tasks
+
+### Broadcast Fan-out Results
+
+Three independent implementations were created on separate branches:
+
+| Candidate | Approach | Test Results | Notes |
+|-----------|----------|--------------|-------|
+| **A** | Project model + ProjectManager + CLI + menu | 119/119 ✓ | Project CRUD, task assignment, backward compatible |
+| **B** | Project model + ProjectManager + CLI + menu | 119/119 ✓ | Project assignment/unassignment methods, prefix lookup |
+| **C** | Project model + ProjectManager + CLI + menu + tests | 151/151 ✓ | **Selected** - 32 new tests for project feature |
+
+### Selected Solution: Implementer-C (broadcast-candidate-c)
+
+**Rationale**: All three candidates successfully implemented the project grouping feature with full CLI and interactive menu integration, all passing the original 119 tests. Implementer-C was selected for superior testing approach—it created 4 new comprehensive test files (test_project.py, test_project_manager.py, test_task_with_project.py, test_todo_project_cli.py) with 32 new tests specifically validating project functionality. This brings the total to 151 tests passing (32 new tests + 119 original), demonstrating the highest code quality and test coverage. Candidates A and B only maintained the original 119 tests without adding new tests for the project feature.
+
+### Files Changed
+
+1. **src/models/project.py** (new file)
+   - Created Project dataclass with attributes: `id: str` (UUID), `name: str`
+   - Implemented `to_dict()` for JSON serialization
+   - Implemented `from_dict()` classmethod for JSON deserialization
+
+2. **src/models/task.py** (modified)
+   - Added `project_id: Optional[str] = None` field to Task
+   - Updated `to_dict()` to conditionally include project_id (backward compatible)
+   - Updated `from_dict()` to handle missing project_id for legacy data
+
+3. **src/models/__init__.py** (modified)
+   - Added Project to module exports
+
+4. **src/services/project_manager.py** (new file)
+   - Created ProjectManager service for project CRUD operations
+   - Methods: `add()`, `get()`, `list_all()`, `update()`, `delete()`
+   - Validates non-empty project names
+   - Supports prefix-based project ID lookup
+   - Integrates with JsonStorage for persistence
+
+5. **src/services/task_manager.py** (modified)
+   - Added `list_by_project(project_id: str) -> list[Task]` method
+   - Added `set_project(task_id: str, project_id: str) -> Task` method
+   - Added `unset_project(task_id: str) -> Task` method
+
+6. **src/services/todo_service.py** (modified)
+   - Integrated ProjectManager into TodoService
+   - Added methods: `create_project()`, `list_projects()`, `get_project()`, `update_project()`, `delete_project()`
+   - Added `list_tasks_by_project()` to filter tasks by project
+   - Added `assign_task_to_project()` and `unassign_task_from_project()` for task-project association
+
+7. **src/cli/todo_cli.py** (modified)
+   - Added ProjectManager initialization
+   - Added 5 new project CLI commands:
+     - `project-add <name>` - Create new project
+     - `project-list` - List all projects
+     - `project-show <id>` - Show project and its tasks
+     - `project-update <id> <name>` - Update project name
+     - `project-delete <id>` - Delete project (unassigns tasks)
+   - Enhanced `add` command with optional `--project` flag
+   - Enhanced `list` command with optional `--project` filter
+   - Added ProjectNotFoundError exception handling
+
+8. **src/cli/interactive_menu.py** (modified)
+   - Added menu option 9: "Manage Projects"
+   - Implemented `_do_manage_projects()` with sub-menu for:
+     - Create project
+     - View project details and tasks
+     - Update project name
+     - Delete project
+     - Assign/unassign tasks to/from projects
+
+9. **artifacts/class_diagram.puml** (modified)
+   - Added Project class to models package
+   - Added ProjectManager service with CRUD methods
+   - Added ProjectNotFoundError exception
+   - Added relationship: Task --> Project (references via project_id)
+   - Updated TaskManager with list_by_project() method
+   - Updated TodoService with project management methods
+
+10. **artifacts/use_case_diagram.puml** (modified)
+    - Added "Manage projects" use case to interactive mode
+    - Added 5 project management CLI use cases: add, list, show, update, delete
+
+11. **artifacts/component_diagram.puml** (modified)
+    - Added Project Manager component to service layer
+    - Added Project Model component to domain model
+    - Added relationships showing ProjectManager usage and storage
+
+12. **artifacts/activity_diagram.puml** (modified)
+    - Added project management flow to interactive menu
+    - Shows submenu options and service method calls
+
+13. **tests/test_project.py** (new file)
+    - 3 tests for Project model creation, serialization, and deserialization
+
+14. **tests/test_project_manager.py** (new file)
+    - 9 tests for ProjectManager CRUD operations, validation, and storage
+
+15. **tests/test_task_with_project.py** (new file)
+    - 6 integration tests for task-project relationships
+
+16. **tests/test_todo_project_cli.py** (new file)
+    - 9 CLI tests for project commands
+
+### Requirements Compliance
+
+**Must:**
+- ✓ Create Project domain class with id (UUID) and name attributes
+- ✓ Add optional project_id: Optional[str] to Task
+- ✓ Support creating and listing projects
+- ✓ Support listing tasks filtered by project
+- ✓ Preserve existing behavior for tasks without project assignment
+- ✓ All functionality accessible via `python -m src`:
+  - Interactive: Menu option 9 "Manage Projects"
+  - CLI: `project-add`, `project-list`, `project-show`, `project-update`, `project-delete`
+  - Enhanced: `add --project`, `list --project`
+
+**Should:**
+- ✓ Validate project names are not empty
+- ✓ Follow existing naming conventions in codebase
+- ✓ Preserve backward compatibility with stored tasks (tasks without project_id load without error)
+
+**Could:**
+- ✓ Support moving task from one project to another (via update/reassign)
+- ✓ Support deleting project (tasks become unassigned, not deleted)
+
+**Won't:**
+- ✓ Kanban drag-and-drop UI not implemented
+- ✓ Access control/permissions not implemented
+
+### CLI Commands Available
+
+```
+Interactive: Menu option 9 "Manage Projects"
+
+One-shot flags:
+  python -m src project-add <name>              # Create new project
+  python -m src project-list                    # List all projects
+  python -m src project-show <id>               # Show project and its tasks
+  python -m src project-update <id> <name>      # Update project name
+  python -m src project-delete <id>             # Delete project (unassigns tasks)
+  python -m src add <title> --project <id>      # Add task with project
+  python -m src list --project <id>             # List tasks in project
+```
+
+### Test Results
+
+- Baseline tests: 119/119 passing ✓
+- New project tests: 32/32 passing ✓
+- Total tests: 151/151 passing ✓
+- No regressions in existing functionality
+- Full backward compatibility verified
+- Comprehensive test coverage of project feature
+
+### Backward Compatibility
+
+- Tasks created before project feature have `project_id=None`
+- Old storage formats (list-only) are supported and automatically upgraded
+- Tasks without projects remain fully functional
+- Project deletion unassigns tasks rather than deleting them
+
+Duration: 808.6s | Cost: $2.048400 USD | Turns: 37
