@@ -7,13 +7,15 @@ left to right direction
 actor User
 
 rectangle "Calculator Application" {
-    usecase "Perform calculation" as UC_Calc
+    usecase "Perform basic calculation" as UC_Calc
+    usecase "Perform scientific calculation" as UC_Scientific
     usecase "View calculation history" as UC_History
     usecase "Exit application" as UC_Exit
 
 }
 
 User --> UC_Calc
+User --> UC_Scientific
 User --> UC_History
 User --> UC_Exit
 

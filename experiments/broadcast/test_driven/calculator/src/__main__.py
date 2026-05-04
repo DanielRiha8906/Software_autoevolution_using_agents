@@ -4,6 +4,7 @@ from pathlib import Path
 
 from .models.operation import Operation
 from .services.calculator import Calculator
+from .services.scientific_calculator import ScientificCalculator
 from .services.calculator_service import CalculatorService
 from .services.memory_service import MemoryService
 from .services.statistics_service import StatisticsService
@@ -24,17 +25,41 @@ def _as_number(value: str) -> float:
         raise argparse.ArgumentTypeError(f"'{value}' is not a valid number")
 
 
+def _run_scientific(operation: str, x: float) -> None:
+    calc = ScientificCalculator()
+    try:
+        dispatch = {
+            "sin": calc.sin,
+            "cos": calc.cos,
+            "tan": calc.tan,
+            "log": calc.log,
+            "ln": calc.ln,
+            "exp": calc.exp,
+        }
+        result = dispatch[operation](x)
+        print(result)
+    except Exception as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         prog="python -m src",
-        description="OOP Calculator — run interactively or pass --operation, --statistics, --import, or --export",
-        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--statistics] [--import FILE] [--export FILE]",
+        description="OOP Calculator — run interactively or pass --operation, --scientific, --statistics, --import, or --export",
+        usage="python -m src [--operation {add,subtract,multiply,divide,square,sqrt,power,modulo} A B] [--scientific {sin,cos,tan,log,ln,exp} X] [--statistics] [--import FILE] [--export FILE]",
     )
     parser.add_argument(
         "--operation",
         metavar="OP",
         choices=["add", "subtract", "multiply", "divide", "square", "sqrt", "power", "modulo"],
         help="Operation to perform (add | subtract | multiply | divide | square | sqrt | power | modulo)",
+    )
+    parser.add_argument(
+        "--scientific",
+        metavar="OP",
+        choices=["sin", "cos", "tan", "log", "ln", "exp"],
+        help="Scientific operation to perform (sin | cos | tan | log | ln | exp)",
     )
     parser.add_argument(
         "--statistics",
@@ -56,7 +81,7 @@ def main() -> None:
         "operands",
         nargs="*",
         metavar="NUMBER",
-        help="Two operands (required when --operation is given)",
+        help="Operands (two for --operation, one for --scientific)",
     )
 
     args = parser.parse_args()
@@ -96,6 +121,14 @@ def main() -> None:
             print(f"Total errors: {report.total_errors}")
             print(f"Error rate: {report.error_rate:.2f}%")
             print(f"Average execution time: {report.avg_execution_time_ms:.2f}ms")
+    elif args.scientific:
+        if len(args.operands) != 1:
+            parser.error("Exactly one operand is required when using --scientific")
+        try:
+            x = _as_number(args.operands[0])
+        except argparse.ArgumentTypeError as exc:
+            parser.error(str(exc))
+        _run_scientific(args.scientific, x)
     elif args.operation:
         if len(args.operands) != 2:
             parser.error("Exactly two operands are required when using --operation")

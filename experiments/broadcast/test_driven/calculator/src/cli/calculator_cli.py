@@ -2,6 +2,7 @@ import sys
 
 from ..models.operation import Operation
 from ..services.calculator_service import CalculatorService
+from ..services.scientific_calculator import ScientificCalculator
 
 
 class CalculatorCLI:
@@ -30,7 +31,8 @@ class CalculatorCLI:
             choice = input("Choose option: ").strip()
 
             history_opt = len(self._MENU) + 1
-            exit_opt    = len(self._MENU) + 2
+            scientific_opt = len(self._MENU) + 2
+            exit_opt    = len(self._MENU) + 3
 
             if choice == str(exit_opt):
                 print("Goodbye!")
@@ -38,6 +40,10 @@ class CalculatorCLI:
 
             if choice == str(history_opt):
                 self._show_history()
+                continue
+
+            if choice == str(scientific_opt):
+                self._run_scientific_menu()
                 continue
 
             operation = self._resolve_menu_choice(choice)
@@ -71,12 +77,48 @@ class CalculatorCLI:
     # Private helpers
     # ------------------------------------------------------------------
 
+    def _run_scientific_menu(self) -> None:
+        scientific_ops = ["Sin", "Cos", "Tan", "Log (base 10)", "Ln (natural log)", "Exp"]
+        print("\nScientific Operations:")
+        for i, op in enumerate(scientific_ops, 1):
+            print(f"  {i}. {op}")
+        print(f"  {len(scientific_ops) + 1}. Back to main menu")
+
+        choice = input("Choose operation: ").strip()
+        try:
+            idx = int(choice) - 1
+            if idx == len(scientific_ops):
+                return
+            if 0 <= idx < len(scientific_ops):
+                op_name = ["sin", "cos", "tan", "log", "ln", "exp"][idx]
+                x = self._prompt_number("Enter value: ")
+                if x is None:
+                    return
+                calc = ScientificCalculator()
+                dispatch = {
+                    "sin": calc.sin,
+                    "cos": calc.cos,
+                    "tan": calc.tan,
+                    "log": calc.log,
+                    "ln": calc.ln,
+                    "exp": calc.exp,
+                }
+                result = dispatch[op_name](x)
+                print(f"\n  Result: {result}\n")
+            else:
+                print("Invalid choice — try again.\n")
+        except ValueError:
+            print("Invalid choice — try again.\n")
+        except Exception as exc:
+            print(f"\n  Error: {str(exc)}\n")
+
     def _print_menu(self) -> None:
         print("\nOperations:")
         for i, (_, label) in enumerate(self._MENU, 1):
             print(f"  {i}. {label}")
         print(f"  {len(self._MENU) + 1}. View history")
-        print(f"  {len(self._MENU) + 2}. Exit")
+        print(f"  {len(self._MENU) + 2}. Scientific operations")
+        print(f"  {len(self._MENU) + 3}. Exit")
 
     def _resolve_menu_choice(self, choice: str) -> Operation | None:
         try:
