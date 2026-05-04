@@ -990,4 +990,4 @@ User Input (GUI) → TodoGUI/Dialog → TodoService → TaskManager/ProjectManag
 - Optional storage: `python -m src --gui --storage /path/to/storage.json`
 - Interactive menu: Can be enhanced to include GUI launch option
 
-Duration: PENDING | Cost: PENDING | Turns: PENDING
+Duration: 766.4s | Cost: $1.606854 USD | Turns: 69
