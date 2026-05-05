@@ -14,4 +14,4 @@
 - Add further trigonometric or hyperbolic functions (e.g., asin, sinh)
 
 ### Won’t
-- Reimplement operations already available in standard mode
+- Reimplement operations already available in standard mode 

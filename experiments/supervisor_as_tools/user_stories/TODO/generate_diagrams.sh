@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARTIFACTS="$SCRIPT_DIR/artifacts"
@@ -21,11 +21,21 @@ fi
 echo "Rendering ${#puml_files[@]} diagram(s) as $FORMAT → $ARTIFACTS/"
 echo
 
+failed=0
 for file in "${puml_files[@]}"; do
     name="$(basename "$file" .puml)"
-    plantuml "-t$FORMAT" -o "$ARTIFACTS" "$file"
-    echo "  ✓ $name.$FORMAT"
+    if plantuml "-t$FORMAT" -o "$ARTIFACTS" "$file"; then
+        echo "  ✓ $name.$FORMAT"
+    else
+        echo "  ✗ $name.$FORMAT (FAILED)" >&2
+        failed=$((failed + 1))
+    fi
 done
 
 echo
-echo "Done."
+if [[ $failed -eq 0 ]]; then
+    echo "Done."
+else
+    echo "Done with $failed failure(s)." >&2
+    exit 1
+fi
