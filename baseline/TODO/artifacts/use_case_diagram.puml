@@ -1,6 +1,7 @@
 @startuml use_case_diagram
 
 left to right direction
+skinparam packageStyle rectangle
 
 actor User
 
@@ -8,6 +9,7 @@ rectangle "TODO Manager" {
 
   package "Interactive mode" {
     usecase "Use interactive menu" as UI
+
     usecase "Add task" as I_ADD
     usecase "List / filter tasks" as I_LIST
     usecase "Show task details" as I_SHOW
@@ -19,6 +21,7 @@ rectangle "TODO Manager" {
 
   package "Command-line mode" {
     usecase "Use one-shot CLI command" as CLI
+
     usecase "Add task" as C_ADD
     usecase "List / filter tasks" as C_LIST
     usecase "Show task details" as C_SHOW
@@ -33,21 +36,40 @@ rectangle "TODO Manager" {
 User --> UI
 User --> CLI
 
-UI ..> I_ADD    : <<exclude>>
-UI ..> I_LIST   : <<exclude>>
-UI ..> I_SHOW   : <<exclude>>
-UI ..> I_STATUS : <<exclude>>
-UI ..> I_UPDATE : <<exclude>>
-UI ..> I_DELETE : <<exclude>>
-UI ..> I_QUIT   : <<exclude>>
+' Layout hints: hlavní use case vlevo, extensions vpravo
+UI -[hidden]right-> I_ADD
+UI -[hidden]right-> I_LIST
+UI -[hidden]right-> I_SHOW
+UI -[hidden]right-> I_STATUS
+UI -[hidden]right-> I_UPDATE
+UI -[hidden]right-> I_DELETE
+UI -[hidden]right-> I_QUIT
 
-CLI ..> C_ADD    : <<exclude>>
-CLI ..> C_LIST   : <<exclude>>
-CLI ..> C_SHOW   : <<exclude>>
-CLI ..> C_START  : <<exclude>>
-CLI ..> C_DONE   : <<exclude>>
-CLI ..> C_REOPEN : <<exclude>>
-CLI ..> C_UPDATE : <<exclude>>
-CLI ..> C_DELETE : <<exclude>>
+CLI -[hidden]right-> C_ADD
+CLI -[hidden]right-> C_LIST
+CLI -[hidden]right-> C_SHOW
+CLI -[hidden]right-> C_START
+CLI -[hidden]right-> C_DONE
+CLI -[hidden]right-> C_REOPEN
+CLI -[hidden]right-> C_UPDATE
+CLI -[hidden]right-> C_DELETE
+
+' UMLově správně: extension use case ukazuje na base use case
+I_ADD    ..> UI : <<extend>>
+I_LIST   ..> UI : <<extend>>
+I_SHOW   ..> UI : <<extend>>
+I_STATUS ..> UI : <<extend>>
+I_UPDATE ..> UI : <<extend>>
+I_DELETE ..> UI : <<extend>>
+I_QUIT   ..> UI : <<extend>>
+
+C_ADD    ..> CLI : <<extend>>
+C_LIST   ..> CLI : <<extend>>
+C_SHOW   ..> CLI : <<extend>>
+C_START  ..> CLI : <<extend>>
+C_DONE   ..> CLI : <<extend>>
+C_REOPEN ..> CLI : <<extend>>
+C_UPDATE ..> CLI : <<extend>>
+C_DELETE ..> CLI : <<extend>>
 
 @enduml

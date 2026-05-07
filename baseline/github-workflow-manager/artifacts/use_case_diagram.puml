@@ -1,6 +1,7 @@
 @startuml use_case_diagram
 
 left to right direction
+skinparam packageStyle rectangle
 
 actor User
 
@@ -8,46 +9,69 @@ rectangle "GitHub Workflow Manager" {
 
   package "Interactive Mode" {
     usecase "Launch interactive menu"  as UI
+
     usecase "Add workflow run"         as I_ADD
     usecase "List all runs"            as I_LIST
     usecase "Get run detail"           as I_DETAIL
     usecase "Filter runs"              as I_FILTER
+    usecase "Exit application"         as I_EXIT
+
     usecase "Filter by branch"         as I_FBRANCH
     usecase "Filter by status"         as I_FSTATUS
     usecase "Filter by conclusion"     as I_FCONCL
-    usecase "Exit application"         as I_EXIT
   }
 
   package "Command-line Mode" {
     usecase "Run one-shot CLI command" as CLI
+
     usecase "Add workflow run"         as C_ADD
     usecase "List runs"                as C_LIST
+    usecase "Get run detail"           as C_DETAIL
+
     usecase "Filter by branch"         as C_FBRANCH
     usecase "Filter by status"         as C_FSTATUS
     usecase "Filter by conclusion"     as C_FCONCL
-    usecase "Get run detail"           as C_DETAIL
   }
 }
 
 User --> UI
 User --> CLI
 
+UI -[hidden]right-> I_ADD
+UI -[hidden]right-> I_LIST
+UI -[hidden]right-> I_DETAIL
+UI -[hidden]right-> I_FILTER
+UI -[hidden]right-> I_EXIT
+
+I_FILTER -[hidden]right-> I_FBRANCH
+I_FILTER -[hidden]right-> I_FSTATUS
+I_FILTER -[hidden]right-> I_FCONCL
+
+CLI -[hidden]right-> C_ADD
+CLI -[hidden]right-> C_LIST
+CLI -[hidden]right-> C_DETAIL
+
+C_LIST -[hidden]right-> C_FBRANCH
+C_LIST -[hidden]right-> C_FSTATUS
+C_LIST -[hidden]right-> C_FCONCL
+
+' Interactive mode actions
 UI --> I_ADD
 UI --> I_LIST
 UI --> I_DETAIL
 UI --> I_FILTER
 UI --> I_EXIT
 
-I_FILTER --> I_FBRANCH  : <<extend>>
-I_FILTER --> I_FSTATUS  : <<extend>>
-I_FILTER --> I_FCONCL   : <<extend>>
+I_FBRANCH ..> I_FILTER : <<extend>>
+I_FSTATUS ..> I_FILTER : <<extend>>
+I_FCONCL  ..> I_FILTER : <<extend>>
 
 CLI --> C_ADD
 CLI --> C_LIST
 CLI --> C_DETAIL
 
-C_LIST --> C_FBRANCH  : <<extend>>
-C_LIST --> C_FSTATUS  : <<extend>>
-C_LIST --> C_FCONCL   : <<extend>>
+C_FBRANCH ..> C_LIST : <<extend>>
+C_FSTATUS ..> C_LIST : <<extend>>
+C_FCONCL  ..> C_LIST : <<extend>>
 
 @enduml

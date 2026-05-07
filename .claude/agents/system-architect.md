@@ -2,7 +2,7 @@
 name: system-architect
 description: "Use this agent when structural or design decisions need to be made before implementation begins — new features, refactors, module splits, interface changes. It reads the current codebase and produces a concrete file-level plan and test specifications."
 tools: "Glob, Grep, Read"
-model: claude-haiku-4-5-20251001
+model: haiku
 color: purple
 ---
 

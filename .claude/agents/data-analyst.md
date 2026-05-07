@@ -2,7 +2,7 @@
 name: data-analyst
 description: "Use this agent to analyze requirements, issues, data sources, or existing code and produce a structured understanding of what needs to happen. Good entry point when the goal is clear but the scope or constraints need to be surfaced before any design or implementation starts."
 tools: "Bash, Glob, Grep, Read, mcp__github__issue_read, mcp__github__pull_request_read, mcp__github__list_issues"
-model: claude-haiku-4-5-20251001
+model: haiku
 color: blue
 ---
 

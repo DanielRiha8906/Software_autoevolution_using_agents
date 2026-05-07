@@ -3,7 +3,7 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ARTIFACTS="$SCRIPT_DIR/artifacts"
-FORMAT="${1:-png}"
+FORMAT="${1:-svg}"
 
 case "$FORMAT" in
     png|svg|eps|pdf) ;;
