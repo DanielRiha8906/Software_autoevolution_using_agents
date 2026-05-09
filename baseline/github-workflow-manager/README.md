@@ -2,6 +2,14 @@
 
 A lightweight CLI tool for tracking GitHub Actions workflow runs locally, with JSON persistence.
 
+## Overview
+
+This application represents a baseline workflow management system used in the experimental part of the bachelor thesis focused on software auto-evolution. Its purpose is to model a more infrastructure-oriented software domain than the other baseline applications, namely the local representation and management of GitHub Actions workflow runs.
+
+The system stores metadata about workflow executions, including their identifiers, branches, statuses, conclusions, timestamps, and optional integration-related attributes. Architecturally, the application is divided into model, service, storage, and CLI layers, which makes it suitable for observing how autonomous agents handle evolution in a domain that combines state tracking, filtering, persistence, and operational tooling concerns.
+
+Within the repository, this project serves as one of the reference baseline applications from which evolved variants in `experiments/` are derived.
+
 ## Structure
 
 ```

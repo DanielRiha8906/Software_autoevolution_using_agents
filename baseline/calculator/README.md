@@ -2,6 +2,14 @@
 
 OOP calculator with persistent history, interactive menu, and one-shot CLI mode.
 
+## Overview
+
+This application represents a baseline calculator system used in the experimental part of the bachelor thesis focused on software auto-evolution. The system is intentionally small, modular, and easy to analyse, so that changes introduced by autonomous agents can be observed with minimal ambiguity.
+
+From a software design perspective, the application is organised into distinct layers for domain modelling, service orchestration, persistence, and command-line interaction. The calculator supports basic arithmetic operations and stores calculation history, which makes it suitable for evaluating both functional extensions and architectural modifications introduced during experimental evolution.
+
+Within the repository, this project serves as one of the reference baseline applications from which evolved variants in `experiments/` are derived.
+
 ## Requirements
 
 - Python 3.12+

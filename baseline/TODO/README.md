@@ -2,6 +2,14 @@
 
 OOP task manager with persistent JSON storage, an interactive menu, and a one-shot CLI mode.
 
+## Overview
+
+This application represents a baseline task management system used in the experimental part of the bachelor thesis focused on software auto-evolution. In comparison with the calculator baseline, this system works with a richer state model and more complex entity lifecycle, which makes it useful for evaluating whether autonomous agents can correctly evolve software beyond purely arithmetic functionality.
+
+The application allows users to create, inspect, modify, and delete tasks, while also managing state transitions between pending, in-progress, and completed states. Its architecture is separated into domain, service, storage, and CLI layers, enabling controlled observation of how experimental interventions affect different parts of the system.
+
+Within the repository, this project serves as one of the reference baseline applications from which evolved variants in `experiments/` are derived.
+
 ## Requirements
 
 - Python 3.12+
